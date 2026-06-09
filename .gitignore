@@ -1,0 +1,19 @@
+target/
+node_modules/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Test universe directories (created by tests)
+starwars/
+toystory/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
