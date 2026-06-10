@@ -1,0 +1,51 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "narrativeengine"
+version = "0.1.0"
+description = "Python SDK for NarrativeEngine, powered by Rust and PyO3."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "NarrativeEngine Maintainers" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+pydantic = ["pydantic>=2.7,<3"]
+dev = [
+  "maturin>=1.7,<2",
+  "mypy>=1.11",
+  "pytest>=8.3",
+  "ruff>=0.6",
+  "pydantic>=2.7,<3",
+]
+
+[tool.maturin]
+manifest-path = "../crates/python-bindings/Cargo.toml"
+python-source = "."
+module-name = "narrativeengine._native"
+features = ["pyo3/extension-module"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["narrativeengine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
