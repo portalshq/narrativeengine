@@ -50,7 +50,9 @@ impl GitBackend {
             .args(args)
             .current_dir(path)
             .output()
-            .map_err(|e| NapError::VcsError(format!("failed to execute git {args_display}: {e}")))?;
+            .map_err(|e| {
+                NapError::VcsError(format!("failed to execute git {args_display}: {e}"))
+            })?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -141,14 +143,19 @@ impl VcsBackend for GitBackend {
                     "reading file from working tree"
                 );
                 let full_path = repo_path.join(file_path);
-                std::fs::read_to_string(&full_path).map_err(|e| NapError::ManifestNotFound(
-                    format!("{}: {e}", full_path.display())
-                ))
+                std::fs::read_to_string(&full_path).map_err(|e| {
+                    NapError::ManifestNotFound(format!("{}: {e}", full_path.display()))
+                })
             }
         }
     }
 
-    fn log(&self, path: &Path, file: Option<&str>, limit: usize) -> Result<Vec<CommitInfo>, NapError> {
+    fn log(
+        &self,
+        path: &Path,
+        file: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<CommitInfo>, NapError> {
         let limit_str = format!("-{limit}");
         let format_flag = "--format=%H%n%P%n%an%n%s%n%aI%n---".to_string();
 
@@ -216,12 +223,20 @@ impl VcsBackend for GitBackend {
 
     fn list_branches(&self, path: &Path) -> Result<Vec<String>, NapError> {
         let output = Self::run_git(path, &["branch", "--format=%(refname:short)"])?;
-        Ok(output.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        Ok(output
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect())
     }
 
     fn list_tags(&self, path: &Path) -> Result<Vec<String>, NapError> {
         let output = Self::run_git(path, &["tag", "--list"])?;
-        Ok(output.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        Ok(output
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect())
     }
 
     // ── Remote operations ────────────────────────────────────────
@@ -373,7 +388,9 @@ mod tests {
         std::fs::write(tmp.path().join("test.txt"), "hello").unwrap();
 
         // Commit
-        let hash = backend.commit(tmp.path(), "initial commit", "test-user").unwrap();
+        let hash = backend
+            .commit(tmp.path(), "initial commit", "test-user")
+            .unwrap();
         assert!(!hash.is_empty());
 
         // Verify HEAD
@@ -396,11 +413,15 @@ mod tests {
         backend.commit(tmp.path(), "v2", "user").unwrap();
 
         // Read current (v2)
-        let current = backend.read_file_at_ref(tmp.path(), "data.txt", None).unwrap();
+        let current = backend
+            .read_file_at_ref(tmp.path(), "data.txt", None)
+            .unwrap();
         assert_eq!(current, "version 2");
 
         // Read at v1
-        let at_v1 = backend.read_file_at_ref(tmp.path(), "data.txt", Some(&hash_v1)).unwrap();
+        let at_v1 = backend
+            .read_file_at_ref(tmp.path(), "data.txt", Some(&hash_v1))
+            .unwrap();
         assert_eq!(at_v1, "version 1");
     }
 
@@ -458,7 +479,9 @@ mod tests {
         backend.init(tmp.path()).unwrap();
 
         // Add a remote
-        backend.add_remote(tmp.path(), "origin", "git@github.com:user/repo.git").unwrap();
+        backend
+            .add_remote(tmp.path(), "origin", "git@github.com:user/repo.git")
+            .unwrap();
 
         let remotes = backend.list_remotes(tmp.path()).unwrap();
         assert_eq!(remotes.len(), 1);
@@ -472,7 +495,9 @@ mod tests {
         let backend = GitBackend::new();
         backend.init(tmp.path()).unwrap();
 
-        backend.add_remote(tmp.path(), "origin", "git@github.com:user/repo.git").unwrap();
+        backend
+            .add_remote(tmp.path(), "origin", "git@github.com:user/repo.git")
+            .unwrap();
         backend.remove_remote(tmp.path(), "origin").unwrap();
 
         let remotes = backend.list_remotes(tmp.path()).unwrap();

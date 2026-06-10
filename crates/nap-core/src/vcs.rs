@@ -47,7 +47,12 @@ pub trait VcsBackend: Send + Sync {
     ) -> Result<String, NapError>;
 
     /// Get the commit log for the repository, optionally filtered to a specific file.
-    fn log(&self, path: &Path, file: Option<&str>, limit: usize) -> Result<Vec<CommitInfo>, NapError>;
+    fn log(
+        &self,
+        path: &Path,
+        file: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<CommitInfo>, NapError>;
 
     /// Create a new branch.
     fn create_branch(&self, path: &Path, name: &str) -> Result<(), NapError>;
@@ -70,7 +75,9 @@ pub trait VcsBackend: Send + Sync {
     /// support revert. Git does via `git revert --no-edit`.
     /// Returns the SHA of the new revert commit.
     fn revert(&self, _path: &Path, _commit_hash: &str) -> Result<String, NapError> {
-        Err(NapError::VcsError("revert not supported by this VCS backend".to_string()))
+        Err(NapError::VcsError(
+            "revert not supported by this VCS backend".to_string(),
+        ))
     }
 
     /// List all branches.
@@ -94,21 +101,13 @@ pub trait VcsBackend: Send + Sync {
     ///
     /// Delegates to `git push <remote> <branch>` or, if both are omitted,
     /// to `git push` (which uses the tracking-branch configuration).
-    fn push(
-        &self,
-        path: &Path,
-        remote: Option<&str>,
-        branch: Option<&str>,
-    ) -> Result<(), NapError>;
+    fn push(&self, path: &Path, remote: Option<&str>, branch: Option<&str>)
+    -> Result<(), NapError>;
 
     /// Pull the current branch from its upstream / a named remote.
     ///
     /// Delegates to `git pull <remote> <branch>` or, if both are omitted,
     /// to `git pull` (which uses the tracking-branch configuration).
-    fn pull(
-        &self,
-        path: &Path,
-        remote: Option<&str>,
-        branch: Option<&str>,
-    ) -> Result<(), NapError>;
+    fn pull(&self, path: &Path, remote: Option<&str>, branch: Option<&str>)
+    -> Result<(), NapError>;
 }

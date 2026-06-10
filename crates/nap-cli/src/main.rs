@@ -54,7 +54,8 @@ struct Cli {
 /// Universe names are simple identifiers (`[a-zA-Z0-9_-]+`).
 /// Everything else (contains `@`, `://`, `/`, `.git`, etc.) is a URL.
 fn looks_like_url(s: &str) -> bool {
-    !s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    !s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 /// Subcommands for `nap remote`.
@@ -340,7 +341,10 @@ fn emit(msg: impl AsRef<str>) {
             "level": "info",
             "message": msg,
         });
-        println!("{}", serde_json::to_string(&entry).unwrap_or_else(|_| msg.to_string()));
+        println!(
+            "{}",
+            serde_json::to_string(&entry).unwrap_or_else(|_| msg.to_string())
+        );
     }
 }
 
@@ -360,14 +364,23 @@ fn main() -> Result<()> {
         .init();
 
     let result = match cli.command {
-        Commands::Init { universe, remote } => cmd_init(&cli.base_dir, &universe, remote.as_deref()),
+        Commands::Init { universe, remote } => {
+            cmd_init(&cli.base_dir, &universe, remote.as_deref())
+        }
         Commands::Create {
             entity_type,
             entity_id,
             universe,
             name,
             author,
-        } => cmd_create(&cli.base_dir, &universe, &entity_type, &entity_id, &name, &author),
+        } => cmd_create(
+            &cli.base_dir,
+            &universe,
+            &entity_type,
+            &entity_id,
+            &name,
+            &author,
+        ),
         Commands::Resolve {
             uri,
             branch,
@@ -386,7 +399,9 @@ fn main() -> Result<()> {
             universe,
             entity_type,
         } => cmd_list(&cli.base_dir, universe.as_deref(), entity_type.as_deref()),
-        Commands::Branch { universe, name } => cmd_branch(&cli.base_dir, &universe, name.as_deref()),
+        Commands::Branch { universe, name } => {
+            cmd_branch(&cli.base_dir, &universe, name.as_deref())
+        }
         Commands::Tag { universe, name } => cmd_tag(&cli.base_dir, &universe, name.as_deref()),
         Commands::Set {
             uri,
@@ -442,7 +457,10 @@ fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
 fn cmd_init(base_dir: &Path, universe: &str, remote: Option<&str>) -> Result<()> {
     let repo = Repository::init(base_dir, universe, Box::new(GitBackend::new()))
         .context(format!("failed to initialize universe '{universe}'"))?;
-    emit(format!("✓ Initialized universe '{universe}' at {}/{universe}", base_dir.display()));
+    emit(format!(
+        "✓ Initialized universe '{universe}' at {}/{universe}",
+        base_dir.display()
+    ));
 
     if let Some(url) = remote {
         repo.add_remote("origin", url)
@@ -468,7 +486,10 @@ fn cmd_create(
     let (manifest, hash) = repo
         .create_entity(entity_type, entity_id, name, author)
         .context("failed to create entity")?;
-    emit(format!("✓ Created {} '{}' ({})", entity_type, name, entity_id));
+    emit(format!(
+        "✓ Created {} '{}' ({})",
+        entity_type, name, entity_id
+    ));
     emit(format!("  URI:    {}", manifest.id));
     emit(format!("  Commit: {}", &hash[..12]));
     Ok(())
@@ -495,21 +516,17 @@ fn cmd_resolve(
 
     let fmt = resolve_output_format(format);
     match result {
-        ResolveResult::Full(manifest) => {
-            match fmt.as_str() {
-                "json" => println!("{}", serde_json::to_string_pretty(&manifest)?),
-                _ => println!("{}", serde_yaml::to_string(&manifest)?),
+        ResolveResult::Full(manifest) => match fmt.as_str() {
+            "json" => println!("{}", serde_json::to_string_pretty(&manifest)?),
+            _ => println!("{}", serde_yaml::to_string(&manifest)?),
+        },
+        ResolveResult::Subtree(value) => match fmt.as_str() {
+            "yaml" => {
+                let yaml: serde_yaml::Value = serde_json::from_value(value)?;
+                println!("{}", serde_yaml::to_string(&yaml)?);
             }
-        }
-        ResolveResult::Subtree(value) => {
-            match fmt.as_str() {
-                "yaml" => {
-                    let yaml: serde_yaml::Value = serde_json::from_value(value)?;
-                    println!("{}", serde_yaml::to_string(&yaml)?);
-                }
-                _ => println!("{}", serde_json::to_string_pretty(&value)?),
-            }
-        }
+            _ => println!("{}", serde_json::to_string_pretty(&value)?),
+        },
     }
     Ok(())
 }
@@ -559,7 +576,10 @@ fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
             } else {
                 &entry.id
             };
-            println!("{} {} — {} ({})", short_hash, entry.timestamp, entry.message, entry.author);
+            println!(
+                "{} {} — {} ({})",
+                short_hash, entry.timestamp, entry.message, entry.author
+            );
         }
     } else {
         // Piped: emit full JSON array
@@ -574,7 +594,9 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
     match universe {
         None => {
             let resolver = Resolver::new(base_dir);
-            let universes = resolver.list_universes().context("failed to list universes")?;
+            let universes = resolver
+                .list_universes()
+                .context("failed to list universes")?;
             if is_piped {
                 println!("{}", serde_json::to_string_pretty(&universes)?);
             } else if universes.is_empty() {
@@ -694,8 +716,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         let tmp_path = base_dir.join(&tmp_name);
 
         emit(format!("  Cloning from {url_or_name} …"));
-        GitBackend::clone_repo(url_or_name, &tmp_path)
-            .context("failed to clone repository")?;
+        GitBackend::clone_repo(url_or_name, &tmp_path).context("failed to clone repository")?;
 
         // Read the universe name from .nap/config.yaml
         let config_path = tmp_path.join(".nap").join("config.yaml");
@@ -717,8 +738,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         let target = base_dir.join(&name);
         if target.exists() {
             // Clean up the temp clone
-            std::fs::remove_dir_all(&tmp_path)
-                .context("failed to clean up temp clone")?;
+            std::fs::remove_dir_all(&tmp_path).context("failed to clean up temp clone")?;
             anyhow::bail!("universe '{name}' already exists at {}", target.display());
         }
 
@@ -726,7 +746,10 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         std::fs::rename(&tmp_path, &target)
             .context(format!("failed to rename {tmp_name} → {name}"))?;
 
-        emit(format!("✓ Cloned universe '{name}' to {}", target.display()));
+        emit(format!(
+            "✓ Cloned universe '{name}' to {}",
+            target.display()
+        ));
     } else {
         // ── Pull existing repo ───────────────────────────────────
         let repo = open_repo(base_dir, url_or_name)?;
@@ -751,7 +774,11 @@ fn cmd_push(base_dir: &Path, universe: &str, remote: &str, branch: Option<&str>)
 
 fn cmd_remote(base_dir: &Path, cmd: RemoteCmd) -> Result<()> {
     match cmd {
-        RemoteCmd::Add { universe, name, url } => {
+        RemoteCmd::Add {
+            universe,
+            name,
+            url,
+        } => {
             let repo = open_repo(base_dir, &universe)?;
             repo.add_remote(&name, &url)
                 .context(format!("failed to add remote '{name}'"))?;
@@ -802,9 +829,8 @@ fn cmd_set(
         .context("failed to read manifest")?;
 
     // Parse value — try as YAML for structured values, fallback to string
-    let yaml_value: serde_yaml::Value = serde_yaml::from_str(value).unwrap_or_else(|_| {
-        serde_yaml::Value::String(value.to_string())
-    });
+    let yaml_value: serde_yaml::Value = serde_yaml::from_str(value)
+        .unwrap_or_else(|_| serde_yaml::Value::String(value.to_string()));
 
     manifest.set_property(key, yaml_value);
     let changes = vec![Change::set(
@@ -856,7 +882,9 @@ fn cmd_add_repr(
     repo.commit_manifest(&mut manifest, message, author, changes)
         .context("failed to commit representation")?;
 
-    emit(format!("✓ Added representation '{key}' ({format}) to {uri_str}"));
+    emit(format!(
+        "✓ Added representation '{key}' ({format}) to {uri_str}"
+    ));
     emit(format!("  Hash: {hash}"));
     Ok(())
 }
@@ -866,9 +894,15 @@ fn cmd_revert(base_dir: &Path, universe: &str, commit: &str, author: &str) -> Re
     let new_hash = repo
         .revert_commit(commit, author)
         .context(format!("failed to revert commit '{commit}'"))?;
-    let short_old = if commit.len() > 12 { &commit[..12] } else { commit };
+    let short_old = if commit.len() > 12 {
+        &commit[..12]
+    } else {
+        commit
+    };
     let short_new = &new_hash[..12.min(new_hash.len())];
-    emit(format!("✓ Reverted commit {short_old} — new commit: {short_new}"));
+    emit(format!(
+        "✓ Reverted commit {short_old} — new commit: {short_new}"
+    ));
     Ok(())
 }
 

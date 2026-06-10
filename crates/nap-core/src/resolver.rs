@@ -129,13 +129,21 @@ impl Resolver {
     /// // With fragment query (via URI)
     /// resolver.resolve("nap://starwars/character/lukeskywalker#references.appears_in", &Default::default())
     /// ```
-    pub fn resolve(&self, uri_str: &str, options: &ResolveOptions) -> Result<ResolveResult, NapError> {
+    pub fn resolve(
+        &self,
+        uri_str: &str,
+        options: &ResolveOptions,
+    ) -> Result<ResolveResult, NapError> {
         let uri: NapUri = uri_str.parse()?;
         self.resolve_uri(&uri, options)
     }
 
     /// Resolve a parsed NAP URI with options.
-    pub fn resolve_uri(&self, uri: &NapUri, options: &ResolveOptions) -> Result<ResolveResult, NapError> {
+    pub fn resolve_uri(
+        &self,
+        uri: &NapUri,
+        options: &ResolveOptions,
+    ) -> Result<ResolveResult, NapError> {
         debug!(
             uri = %uri,
             options = ?options,
@@ -152,9 +160,7 @@ impl Resolver {
                 debug!(reference = %reference, "resolving at specific ref");
                 repo.read_manifest_at_ref(uri.entity_type, &uri.entity_id, reference)?
             }
-            None => {
-                repo.read_manifest(uri.entity_type, &uri.entity_id)?
-            }
+            None => repo.read_manifest(uri.entity_type, &uri.entity_id)?,
         };
 
         // Apply query if present
@@ -202,7 +208,8 @@ impl Resolver {
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_dir() && path.join(".nap").exists()
+            if path.is_dir()
+                && path.join(".nap").exists()
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
                 universes.push(name.to_string());
@@ -225,7 +232,12 @@ mod tests {
 
         // Create a character
         let (mut manifest, _) = repo
-            .create_entity(EntityType::Character, "lukeskywalker", "Luke Skywalker", "test")
+            .create_entity(
+                EntityType::Character,
+                "lukeskywalker",
+                "Luke Skywalker",
+                "test",
+            )
             .unwrap();
 
         // Add properties and commit
@@ -236,9 +248,9 @@ mod tests {
         );
         manifest.add_reference(
             "appears_in",
-            serde_yaml::Value::Sequence(vec![
-                serde_yaml::Value::String("nap://starwars/scene/cantina".to_string()),
-            ]),
+            serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
+                "nap://starwars/scene/cantina".to_string(),
+            )]),
         );
 
         use crate::commit::Change;
@@ -258,7 +270,10 @@ mod tests {
     fn test_resolve_full_manifest() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("nap://starwars/character/lukeskywalker", &Default::default())
+            .resolve(
+                "nap://starwars/character/lukeskywalker",
+                &Default::default(),
+            )
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
@@ -310,7 +325,10 @@ mod tests {
     fn test_query_convenience() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .query("nap://starwars/character/lukeskywalker", "properties.species")
+            .query(
+                "nap://starwars/character/lukeskywalker",
+                "properties.species",
+            )
             .unwrap();
         assert_eq!(result.as_str(), Some("human"));
     }
@@ -325,10 +343,7 @@ mod tests {
     #[test]
     fn test_resolve_not_found() {
         let (_tmp, resolver) = setup();
-        let result = resolver.resolve(
-            "nap://starwars/character/nonexistent",
-            &Default::default(),
-        );
+        let result = resolver.resolve("nap://starwars/character/nonexistent", &Default::default());
         assert!(result.is_err());
     }
 }

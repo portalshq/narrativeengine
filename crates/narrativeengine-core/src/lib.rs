@@ -10,4 +10,4 @@ pub use engine::{
 };
 pub use error::{NarrativeError, Result};
 pub use models::{HybridCandidate, LabConfig, NarrativeBlock, NarrativeLore};
-pub use schema::{schema_bundle, MODEL_NAMES};
+pub use schema::{MODEL_NAMES, schema_bundle};

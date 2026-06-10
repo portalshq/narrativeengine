@@ -52,7 +52,8 @@ impl ContentHash {
             )));
         }
         // Validate hex characters
-        hex::decode(hex_part).map_err(|e| NapError::Other(format!("invalid hex in content hash: {e}")))?;
+        hex::decode(hex_part)
+            .map_err(|e| NapError::Other(format!("invalid hex in content hash: {e}")))?;
         Ok(ContentHash(s.to_string()))
     }
 

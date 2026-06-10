@@ -14,6 +14,7 @@ let localFileExisted = false
 let loadError = null
 
 function isMusl() {
+  // For Node 10
   if (!process.report || typeof process.report.getReport !== 'function') {
     try {
       const lddPath = require('child_process').execSync('which ldd').toString().trim()

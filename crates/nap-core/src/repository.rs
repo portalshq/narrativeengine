@@ -72,7 +72,9 @@ impl Repository {
     pub fn init(path: &Path, universe: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
         let repo_root = path.join(universe);
         if repo_root.join(NAP_DIR).exists() {
-            return Err(NapError::RepositoryAlreadyExists(repo_root.display().to_string()));
+            return Err(NapError::RepositoryAlreadyExists(
+                repo_root.display().to_string(),
+            ));
         }
 
         info!(
@@ -97,14 +99,23 @@ impl Repository {
         std::fs::write(repo_root.join(NAP_DIR).join("config.yaml"), config)?;
 
         // Create universe.yaml (world manifest)
-        let world_manifest = Manifest::new(universe, EntityType::World, universe, &format!("{universe} Universe"));
+        let world_manifest = Manifest::new(
+            universe,
+            EntityType::World,
+            universe,
+            &format!("{universe} Universe"),
+        );
         world_manifest.to_file(&repo_root.join("universe.yaml"))?;
 
         // Initialize VCS
         vcs.init(&repo_root)?;
 
         // Initial commit
-        vcs.commit(&repo_root, &format!("Initialize {universe} universe"), "nap-init")?;
+        vcs.commit(
+            &repo_root,
+            &format!("Initialize {universe} universe"),
+            "nap-init",
+        )?;
 
         info!(
             path = %repo_root.display(),
@@ -126,7 +137,11 @@ impl Repository {
     }
 
     /// Read a manifest from the repository.
-    pub fn read_manifest(&self, entity_type: EntityType, entity_id: &str) -> Result<Manifest, NapError> {
+    pub fn read_manifest(
+        &self,
+        entity_type: EntityType,
+        entity_id: &str,
+    ) -> Result<Manifest, NapError> {
         let path = self.manifest_path(entity_type, entity_id);
         debug!(
             path = %path.display(),
@@ -153,7 +168,9 @@ impl Repository {
             "reading manifest at ref"
         );
 
-        let content = self.vcs.read_file_at_ref(&self.root, &file_path, Some(reference))?;
+        let content = self
+            .vcs
+            .read_file_at_ref(&self.root, &file_path, Some(reference))?;
         Manifest::from_yaml(&content)
     }
 
@@ -183,9 +200,8 @@ impl Repository {
         let mut manifest = Manifest::new(&self.universe, entity_type, entity_id, name);
 
         // Validate against schema before writing
-        crate::schema::validate_manifest(&manifest).map_err(|errors| {
-            NapError::ManifestValidationError(errors.join("; "))
-        })?;
+        crate::schema::validate_manifest(&manifest)
+            .map_err(|errors| NapError::ManifestValidationError(errors.join("; ")))?;
 
         // Write the manifest
         self.write_manifest(&manifest)?;
@@ -217,9 +233,8 @@ impl Repository {
         changes: Vec<Change>,
     ) -> Result<Commit, NapError> {
         // Validate against schema before writing
-        crate::schema::validate_manifest(manifest).map_err(|errors| {
-            NapError::ManifestValidationError(errors.join("; "))
-        })?;
+        crate::schema::validate_manifest(manifest)
+            .map_err(|errors| NapError::ManifestValidationError(errors.join("; ")))?;
 
         // Bump version
         manifest.bump_version();
@@ -451,8 +466,10 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = make_repo(&tmp);
 
-        repo.create_entity(EntityType::Character, "alice", "Alice", "author").unwrap();
-        repo.create_entity(EntityType::Character, "bob", "Bob", "author").unwrap();
+        repo.create_entity(EntityType::Character, "alice", "Alice", "author")
+            .unwrap();
+        repo.create_entity(EntityType::Character, "bob", "Bob", "author")
+            .unwrap();
 
         let chars = repo.list_entities(EntityType::Character).unwrap();
         assert_eq!(chars, vec!["alice", "bob"]);
@@ -491,8 +508,12 @@ mod tests {
             .create_entity(EntityType::Character, "hero", "The Hero", "author")
             .unwrap();
 
-        manifest.set_property("name", serde_yaml::Value::String("Updated Hero".to_string()));
-        repo.commit_manifest(&mut manifest, "update name", "author", vec![]).unwrap();
+        manifest.set_property(
+            "name",
+            serde_yaml::Value::String("Updated Hero".to_string()),
+        );
+        repo.commit_manifest(&mut manifest, "update name", "author", vec![])
+            .unwrap();
 
         let hist = repo.history(EntityType::Character, "hero", 10).unwrap();
         assert!(hist.len() >= 2);
@@ -526,7 +547,10 @@ mod tests {
         // Get the VCS commit hash from the manifest's head pointer.
         // After commit_manifest, this is the single VCS commit containing
         // the property change (the head pointer update is left dirty).
-        let vcs_hash = read_back.head.as_ref().expect("head should be set after commit");
+        let vcs_hash = read_back
+            .head
+            .as_ref()
+            .expect("head should be set after commit");
 
         // Revert that VCS commit
         let revert_hash = repo.revert_commit(vcs_hash, "author").unwrap();
@@ -546,7 +570,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = make_repo(&tmp);
 
-        repo.add_remote("origin", "git@github.com:user/repo.git").unwrap();
+        repo.add_remote("origin", "git@github.com:user/repo.git")
+            .unwrap();
         let remotes = repo.list_remotes().unwrap();
         assert_eq!(remotes.len(), 1);
         assert_eq!(remotes[0].0, "origin");

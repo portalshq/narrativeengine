@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::{Parser, ValueEnum};
 use serde_json::Value;
 use std::fs;
@@ -216,7 +216,9 @@ fn render_typescript(models: &[Model]) -> String {
 }
 
 fn render_go(models: &[Model]) -> String {
-    let mut out = String::from("// This file is generated from Rust schemas by narrativeengine-codegen.\npackage narrativeengine\n\n");
+    let mut out = String::from(
+        "// This file is generated from Rust schemas by narrativeengine-codegen.\npackage narrativeengine\n\n",
+    );
     for model in models {
         out.push_str(&format!("type {} struct {{\n", model.name));
         for field in &model.fields {
@@ -233,7 +235,9 @@ fn render_go(models: &[Model]) -> String {
 }
 
 fn render_java(models: &[Model]) -> String {
-    let mut out = String::from("// This file is generated from Rust schemas by narrativeengine-codegen.\npackage com.narrativeengine;\n\nimport java.util.List;\n\n");
+    let mut out = String::from(
+        "// This file is generated from Rust schemas by narrativeengine-codegen.\npackage com.narrativeengine;\n\nimport java.util.List;\n\n",
+    );
     out.push_str("public final class NarrativeModels {\n    private NarrativeModels() {}\n\n");
     for model in models {
         out.push_str(&format!("    public record {}(\n", model.name));
@@ -256,7 +260,9 @@ fn render_java(models: &[Model]) -> String {
 }
 
 fn render_csharp(models: &[Model]) -> String {
-    let mut out = String::from("// This file is generated from Rust schemas by narrativeengine-codegen.\nusing System.Collections.Generic;\n\nnamespace NarrativeEngine;\n\n");
+    let mut out = String::from(
+        "// This file is generated from Rust schemas by narrativeengine-codegen.\nusing System.Collections.Generic;\n\nnamespace NarrativeEngine;\n\n",
+    );
     for model in models {
         out.push_str(&format!("public sealed record {}(\n", model.name));
         for (index, field) in model.fields.iter().enumerate() {
@@ -277,7 +283,9 @@ fn render_csharp(models: &[Model]) -> String {
 }
 
 fn render_swift(models: &[Model]) -> String {
-    let mut out = String::from("// This file is generated from Rust schemas by narrativeengine-codegen.\nimport Foundation\n\n");
+    let mut out = String::from(
+        "// This file is generated from Rust schemas by narrativeengine-codegen.\nimport Foundation\n\n",
+    );
     for model in models {
         out.push_str(&format!(
             "public struct {}: Codable, Equatable {{\n",
@@ -296,7 +304,9 @@ fn render_swift(models: &[Model]) -> String {
 }
 
 fn render_kotlin(models: &[Model]) -> String {
-    let mut out = String::from("// This file is generated from Rust schemas by narrativeengine-codegen.\npackage com.narrativeengine\n\n");
+    let mut out = String::from(
+        "// This file is generated from Rust schemas by narrativeengine-codegen.\npackage com.narrativeengine\n\n",
+    );
     for model in models {
         out.push_str(&format!("data class {}(\n", model.name));
         for (index, field) in model.fields.iter().enumerate() {

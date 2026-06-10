@@ -1,6 +1,6 @@
 use crate::models::{HybridCandidate, LabConfig, NarrativeBlock, NarrativeLore};
 use schemars::schema_for;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub const MODEL_NAMES: [&str; 4] = [
     "NarrativeBlock",

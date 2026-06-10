@@ -347,7 +347,12 @@ mod tests {
     #[test]
     fn test_validate_valid_manifest() {
         use crate::manifest::Manifest;
-        let m = Manifest::new("starwars", crate::types::EntityType::Character, "luke", "Luke Skywalker");
+        let m = Manifest::new(
+            "starwars",
+            crate::types::EntityType::Character,
+            "luke",
+            "Luke Skywalker",
+        );
         assert!(validate_manifest(&m).is_ok());
     }
 
@@ -368,9 +373,15 @@ mod tests {
             .iter_errors(&json)
             .map(|e| format!("{}: {}", e.instance_path, e))
             .collect();
-        assert!(!errors.is_empty(), "expected validation errors for invalid entity_type");
+        assert!(
+            !errors.is_empty(),
+            "expected validation errors for invalid entity_type"
+        );
         let joined = errors.join(" ");
-        assert!(joined.contains("entity_type"), "expected entity_type error in output, got: {joined}");
+        assert!(
+            joined.contains("entity_type"),
+            "expected entity_type error in output, got: {joined}"
+        );
     }
 
     #[test]
@@ -422,9 +433,6 @@ mod tests {
         let c = commit_schema();
         let json = serde_json::to_string(&c).unwrap();
         let parsed: Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(
-            parsed.get("title").unwrap().as_str().unwrap(),
-            "NAP Commit"
-        );
+        assert_eq!(parsed.get("title").unwrap().as_str().unwrap(), "NAP Commit");
     }
 }

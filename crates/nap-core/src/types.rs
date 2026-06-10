@@ -96,7 +96,10 @@ mod tests {
 
     #[test]
     fn test_entity_type_aliases() {
-        assert_eq!("characters".parse::<EntityType>().unwrap(), EntityType::Character);
+        assert_eq!(
+            "characters".parse::<EntityType>().unwrap(),
+            EntityType::Character
+        );
         assert_eq!("universe".parse::<EntityType>().unwrap(), EntityType::World);
     }
 

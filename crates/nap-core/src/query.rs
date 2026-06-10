@@ -88,12 +88,11 @@ impl ManifestQuery {
                 }
                 Value::Sequence(seq) => {
                     // Allow integer index access into sequences
-                    let index: usize = segment.parse().map_err(|_| {
-                        NapError::QueryPathNotFound {
+                    let index: usize =
+                        segment.parse().map_err(|_| NapError::QueryPathNotFound {
                             path: path.to_string(),
                             manifest_id: manifest_id.to_string(),
-                        }
-                    })?;
+                        })?;
                     seq.get(index).ok_or_else(|| NapError::QueryPathNotFound {
                         path: path.to_string(),
                         manifest_id: manifest_id.to_string(),
@@ -169,7 +168,8 @@ references:
     #[test]
     fn test_query_nested_representation() {
         let root = test_manifest();
-        let result = ManifestQuery::query(&root, "representations.reference_image.hash", "test").unwrap();
+        let result =
+            ManifestQuery::query(&root, "representations.reference_image.hash", "test").unwrap();
         assert_eq!(result, Value::String("sha256:abc123".to_string()));
     }
 
@@ -187,7 +187,10 @@ references:
     fn test_query_array_index() {
         let root = test_manifest();
         let result = ManifestQuery::query(&root, "references.appears_in.0", "test").unwrap();
-        assert_eq!(result, Value::String("nap://starwars/scene/cantina".to_string()));
+        assert_eq!(
+            result,
+            Value::String("nap://starwars/scene/cantina".to_string())
+        );
     }
 
     #[test]

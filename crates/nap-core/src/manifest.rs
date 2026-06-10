@@ -157,12 +157,7 @@ pub struct Provenance {
 
 impl Manifest {
     /// Create a new manifest with minimal required fields.
-    pub fn new(
-        universe: &str,
-        entity_type: EntityType,
-        entity_id: &str,
-        name: &str,
-    ) -> Self {
+    pub fn new(universe: &str, entity_type: EntityType, entity_id: &str, name: &str) -> Self {
         let id = match entity_type {
             EntityType::World => format!("nap://{universe}/world/{universe}"),
             _ => format!("nap://{universe}/{entity_type}/{entity_id}"),
@@ -260,7 +255,12 @@ mod tests {
 
     #[test]
     fn test_manifest_new() {
-        let manifest = Manifest::new("starwars", EntityType::Character, "lukeskywalker", "Luke Skywalker");
+        let manifest = Manifest::new(
+            "starwars",
+            EntityType::Character,
+            "lukeskywalker",
+            "Luke Skywalker",
+        );
         assert_eq!(manifest.id, "nap://starwars/character/lukeskywalker");
         assert_eq!(manifest.name, "Luke Skywalker");
         assert_eq!(manifest.entity_type, EntityType::Character);
@@ -269,14 +269,22 @@ mod tests {
 
     #[test]
     fn test_manifest_yaml_roundtrip() {
-        let mut manifest = Manifest::new("starwars", EntityType::Character, "lukeskywalker", "Luke Skywalker");
+        let mut manifest = Manifest::new(
+            "starwars",
+            EntityType::Character,
+            "lukeskywalker",
+            "Luke Skywalker",
+        );
         manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
-        manifest.set_representation("reference_image", Representation {
-            hash: "sha256:abc123".to_string(),
-            format: "png".to_string(),
-            uri: Some("gs://assets/luke/ref.png".to_string()),
-            tier: Some("production".to_string()),
-        });
+        manifest.set_representation(
+            "reference_image",
+            Representation {
+                hash: "sha256:abc123".to_string(),
+                format: "png".to_string(),
+                uri: Some("gs://assets/luke/ref.png".to_string()),
+                tier: Some("production".to_string()),
+            },
+        );
 
         let yaml = manifest.to_yaml().unwrap();
         let parsed = Manifest::from_yaml(&yaml).unwrap();
@@ -289,13 +297,23 @@ mod tests {
 
     #[test]
     fn test_manifest_world_uri() {
-        let manifest = Manifest::new("starwars", EntityType::World, "starwars", "Star Wars Universe");
+        let manifest = Manifest::new(
+            "starwars",
+            EntityType::World,
+            "starwars",
+            "Star Wars Universe",
+        );
         assert_eq!(manifest.id, "nap://starwars/world/starwars");
     }
 
     #[test]
     fn test_manifest_content_hash_deterministic() {
-        let manifest = Manifest::new("starwars", EntityType::Character, "lukeskywalker", "Luke Skywalker");
+        let manifest = Manifest::new(
+            "starwars",
+            EntityType::Character,
+            "lukeskywalker",
+            "Luke Skywalker",
+        );
         let hash_a = manifest.content_hash().unwrap();
         let hash_b = manifest.content_hash().unwrap();
         assert_eq!(hash_a, hash_b);

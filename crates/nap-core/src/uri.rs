@@ -59,7 +59,11 @@ pub struct NapUri {
 
 impl NapUri {
     /// Construct a new NAP URI without a fragment.
-    pub fn new(universe: impl Into<String>, entity_type: EntityType, entity_id: impl Into<String>) -> Self {
+    pub fn new(
+        universe: impl Into<String>,
+        entity_type: EntityType,
+        entity_id: impl Into<String>,
+    ) -> Self {
         Self {
             universe: universe.into(),
             entity_type,
@@ -86,7 +90,10 @@ impl NapUri {
     /// Returns the canonical URI string WITHOUT the fragment.
     /// This is the resource identity — fragments are query concerns.
     pub fn identity(&self) -> String {
-        format!("nap://{}/{}/{}", self.universe, self.entity_type, self.entity_id)
+        format!(
+            "nap://{}/{}/{}",
+            self.universe, self.entity_type, self.entity_id
+        )
     }
 
     /// Returns the relative filesystem path for this entity's manifest within
@@ -96,14 +103,22 @@ impl NapUri {
     pub fn manifest_path(&self) -> String {
         match self.entity_type {
             EntityType::World => "universe.yaml".to_string(),
-            _ => format!("{}/{}.yaml", self.entity_type.directory_name(), self.entity_id),
+            _ => format!(
+                "{}/{}.yaml",
+                self.entity_type.directory_name(),
+                self.entity_id
+            ),
         }
     }
 }
 
 impl fmt::Display for NapUri {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "nap://{}/{}/{}", self.universe, self.entity_type, self.entity_id)?;
+        write!(
+            f,
+            "nap://{}/{}/{}",
+            self.universe, self.entity_type, self.entity_id
+        )?;
         if let Some(ref fragment) = self.fragment {
             write!(f, "#{fragment}")?;
         }
@@ -118,10 +133,13 @@ impl FromStr for NapUri {
         let input = s.trim();
 
         // ── Strip scheme ────────────────────────────────────────────────
-        let without_scheme = input.strip_prefix(NAP_SCHEME).ok_or_else(|| NapError::InvalidUri {
-            uri: input.to_string(),
-            reason: format!("URI must start with '{NAP_SCHEME}'"),
-        })?;
+        let without_scheme =
+            input
+                .strip_prefix(NAP_SCHEME)
+                .ok_or_else(|| NapError::InvalidUri {
+                    uri: input.to_string(),
+                    reason: format!("URI must start with '{NAP_SCHEME}'"),
+                })?;
 
         // ── Split fragment ──────────────────────────────────────────────
         let (path_part, fragment) = match without_scheme.split_once('#') {
@@ -215,7 +233,12 @@ mod tests {
 
     #[test]
     fn test_roundtrip_display_parse() {
-        let original = NapUri::with_fragment("starwars", EntityType::Character, "lukeskywalker", "references.appears_in");
+        let original = NapUri::with_fragment(
+            "starwars",
+            EntityType::Character,
+            "lukeskywalker",
+            "references.appears_in",
+        );
         let displayed = original.to_string();
         let parsed: NapUri = displayed.parse().unwrap();
         assert_eq!(original, parsed);
@@ -223,7 +246,12 @@ mod tests {
 
     #[test]
     fn test_identity_strips_fragment() {
-        let uri = NapUri::with_fragment("starwars", EntityType::Character, "lukeskywalker", "appearances");
+        let uri = NapUri::with_fragment(
+            "starwars",
+            EntityType::Character,
+            "lukeskywalker",
+            "appearances",
+        );
         assert_eq!(uri.identity(), "nap://starwars/character/lukeskywalker");
     }
 

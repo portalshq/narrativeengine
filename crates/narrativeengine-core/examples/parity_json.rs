@@ -1,6 +1,6 @@
 use narrativeengine_core::{
-    create_block_json, generate_candidate_json, render_lore_summary_json, LabConfig,
-    NarrativeBlock, NarrativeLore,
+    LabConfig, NarrativeBlock, NarrativeLore, create_block_json, generate_candidate_json,
+    render_lore_summary_json,
 };
 use serde_json::json;
 

@@ -21,11 +21,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::{
+    Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
     routing::{get, post},
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
@@ -91,19 +91,26 @@ async fn main() {
 
     info!(base_path = %base_path.display(), "starting NAP resolver server");
 
-    let state = Arc::new(AppState {
-        base_path,
-    });
+    let state = Arc::new(AppState { base_path });
 
     let app = Router::new()
         // Resolution
-        .route("/resolve/{universe}/{entity_type}/{entity_id}", get(handle_resolve))
+        .route(
+            "/resolve/{universe}/{entity_type}/{entity_id}",
+            get(handle_resolve),
+        )
         // Commit
-        .route("/commit/{universe}/{entity_type}/{entity_id}", post(handle_commit))
+        .route(
+            "/commit/{universe}/{entity_type}/{entity_id}",
+            post(handle_commit),
+        )
         // Revert
         .route("/revert/{universe}", post(handle_revert))
         // History
-        .route("/history/{universe}/{entity_type}/{entity_id}", get(handle_history))
+        .route(
+            "/history/{universe}/{entity_type}/{entity_id}",
+            get(handle_history),
+        )
         // JSON Schema
         .route("/schema/{name}", get(handle_schema))
         // List universes
@@ -163,10 +170,16 @@ async fn handle_resolve(
         Err(e) => {
             let (status, code) = match &e {
                 nap_core::NapError::ManifestNotFound(_) => (StatusCode::NOT_FOUND, "NOT_FOUND"),
-                nap_core::NapError::RepositoryNotFound(_) => (StatusCode::NOT_FOUND, "UNIVERSE_NOT_FOUND"),
-                nap_core::NapError::UnknownEntityType(_) => (StatusCode::BAD_REQUEST, "INVALID_ENTITY_TYPE"),
+                nap_core::NapError::RepositoryNotFound(_) => {
+                    (StatusCode::NOT_FOUND, "UNIVERSE_NOT_FOUND")
+                }
+                nap_core::NapError::UnknownEntityType(_) => {
+                    (StatusCode::BAD_REQUEST, "INVALID_ENTITY_TYPE")
+                }
                 nap_core::NapError::InvalidUri { .. } => (StatusCode::BAD_REQUEST, "INVALID_URI"),
-                nap_core::NapError::QueryPathNotFound { .. } => (StatusCode::NOT_FOUND, "QUERY_PATH_NOT_FOUND"),
+                nap_core::NapError::QueryPathNotFound { .. } => {
+                    (StatusCode::NOT_FOUND, "QUERY_PATH_NOT_FOUND")
+                }
                 _ => (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR"),
             };
             error!(error = %e, uri = %uri_str, "resolve failed");
@@ -272,16 +285,18 @@ async fn handle_revert(
         )
     })?;
 
-    let new_hash = repo.revert_commit(&body.commit, &body.author).map_err(|e| {
-        error!(error = %e, commit = %body.commit, "revert failed");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "REVERT_FAILED".to_string(),
-            }),
-        )
-    })?;
+    let new_hash = repo
+        .revert_commit(&body.commit, &body.author)
+        .map_err(|e| {
+            error!(error = %e, commit = %body.commit, "revert failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "REVERT_FAILED".to_string(),
+                }),
+            )
+        })?;
 
     let response = serde_json::json!({
         "reverted_commit": body.commit,
