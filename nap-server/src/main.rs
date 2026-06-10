@@ -7,6 +7,7 @@
 //!   GET  /schema/{name}                               — Get JSON Schema for a type
 //!   GET  /universes                                   — List all universes
 //!   GET  /universes/:universe/entities                 — List entities in a universe
+//!   POST /sync/:universe                              — Push configured remote
 //!   GET  /health                                      — Health check
 //!
 //! Query parameters:
@@ -109,6 +110,8 @@ async fn main() {
         .route("/universes", get(handle_list_universes))
         // List entities
         .route("/universes/{universe}/entities", get(handle_list_entities))
+        // Sync (push to configured remote)
+        .route("/sync/{universe}", post(handle_sync))
         // Health
         .route("/health", get(handle_health))
         .layer(CorsLayer::permissive())
@@ -286,6 +289,46 @@ async fn handle_revert(
         "author": body.author,
     });
     Ok(Json(response))
+}
+
+/// POST /sync/:universe
+async fn handle_sync(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    // Use the current branch and let git figure out the remote from tracking config.
+    // Default to pushing "origin" if no tracking branch is set.
+    let branch = repo.vcs().current_branch(&repo.root).ok();
+    let branch_str = branch.as_deref().unwrap_or("main");
+
+    repo.push(Some("origin"), Some(branch_str)).map_err(|e| {
+        error!(error = %e, universe = %universe, "sync (push) failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "SYNC_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "universe": universe,
+        "remote": "origin",
+        "branch": branch_str,
+    })))
 }
 
 /// GET /history/:universe/:entity_type/:entity_id

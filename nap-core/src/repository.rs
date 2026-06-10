@@ -23,7 +23,6 @@ use std::path::{Path, PathBuf};
 use tracing::{debug, info};
 
 use crate::commit::{Change, Commit};
-use crate::content::ContentHash;
 use crate::error::NapError;
 use crate::manifest::Manifest;
 use crate::types::EntityType;
@@ -374,6 +373,33 @@ impl Repository {
         self.vcs.head_hash(&self.root)
     }
 
+    // ── Remote operations ─────────────────────────────────────────
+
+    /// Add a remote to the repository.
+    pub fn add_remote(&self, name: &str, url: &str) -> Result<(), NapError> {
+        self.vcs.add_remote(&self.root, name, url)
+    }
+
+    /// Remove a remote from the repository.
+    pub fn remove_remote(&self, name: &str) -> Result<(), NapError> {
+        self.vcs.remove_remote(&self.root, name)
+    }
+
+    /// List remotes as `(name, url)` pairs.
+    pub fn list_remotes(&self) -> Result<Vec<(String, String)>, NapError> {
+        self.vcs.list_remotes(&self.root)
+    }
+
+    /// Push the current branch to a remote.
+    pub fn push(&self, remote: Option<&str>, branch: Option<&str>) -> Result<(), NapError> {
+        self.vcs.push(&self.root, remote, branch)
+    }
+
+    /// Pull the current branch from a remote.
+    pub fn pull(&self, remote: Option<&str>, branch: Option<&str>) -> Result<(), NapError> {
+        self.vcs.pull(&self.root, remote, branch)
+    }
+
     /// Access the VCS backend (for the resolver to read files at specific refs).
     pub fn vcs(&self) -> &dyn VcsBackend {
         self.vcs.as_ref()
@@ -513,5 +539,20 @@ mod tests {
             None,
             "species should be removed after revert"
         );
+    }
+
+    #[test]
+    fn test_remote_operations() {
+        let tmp = TempDir::new().unwrap();
+        let repo = make_repo(&tmp);
+
+        repo.add_remote("origin", "git@github.com:user/repo.git").unwrap();
+        let remotes = repo.list_remotes().unwrap();
+        assert_eq!(remotes.len(), 1);
+        assert_eq!(remotes[0].0, "origin");
+
+        repo.remove_remote("origin").unwrap();
+        let remotes = repo.list_remotes().unwrap();
+        assert!(remotes.is_empty());
     }
 }

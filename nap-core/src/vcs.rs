@@ -78,4 +78,37 @@ pub trait VcsBackend: Send + Sync {
 
     /// List all tags.
     fn list_tags(&self, path: &Path) -> Result<Vec<String>, NapError>;
+
+    // ── Remote operations ────────────────────────────────────────────
+
+    /// Add a remote.
+    fn add_remote(&self, path: &Path, name: &str, url: &str) -> Result<(), NapError>;
+
+    /// Remove a remote.
+    fn remove_remote(&self, path: &Path, name: &str) -> Result<(), NapError>;
+
+    /// List remotes as `(name, url)` pairs.
+    fn list_remotes(&self, path: &Path) -> Result<Vec<(String, String)>, NapError>;
+
+    /// Push the current branch to its upstream / a named remote.
+    ///
+    /// Delegates to `git push <remote> <branch>` or, if both are omitted,
+    /// to `git push` (which uses the tracking-branch configuration).
+    fn push(
+        &self,
+        path: &Path,
+        remote: Option<&str>,
+        branch: Option<&str>,
+    ) -> Result<(), NapError>;
+
+    /// Pull the current branch from its upstream / a named remote.
+    ///
+    /// Delegates to `git pull <remote> <branch>` or, if both are omitted,
+    /// to `git pull` (which uses the tracking-branch configuration).
+    fn pull(
+        &self,
+        path: &Path,
+        remote: Option<&str>,
+        branch: Option<&str>,
+    ) -> Result<(), NapError>;
 }

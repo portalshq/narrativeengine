@@ -10,6 +10,9 @@
 //!   list     — List entities or universes
 //!   branch   — Create or list branches
 //!   tag      — Create or list tags
+//!   pull     — Clone or pull a universe from a remote
+//!   push     — Push a universe to a remote
+//!   remote   — Manage git remotes on a universe
 //!   sign     — Sign a manifest (stub for v0)
 //!   verify   — Verify a manifest signature (stub for v0)
 
@@ -46,12 +49,50 @@ struct Cli {
     command: Commands,
 }
 
+/// Return `true` if `s` looks like a URL rather than a universe name.
+///
+/// Universe names are simple identifiers (`[a-zA-Z0-9_-]+`).
+/// Everything else (contains `@`, `://`, `/`, `.git`, etc.) is a URL.
+fn looks_like_url(s: &str) -> bool {
+    !s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+/// Subcommands for `nap remote`.
+#[derive(Subcommand, Debug)]
+enum RemoteCmd {
+    /// Add a remote to a universe repository.
+    Add {
+        /// Universe name.
+        universe: String,
+        /// Remote name (e.g., "origin").
+        name: String,
+        /// Remote URL.
+        url: String,
+    },
+    /// List remotes on a universe repository.
+    Ls {
+        /// Universe name.
+        universe: String,
+    },
+    /// Remove a remote from a universe repository.
+    Rm {
+        /// Universe name.
+        universe: String,
+        /// Remote name to remove.
+        name: String,
+    },
+}
+
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Initialize a new universe repository.
     Init {
         /// Universe name (e.g., "starwars", "toystory").
         universe: String,
+
+        /// Remote URL to add as origin after init.
+        #[arg(long)]
+        remote: Option<String>,
     },
 
     /// Create a new entity manifest.
@@ -223,6 +264,34 @@ enum Commands {
         author: String,
     },
 
+    /// Clone or pull a universe from a remote.
+    ///
+    /// If the argument is a URL, the repo is cloned (name is read from the
+    /// repo's own config).  If it's a universe name, the repo must already
+    /// exist locally and will be updated via `git pull`.
+    Pull {
+        /// URL (clone) or universe name (pull existing).
+        url_or_name: String,
+    },
+
+    /// Push the current branch to its configured upstream remote.
+    Push {
+        /// Universe name.
+        universe: String,
+
+        /// Remote name (default: tracking branch's remote, or "origin").
+        #[arg(long, default_value = "origin")]
+        remote: String,
+
+        /// Branch to push (default: current branch).
+        #[arg(long)]
+        branch: Option<String>,
+    },
+
+    /// Manage git remotes on a universe.
+    #[command(subcommand)]
+    Remote(RemoteCmd),
+
     /// Sign a manifest (stub for v0).
     Sign {
         /// NAP URI.
@@ -291,7 +360,7 @@ fn main() -> Result<()> {
         .init();
 
     let result = match cli.command {
-        Commands::Init { universe } => cmd_init(&cli.base_dir, &universe),
+        Commands::Init { universe, remote } => cmd_init(&cli.base_dir, &universe, remote.as_deref()),
         Commands::Create {
             entity_type,
             entity_id,
@@ -339,6 +408,13 @@ fn main() -> Result<()> {
             commit,
             author,
         } => cmd_revert(&cli.base_dir, &universe, &commit, &author),
+        Commands::Pull { url_or_name } => cmd_pull(&cli.base_dir, &url_or_name),
+        Commands::Push {
+            universe,
+            remote,
+            branch,
+        } => cmd_push(&cli.base_dir, &universe, &remote, branch.as_deref()),
+        Commands::Remote(cmd) => cmd_remote(&cli.base_dir, cmd),
         Commands::Sign { uri } => cmd_sign(&uri),
         Commands::Verify { uri } => cmd_verify(&uri),
     };
@@ -363,10 +439,17 @@ fn open_repo(base_dir: &PathBuf, universe: &str) -> Result<Repository> {
         .context(format!("failed to open universe '{universe}'"))
 }
 
-fn cmd_init(base_dir: &PathBuf, universe: &str) -> Result<()> {
-    Repository::init(base_dir, universe, Box::new(GitBackend::new()))
+fn cmd_init(base_dir: &PathBuf, universe: &str, remote: Option<&str>) -> Result<()> {
+    let repo = Repository::init(base_dir, universe, Box::new(GitBackend::new()))
         .context(format!("failed to initialize universe '{universe}'"))?;
     emit(format!("✓ Initialized universe '{universe}' at {}/{universe}", base_dir.display()));
+
+    if let Some(url) = remote {
+        repo.add_remote("origin", url)
+            .context(format!("failed to add remote origin '{url}'"))?;
+        emit(format!("  Added remote 'origin' → {url}"));
+    }
+
     Ok(())
 }
 
@@ -592,6 +675,113 @@ fn cmd_tag(base_dir: &PathBuf, universe: &str, name: Option<&str>) -> Result<()>
                     println!("  {t}");
                 }
             }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_pull(base_dir: &PathBuf, url_or_name: &str) -> Result<()> {
+    if looks_like_url(url_or_name) {
+        // ── Clone from URL ──────────────────────────────────────
+        // Clone to a temp directory, read the universe name from the
+        // repo's own config, then rename to the final directory.
+
+        let tmp_suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp_name = format!(".__nap_clone_{tmp_suffix}");
+        let tmp_path = base_dir.join(&tmp_name);
+
+        emit(format!("  Cloning from {url_or_name} …"));
+        GitBackend::clone_repo(url_or_name, &tmp_path)
+            .context("failed to clone repository")?;
+
+        // Read the universe name from .nap/config.yaml
+        let config_path = tmp_path.join(".nap").join("config.yaml");
+        let name = if config_path.exists() {
+            let config_content = std::fs::read_to_string(&config_path)
+                .context("cloned repo is missing or corrupt .nap/config.yaml")?;
+            // Parse universe name from YAML front matter
+            let config_yaml: serde_yaml::Value = serde_yaml::from_str(&config_content)
+                .context("invalid .nap/config.yaml in cloned repo")?;
+            config_yaml["universe"]
+                .as_str()
+                .map(|s| s.to_string())
+                .ok_or_else(|| anyhow::anyhow!("missing 'universe' key in .nap/config.yaml"))?
+        } else {
+            anyhow::bail!("not a NAP universe repository: missing .nap/config.yaml");
+        };
+
+        // Check if the target directory already exists
+        let target = base_dir.join(&name);
+        if target.exists() {
+            // Clean up the temp clone
+            std::fs::remove_dir_all(&tmp_path)
+                .context("failed to clean up temp clone")?;
+            anyhow::bail!("universe '{name}' already exists at {}", target.display());
+        }
+
+        // Rename temp → final
+        std::fs::rename(&tmp_path, &target)
+            .context(format!("failed to rename {tmp_name} → {name}"))?;
+
+        emit(format!("✓ Cloned universe '{name}' to {}", target.display()));
+    } else {
+        // ── Pull existing repo ───────────────────────────────────
+        let repo = open_repo(base_dir, url_or_name)?;
+        repo.pull(None, None)
+            .context("failed to pull latest changes")?;
+        emit(format!("✓ Pulled latest changes for '{url_or_name}'"));
+    }
+
+    Ok(())
+}
+
+fn cmd_push(base_dir: &PathBuf, universe: &str, remote: &str, branch: Option<&str>) -> Result<()> {
+    let repo = open_repo(base_dir, universe)?;
+    repo.push(Some(remote), branch)
+        .context("failed to push to remote")?;
+    match branch {
+        Some(b) => emit(format!("✓ Pushed '{universe}' ({b}) → {remote}")),
+        None => emit(format!("✓ Pushed '{universe}' → {remote}")),
+    }
+    Ok(())
+}
+
+fn cmd_remote(base_dir: &PathBuf, cmd: RemoteCmd) -> Result<()> {
+    match cmd {
+        RemoteCmd::Add { universe, name, url } => {
+            let repo = open_repo(base_dir, &universe)?;
+            repo.add_remote(&name, &url)
+                .context(format!("failed to add remote '{name}'"))?;
+            emit(format!("✓ Added remote '{name}' → {url} to '{universe}'"));
+        }
+        RemoteCmd::Ls { universe } => {
+            let repo = open_repo(base_dir, &universe)?;
+            let remotes = repo.list_remotes().context("failed to list remotes")?;
+            if remotes.is_empty() {
+                emit(format!("No remotes configured for '{universe}'"));
+            } else {
+                if std::io::stdout().is_terminal() {
+                    println!("Remotes in '{universe}':");
+                    for (name, url) in &remotes {
+                        println!("  {name}\t{url}");
+                    }
+                } else {
+                    let pairs: Vec<serde_json::Value> = remotes
+                        .iter()
+                        .map(|(n, u)| serde_json::json!({ "name": n, "url": u }))
+                        .collect();
+                    println!("{}", serde_json::to_string_pretty(&pairs)?);
+                }
+            }
+        }
+        RemoteCmd::Rm { universe, name } => {
+            let repo = open_repo(base_dir, &universe)?;
+            repo.remove_remote(&name)
+                .context(format!("failed to remove remote '{name}'"))?;
+            emit(format!("✓ Removed remote '{name}' from '{universe}'"));
         }
     }
     Ok(())

@@ -21,7 +21,6 @@ use crate::error::NapError;
 use crate::manifest::Manifest;
 use crate::query::ManifestQuery;
 use crate::repository::Repository;
-use crate::types::EntityType;
 use crate::uri::NapUri;
 use crate::vcs::VcsBackend;
 use crate::vcs_git::GitBackend;
@@ -219,6 +218,7 @@ impl Resolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::EntityType;
     use tempfile::TempDir;
 
     fn setup() -> (TempDir, Resolver) {

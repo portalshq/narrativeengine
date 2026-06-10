@@ -24,6 +24,19 @@ impl GitBackend {
         Self
     }
 
+    /// Clone a remote repository to a local directory.
+    ///
+    /// This is a standalone operation (not on `VcsBackend`) because it
+    /// creates a new repository rather than operating on an existing one.
+    /// The `dest` directory must not already exist.
+    pub fn clone_repo(url: &str, dest: &Path) -> Result<(), NapError> {
+        debug!(url = %url, dest = %dest.display(), "cloning git repository");
+        let parent = dest.parent().unwrap_or(Path::new("."));
+        let dest_name = dest.file_name().and_then(|n| n.to_str()).unwrap_or(".");
+        Self::run_git(parent, &["clone", url, dest_name])?;
+        Ok(())
+    }
+
     /// Run a git command and return stdout. Logs the command and output at trace level.
     fn run_git(path: &Path, args: &[&str]) -> Result<String, NapError> {
         let args_display = args.join(" ");
@@ -211,6 +224,108 @@ impl VcsBackend for GitBackend {
         Ok(output.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
     }
 
+    // ── Remote operations ────────────────────────────────────────
+
+    fn add_remote(&self, path: &Path, name: &str, url: &str) -> Result<(), NapError> {
+        debug!(
+            path = %path.display(),
+            remote = %name,
+            url = %url,
+            "adding git remote"
+        );
+        Self::run_git(path, &["remote", "add", name, url])?;
+        Ok(())
+    }
+
+    fn remove_remote(&self, path: &Path, name: &str) -> Result<(), NapError> {
+        debug!(
+            path = %path.display(),
+            remote = %name,
+            "removing git remote"
+        );
+        Self::run_git(path, &["remote", "remove", name])?;
+        Ok(())
+    }
+
+    fn list_remotes(&self, path: &Path) -> Result<Vec<(String, String)>, NapError> {
+        debug!(path = %path.display(), "listing git remotes");
+        let output = Self::run_git(path, &["remote", "-v"])?;
+        let mut remotes = Vec::new();
+        for line in output.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            // Format: "origin\tgit@github.com:user/repo.git (fetch)"
+            if let Some(tab_pos) = line.find('\t') {
+                let name = line[..tab_pos].to_string();
+                let rest = &line[tab_pos + 1..];
+                if let Some(space_pos) = rest.rfind(" (") {
+                    let url = rest[..space_pos].to_string();
+                    // Only add once per remote (skip the (push) entry)
+                    if !remotes.iter().any(|(n, _): &(String, String)| n == &name) {
+                        remotes.push((name, url));
+                    }
+                }
+            }
+        }
+        Ok(remotes)
+    }
+
+    fn push(
+        &self,
+        path: &Path,
+        remote: Option<&str>,
+        branch: Option<&str>,
+    ) -> Result<(), NapError> {
+        let remote_display = remote.unwrap_or("origin");
+        let branch_display = branch.unwrap_or("current");
+        debug!(
+            path = %path.display(),
+            remote = %remote_display,
+            branch = %branch_display,
+            "pushing to git remote"
+        );
+
+        let mut args = vec!["push"];
+        if let Some(r) = remote {
+            args.push(r);
+        }
+        if let Some(b) = branch {
+            args.push(b);
+        }
+
+        Self::run_git(path, &args)?;
+        Ok(())
+    }
+
+    fn pull(
+        &self,
+        path: &Path,
+        remote: Option<&str>,
+        branch: Option<&str>,
+    ) -> Result<(), NapError> {
+        let remote_display = remote.unwrap_or("origin");
+        let branch_display = branch.unwrap_or("current");
+        debug!(
+            path = %path.display(),
+            remote = %remote_display,
+            branch = %branch_display,
+            "pulling from git remote"
+        );
+
+        let mut args = vec!["pull"];
+        if let Some(r) = remote {
+            args.push(r);
+        }
+        if let Some(b) = branch {
+            args.push(b);
+        }
+
+        Self::run_git(path, &args)?;
+        Ok(())
+    }
+
     fn revert(&self, path: &Path, commit_hash: &str) -> Result<String, NapError> {
         debug!(
             path = %path.display(),
@@ -334,5 +449,57 @@ mod tests {
         backend.create_tag(tmp.path(), "v1.0").unwrap();
         let tags = backend.list_tags(tmp.path()).unwrap();
         assert!(tags.contains(&"v1.0".to_string()));
+    }
+
+    #[test]
+    fn test_git_add_and_list_remotes() {
+        let tmp = TempDir::new().unwrap();
+        let backend = GitBackend::new();
+        backend.init(tmp.path()).unwrap();
+
+        // Add a remote
+        backend.add_remote(tmp.path(), "origin", "git@github.com:user/repo.git").unwrap();
+
+        let remotes = backend.list_remotes(tmp.path()).unwrap();
+        assert_eq!(remotes.len(), 1);
+        assert_eq!(remotes[0].0, "origin");
+        assert_eq!(remotes[0].1, "git@github.com:user/repo.git");
+    }
+
+    #[test]
+    fn test_git_remove_remote() {
+        let tmp = TempDir::new().unwrap();
+        let backend = GitBackend::new();
+        backend.init(tmp.path()).unwrap();
+
+        backend.add_remote(tmp.path(), "origin", "git@github.com:user/repo.git").unwrap();
+        backend.remove_remote(tmp.path(), "origin").unwrap();
+
+        let remotes = backend.list_remotes(tmp.path()).unwrap();
+        assert!(remotes.is_empty());
+    }
+
+    #[test]
+    fn test_git_clone_repo() {
+        // Clone from a local repo (file://) to test clone_repo end-to-end
+        let tmp = TempDir::new().unwrap();
+        let backend = GitBackend::new();
+
+        // Create a source repo with content
+        let src = tmp.path().join("source");
+        backend.init(&src).unwrap();
+        std::fs::write(src.join("hello.txt"), "world").unwrap();
+        backend.commit(&src, "init", "user").unwrap();
+
+        // Clone it
+        let dest = tmp.path().join("clone");
+        GitBackend::clone_repo(src.to_str().unwrap(), &dest).unwrap();
+
+        // Verify content
+        assert!(dest.join("hello.txt").exists());
+        assert_eq!(
+            std::fs::read_to_string(dest.join("hello.txt")).unwrap(),
+            "world"
+        );
     }
 }
