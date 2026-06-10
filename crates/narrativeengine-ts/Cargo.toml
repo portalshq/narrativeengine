@@ -1,0 +1,18 @@
+[package]
+name = "narrativeengine-ts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "NAPI-RS bindings for the NarrativeEngine SDK."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+narrativeengine-core = { path = "../narrativeengine-core" }
+napi = { workspace = true }
+napi-derive = { workspace = true }
+
+[build-dependencies]
+napi-build = { workspace = true }

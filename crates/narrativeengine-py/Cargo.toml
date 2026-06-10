@@ -1,0 +1,15 @@
+[package]
+name = "narrativeengine-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "PyO3 bindings for the NarrativeEngine SDK."
+
+[lib]
+name = "_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+narrativeengine-core = { path = "../narrativeengine-core" }
+pyo3 = { workspace = true }

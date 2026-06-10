@@ -119,8 +119,9 @@ starwars/                    ← universe root (Git repo)
 
 ### Install
 
+#### CLI & Server (Rust — compile from source)
+
 ```bash
-# Build from source
 git clone https://github.com/cinematiccanvas/nap.git
 cd nap
 cargo build --release
@@ -128,6 +129,31 @@ cargo build --release
 # Binaries land in target/release/
 #   nap          — CLI tool
 #   nap-server   — HTTP resolver server
+```
+
+#### Python SDK (prebuilt wheel, no Rust needed)
+
+```bash
+pip install narrativeengine
+```
+
+```python
+from narrativeengine import create_block, generate_candidate, render_lore_summary
+
+block = create_block("char-1", "A brave adventurer")
+candidate = generate_candidate(block)
+```
+
+#### TypeScript SDK (prebuilt binary, no Rust needed)
+
+```bash
+npm install narrativeengine
+```
+
+```typescript
+import { createBlock } from "narrativeengine";
+
+const block = createBlock("char-1", "A brave adventurer");
 ```
 
 ### Create a Universe
@@ -251,25 +277,34 @@ representations:
 
 ```
 nap/
-├── Cargo.toml              ← workspace root
-├── nap-core/               ← core library
-│   └── src/
-│       ├── lib.rs          ← crate root, re-exports
-│       ├── uri.rs          ← NapUri parser/builder
-│       ├── manifest.rs     ← Manifest, Representation, Provenance
-│       ├── commit.rs       ← Commit, Change, ChangeOp
-│       ├── resolver.rs     ← Resolver (URI → Manifest)
-│       ├── query.rs        ← Subtree query engine
-│       ├── repository.rs   ← Universe repository CRUD
-│       ├── types.rs        ← EntityType enum
-│       ├── content.rs      ← SHA-256 content hashing
-│       ├── error.rs        ← NapError types
-│       ├── vcs.rs          ← VcsBackend trait
-│       └── vcs_git.rs      ← Git backend implementation
-├── nap-cli/                ← CLI binary (nap)
-│   └── src/main.rs
-└── nap-server/             ← HTTP server binary (nap-server)
-    └── src/main.rs
+├── Cargo.toml                      ← workspace root (7 crates)
+├── crates/
+│   ├── nap-core/                   ← core library (URI, manifest, resolver, VCS)
+│   │   └── src/
+│   │       ├── lib.rs              ← crate root, re-exports
+│   │       ├── uri.rs             ← NapUri parser/builder
+│   │       ├── manifest.rs         ← Manifest, Representation, Provenance
+│   │       ├── commit.rs           ← Commit, Change, ChangeOp
+│   │       ├── resolver.rs         ← Resolver (URI → Manifest)
+│   │       ├── query.rs            ← Subtree query engine
+│   │       ├── repository.rs       ← Universe repository CRUD
+│   │       ├── types.rs            ← EntityType enum
+│   │       ├── content.rs          ← SHA-256 content hashing
+│   │       ├── error.rs            ← NapError types
+│   │       ├── vcs.rs              ← VcsBackend trait
+│   │       └── vcs_git.rs          ← Git backend implementation
+│   ├── nap-cli/                    ← CLI binary (nap)
+│   ├── nap-server/                 ← HTTP server binary (nap-server)
+│   ├── narrativeengine-core/       ← narrative engine (AI story generation)
+│   ├── narrativeengine-py/         ← Python bindings (PyO3)
+│   ├── narrativeengine-ts/         ← TypeScript/NAPI bindings
+│   └── narrativeengine-codegen/    ← schema/code generation tooling
+├── python/                         ← Python SDK package
+│   └── pyproject.toml
+└── typescript/                     ← TypeScript SDK package
+    ├── package.json
+    ├── index.cjs
+    └── index.d.ts
 ```
 
 ---
@@ -278,44 +313,52 @@ nap/
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 2024 edition (1.85+)
+- [Rust](https://rustup.rs/) 2024 edition (1.85+) — only needed to build from source
 - Git (for the VCS backend)
 
 ### Build
 
 ```bash
 # Build everything (debug)
-cargo build
+cargo build --workspace
 
 # Build everything (release)
-cargo build --release
+cargo build --release --workspace
 
 # Build individual crates
 cargo build -p nap-core
 cargo build -p nap-cli
 cargo build -p nap-server
+cargo build -p narrativeengine-core
+cargo build -p narrativeengine-codegen
 ```
 
 ### Test
 
 ```bash
-# Run all tests
-cargo test
+# Run all tests (excluding Python bindings which need Python headers)
+cargo test --workspace --exclude narrativeengine-py --exclude narrativeengine-ts
 
 # Run tests for a specific crate
 cargo test -p nap-core
-
-# Run a specific test
-cargo test test_resolve_full_manifest
-
-# Run tests with output
-cargo test -- --nocapture
 
 # Run doc tests
 cargo test --doc
 ```
 
-All 49 unit tests and 2 doc tests pass.
+### Build SDK artifacts
+
+```bash
+# Python wheel (requires maturin)
+pip install maturin
+cd python
+maturin build --release
+
+# TypeScript prebuild (requires napi-rs toolchain)
+cd typescript
+npm install
+npm run build:native
+```
 
 ### Run
 

@@ -1,0 +1,39 @@
+{
+  "name": "narrativeengine",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for NarrativeEngine, powered by Rust and NAPI-RS.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "index.cjs",
+    "index.d.ts",
+    "*.node"
+  ],
+  "scripts": {
+    "generate": "../scripts/generate-types.sh",
+    "build:native": "napi build --cargo-cwd ../crates/narrativeengine-ts --platform --release && mv -f index.js index.cjs",
+    "build:types": "tsc -p tsconfig.json",
+    "build": "npm run generate && npm run build:native && npm run build:types",
+    "lint": "eslint src tests --ext .ts",
+    "test": "vitest run"
+  },
+  "napi": {
+    "name": "narrativeengine",
+    "binaryName": "narrativeengine",
+    "triples": {
+      "defaults": true
+    }
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
