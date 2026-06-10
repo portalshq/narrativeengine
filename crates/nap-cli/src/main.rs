@@ -821,10 +821,10 @@ fn cmd_set(
 }
 
 fn cmd_add_repr(
-    base_dir: &PathBuf,
+    base_dir: &Path,
     uri_str: &str,
     key: &str,
-    file: &PathBuf,
+    file: &Path,
     format: &str,
     message: &str,
     author: &str,
@@ -861,7 +861,7 @@ fn cmd_add_repr(
     Ok(())
 }
 
-fn cmd_revert(base_dir: &PathBuf, universe: &str, commit: &str, author: &str) -> Result<()> {
+fn cmd_revert(base_dir: &Path, universe: &str, commit: &str, author: &str) -> Result<()> {
     let repo = open_repo(base_dir, universe)?;
     let new_hash = repo
         .revert_commit(commit, author)

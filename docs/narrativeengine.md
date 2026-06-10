@@ -8,10 +8,13 @@ NarrativeEngine is a SDK platform for interactive enterinment. Domain models, va
 .
 ├── Cargo.toml
 ├── crates
-│   ├── codegen
-│   ├── core
-│   ├── python-bindings
-│   └── typescript-bindings
+│   ├── narrativeengine-core
+│   ├── narrativeengine-py
+│   ├── narrativeengine-ts
+│   ├── narrativeengine-codegen
+│   ├── nap-core
+│   ├── nap-cli
+│   └── nap-server
 ├── generated
 │   ├── csharp
 │   ├── go
@@ -21,12 +24,8 @@ NarrativeEngine is a SDK platform for interactive enterinment. Domain models, va
 ├── integration-tests
 │   └── parity
 ├── python
-│   ├── narrativeengine
-│   └── tests
 ├── scripts
 ├── typescript
-│   ├── src
-│   └── tests
 └── .github
     └── workflows
 ```
@@ -49,7 +48,7 @@ pip install "narrativeengine[pydantic]"
 TypeScript:
 
 ```sh
-npm install @narrativeengine/sdk
+npm install narrativeengine
 ```
 
 ## Usage
@@ -82,7 +81,7 @@ candidate = generate_candidate(lore, LabConfig(temperature=0.7, max_candidates=4
 TypeScript:
 
 ```ts
-import { createBlock, generateCandidate } from "@narrativeengine/sdk";
+import { createBlock, generateCandidate } from "narrativeengine";
 
 const block = createBlock("intro", "A signal appears in the archive.");
 const candidate = generateCandidate(

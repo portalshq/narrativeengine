@@ -5,13 +5,13 @@ The TypeScript SDK is a thin NAPI-RS wrapper over the canonical Rust implementat
 ## Installation
 
 ```sh
-npm install @narrativeengine/sdk
+npm install narrativeengine
 ```
 
 ## Usage
 
 ```ts
-import { createBlock, generateCandidate } from "@narrativeengine/sdk";
+import { createBlock, generateCandidate } from "narrativeengine";
 
 const block = createBlock("intro", "A signal appears in the archive.");
 const candidate = generateCandidate(

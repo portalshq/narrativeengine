@@ -54,7 +54,7 @@ impl ResolveOptions {
         } else if let Some(ref tag) = self.tag {
             Some(format!("refs/tags/{tag}"))
         } else {
-            self.branch.as_ref().map(|branch| branch.clone())
+            self.branch.clone()
         }
     }
 
