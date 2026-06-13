@@ -30,6 +30,18 @@ use nap_core::{
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
+/// Expand a path, resolving a leading `~` to the user's home directory.
+fn expand_path(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if s.starts_with('~') {
+        if let Ok(home) = std::env::var("HOME") {
+            let rest = s.strip_prefix('~').unwrap_or("");
+            return PathBuf::from(format!("{home}{rest}"));
+        }
+    }
+    path.to_path_buf()
+}
+
 /// NAP — Narrative Addressing Protocol CLI
 ///
 /// Identity, addressing, resolution, and attribution for entertainment media.
@@ -37,8 +49,8 @@ use std::path::{Path, PathBuf};
 #[command(name = "nap", version, about, long_about = None)]
 struct Cli {
     /// Base directory for universe repositories.
-    /// Defaults to current directory.
-    #[arg(long, short = 'd', global = true, default_value = ".")]
+    /// Defaults to ~/.nap
+    #[arg(long, short = 'd', global = true, default_value = "~/.nap")]
     base_dir: PathBuf,
 
     /// Enable verbose debug logging.
@@ -363,9 +375,16 @@ fn main() -> Result<()> {
         .with_target(false)
         .init();
 
+    // Expand ~ in base_dir to full home directory path
+    let base_dir = expand_path(&cli.base_dir);
+
+    // Ensure the base directory exists (e.g. ~/.nap/)
+    std::fs::create_dir_all(&base_dir)
+        .with_context(|| format!("failed to create base directory '{}'", base_dir.display()))?;
+
     let result = match cli.command {
         Commands::Init { universe, remote } => {
-            cmd_init(&cli.base_dir, &universe, remote.as_deref())
+            cmd_init(&base_dir, &universe, remote.as_deref())
         }
         Commands::Create {
             entity_type,
@@ -374,7 +393,7 @@ fn main() -> Result<()> {
             name,
             author,
         } => cmd_create(
-            &cli.base_dir,
+            &base_dir,
             &universe,
             &entity_type,
             &entity_id,
@@ -387,29 +406,29 @@ fn main() -> Result<()> {
             commit,
             tag,
             format,
-        } => cmd_resolve(&cli.base_dir, &uri, branch, commit, tag, &format),
-        Commands::Query { uri, path, format } => cmd_query(&cli.base_dir, &uri, &path, &format),
+        } => cmd_resolve(&base_dir, &uri, branch, commit, tag, &format),
+        Commands::Query { uri, path, format } => cmd_query(&base_dir, &uri, &path, &format),
         Commands::Commit {
             universe,
             message,
             author,
-        } => cmd_commit(&cli.base_dir, &universe, &message, &author),
-        Commands::History { uri, limit } => cmd_history(&cli.base_dir, &uri, limit),
+        } => cmd_commit(&base_dir, &universe, &message, &author),
+        Commands::History { uri, limit } => cmd_history(&base_dir, &uri, limit),
         Commands::List {
             universe,
             entity_type,
-        } => cmd_list(&cli.base_dir, universe.as_deref(), entity_type.as_deref()),
+        } => cmd_list(&base_dir, universe.as_deref(), entity_type.as_deref()),
         Commands::Branch { universe, name } => {
-            cmd_branch(&cli.base_dir, &universe, name.as_deref())
+            cmd_branch(&base_dir, &universe, name.as_deref())
         }
-        Commands::Tag { universe, name } => cmd_tag(&cli.base_dir, &universe, name.as_deref()),
+        Commands::Tag { universe, name } => cmd_tag(&base_dir, &universe, name.as_deref()),
         Commands::Set {
             uri,
             key,
             value,
             message,
             author,
-        } => cmd_set(&cli.base_dir, &uri, &key, &value, &message, &author),
+        } => cmd_set(&base_dir, &uri, &key, &value, &message, &author),
         Commands::AddRepr {
             uri,
             key,
@@ -417,19 +436,19 @@ fn main() -> Result<()> {
             format,
             message,
             author,
-        } => cmd_add_repr(&cli.base_dir, &uri, &key, &file, &format, &message, &author),
+        } => cmd_add_repr(&base_dir, &uri, &key, &file, &format, &message, &author),
         Commands::Revert {
             universe,
             commit,
             author,
-        } => cmd_revert(&cli.base_dir, &universe, &commit, &author),
-        Commands::Pull { url_or_name } => cmd_pull(&cli.base_dir, &url_or_name),
+        } => cmd_revert(&base_dir, &universe, &commit, &author),
+        Commands::Pull { url_or_name } => cmd_pull(&base_dir, &url_or_name),
         Commands::Push {
             universe,
             remote,
             branch,
-        } => cmd_push(&cli.base_dir, &universe, &remote, branch.as_deref()),
-        Commands::Remote(cmd) => cmd_remote(&cli.base_dir, cmd),
+        } => cmd_push(&base_dir, &universe, &remote, branch.as_deref()),
+        Commands::Remote(cmd) => cmd_remote(&base_dir, cmd),
         Commands::Sign { uri } => cmd_sign(&uri),
         Commands::Verify { uri } => cmd_verify(&uri),
     };

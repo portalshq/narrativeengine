@@ -132,14 +132,9 @@ impl FromStr for NapUri {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let input = s.trim();
 
-        // ── Strip scheme ────────────────────────────────────────────────
-        let without_scheme =
-            input
-                .strip_prefix(NAP_SCHEME)
-                .ok_or_else(|| NapError::InvalidUri {
-                    uri: input.to_string(),
-                    reason: format!("URI must start with '{NAP_SCHEME}'"),
-                })?;
+        // ── Strip scheme (optional) ──────────────────────────────────────
+        // Accept both "nap://starwars/character/luke" and "starwars/character/luke".
+        let without_scheme = input.strip_prefix(NAP_SCHEME).unwrap_or(input);
 
         // ── Split fragment ──────────────────────────────────────────────
         let (path_part, fragment) = match without_scheme.split_once('#') {
@@ -265,14 +260,42 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_scheme() {
+    fn test_invalid_scheme_or_entity_type() {
+        // "http:" is treated as the universe name, "starwars" fails as entity type
         let result = "http://starwars/character/luke".parse::<NapUri>();
         assert!(result.is_err());
     }
 
     #[test]
+    fn test_optional_scheme() {
+        // Bare path without nap:// scheme should resolve correctly
+        let uri: NapUri = "starwars/character/lukeskywalker#references.appears_in"
+            .parse()
+            .unwrap();
+        assert_eq!(uri.universe, "starwars");
+        assert_eq!(uri.entity_type, EntityType::Character);
+        assert_eq!(uri.entity_id, "lukeskywalker");
+        assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
+    }
+
+    #[test]
+    fn test_bare_path_no_fragment() {
+        let uri: NapUri = "toystory/location/pizzapalace".parse().unwrap();
+        assert_eq!(uri.universe, "toystory");
+        assert_eq!(uri.entity_type, EntityType::Location);
+        assert_eq!(uri.entity_id, "pizzapalace");
+        assert!(uri.fragment.is_none());
+    }
+
+    #[test]
     fn test_too_few_segments() {
         let result = "nap://starwars/character".parse::<NapUri>();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bare_path_too_few_segments() {
+        let result = "starwars/character".parse::<NapUri>();
         assert!(result.is_err());
     }
 }

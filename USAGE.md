@@ -44,7 +44,7 @@ This guide covers practical workflows for four core capabilities of the `nap` CL
 ## Quick Reference
 
 ```bash
-# Initialize a universe
+# Initialize a universe in ~/.nap/
 nap init starwars
 
 # Create entities
@@ -686,10 +686,10 @@ nap branch middleearth canon
 nap tag middleearth fellowship-of-the-ring
 ```
 
-**Universe directory layout:**
+**Universe directory layout (default: `~/.nap/`):**
 
 ```
-base_dir/
+~/.nap/
 ├── starwars/              ← independent Git repo
 │   ├── .nap/config.yaml
 │   ├── universe.yaml
@@ -763,11 +763,14 @@ nap query nap://starwars/character/lukeskywalker provenance.model
 ### Composition
 
 ```bash
-# Initialize a universe in any directory
+# Initialize a universe (defaults to ~/.nap/)
+nap init myuniverse
+
+# Override with any directory
 nap init myuniverse -d /path/to/shared/universes
 nap init myuniverse -d ~/Dropbox/TeamWorldbuilding
 
-# Point the resolver at a remote path
+# Point the resolver at a specific path
 nap -d /mnt/nas/universes list
 nap -d /mnt/nas/universes resolve nap://starwars/character/lukeskywalker
 ```
@@ -853,7 +856,9 @@ starwars/                    ← universe root (Git repo)
 | `nap sign <uri>` | Sign a manifest (stub in v0) |
 | `nap verify <uri>` | Verify a manifest signature (stub in v0) |
 
-Global options: `-d/--base-dir <path>`, `-v/--verbose`, `-f/--format <yaml|json>`
+Global options: `-d/--base-dir <path>` (default `~/.nap`), `-v/--verbose`, `-f/--format <yaml|json>`
+
+Universe repositories are stored in `~/.nap/<universe>/` by default. Use `-d` (or `--base-dir`) to point to a different directory.
 
 ---
 
