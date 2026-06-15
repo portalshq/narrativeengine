@@ -148,6 +148,7 @@ mod tests {
     proptest! {
         #[test]
         fn valid_blocks_round_trip_json(id in "[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}", content in "\\PC{1,120}") {
+            prop_assume!(!content.chars().all(|c| c.is_ascii_whitespace()));
             let json = create_block_json(id, content).unwrap();
             let block: NarrativeBlock = serde_json::from_str(&json).unwrap();
             validate_block(&block).unwrap();

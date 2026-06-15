@@ -3,23 +3,26 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="${VENV_DIR:-$ROOT_DIR/.venv-python}"
-PYTHON_BIN="${PYTHON:-python3}"
 
-echo "Using ${PYTHON_BIN} at: $(which "$PYTHON_BIN")"
+PYTHON_VERSION=$(cat "$ROOT_DIR/.python-version")
 
-if [ ! -x "$VENV_DIR/bin/python" ]; then
-  "$PYTHON_BIN" -m venv "$VENV_DIR"
+if [ ! -d "$VENV_DIR" ]; then
+  uv venv "$VENV_DIR" --python "$PYTHON_VERSION"
 fi
 
 PYTHON_BIN="$VENV_DIR/bin/python"
+echo "Using Python at: $PYTHON_BIN ($("$PYTHON_BIN" --version))"
 
+# Activate the venv so all child processes find the right Python
+export VIRTUAL_ENV="$VENV_DIR"
+export PATH="$VENV_DIR/bin:$PATH"
 export PYO3_PYTHON="$PYTHON_BIN"
 
 cd "$ROOT_DIR/python"
 
-"$PYTHON_BIN" -m pip install --upgrade pip
-"$PYTHON_BIN" -m pip install -e ".[dev]"
-"$PYTHON_BIN" -m maturin develop --manifest-path ../crates/narrativeengine-py/Cargo.toml --extras pydantic
-"$PYTHON_BIN" -m pytest
-"$PYTHON_BIN" -m ruff check --fix .
-"$PYTHON_BIN" -m mypy narrativeengine
+# --python targets the right venv for pip; --active makes uv run use VIRTUAL_ENV
+uv pip install --python "$PYTHON_BIN" -e ".[dev]"
+uv run --active maturin develop --manifest-path ../crates/narrativeengine-py/Cargo.toml --extras pydantic
+uv run --active pytest
+uv run --active ruff check --fix .
+uv run --active mypy narrativeengine

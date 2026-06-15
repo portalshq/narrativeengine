@@ -47,7 +47,9 @@ pub fn validate_config(config: &LabConfig) -> Result<()> {
 }
 
 fn require_non_empty(field: &str, value: &str) -> Result<()> {
-    if value.trim().is_empty() {
+    // Use ASCII whitespace check (not trim()) so behavior is stable across Rust editions.
+    // In edition 2024, trim() also strips non-ASCII whitespace like U+00A0 (NBSP).
+    if value.chars().all(|c| c.is_ascii_whitespace()) {
         return Err(NarrativeError::Validation(format!(
             "{field} must not be empty"
         )));

@@ -33,11 +33,11 @@ use std::path::{Path, PathBuf};
 /// Expand a path, resolving a leading `~` to the user's home directory.
 fn expand_path(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
-    if s.starts_with('~') {
-        if let Ok(home) = std::env::var("HOME") {
-            let rest = s.strip_prefix('~').unwrap_or("");
-            return PathBuf::from(format!("{home}{rest}"));
-        }
+    if s.starts_with('~')
+        && let Ok(home) = std::env::var("HOME")
+    {
+        let rest = s.strip_prefix('~').unwrap_or("");
+        return PathBuf::from(format!("{home}{rest}"));
     }
     path.to_path_buf()
 }
@@ -383,9 +383,7 @@ fn main() -> Result<()> {
         .with_context(|| format!("failed to create base directory '{}'", base_dir.display()))?;
 
     let result = match cli.command {
-        Commands::Init { universe, remote } => {
-            cmd_init(&base_dir, &universe, remote.as_deref())
-        }
+        Commands::Init { universe, remote } => cmd_init(&base_dir, &universe, remote.as_deref()),
         Commands::Create {
             entity_type,
             entity_id,
@@ -418,9 +416,7 @@ fn main() -> Result<()> {
             universe,
             entity_type,
         } => cmd_list(&base_dir, universe.as_deref(), entity_type.as_deref()),
-        Commands::Branch { universe, name } => {
-            cmd_branch(&base_dir, &universe, name.as_deref())
-        }
+        Commands::Branch { universe, name } => cmd_branch(&base_dir, &universe, name.as_deref()),
         Commands::Tag { universe, name } => cmd_tag(&base_dir, &universe, name.as_deref()),
         Commands::Set {
             uri,
