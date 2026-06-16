@@ -53,6 +53,7 @@ jobs:
           cache-dependency-path: typescript/package-lock.json
       # Build native binaries (release mode for distributable artifacts)
       - run: pip install maturin
+      - run: python -c "import shutil, pathlib; p = pathlib.Path('target/wheels'); shutil.rmtree(p, ignore_errors=True); p.mkdir(parents=True, exist_ok=True)"
       - run: maturin build --release --out ../target/wheels
         working-directory: python
 

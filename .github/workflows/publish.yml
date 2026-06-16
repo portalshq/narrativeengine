@@ -26,6 +26,7 @@ jobs:
           cache-dependency-path: typescript/package-lock.json
 
       - run: pip install maturin
+      - run: python -c "import shutil, pathlib; p = pathlib.Path('target/wheels'); shutil.rmtree(p, ignore_errors=True); p.mkdir(parents=True, exist_ok=True)"
       - run: npm ci
         working-directory: typescript
 
