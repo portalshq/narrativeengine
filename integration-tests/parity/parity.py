@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 
 from narrativeengine import LabConfig, NarrativeLore, create_block, generate_candidate, render_lore_summary
 
@@ -15,7 +16,8 @@ def main() -> None:
         "candidate": _dump(candidate),
         "summary": render_lore_summary(lore),
     }
-    print(json.dumps(value, separators=(",", ":")))
+    json_bytes = json.dumps(value, separators=(",", ":")).encode() + b"\n"
+    sys.stdout.buffer.write(json_bytes)
 
 
 def _dump(value: object) -> object:

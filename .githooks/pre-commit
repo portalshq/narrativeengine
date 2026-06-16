@@ -34,9 +34,12 @@ fi
 
 # ── 2. Python lint ──────────────────────────────────────────────
 if [ "$HAS_PY" -eq 1 ]; then
-  echo "→ ruff ($CHANGED_PY changed .py files)..."
-  pip install -q ruff 2>/dev/null || true
-  ruff check python
+  if command -v ruff &>/dev/null; then
+    echo "→ ruff ($CHANGED_PY changed .py files)..."
+    ruff check python
+  else
+    echo "→ ruff — skipped (not installed; run: pip install ruff)"
+  fi
 else
   echo "→ ruff — skipped (no Python changes)"
 fi
