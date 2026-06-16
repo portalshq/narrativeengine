@@ -1,6 +1,9 @@
 name: ci
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ['**']
+  pull_request:
 
 jobs:
   # ── Lint (deterministic — ubuntu only) ──────────────────────────
@@ -66,8 +69,13 @@ jobs:
       - run: cargo test --workspace --exclude narrativeengine-py
 
       # Python tests
+      # Install from the pre-built wheel instead of `maturin develop`.
+      # GitHub Actions runners have Python installed directly (no virtualenv),
+      # so maturin develop fails with "Couldn't find a virtualenv".
       - run: pip install -e "python[dev]"
-      - run: maturin develop --manifest-path crates/narrativeengine-py/Cargo.toml --extras pydantic
+        shell: bash
+      - run: pip install --force-reinstall --no-deps target/wheels/narrativeengine-*.whl
+        shell: bash
       - run: pytest python
 
       # TypeScript tests

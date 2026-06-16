@@ -31,19 +31,25 @@ jobs:
       - run: npm run build
         working-directory: typescript
       - run: cargo test --workspace --exclude narrativeengine-py
+
+      # Build Python wheel once — used for both testing and publish.
+      # Install from wheel instead of `maturin develop` (which needs a
+      # virtualenv not present on GitHub Actions runners).
+      - run: maturin build --release --manifest-path crates/narrativeengine-py/Cargo.toml
       - run: pip install -e "python[dev]"
-      - run: maturin develop --manifest-path crates/narrativeengine-py/Cargo.toml --extras pydantic
+        shell: bash
+      - run: pip install --force-reinstall --no-deps target/wheels/narrativeengine-*.whl
+        shell: bash
       - run: pytest python
+
       - run: npm test
         working-directory: typescript
       - run: ./scripts/test-parity.sh
         shell: bash
 
-      # Publish Python wheel to PyPI
+      # Publish Python wheel to PyPI (already built above)
       - name: Publish Python to PyPI
-        run: |
-          maturin build --release --manifest-path crates/narrativeengine-py/Cargo.toml
-          maturin upload --skip-existing --username __token__ --password "${{ secrets.MATURIN_PYPI_TOKEN }}" "${{ github.workspace }}/target/wheels/*.whl"
+        run: maturin upload --skip-existing --username __token__ --password "${{ secrets.MATURIN_PYPI_TOKEN }}" "${{ github.workspace }}/target/wheels/*.whl"
 
       # Publish TypeScript SDK to npm
       - name: Publish TypeScript to npm
