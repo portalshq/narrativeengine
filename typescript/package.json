@@ -1,8 +1,16 @@
 {
   "name": "narrativeengine",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "TypeScript SDK for NarrativeEngine, powered by Rust and NAPI-RS.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DigitalCreationsCo/narrativeengine.git"
+  },
+  "homepage": "https://github.com/DigitalCreationsCo/narrativeengine#readme",
+  "bugs": {
+    "url": "https://github.com/DigitalCreationsCo/narrativeengine/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
