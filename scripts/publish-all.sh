@@ -106,7 +106,7 @@ fi
 
 echo "Bumping release version: $CURRENT_VERSION → $NEW_VERSION"
 
-python3 <<'PY' "$ROOT_DIR" "$CURRENT_VERSION" "$NEW_VERSION"
+python3 - "$ROOT_DIR" "$CURRENT_VERSION" "$NEW_VERSION" <<'PY'
 from pathlib import Path
 import sys
 
