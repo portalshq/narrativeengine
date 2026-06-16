@@ -316,6 +316,16 @@ nap/
 - [Rust](https://rustup.rs/) 2024 edition (1.85+) — only needed to build from source
 - Git (for the VCS backend)
 
+### Pre-commit Hooks
+
+This repo ships a pre-commit hook that runs fast checks (`cargo fmt`, `ruff`, `eslint`, `vitest`) before each commit. Activate it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The hook only runs checks relevant to the files you've staged — no Rust checks on pure Python changes, etc.
+
 ### Build
 
 ```bash
