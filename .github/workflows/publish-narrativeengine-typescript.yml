@@ -9,21 +9,17 @@ jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.filter.outputs.run_build }}
+      changed: ${{ steps.check-paths.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          base: ${{ github.event.workflow_run.head_sha }}~1
-          filters: |
-            run_build:
-              - 'crates/narrativeengine/**'
-              - 'typescript/narrativeengine/**'
+      - id: check-paths
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -cE '^crates/narrativeengine/|^typescript/narrativeengine/' || true)
+          echo "changed=$([ "$CHANGED" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   build:
     needs: check
