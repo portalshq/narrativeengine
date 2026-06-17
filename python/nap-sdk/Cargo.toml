@@ -1,0 +1,17 @@
+[package]
+name = "nap-sdk-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "PyO3 bindings for the NAP (Narrative Addressing Protocol) SDK."
+
+[lib]
+name = "_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+nap-core = { path = "../../crates/nap-core" }
+pyo3 = { workspace = true, features = ["extension-module"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }

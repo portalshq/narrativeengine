@@ -4,14 +4,16 @@ members = [
     "crates/nap-core",
     "crates/nap-cli",
     "crates/nap-server",
-    "crates/narrativeengine-core",
-    "crates/narrativeengine-py",
-    "crates/narrativeengine-ts",
+    "crates/narrativeengine",
     "crates/narrativeengine-codegen",
+    "python/nap-sdk",
+    "python/narrativeengine",
+    "typescript/nap-sdk",
+    "typescript/narrativeengine",
 ]
 
 [workspace.package]
-version = "0.1.23"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 authors = ["Cinematic Canvas <team@cinematiccanvas.com>"]

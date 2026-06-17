@@ -1,4 +1,4 @@
-use narrativeengine_core::{
+use narrativeengine::{
     LabConfig, NarrativeBlock, NarrativeLore, create_block_json, generate_candidate_json,
     render_lore_summary_json,
 };

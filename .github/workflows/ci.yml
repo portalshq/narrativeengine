@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # ── Lint (deterministic — ubuntu only) ──────────────────────────
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -23,16 +22,17 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: typescript/package-lock.json
+          cache-dependency-path: |
+            typescript/narrativeengine/package-lock.json
+            typescript/nap-sdk/package-lock.json
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: pip install -e "python[dev]"
-      - run: ruff check python
-      - run: mypy python/narrativeengine
+      - run: pip install -e "python/narrativeengine[dev]"
+      - run: ruff check python/narrativeengine
+      - run: mypy python/narrativeengine/narrativeengine
       - run: npm ci && npm run lint
-        working-directory: typescript
+        working-directory: typescript/narrativeengine
 
-  # ── Build + test (platform-specific — 3 OS matrix) ─────────────
   build:
     strategy:
       fail-fast: false
@@ -50,37 +50,32 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: typescript/package-lock.json
-      # Build native binaries (release mode for distributable artifacts)
+          cache-dependency-path: |
+            typescript/narrativeengine/package-lock.json
+            typescript/nap-sdk/package-lock.json
+
       - run: pip install maturin
       - run: python -c "import shutil, pathlib; p = pathlib.Path('target/wheels'); shutil.rmtree(p, ignore_errors=True); p.mkdir(parents=True, exist_ok=True)"
-      - run: maturin build --release --out ../target/wheels
-        working-directory: python
+      - run: maturin build --release --out ../../target/wheels
+        working-directory: python/narrativeengine
 
-      # Build TypeScript SDK (includes native napi build)
       - run: npm ci
-        working-directory: typescript
+        working-directory: typescript/narrativeengine
       - run: npm run build
-        working-directory: typescript
+        working-directory: typescript/narrativeengine
 
-      # Rust tests (debug mode — verifies all workspace crates compile)
-      - run: cargo test --workspace --exclude narrativeengine-py
+      - run: cargo test --workspace --exclude narrativeengine-py --exclude nap-sdk-py --exclude nap-sdk-ts --exclude narrativeengine-ts
 
-      # Python tests
-      # Install from the pre-built wheel instead of `maturin develop`.
-      # GitHub Actions runners have Python installed directly (no virtualenv),
-      # so maturin develop fails with "Couldn't find a virtualenv".
-      - run: pip install -e "python[dev]"
+      - run: pip install -e "python/narrativeengine[dev]"
         shell: bash
       - run: >-
           python -c "import pathlib, subprocess, sys; wheels = sorted(pathlib.Path('target/wheels').glob('narrativeengine-*.whl')); preferred = [w for w in wheels if 'manylinux' in w.name or 'musllinux' in w.name]; chosen = preferred[0] if preferred else wheels[0]; print(f'Installing wheel: {chosen}'); sys.exit(subprocess.call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', str(chosen)]))"
         shell: bash
-      - run: pytest python
+      - run: pytest
+        working-directory: python/narrativeengine
 
-      # TypeScript tests
       - run: npm test
-        working-directory: typescript
+        working-directory: typescript/narrativeengine
 
-      # Cross-runtime parity tests
       - run: ./scripts/test-parity.sh
         shell: bash

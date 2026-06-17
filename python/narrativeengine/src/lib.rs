@@ -7,28 +7,28 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-fn map_error(error: narrativeengine_core::NarrativeError) -> PyErr {
+fn map_error(error: narrativeengine::NarrativeError) -> PyErr {
     PyValueError::new_err(error.to_string())
 }
 
 #[pyfunction]
 fn create_block_json(id: String, content: String) -> PyResult<String> {
-    narrativeengine_core::create_block_json(id, content).map_err(map_error)
+    narrativeengine::create_block_json(id, content).map_err(map_error)
 }
 
 #[pyfunction]
 fn generate_candidate_json(lore_json: String, config_json: String) -> PyResult<String> {
-    narrativeengine_core::generate_candidate_json(&lore_json, &config_json).map_err(map_error)
+    narrativeengine::generate_candidate_json(&lore_json, &config_json).map_err(map_error)
 }
 
 #[pyfunction]
 fn render_lore_summary_json(lore_json: String) -> PyResult<String> {
-    narrativeengine_core::render_lore_summary_json(&lore_json).map_err(map_error)
+    narrativeengine::render_lore_summary_json(&lore_json).map_err(map_error)
 }
 
 #[pyfunction]
 fn schema_bundle_json() -> PyResult<String> {
-    narrativeengine_core::schema_bundle_json().map_err(map_error)
+    narrativeengine::schema_bundle_json().map_err(map_error)
 }
 
 #[pyfunction]

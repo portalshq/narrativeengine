@@ -47,7 +47,7 @@ fi
 # ── 3. TypeScript lint ──────────────────────────────────────────
 if [ "$HAS_TS" -eq 1 ]; then
   echo "→ eslint ($CHANGED_TS changed .ts files)..."
-  cd "$ROOT_DIR/typescript"
+  cd "$ROOT_DIR/typescript/narrativeengine"
   npx --yes eslint src tests --ext .ts
   cd "$ROOT_DIR"
 else
@@ -57,7 +57,7 @@ fi
 # ── 4. TypeScript tests ────────────────────────────────────────
 if [ "$HAS_TS" -eq 1 ] || [ "$HAS_RUST" -eq 1 ]; then
   echo "→ vitest..."
-  cd "$ROOT_DIR/typescript"
+  cd "$ROOT_DIR/typescript/narrativeengine"
   npx vitest run
   cd "$ROOT_DIR"
 else

@@ -61,7 +61,7 @@ fn main() -> Result<()> {
 }
 
 fn read_models() -> Result<Vec<Model>> {
-    let bundle = narrativeengine_core::schema_bundle();
+    let bundle = narrativeengine::schema_bundle();
     let schemas = bundle
         .get("models")
         .and_then(Value::as_object)
@@ -71,7 +71,7 @@ fn read_models() -> Result<Vec<Model>> {
         .and_then(Value::as_object)
         .context("schema bundle is missing field_order")?;
 
-    narrativeengine_core::MODEL_NAMES
+    narrativeengine::MODEL_NAMES
         .iter()
         .map(|name| {
             let schema = schemas

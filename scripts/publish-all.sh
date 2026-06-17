@@ -9,10 +9,12 @@ WORKSPACE_PACKAGES=(
   "nap-cli"
   "nap-core"
   "nap-server"
+  "narrativeengine"
   "narrativeengine-codegen"
-  "narrativeengine-core"
   "narrativeengine-py"
   "narrativeengine-ts"
+  "nap-sdk-py"
+  "nap-sdk-ts"
 )
 
 usage() {
@@ -117,16 +119,20 @@ workspace_packages = [
     "nap-cli",
     "nap-core",
     "nap-server",
+    "narrativeengine",
     "narrativeengine-codegen",
-    "narrativeengine-core",
     "narrativeengine-py",
     "narrativeengine-ts",
+    "nap-sdk-py",
+    "nap-sdk-ts",
 ]
 
 replacements = {
     root / "Cargo.toml": [(f'version = "{current}"', f'version = "{new}"')],
-    root / "python/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
-    root / "typescript/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
+    root / "python/narrativeengine/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
+    root / "python/nap-sdk/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
+    root / "typescript/narrativeengine/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
+    root / "typescript/nap-sdk/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
 }
 
 for path, ops in replacements.items():
@@ -153,16 +159,18 @@ echo "✓ Versions updated"
 echo ""
 echo "Running pre-publish validation..."
 
-npm --prefix typescript ci
+npm --prefix typescript/narrativeengine ci
+npm --prefix typescript/nap-sdk ci
 env GITHUB_REF_NAME="$RELEASE_TAG" node scripts/pre-publish-check.mjs
-npm --prefix typescript run build:types
+npm --prefix typescript/narrativeengine run build:types
+npm --prefix typescript/nap-sdk run build:types
 
 echo "✓ Release validation passed"
 
 echo ""
 echo "Committing and tagging $RELEASE_TAG..."
 
-git add Cargo.toml Cargo.lock python/pyproject.toml typescript/package.json
+git add Cargo.toml Cargo.lock python/narrativeengine/pyproject.toml python/nap-sdk/pyproject.toml typescript/narrativeengine/package.json typescript/nap-sdk/package.json
 git commit -m "chore(release): cut $RELEASE_TAG"
 git tag -a "$RELEASE_TAG" -m "$RELEASE_TAG"
 

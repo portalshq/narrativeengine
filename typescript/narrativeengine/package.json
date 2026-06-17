@@ -1,6 +1,6 @@
 {
   "name": "narrativeengine",
-  "version": "0.1.23",
+  "version": "0.2.0",
   "description": "TypeScript SDK for NarrativeEngine, powered by Rust and NAPI-RS.",
   "license": "MIT",
   "repository": {
@@ -21,8 +21,8 @@
     "*.node"
   ],
   "scripts": {
-    "generate": "node ../scripts/generate-types.mjs",
-    "build:native": "napi build --cargo-cwd ../crates/narrativeengine-ts --platform --release && node -e \"require('fs').renameSync('index.js', 'index.cjs')\"",
+    "generate": "node ../../scripts/generate-types.mjs",
+    "build:native": "napi build --cargo-cwd . --platform --release && node -e \"require('fs').renameSync('index.js', 'index.cjs')\"",
     "build:types": "tsc -p tsconfig.json",
     "build": "npm run generate && npm run build:native && npm run build:types",
     "lint": "eslint src tests --ext .ts",

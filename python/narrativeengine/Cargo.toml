@@ -11,5 +11,5 @@ name = "_native"
 crate-type = ["cdylib"]
 
 [dependencies]
-narrativeengine-core = { path = "../narrativeengine-core" }
+narrativeengine = { path = "../../crates/narrativeengine" }
 pyo3 = { workspace = true, features = ["extension-module"] }

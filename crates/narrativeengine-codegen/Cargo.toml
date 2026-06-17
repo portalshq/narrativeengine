@@ -11,7 +11,7 @@ name = "narrativeengine-codegen"
 path = "src/main.rs"
 
 [dependencies]
-narrativeengine-core = { path = "../narrativeengine-core" }
+narrativeengine = { path = "../narrativeengine" }
 anyhow = { workspace = true }
 clap = { workspace = true }
 serde_json = { workspace = true }

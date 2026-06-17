@@ -1,0 +1,45 @@
+{
+  "name": "nap-sdk",
+  "version": "0.2.0",
+  "description": "TypeScript SDK for NAP (Narrative Addressing Protocol), powered by Rust and NAPI-RS.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DigitalCreationsCo/nap"
+  },
+  "homepage": "https://github.com/DigitalCreationsCo/nap#readme",
+  "bugs": {
+    "url": "https://github.com/DigitalCreationsCo/nap/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "index.cjs",
+    "index.d.ts",
+    "*.node"
+  ],
+  "scripts": {
+    "build:native": "napi build --cargo-cwd . --platform --release && node -e \"require('fs').renameSync('index.js', 'index.cjs')\"",
+    "build:types": "tsc -p tsconfig.json",
+    "build": "npm run build:native && npm run build:types",
+    "test": "vitest run"
+  },
+  "napi": {
+    "name": "nap-sdk",
+    "binaryName": "nap-sdk",
+    "triples": {
+      "defaults": true
+    }
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

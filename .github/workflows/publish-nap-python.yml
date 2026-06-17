@@ -1,0 +1,56 @@
+name: publish-nap-python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/nap-core/**"
+      - "python/nap-sdk/**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install maturin
+      - run: maturin build --release --out ../../target/wheels
+        working-directory: python/nap-sdk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-nap-${{ runner.os }}
+          path: target/wheels/*.whl
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install twine
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-nap-*
+          path: target/wheels/
+          merge-multiple: true
+
+      - run: ls -la target/wheels/
+      - run: twine upload --skip-existing --username __token__ --password "${{ secrets.MATURIN_PYPI_TOKEN }}" target/wheels/*.whl

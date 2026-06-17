@@ -10,7 +10,7 @@ description = "NAPI-RS bindings for the NarrativeEngine SDK."
 crate-type = ["cdylib"]
 
 [dependencies]
-narrativeengine-core = { path = "../narrativeengine-core" }
+narrativeengine = { path = "../../crates/narrativeengine" }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 

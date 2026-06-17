@@ -1,10 +1,13 @@
 [package]
-name = "narrativeengine-core"
+name = "narrativeengine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Canonical Rust implementation for the NarrativeEngine polyglot SDK."
+
+[lib]
+crate-type = ["rlib"]
 
 [dependencies]
 nap-core = { path = "../nap-core" }

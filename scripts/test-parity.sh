@@ -12,7 +12,7 @@ fi
 TMP_DIR="$ROOT_DIR/integration-tests/parity/.tmp"
 mkdir -p "$TMP_DIR"
 
-cargo run --quiet --manifest-path "$ROOT_DIR/Cargo.toml" --package narrativeengine-core --example parity_json > "$TMP_DIR/rust.json"
+cargo run --quiet --manifest-path "$ROOT_DIR/Cargo.toml" --package narrativeengine --example parity_json > "$TMP_DIR/rust.json"
 "$PYTHON_BIN" "$ROOT_DIR/integration-tests/parity/parity.py" > "$TMP_DIR/python.json"
 node "$ROOT_DIR/integration-tests/parity/parity.mjs" > "$TMP_DIR/typescript.json"
 

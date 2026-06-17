@@ -18,11 +18,17 @@ export VIRTUAL_ENV="$VENV_DIR"
 export PATH="$VENV_DIR/bin:$PATH"
 export PYO3_PYTHON="$PYTHON_BIN"
 
-cd "$ROOT_DIR/python"
+# Build narrativeengine Python bindings
+cd "$ROOT_DIR/python/narrativeengine"
 
 # --python targets the right venv for pip; --active makes uv run use VIRTUAL_ENV
 uv pip install --python "$PYTHON_BIN" -e ".[dev]"
-uv run --active maturin develop --manifest-path ../crates/narrativeengine-py/Cargo.toml --extras pydantic
+uv run --active maturin develop --extras pydantic
 uv run --active pytest
 uv run --active ruff check --fix .
-uv run --active mypy narrativeengine
+uv run --active mypy narrativeengine/narrativeengine
+
+# Build nap-sdk Python bindings
+cd "$ROOT_DIR/python/nap-sdk"
+uv pip install --python "$PYTHON_BIN" -e ".[dev]"
+uv run --active maturin develop

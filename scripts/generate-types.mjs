@@ -23,7 +23,7 @@ export const manifest = resolve(rootDir, "Cargo.toml");
 /** Language-to-output-path mapping for all SDK codegen targets. */
 export const targets = [
   ["python", resolve(rootDir, "python/narrativeengine/types.py")],
-  ["typescript", resolve(rootDir, "typescript/src/models.ts")],
+  ["typescript", resolve(rootDir, "typescript/narrativeengine/src/models.ts")],
   ["go", resolve(rootDir, "generated/go/models.go")],
   ["java", resolve(rootDir, "generated/java/NarrativeModels.java")],
   ["csharp", resolve(rootDir, "generated/csharp/NarrativeModels.cs")],

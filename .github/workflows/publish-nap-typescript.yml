@@ -1,0 +1,69 @@
+name: publish-nap-typescript
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/nap-core/**"
+      - "typescript/nap-sdk/**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - run: npm ci
+        working-directory: typescript/nap-sdk
+
+      - run: npx napi build --cargo-cwd . --platform --release
+        working-directory: typescript/nap-sdk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: napi-nap-${{ runner.os }}
+          path: typescript/nap-sdk/*.node
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+        working-directory: typescript/nap-sdk
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: napi-nap-*
+          path: typescript/nap-sdk/
+          merge-multiple: true
+
+      - run: npm run build:types
+        working-directory: typescript/nap-sdk
+
+      - run: ls -la typescript/nap-sdk/*.node
+
+      - run: npm publish --access public
+        working-directory: typescript/nap-sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

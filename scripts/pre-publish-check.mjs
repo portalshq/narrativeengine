@@ -47,30 +47,47 @@ const cargoVersion = readFileSync(
   "utf-8",
 ).match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
-const pyprojectVersion = readFileSync(
-  resolve(rootDir, "python/pyproject.toml"),
+const pyprojectVersionNE = readFileSync(
+  resolve(rootDir, "python/narrativeengine/pyproject.toml"),
   "utf-8",
 ).match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
-const packageVersion = JSON.parse(
-  readFileSync(resolve(rootDir, "typescript/package.json"), "utf-8"),
+const pyprojectVersionNAP = readFileSync(
+  resolve(rootDir, "python/nap-sdk/pyproject.toml"),
+  "utf-8",
+).match(/^version\s*=\s*"([^"]+)"/m)?.[1];
+
+const packageVersionNE = JSON.parse(
+  readFileSync(resolve(rootDir, "typescript/narrativeengine/package.json"), "utf-8"),
 ).version;
 
-// Guard: all three must be parseable
+const packageVersionNAP = JSON.parse(
+  readFileSync(resolve(rootDir, "typescript/nap-sdk/package.json"), "utf-8"),
+).version;
+
+// Guard: all must be parseable
 if (!cargoVersion) fail("Could not extract version from Cargo.toml");
-if (!pyprojectVersion)
-  fail("Could not extract version from python/pyproject.toml");
-if (!packageVersion)
-  fail("Could not extract version from typescript/package.json");
+if (!pyprojectVersionNE)
+  fail("Could not extract version from python/narrativeengine/pyproject.toml");
+if (!pyprojectVersionNAP)
+  fail("Could not extract version from python/nap-sdk/pyproject.toml");
+if (!packageVersionNE)
+  fail("Could not extract version from typescript/narrativeengine/package.json");
+if (!packageVersionNAP)
+  fail("Could not extract version from typescript/nap-sdk/package.json");
 
-// Compare (only meaningful if all three parsed)
-if (cargoVersion && pyprojectVersion && packageVersion) {
-  if (cargoVersion !== pyprojectVersion)
-    fail(`Cargo.toml (${cargoVersion}) ≠ pyproject.toml (${pyprojectVersion})`);
-  if (cargoVersion !== packageVersion)
-    fail(`Cargo.toml (${cargoVersion}) ≠ package.json (${packageVersion})`);
+// Compare (only meaningful if all parsed)
+if (cargoVersion && pyprojectVersionNE && pyprojectVersionNAP && packageVersionNE && packageVersionNAP) {
+  if (cargoVersion !== pyprojectVersionNE)
+    fail(`Cargo.toml (${cargoVersion}) ≠ python/narrativeengine/pyproject.toml (${pyprojectVersionNE})`);
+  if (cargoVersion !== pyprojectVersionNAP)
+    fail(`Cargo.toml (${cargoVersion}) ≠ python/nap-sdk/pyproject.toml (${pyprojectVersionNAP})`);
+  if (cargoVersion !== packageVersionNE)
+    fail(`Cargo.toml (${cargoVersion}) ≠ typescript/narrativeengine/package.json (${packageVersionNE})`);
+  if (cargoVersion !== packageVersionNAP)
+    fail(`Cargo.toml (${cargoVersion}) ≠ typescript/nap-sdk/package.json (${packageVersionNAP})`);
 
-  if (exitCode === 0) pass(`All three declare version ${cargoVersion}`);
+  if (exitCode === 0) pass(`All packages declare version ${cargoVersion}`);
 }
 
 // =========================================================================
@@ -109,7 +126,7 @@ try {
 // unrelated working-tree changes (e.g. the CI files we just edited) don't
 // trigger a false positive.
 const generatedPaths = [
-  "typescript/src/models.ts",
+  "typescript/narrativeengine/src/models.ts",
   "python/narrativeengine/types.py",
   "generated/",
 ];
