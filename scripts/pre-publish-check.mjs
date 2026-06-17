@@ -127,7 +127,7 @@ try {
 // trigger a false positive.
 const generatedPaths = [
   "typescript/narrativeengine/src/models.ts",
-  "python/narrativeengine/types.py",
+  "python/narrativeengine/models.py",
   "generated/",
 ];
 

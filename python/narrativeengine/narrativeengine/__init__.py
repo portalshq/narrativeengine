@@ -4,7 +4,7 @@ import json
 from typing import Any, cast
 
 from . import _native
-from .types import HybridCandidate, LabConfig, NarrativeBlock, NarrativeLore
+from .models import HybridCandidate, LabConfig, NarrativeBlock, NarrativeLore
 
 
 def create_block(id: str, content: str) -> NarrativeBlock:
