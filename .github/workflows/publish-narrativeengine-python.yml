@@ -1,14 +1,36 @@
 name: publish-narrativeengine-python
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "crates/narrativeengine/**"
-      - "python/narrativeengine/**"
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.run_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event.workflow_run.head_sha }}~1
+          filters: |
+            run_build:
+              - 'crates/narrativeengine/**'
+              - 'python/narrativeengine/**'
+
   build:
+    needs: check
+    if: >
+      github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.head_branch == 'main'
+      && needs.check.outputs.changed == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -16,6 +38,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-python@v5
@@ -32,7 +56,11 @@ jobs:
           path: target/wheels/*.whl
 
   publish:
-    needs: build
+    needs: [check, build]
+    if: >
+      github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.head_branch == 'main'
+      && needs.check.outputs.changed == 'true'
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -40,6 +68,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"

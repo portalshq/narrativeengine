@@ -27,7 +27,7 @@ jobs:
             typescript/nap-sdk/package-lock.json
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: pip install -e "python/narrativeengine[dev]"
+      - run: pip install ruff mypy pydantic
       - run: ruff check python/narrativeengine
       - run: mypy python/narrativeengine/narrativeengine
       - run: npm ci && npm run lint
@@ -54,7 +54,7 @@ jobs:
             typescript/narrativeengine/package-lock.json
             typescript/nap-sdk/package-lock.json
 
-      - run: pip install maturin
+      - run: pip install maturin mypy pytest ruff pydantic
       - run: python -c "import shutil, pathlib; p = pathlib.Path('target/wheels'); shutil.rmtree(p, ignore_errors=True); p.mkdir(parents=True, exist_ok=True)"
       - run: maturin build --release --out ../../target/wheels
         working-directory: python/narrativeengine
@@ -66,10 +66,8 @@ jobs:
 
       - run: cargo test --workspace --exclude narrativeengine-py --exclude nap-sdk-py --exclude nap-sdk-ts --exclude narrativeengine-ts
 
-      - run: pip install -e "python/narrativeengine[dev]"
-        shell: bash
       - run: >-
-          python -c "import pathlib, subprocess, sys; wheels = sorted(pathlib.Path('target/wheels').glob('narrativeengine-*.whl')); preferred = [w for w in wheels if 'manylinux' in w.name or 'musllinux' in w.name]; chosen = preferred[0] if preferred else wheels[0]; print(f'Installing wheel: {chosen}'); sys.exit(subprocess.call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', str(chosen)]))"
+          python -c "import pathlib, subprocess, sys; wheels = sorted(pathlib.Path('target/wheels').glob('narrativeengine-*.whl')); preferred = [w for w in wheels if 'manylinux' in w.name or 'musllinux' in w.name]; chosen = preferred[0] if preferred else wheels[0]; print(f'Installing wheel: {chosen}'); sys.exit(subprocess.call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', str(chosen)]))"
         shell: bash
       - run: pytest
         working-directory: python/narrativeengine
