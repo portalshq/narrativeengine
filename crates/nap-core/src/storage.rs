@@ -580,7 +580,10 @@ mod tests {
     fn test_resolve_path_expands_tilde() {
         let resolved = resolve_path("~/nap-test-storage");
         assert!(resolved.is_absolute(), "expected absolute path");
-        let home = std::env::var("HOME").unwrap();
+        // Home may be in HOME (Unix) or USERPROFILE (Windows).
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .expect("home dir env var must be set in test env");
         assert!(
             resolved.starts_with(&home),
             "expected '{:?}' to start with '{home}'",
@@ -590,9 +593,11 @@ mod tests {
 
     #[test]
     fn test_resolve_path_absolute_passthrough() {
-        let p = "/tmp/nap-test-abs";
-        let resolved = resolve_path(p);
-        assert_eq!(resolved, PathBuf::from(p));
+        // Use the OS temp dir so the test works on all platforms.
+        let temp = std::env::temp_dir();
+        let p = temp.join("nap-test-abs");
+        let resolved = resolve_path(&p.to_string_lossy());
+        assert_eq!(resolved, p);
     }
 
     #[test]
@@ -664,11 +669,12 @@ mod tests {
 
     #[test]
     fn test_build_store_path_local() {
+        let temp = std::env::temp_dir();
         let engine = StorageEngine {
             store: Box::new(LocalFileSystem::new()),
             config: StorageConfig {
                 backend: StorageBackend::Local,
-                base_dir: PathBuf::from("/tmp/nap-test"),
+                base_dir: temp.join("nap-test"),
                 assets_prefix: ".nap-assets".to_string(),
                 bucket: String::new(),
             },
@@ -704,11 +710,12 @@ mod tests {
         // directory components.  Note: `from_absolute_path` returns a path
         // relative to the filesystem root (strips the leading '/'), so
         // we check for the subdirectory components rather than a leading '/'.
+        let temp = std::env::temp_dir();
         let engine = StorageEngine {
             store: Box::new(LocalFileSystem::new()),
             config: StorageConfig {
                 backend: StorageBackend::Local,
-                base_dir: PathBuf::from("/tmp/nap-test"),
+                base_dir: temp.join("nap-test"),
                 assets_prefix: ".nap-assets".to_string(),
                 bucket: String::new(),
             },
