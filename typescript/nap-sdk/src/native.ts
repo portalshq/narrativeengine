@@ -5,6 +5,7 @@ interface NativeBindings {
   parseManifest(yamlStr: string): string;
   resolve(uri: string, repoPath: string): string;
   version(): string;
+  ingestMedia(data: Buffer, format: string): Promise<string>;
 }
 
 const require = createRequire(import.meta.url);

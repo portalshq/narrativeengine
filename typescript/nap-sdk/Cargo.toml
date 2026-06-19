@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 nap-core = { path = "../../crates/nap-core" }
-napi = { workspace = true }
+napi = { workspace = true, features = ["tokio_rt"] }
 napi-derive = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }

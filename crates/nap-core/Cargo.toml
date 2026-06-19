@@ -23,5 +23,10 @@ jsonschema = { workspace = true }
 similar = { workspace = true }
 rand = { workspace = true }
 
+# Storage engine (local + S3 backends)
+object_store = { version = "0.11", features = ["aws"] }
+bytes = "1"
+
 [dev-dependencies]
 tempfile = { workspace = true }
+tokio = { workspace = true }
