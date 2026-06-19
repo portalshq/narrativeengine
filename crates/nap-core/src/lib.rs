@@ -28,7 +28,7 @@ pub use manifest::{Manifest, Principal, Provenance, Representation};
 pub use query::ManifestQuery;
 pub use repository::Repository;
 pub use resolver::{ResolveOptions, Resolver};
-pub use storage::{get_engine, StorageBackend, StorageConfig, StorageEngine, StorageError};
+pub use storage::{StorageBackend, StorageConfig, StorageEngine, StorageError, get_engine};
 pub use types::EntityType;
 pub use uri::NapUri;
 pub use vcs::VcsBackend;

@@ -27,10 +27,10 @@
 //!   in `<NAP_DIR>/.gitignore` so raw binaries never enter the Git graph.
 
 use bytes::Bytes;
+use object_store::ObjectStore;
 use object_store::aws::AmazonS3Builder;
 use object_store::local::LocalFileSystem;
 use object_store::path::Path as StorePath;
-use object_store::ObjectStore;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -274,8 +274,8 @@ impl StorageEngine {
         // Handle custom S3-compatible endpoints (Cloudflare R2, MinIO, etc.).
         // AWS_ENDPOINT_URL_S3 is the service-specific override; fall back to
         // the generic AWS_ENDPOINT_URL if the S3-specific var is unset.
-        let endpoint_var = std::env::var("AWS_ENDPOINT_URL_S3")
-            .or_else(|_| std::env::var("AWS_ENDPOINT_URL"));
+        let endpoint_var =
+            std::env::var("AWS_ENDPOINT_URL_S3").or_else(|_| std::env::var("AWS_ENDPOINT_URL"));
 
         if let Ok(endpoint) = endpoint_var {
             let endpoint_str = endpoint.trim().to_string();
@@ -403,15 +403,18 @@ impl StorageEngine {
 
         // ── Step 4: PUT ─────────────────────────────────────────────
         let blob = Bytes::copy_from_slice(data);
-        self.store.put(&store_path, blob.into()).await.map_err(|e| {
-            error!(
-                hash = %hash,
-                path = %store_path,
-                error = %e,
-                "PUT failed during media ingestion"
-            );
-            StorageError::ObjectStore(e)
-        })?;
+        self.store
+            .put(&store_path, blob.into())
+            .await
+            .map_err(|e| {
+                error!(
+                    hash = %hash,
+                    path = %store_path,
+                    error = %e,
+                    "PUT failed during media ingestion"
+                );
+                StorageError::ObjectStore(e)
+            })?;
 
         info!(
             hash = %hash,
@@ -796,7 +799,11 @@ mod tests {
         let path = StorePath::from(format!(".nap-assets/{hex}.png"));
         // `head` should succeed (object exists).
         let meta = engine.store.head(&path).await.unwrap();
-        assert_eq!(meta.size as usize, data.len(), "stored object size must match");
+        assert_eq!(
+            meta.size as usize,
+            data.len(),
+            "stored object size must match"
+        );
     }
 
     #[tokio::test]
@@ -860,14 +867,20 @@ mod tests {
         assert!(hash.starts_with("sha256:"), "empty data should still hash");
         // SHA-256 of empty string: e3b0c44298fc1c149afbf4c8996fb924
         //                          27ae41e4649b934ca495991b7852b855
-        assert_eq!(&hash[7..], "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        assert_eq!(
+            &hash[7..],
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
     }
 
     #[tokio::test]
     async fn test_ingest_media_unknown_format() {
         // Even unknown/weird formats should work fine.
         let engine = in_memory_engine();
-        let hash = engine.ingest_media(b"\x00\x01\x02", "weird-format-123").await.unwrap();
+        let hash = engine
+            .ingest_media(b"\x00\x01\x02", "weird-format-123")
+            .await
+            .unwrap();
         assert!(hash.starts_with("sha256:"));
 
         // Verify it was stored under the correct key.
@@ -938,11 +951,7 @@ mod tests {
             .collect();
         let matching: Vec<_> = entries
             .iter()
-            .filter(|e| {
-                e.file_name()
-                    .to_str()
-                    .map_or(false, |n| n.contains(hex))
-            })
+            .filter(|e| e.file_name().to_str().map_or(false, |n| n.contains(hex)))
             .collect();
         assert_eq!(
             matching.len(),
@@ -968,13 +977,11 @@ mod tests {
             // Determine format from the stored key.
             // Since we used S3 path style, we need to check the file.
             // Let's just check at least one file with this hex exists.
-            let found = std::fs::read_dir(&assets_dir)
-                .unwrap()
-                .any(|e| {
-                    e.ok()
-                        .and_then(|e| e.file_name().to_str().map(|s| s.to_string()))
-                        .map_or(false, |name| name.starts_with(hex))
-                });
+            let found = std::fs::read_dir(&assets_dir).unwrap().any(|e| {
+                e.ok()
+                    .and_then(|e| e.file_name().to_str().map(|s| s.to_string()))
+                    .map_or(false, |name| name.starts_with(hex))
+            });
             assert!(
                 found,
                 "expected file starting with {hex} in assets directory"
@@ -1063,7 +1070,10 @@ mod tests {
     fn test_storage_error_from_object_store() {
         let os_err = object_store::Error::Generic {
             store: "test-store",
-            source: Box::new(std::io::Error::new(std::io::ErrorKind::Other, "store error")),
+            source: Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "store error",
+            )),
         };
         let err = StorageError::ObjectStore(os_err);
         assert!(err.to_string().contains("object store error"));
