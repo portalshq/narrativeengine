@@ -1,5 +1,5 @@
-use napi::bindgen_prelude::Buffer;
 use napi::Error;
+use napi::bindgen_prelude::Buffer;
 use napi_derive::napi;
 use std::path::Path;
 
@@ -67,8 +67,7 @@ pub async fn ingest_media(data: Buffer, format: String) -> napi::Result<String> 
     // ArrayBuffer once we yield control to the Tokio runtime.
     let owned_data = data.to_vec();
 
-    let engine = nap_core::storage::get_engine()
-        .map_err(|e| Error::from_reason(e.to_string()))?;
+    let engine = nap_core::storage::get_engine().map_err(|e| Error::from_reason(e.to_string()))?;
 
     engine
         .ingest_media(&owned_data, &format)

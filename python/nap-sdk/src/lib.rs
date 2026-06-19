@@ -16,9 +16,7 @@ use tokio::runtime::Runtime;
 static RUNTIME: OnceLock<Runtime> = OnceLock::new();
 
 fn get_runtime() -> &'static Runtime {
-    RUNTIME.get_or_init(|| {
-        Runtime::new().expect("failed to create Tokio runtime for nap-sdk-py")
-    })
+    RUNTIME.get_or_init(|| Runtime::new().expect("failed to create Tokio runtime for nap-sdk-py"))
 }
 
 // ── Error mapping ───────────────────────────────────────────────────
