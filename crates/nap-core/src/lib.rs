@@ -10,6 +10,7 @@ pub mod commit;
 pub mod content;
 pub mod error;
 pub mod manifest;
+pub mod merge;
 pub mod query;
 pub mod repository;
 pub mod resolver;
@@ -17,6 +18,7 @@ pub mod schema;
 pub mod storage;
 pub mod types;
 pub mod uri;
+pub mod validation;
 pub mod vcs;
 pub mod vcs_git;
 
@@ -25,6 +27,18 @@ pub use commit::{Change, ChangeOp, Commit};
 pub use content::ContentHash;
 pub use error::NapError;
 pub use manifest::{Manifest, Principal, Provenance, Representation};
+pub use merge::{
+    conflict::{Conflict, ConflictType, MergeResult},
+    diff::{Change as DiffChange, ChangeOp as DiffChangeOp, DiffResult, diff, diff_normalized},
+    merge_engine::MergeEngine,
+    normalization::normalize,
+    path::CanonicalPath,
+    sdl::{
+        IdentityRule, MergeStrategyDef, MergeStrategyType, PropertyDef, PropertyType, SdlDocument,
+        SdlError,
+    },
+    strategies,
+};
 pub use query::ManifestQuery;
 pub use repository::Repository;
 pub use resolver::{ResolveOptions, Resolver};

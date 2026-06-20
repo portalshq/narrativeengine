@@ -67,6 +67,22 @@ pub enum NapError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
+    // ── Merge Errors ────────────────────────────────────────────────────
+    #[error("merge conflict at '{path}': {details}")]
+    MergeConflict { path: String, details: String },
+
+    #[error("SDL parse error: {0}")]
+    SdlParseError(String),
+
+    #[error("SDL validation error: {reason}")]
+    SdlValidationError { reason: String },
+
+    #[error("merge strategy error at '{path}': {reason}")]
+    MergeStrategyError { path: String, reason: String },
+
+    #[error("merge validation error: {reason}")]
+    MergeValidationError { reason: String },
+
     // ── Catch-all ───────────────────────────────────────────────────────
     #[error("{0}")]
     Other(String),
