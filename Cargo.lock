@@ -2211,7 +2211,7 @@ dependencies = [
 
 [[package]]
 name = "nap-cli"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2226,7 +2226,7 @@ dependencies = [
 
 [[package]]
 name = "nap-core"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2251,7 +2251,7 @@ dependencies = [
 
 [[package]]
 name = "nap-sdk-py"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "nap-core",
  "pyo3",
@@ -2263,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "nap-sdk-ts"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "nap-core",
  "napi",
@@ -2276,7 +2276,7 @@ dependencies = [
 
 [[package]]
 name = "nap-server"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "axum",
@@ -2353,7 +2353,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "nap-core",
  "proptest",
@@ -2366,7 +2366,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-codegen"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -2376,7 +2376,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-py"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "narrativeengine",
  "pyo3",
@@ -2384,7 +2384,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-ts"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "napi",
  "napi-build",
