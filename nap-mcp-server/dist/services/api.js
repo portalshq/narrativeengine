@@ -134,7 +134,76 @@ export async function healthCheck() {
 export async function getSchema(schemaName) {
     return napFetch(`/schema/${schemaName}`);
 }
-/** Search entities in a universe by substring match against name/id. */
+// ── Init Universe ─────────────────────────────────────────────
+/** Initialize a new universe repository. */
+export async function initUniverse(universe) {
+    return napFetch(`/init/${universe}`, { method: "POST" });
+}
+// ── Create Entity ─────────────────────────────────────────────
+/** Create a new entity in a universe. */
+export async function createEntity(universe, entityType, entityId, body) {
+    return napFetch(`/create/${universe}/${entityType}/${entityId}`, { method: "POST", body: JSON.stringify(body) });
+}
+// ── Delete Entity ─────────────────────────────────────────────
+/** Delete an entity from a universe. */
+export async function deleteEntity(universe, entityType, entityId, author) {
+    return napFetch(`/${universe}/${entityType}/${entityId}`, { method: "DELETE", body: JSON.stringify({ author }) });
+}
+// ── Branch Operations ─────────────────────────────────────────
+/** List branches in a universe. */
+export async function listBranches(universe) {
+    return napFetch(`/branches/${universe}`);
+}
+/** Create a branch in a universe. */
+export async function createBranch(universe, name) {
+    return napFetch(`/branches/${universe}`, { method: "POST", body: JSON.stringify({ name }) });
+}
+/** Switch to a branch in a universe. */
+export async function switchBranch(universe, name) {
+    return napFetch(`/switch/${universe}`, { method: "POST", body: JSON.stringify({ name }) });
+}
+// ── Tag Operations ────────────────────────────────────────────
+/** List tags in a universe. */
+export async function listTags(universe) {
+    return napFetch(`/tags/${universe}`);
+}
+/** Create a tag in a universe. */
+export async function createTag(universe, name) {
+    return napFetch(`/tags/${universe}`, { method: "POST", body: JSON.stringify({ name }) });
+}
+// ── Remote Operations ─────────────────────────────────────────
+/** List remotes in a universe. */
+export async function listRemotes(universe) {
+    return napFetch(`/remotes/${universe}`);
+}
+/** Add a remote to a universe. */
+export async function addRemote(universe, name, url) {
+    return napFetch(`/remotes/${universe}`, { method: "POST", body: JSON.stringify({ name, url }) });
+}
+/** Remove a remote from a universe. */
+export async function removeRemote(universe, name) {
+    return napFetch(`/remotes/${universe}/${name}`, { method: "DELETE" });
+}
+// ── Push / Pull ───────────────────────────────────────────────
+/** Push a universe to its remote. */
+export async function pushUniverse(universe, remote, branch) {
+    return napFetch(`/push/${universe}`, { method: "POST", body: JSON.stringify({ remote, branch }) });
+}
+/** Pull a universe from its remote. */
+export async function pullUniverse(universe, remote, branch) {
+    return napFetch(`/pull/${universe}`, { method: "POST", body: JSON.stringify({ remote, branch }) });
+}
+// ── Content Hash ──────────────────────────────────────────────
+/** Compute the SHA-256 content hash of data (base64-encoded). */
+export async function computeContentHash(data) {
+    return napFetch(`/content-hash`, { method: "POST", body: JSON.stringify({ data }) });
+}
+// ── Validate Manifest ─────────────────────────────────────────
+/** Validate a manifest against the NAP schema. */
+export async function validateManifest(universe, entityType, entityId) {
+    return napFetch(`/validate/${universe}/${entityType}/${entityId}`);
+}
+// ── Search Entities ───────────────────────────────────────────
 export async function searchEntities(universe, query, entityType) {
     const types = entityType
         ? [entityType]

@@ -65,7 +65,92 @@ export declare function healthCheck(): Promise<{
 }>;
 /** Fetch the JSON Schema for a given schema name. */
 export declare function getSchema(schemaName: string): Promise<Record<string, unknown>>;
-/** Search entities in a universe by substring match against name/id. */
+/** Initialize a new universe repository. */
+export declare function initUniverse(universe: string): Promise<{
+    success: boolean;
+    universe: string;
+    path: string;
+}>;
+/** Create a new entity in a universe. */
+export declare function createEntity(universe: string, entityType: string, entityId: string, body: {
+    name: string;
+    author: string;
+}): Promise<{
+    success: boolean;
+    uri: string;
+    commit_id: string;
+    version: number;
+}>;
+/** Delete an entity from a universe. */
+export declare function deleteEntity(universe: string, entityType: string, entityId: string, author: string): Promise<{
+    success: boolean;
+    commit_id: string;
+}>;
+/** List branches in a universe. */
+export declare function listBranches(universe: string): Promise<{
+    universe: string;
+    branches: string[];
+}>;
+/** Create a branch in a universe. */
+export declare function createBranch(universe: string, name: string): Promise<{
+    success: boolean;
+    branch: string;
+}>;
+/** Switch to a branch in a universe. */
+export declare function switchBranch(universe: string, name: string): Promise<{
+    success: boolean;
+    branch: string;
+}>;
+/** List tags in a universe. */
+export declare function listTags(universe: string): Promise<{
+    universe: string;
+    tags: string[];
+}>;
+/** Create a tag in a universe. */
+export declare function createTag(universe: string, name: string): Promise<{
+    success: boolean;
+    tag: string;
+}>;
+/** List remotes in a universe. */
+export declare function listRemotes(universe: string): Promise<{
+    universe: string;
+    remotes: Array<{
+        name: string;
+        url: string;
+    }>;
+}>;
+/** Add a remote to a universe. */
+export declare function addRemote(universe: string, name: string, url: string): Promise<{
+    success: boolean;
+    remote: string;
+    url: string;
+}>;
+/** Remove a remote from a universe. */
+export declare function removeRemote(universe: string, name: string): Promise<{
+    success: boolean;
+    removed: string;
+}>;
+/** Push a universe to its remote. */
+export declare function pushUniverse(universe: string, remote?: string, branch?: string): Promise<{
+    success: boolean;
+    universe: string;
+}>;
+/** Pull a universe from its remote. */
+export declare function pullUniverse(universe: string, remote?: string, branch?: string): Promise<{
+    success: boolean;
+    universe: string;
+}>;
+/** Compute the SHA-256 content hash of data (base64-encoded). */
+export declare function computeContentHash(data: string): Promise<{
+    hash: string;
+    algorithm: string;
+}>;
+/** Validate a manifest against the NAP schema. */
+export declare function validateManifest(universe: string, entityType: string, entityId: string): Promise<{
+    valid: boolean;
+    uri: string;
+    errors: string[];
+}>;
 export declare function searchEntities(universe: string, query: string, entityType?: string): Promise<Array<{
     uri: string;
     name: string;

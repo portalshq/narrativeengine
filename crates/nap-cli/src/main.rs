@@ -316,6 +316,68 @@ enum Commands {
         /// NAP URI.
         uri: String,
     },
+
+    /// Switch to a branch.
+    Switch {
+        /// Universe name.
+        universe: String,
+        /// Branch name to switch to.
+        name: String,
+    },
+
+    /// Show the current HEAD commit hash.
+    HeadHash {
+        /// Universe name.
+        universe: String,
+    },
+
+    /// Validate a manifest against the NAP schema.
+    Validate {
+        /// NAP URI of the entity to validate.
+        uri: Option<String>,
+        /// Path to a manifest YAML file to validate.
+        #[arg(long)]
+        file: Option<PathBuf>,
+    },
+
+    /// Print a JSON Schema for manifest or commit types.
+    Schema {
+        /// Schema name: 'manifest' or 'commit'.
+        name: String,
+        /// Output format: json, yaml.
+        #[arg(long, short = 'f', default_value = "json")]
+        format: String,
+    },
+
+    /// Show diff between two manifest files or versions.
+    Diff {
+        /// Base (left) manifest file.
+        base_file: PathBuf,
+        /// Candidate (right) manifest file.
+        candidate_file: PathBuf,
+        /// Output format: json, yaml.
+        #[arg(long, short = 'f', default_value = "yaml")]
+        format: String,
+    },
+
+    /// Three-way merge of JSON/YAML values.
+    Merge {
+        /// Base (common ancestor) file.
+        base: PathBuf,
+        /// Current (ours) file.
+        current: PathBuf,
+        /// Proposed (theirs) file.
+        proposed: PathBuf,
+        /// Output format: json, yaml.
+        #[arg(long, short = 'f', default_value = "yaml")]
+        format: String,
+    },
+
+    /// Compute the SHA-256 content hash of a file.
+    ContentHash {
+        /// Path to the file to hash.
+        file: PathBuf,
+    },
 }
 
 /// Determine output format for a command.
@@ -451,6 +513,24 @@ fn main() -> Result<()> {
         Commands::Remote(cmd) => cmd_remote(&base_dir, cmd),
         Commands::Sign { uri } => cmd_sign(&uri),
         Commands::Verify { uri } => cmd_verify(&uri),
+        Commands::Switch { universe, name } => cmd_switch(&base_dir, &universe, &name),
+        Commands::HeadHash { universe } => cmd_head_hash(&base_dir, &universe),
+        Commands::Validate { uri, file } => {
+            cmd_validate(&base_dir, uri.as_deref(), file.as_deref())
+        }
+        Commands::Schema { name, format } => cmd_schema(&name, &format),
+        Commands::Diff {
+            base_file,
+            candidate_file,
+            format,
+        } => cmd_diff(&base_file, &candidate_file, &format),
+        Commands::Merge {
+            base,
+            current,
+            proposed,
+            format,
+        } => cmd_merge(&base, &current, &proposed, &format),
+        Commands::ContentHash { file } => cmd_content_hash(&file),
     };
 
     if let Err(err) = result {
@@ -922,6 +1002,257 @@ fn cmd_revert(base_dir: &Path, universe: &str, commit: &str, author: &str) -> Re
     emit(format!(
         "✓ Reverted commit {short_old} — new commit: {short_new}"
     ));
+    Ok(())
+}
+
+fn cmd_switch(base_dir: &Path, universe: &str, name: &str) -> Result<()> {
+    let repo = open_repo(base_dir, universe)?;
+    repo.switch_branch(name)
+        .context(format!("failed to switch to branch '{name}'"))?;
+    emit(format!("✓ Switched to branch '{name}' in {universe}"));
+    Ok(())
+}
+
+fn cmd_head_hash(base_dir: &Path, universe: &str) -> Result<()> {
+    let repo = open_repo(base_dir, universe)?;
+    let hash = repo.head_hash().context("failed to get HEAD hash")?;
+    if !std::io::stdout().is_terminal() {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "universe": universe,
+                "head": hash,
+            }))?
+        );
+    } else {
+        emit(format!("HEAD: {hash}"));
+    }
+    Ok(())
+}
+
+fn cmd_validate(base_dir: &Path, uri: Option<&str>, file: Option<&Path>) -> Result<()> {
+    match (uri, file) {
+        (Some(uri_str), None) => {
+            // Validate entity manifest by URI
+            let uri_parsed: NapUri = uri_str.parse().context("invalid URI")?;
+            let repo = open_repo(base_dir, &uri_parsed.universe)?;
+            let manifest = repo
+                .read_manifest(uri_parsed.entity_type, &uri_parsed.entity_id)
+                .context("failed to read manifest")?;
+            match nap_core::schema::validate_manifest(&manifest) {
+                Ok(()) => {
+                    if !std::io::stdout().is_terminal() {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "valid": true,
+                                "uri": uri_str,
+                            }))?
+                        );
+                    } else {
+                        emit(format!("✓ '{uri_str}' is valid"));
+                    }
+                }
+                Err(errors) => {
+                    if !std::io::stdout().is_terminal() {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "valid": false,
+                                "uri": uri_str,
+                                "errors": errors,
+                            }))?
+                        );
+                    } else {
+                        emit(format!("✗ '{uri_str}' is invalid:"));
+                        for err in &errors {
+                            emit(format!("  - {err}"));
+                        }
+                    }
+                }
+            }
+        }
+        (None, Some(file_path)) => {
+            // Validate a YAML manifest file
+            let manifest = nap_core::Manifest::from_file(file_path)
+                .context("failed to parse manifest file")?;
+            match nap_core::schema::validate_manifest(&manifest) {
+                Ok(()) => {
+                    if !std::io::stdout().is_terminal() {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "valid": true,
+                                "file": file_path.to_string_lossy(),
+                            }))?
+                        );
+                    } else {
+                        emit(format!("✓ '{}' is valid", file_path.display()));
+                    }
+                }
+                Err(errors) => {
+                    if !std::io::stdout().is_terminal() {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "valid": false,
+                                "file": file_path.to_string_lossy(),
+                                "errors": errors,
+                            }))?
+                        );
+                    } else {
+                        emit(format!("✗ '{}' is invalid:", file_path.display()));
+                        for err in &errors {
+                            emit(format!("  - {err}"));
+                        }
+                    }
+                }
+            }
+        }
+        _ => {
+            anyhow::bail!(
+                "Provide either a NAP URI (nap validate <uri>) or a manifest file (nap validate --file <path>)"
+            )
+        }
+    }
+    Ok(())
+}
+
+fn cmd_schema(name: &str, format: &str) -> Result<()> {
+    let schema = match name {
+        "manifest" => nap_core::schema::manifest_schema(),
+        "commit" => nap_core::schema::commit_schema(),
+        _ => anyhow::bail!("Unknown schema '{name}'. Available: 'manifest', 'commit'"),
+    };
+
+    let fmt = resolve_output_format(format);
+    match fmt.as_str() {
+        "json" => println!("{}", serde_json::to_string_pretty(&schema)?),
+        _ => {
+            let yaml: serde_yaml::Value = serde_json::from_value(schema)?;
+            println!("{}", serde_yaml::to_string(&yaml)?);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_diff(base_file: &Path, candidate_file: &Path, format: &str) -> Result<()> {
+    // Read and parse both files
+    let base_content = std::fs::read_to_string(base_file)
+        .context(format!("failed to read '{}'", base_file.display()))?;
+    let candidate_content = std::fs::read_to_string(candidate_file)
+        .context(format!("failed to read '{}'", candidate_file.display()))?;
+
+    // Parse as YAML then convert to JSON Value
+    let base_yaml: serde_yaml::Value = serde_yaml::from_str(&base_content)
+        .context(format!("failed to parse YAML in '{}'", base_file.display()))?;
+    let candidate_yaml: serde_yaml::Value = serde_yaml::from_str(&candidate_content).context(
+        format!("failed to parse YAML in '{}'", candidate_file.display()),
+    )?;
+
+    let base_value: serde_json::Value = serde_json::to_value(base_yaml)
+        .map_err(|e| anyhow::anyhow!("YAML→JSON conversion failed: {e}"))?;
+    let candidate_value: serde_json::Value = serde_json::to_value(candidate_yaml)
+        .map_err(|e| anyhow::anyhow!("YAML→JSON conversion failed: {e}"))?;
+
+    // Build a minimal SDL for diffing
+    use nap_core::merge::sdl::SdlDocument;
+    let sdl = SdlDocument::from_yaml(
+        r#"schema:
+  version: "1.0"
+  required: []
+  properties: {}
+"#,
+    )
+    .context("failed to create default SDL")?;
+
+    use nap_core::merge::diff::diff;
+    let result = diff(&base_value, &candidate_value, &sdl);
+
+    let fmt = resolve_output_format(format);
+    match fmt.as_str() {
+        "json" => println!("{}", serde_json::to_string_pretty(&result)?),
+        _ => {
+            let yaml: serde_yaml::Value = serde_json::from_value(serde_json::to_value(&result)?)?;
+            println!("{}", serde_yaml::to_string(&yaml)?);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_merge(
+    base_file: &Path,
+    current_file: &Path,
+    proposed_file: &Path,
+    format: &str,
+) -> Result<()> {
+    // Read and parse all three files
+    let read_file = |path: &Path| -> Result<serde_json::Value> {
+        let content = std::fs::read_to_string(path)
+            .context(format!("failed to read '{}'", path.display()))?;
+        let yaml: serde_yaml::Value = serde_yaml::from_str(&content)
+            .context(format!("failed to parse YAML in '{}'", path.display()))?;
+        serde_json::to_value(yaml).map_err(|e| anyhow::anyhow!("YAML→JSON conversion failed: {e}"))
+    };
+
+    let base = read_file(base_file)?;
+    let current = read_file(current_file)?;
+    let proposed = read_file(proposed_file)?;
+
+    // Build minimal SDL and merge engine
+    use nap_core::merge::merge_engine::MergeEngine;
+    use nap_core::merge::sdl::SdlDocument;
+    let sdl = SdlDocument::from_yaml(
+        r#"schema:
+  version: "1.0"
+  required: []
+  properties: {}
+"#,
+    )
+    .context("failed to create default SDL")?;
+    let engine = MergeEngine::new(sdl);
+
+    use nap_core::merge::conflict::MergeResult;
+    match engine.merge(base, current, proposed) {
+        MergeResult::Merged(merged) => {
+            let fmt = resolve_output_format(format);
+            match fmt.as_str() {
+                "json" => println!("{}", serde_json::to_string_pretty(&merged)?),
+                _ => {
+                    let yaml: serde_yaml::Value = serde_json::from_value(merged)?;
+                    println!("{}", serde_yaml::to_string(&yaml)?);
+                }
+            }
+        }
+        MergeResult::Conflicts(conflicts) => {
+            if !std::io::stdout().is_terminal() {
+                println!("{}", serde_json::to_string_pretty(&conflicts)?);
+            } else {
+                emit(format!("✗ Merge conflicts detected ({}):", conflicts.len()));
+                for c in &conflicts {
+                    emit(format!("  - {}: {:?}", c.path, c.conflict_type));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_content_hash(file: &Path) -> Result<()> {
+    let hash = nap_core::ContentHash::from_file(file)
+        .context(format!("failed to hash file '{}'", file.display()))?;
+    if !std::io::stdout().is_terminal() {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "file": file.to_string_lossy(),
+                "hash": hash.as_str(),
+                "algorithm": "sha256",
+            }))?
+        );
+    } else {
+        emit(format!("{}  {}", hash, file.display()));
+    }
     Ok(())
 }
 

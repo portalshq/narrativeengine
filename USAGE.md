@@ -13,6 +13,12 @@ This guide covers practical workflows for four core capabilities of the `nap` CL
 
 ---
 
+## Abstract
+Nap makes narrative resources addressable, portable, resolvable, and versioned across tools, storage systems, formats, and AI workflows.
+Nap addresses are stable -- entity references are immutable.
+
+---
+
 ## Table of Contents
 
 - [Quick Reference](#quick-reference)

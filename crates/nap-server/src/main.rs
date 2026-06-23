@@ -1,14 +1,31 @@
 //! NAP HTTP Resolver Server — Axum-based REST API.
 //!
 //! Endpoints:
-//!   GET  /resolve/:universe/:entity_type/:entity_id  — Resolve a manifest
-//!   POST /commit/:universe/:entity_type/:entity_id   — Commit changes
-//!   GET  /history/:universe/:entity_type/:entity_id   — Get commit history
-//!   GET  /schema/{name}                               — Get JSON Schema for a type
-//!   GET  /universes                                   — List all universes
-//!   GET  /universes/:universe/entities                 — List entities in a universe
-//!   POST /sync/:universe                              — Push configured remote
-//!   GET  /health                                      — Health check
+//!   GET   /resolve/:universe/:entity_type/:entity_id   — Resolve a manifest
+//!   POST  /commit/:universe/:entity_type/:entity_id    — Commit changes
+//!   POST  /create/:universe/:entity_type/:entity_id    — Create entity
+//!   DELETE /:universe/:entity_type/:entity_id          — Delete entity
+//!   POST  /revert/:universe                            — Revert a commit
+//!   GET   /history/:universe/:entity_type/:entity_id   — Get commit history
+//!   GET   /schema/{name}                               — Get JSON Schema for a type
+//!   GET   /universes                                   — List all universes
+//!   GET   /universes/:universe/entities                 — List entities in a universe
+//!   POST  /init/:universe                              — Initialize a universe
+//!   POST  /switch/:universe                            — Switch to a branch
+//!   GET   /head/:universe                              — Get HEAD commit hash
+//!   GET   /branches/:universe                          — List branches
+//!   POST  /branches/:universe                          — Create a branch
+//!   GET   /tags/:universe                              — List tags
+//!   POST  /tags/:universe                              — Create a tag
+//!   GET   /remotes/:universe                           — List remotes
+//!   POST  /remotes/:universe                           — Add a remote
+//!   DELETE /remotes/:universe/:name                    — Remove a remote
+//!   POST  /pull/:universe                              — Pull from remote
+//!   POST  /push/:universe                              — Push to remote
+//!   POST  /sync/:universe                              — Push configured remote
+//!   POST  /content-hash                                — Compute content hash
+//!   GET   /validate/:universe/:entity_type/:entity_id  — Validate a manifest
+//!   GET   /health                                      — Health check
 //!
 //! Query parameters:
 //!   branch — Resolve at a specific branch
@@ -25,7 +42,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
@@ -34,6 +51,7 @@ use tracing::{error, info};
 
 use nap_core::{
     commit::Change,
+    content::ContentHash,
     repository::Repository,
     resolver::{ResolveOptions, ResolveResult, Resolver},
     schema,
@@ -68,6 +86,51 @@ struct CommitRequest {
 struct RevertRequest {
     commit: String,
     author: String,
+}
+
+/// Request body for entity creation.
+#[derive(Debug, Deserialize)]
+struct CreateRequest {
+    name: String,
+    author: String,
+}
+
+/// Request body for entity deletion.
+#[derive(Debug, Deserialize)]
+struct DeleteRequest {
+    author: String,
+}
+
+/// Request body for branch/tag creation.
+#[derive(Debug, Deserialize)]
+struct BranchTagRequest {
+    name: String,
+}
+
+/// Request body for branch switch.
+#[derive(Debug, Deserialize)]
+struct SwitchRequest {
+    name: String,
+}
+
+/// Request body for remote add.
+#[derive(Debug, Deserialize)]
+struct RemoteAddRequest {
+    name: String,
+    url: String,
+}
+
+/// Request body for push/pull.
+#[derive(Debug, Deserialize)]
+struct PushPullRequest {
+    remote: Option<String>,
+    branch: Option<String>,
+}
+
+/// Request body for content hash computation.
+#[derive(Debug, Deserialize)]
+struct ContentHashRequest {
+    data: String, // base64-encoded data
 }
 
 /// API error response.
@@ -105,6 +168,16 @@ async fn main() {
             "/commit/{universe}/{entity_type}/{entity_id}",
             post(handle_commit),
         )
+        // Create entity
+        .route(
+            "/create/{universe}/{entity_type}/{entity_id}",
+            post(handle_create),
+        )
+        // Delete entity
+        .route(
+            "/{universe}/{entity_type}/{entity_id}",
+            delete(handle_delete),
+        )
         // Revert
         .route("/revert/{universe}", post(handle_revert))
         // History
@@ -118,8 +191,41 @@ async fn main() {
         .route("/universes", get(handle_list_universes))
         // List entities
         .route("/universes/{universe}/entities", get(handle_list_entities))
+        // Init universe
+        .route("/init/{universe}", post(handle_init))
+        // Switch branch
+        .route("/switch/{universe}", post(handle_switch_branch))
+        // Get HEAD hash
+        .route("/head/{universe}", get(handle_head_hash))
+        // Branches
+        .route(
+            "/branches/{universe}",
+            get(handle_list_branches).post(handle_create_branch),
+        )
+        // Tags
+        .route(
+            "/tags/{universe}",
+            get(handle_list_tags).post(handle_create_tag),
+        )
+        // Remotes
+        .route(
+            "/remotes/{universe}",
+            get(handle_list_remotes).post(handle_add_remote),
+        )
+        .route("/remotes/{universe}/{name}", delete(handle_remove_remote))
+        // Pull
+        .route("/pull/{universe}", post(handle_pull))
+        // Push
+        .route("/push/{universe}", post(handle_push))
         // Sync (push to configured remote)
         .route("/sync/{universe}", post(handle_sync))
+        // Content hash
+        .route("/content-hash", post(handle_content_hash))
+        // Validate
+        .route(
+            "/validate/{universe}/{entity_type}/{entity_id}",
+            get(handle_validate),
+        )
         // Health
         .route("/health", get(handle_health))
         .layer(CorsLayer::permissive())
@@ -136,6 +242,591 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+/// POST /init/:universe
+async fn handle_init(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo = Repository::init(&state.base_path, &universe, Box::new(GitBackend::new())).map_err(
+        |e| {
+            let (status, code) = match &e {
+                nap_core::NapError::RepositoryAlreadyExists(_) => {
+                    (StatusCode::CONFLICT, "ALREADY_EXISTS")
+                }
+                _ => (StatusCode::INTERNAL_SERVER_ERROR, "INIT_FAILED"),
+            };
+            error!(error = %e, universe = %universe, "init failed");
+            (
+                status,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: code.to_string(),
+                }),
+            )
+        },
+    )?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "universe": universe,
+        "path": repo.root.to_string_lossy(),
+    })))
+}
+
+/// POST /create/:universe/:entity_type/:entity_id
+async fn handle_create(
+    State(state): State<Arc<AppState>>,
+    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Json(body): Json<CreateRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "INVALID_ENTITY_TYPE".to_string(),
+            }),
+        )
+    })?;
+
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    let (manifest, commit_hash) = repo
+        .create_entity(entity_type, &entity_id, &body.name, &body.author)
+        .map_err(|e| {
+            error!(error = %e, "create entity failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "CREATE_FAILED".to_string(),
+                }),
+            )
+        })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "uri": manifest.id,
+        "commit_id": commit_hash,
+        "version": manifest.version,
+    })))
+}
+
+/// DELETE /:universe/:entity_type/:entity_id
+async fn handle_delete(
+    State(state): State<Arc<AppState>>,
+    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Json(body): Json<DeleteRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "INVALID_ENTITY_TYPE".to_string(),
+            }),
+        )
+    })?;
+
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    let commit_hash = repo
+        .delete_entity(entity_type, &entity_id, &body.author)
+        .map_err(|e| {
+            error!(error = %e, "delete entity failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "DELETE_FAILED".to_string(),
+                }),
+            )
+        })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "commit_id": commit_hash,
+    })))
+}
+
+/// POST /switch/:universe
+async fn handle_switch_branch(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+    Json(body): Json<SwitchRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.switch_branch(&body.name).map_err(|e| {
+        error!(error = %e, branch = %body.name, "switch branch failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "SWITCH_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "branch": body.name,
+    })))
+}
+
+/// GET /head/:universe
+async fn handle_head_hash(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    let hash = repo.head_hash().map_err(|e| {
+        error!(error = %e, "head hash failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "HEAD_HASH_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "universe": universe,
+        "head": hash,
+    })))
+}
+
+/// GET /branches/:universe
+async fn handle_list_branches(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    let branches = repo.list_branches().map_err(|e| {
+        error!(error = %e, "list branches failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "LIST_BRANCHES_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "universe": universe,
+        "branches": branches,
+    })))
+}
+
+/// POST /branches/:universe
+async fn handle_create_branch(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+    Json(body): Json<BranchTagRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.create_branch(&body.name).map_err(|e| {
+        error!(error = %e, branch = %body.name, "create branch failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "CREATE_BRANCH_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "branch": body.name,
+    })))
+}
+
+/// GET /tags/:universe
+async fn handle_list_tags(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    // To avoid conflicting with POST /tags/:universe body parsing,
+    // we use a function-level approach
+    let repo_path = state.base_path.join(&universe);
+    let repo = match Repository::open(&repo_path, Box::new(GitBackend::new())) {
+        Ok(r) => r,
+        Err(e) => {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "UNIVERSE_NOT_FOUND".to_string(),
+                }),
+            ));
+        }
+    };
+
+    let tags = match repo.list_tags() {
+        Ok(t) => t,
+        Err(e) => {
+            error!(error = %e, "list tags failed");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "LIST_TAGS_FAILED".to_string(),
+                }),
+            ));
+        }
+    };
+
+    Ok(Json(serde_json::json!({
+        "universe": universe,
+        "tags": tags,
+    })))
+}
+
+/// POST /tags/:universe
+async fn handle_create_tag(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+    Json(body): Json<BranchTagRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.create_tag(&body.name).map_err(|e| {
+        error!(error = %e, tag = %body.name, "create tag failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "CREATE_TAG_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "tag": body.name,
+    })))
+}
+
+/// GET /remotes/:universe
+async fn handle_list_remotes(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    let remotes = repo.list_remotes().map_err(|e| {
+        error!(error = %e, "list remotes failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "LIST_REMOTES_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    let pairs: Vec<serde_json::Value> = remotes
+        .iter()
+        .map(|(n, u)| serde_json::json!({ "name": n, "url": u }))
+        .collect();
+
+    Ok(Json(serde_json::json!({
+        "universe": universe,
+        "remotes": pairs,
+    })))
+}
+
+/// POST /remotes/:universe
+async fn handle_add_remote(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+    Json(body): Json<RemoteAddRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.add_remote(&body.name, &body.url).map_err(|e| {
+        error!(error = %e, remote = %body.name, "add remote failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "ADD_REMOTE_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "remote": body.name,
+        "url": body.url,
+    })))
+}
+
+/// DELETE /remotes/:universe/:name
+async fn handle_remove_remote(
+    State(state): State<Arc<AppState>>,
+    Path((universe, name)): Path<(String, String)>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.remove_remote(&name).map_err(|e| {
+        error!(error = %e, remote = %name, "remove remote failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "REMOVE_REMOTE_FAILED".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "removed": name,
+    })))
+}
+
+/// POST /pull/:universe
+async fn handle_pull(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+    Json(body): Json<PushPullRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.pull(body.remote.as_deref(), body.branch.as_deref())
+        .map_err(|e| {
+            error!(error = %e, "pull failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "PULL_FAILED".to_string(),
+                }),
+            )
+        })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "universe": universe,
+    })))
+}
+
+/// POST /push/:universe
+async fn handle_push(
+    State(state): State<Arc<AppState>>,
+    Path(universe): Path<String>,
+    Json(body): Json<PushPullRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    repo.push(body.remote.as_deref(), body.branch.as_deref())
+        .map_err(|e| {
+            error!(error = %e, "push failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "PUSH_FAILED".to_string(),
+                }),
+            )
+        })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "universe": universe,
+    })))
+}
+
+/// POST /content-hash
+async fn handle_content_hash(
+    Json(body): Json<ContentHashRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    use base64::Engine;
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(&body.data)
+        .map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ApiError {
+                    error: format!("invalid base64: {e}"),
+                    code: "INVALID_BASE64".to_string(),
+                }),
+            )
+        })?;
+
+    let hash = ContentHash::from_bytes(&bytes);
+    Ok(Json(serde_json::json!({
+        "hash": hash.as_str(),
+        "algorithm": "sha256",
+    })))
+}
+
+/// GET /validate/:universe/:entity_type/:entity_id
+async fn handle_validate(
+    State(state): State<Arc<AppState>>,
+    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "INVALID_ENTITY_TYPE".to_string(),
+            }),
+        )
+    })?;
+
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::open(&repo_path, Box::new(GitBackend::new())).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "UNIVERSE_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    let manifest = repo.read_manifest(entity_type, &entity_id).map_err(|e| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    match nap_core::schema::validate_manifest(&manifest) {
+        Ok(()) => Ok(Json(serde_json::json!({
+            "valid": true,
+            "uri": manifest.id,
+            "errors": [],
+        }))),
+        Err(errors) => Ok(Json(serde_json::json!({
+            "valid": false,
+            "uri": manifest.id,
+            "errors": errors,
+        }))),
+    }
 }
 
 /// GET /resolve/:universe/:entity_type/:entity_id

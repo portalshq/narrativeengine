@@ -80,3 +80,6 @@ tempfile = "3"
 
 # Random
 rand = "0.9"
+
+# Encoding
+base64 = "0.22"

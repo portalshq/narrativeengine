@@ -2255,6 +2255,7 @@ version = "0.2.4"
 dependencies = [
  "nap-core",
  "pyo3",
+ "serde",
  "serde_json",
  "serde_yaml",
  "tokio",
@@ -2268,6 +2269,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "serde",
  "serde_json",
  "serde_yaml",
 ]
@@ -2278,6 +2280,7 @@ version = "0.2.4"
 dependencies = [
  "anyhow",
  "axum",
+ "base64",
  "chrono",
  "nap-core",
  "serde",

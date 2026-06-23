@@ -32,6 +32,7 @@ import { registerResolveTools } from "./tools/resolve.js";
 import { registerDiscoveryTools } from "./tools/discovery.js";
 import { registerMutationTools } from "./tools/mutation.js";
 import { registerSchemaTools } from "./tools/schema.js";
+import { registerManagementTools } from "./tools/management.js";
 import { CONFIG } from "./constants.js";
 
 // ── Server Initialization ─────────────────────────────────────────────────
@@ -51,6 +52,8 @@ registerDiscoveryTools(server);
 registerMutationTools(server);
 // Read-only: schema introspection
 registerSchemaTools(server);
+// Read-write: init, CRUD, VCS, remotes, etc.
+registerManagementTools(server);
 
 // ── Resource Registration ─────────────────────────────────────────────────
 

@@ -15,6 +15,7 @@ napi = { workspace = true, features = ["tokio_rt"] }
 napi-derive = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
+serde = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }

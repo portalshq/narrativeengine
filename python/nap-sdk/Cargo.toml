@@ -15,4 +15,5 @@ nap-core = { path = "../../crates/nap-core" }
 pyo3 = { workspace = true, features = ["extension-module"] }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
+serde = { workspace = true }
 tokio = { workspace = true }

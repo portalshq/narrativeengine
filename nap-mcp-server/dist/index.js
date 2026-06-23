@@ -30,6 +30,7 @@ import { registerResolveTools } from "./tools/resolve.js";
 import { registerDiscoveryTools } from "./tools/discovery.js";
 import { registerMutationTools } from "./tools/mutation.js";
 import { registerSchemaTools } from "./tools/schema.js";
+import { registerManagementTools } from "./tools/management.js";
 import { CONFIG } from "./constants.js";
 // ── Server Initialization ─────────────────────────────────────────────────
 const server = new McpServer({
@@ -45,6 +46,8 @@ registerDiscoveryTools(server);
 registerMutationTools(server);
 // Read-only: schema introspection
 registerSchemaTools(server);
+// Read-write: init, CRUD, VCS, remotes, etc.
+registerManagementTools(server);
 import { parseNapUri, resolveManifest } from "./services/api.js";
 // nap:// URI resources — agents can read any NAP resource by URI
 server.registerResource({

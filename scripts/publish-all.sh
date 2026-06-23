@@ -96,13 +96,18 @@ if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
+# Fetch the latest remote changes to ensure checks are accurate
+echo "Fetching origin main..."
+git fetch origin main
+
 if git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | grep -q "$RELEASE_TAG"; then
   echo "Error: tag $RELEASE_TAG already exists on origin" >&2
   exit 1
 fi
 
-if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-  echo "Error: local main is not aligned with origin/main — pull/rebase first" >&2
+# Verify local branch includes all remote history (it can be ahead, but not behind)
+if ! git merge-base --is-ancestor origin/main HEAD; then
+  echo "Error: local main is missing changes from origin/main — pull/rebase first" >&2
   exit 1
 fi
 
@@ -125,7 +130,7 @@ workspace_packages = [
     "narrativeengine-ts",
     "nap-sdk-py",
     "nap-sdk-ts",
-]
+    ]
 
 replacements = {
     root / "Cargo.toml": [(f'version = "{current}"', f'version = "{new}"')],

@@ -90,7 +90,19 @@ The resolver turns a `nap://` URI into a manifest (or a subtree of one). With op
 | `location` | `nap://starwars/location/tatooine` | Spatial location within a fictional universe |
 | `scene` | `nap://starwars/scene/cantina` | Narrative scene — participants, timeline, events |
 | `prop` | `nap://toystory/prop/andy-hat` | Physical object with materials, variants, ownership |
+| `group` | `nap://toystory/group/buzz-and-woody-flying` | Mixed-media groups |
 | `world` | `nap://starwars/world/starwars` | The universe itself — rules, canon, top-level metadata |
+
+---
+
+## Groups
+
+Groups are composite objects that can reference both entities and media. 
+
+Use cases: compound props, outfits, events, and more. 
+
+Examples: woody + buzzlightyear = group("woodyandbuzzflying"). 
+andy + truck = group("andysmovingtruck"). 
 
 ---
 
