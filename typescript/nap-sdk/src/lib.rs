@@ -4,7 +4,6 @@ use napi_derive::napi;
 use std::path::Path;
 
 use nap_core::{
-    VcsBackend,
     commit::{Change, Commit},
     content::ContentHash,
     manifest::{Manifest, Representation},
@@ -696,27 +695,22 @@ pub fn merge_merge(
     let proposed_val: serde_json::Value =
         serde_json::from_str(&proposed).map_err(|e| Error::from_reason(e.to_string()))?;
 
-    let base_yaml: serde_yaml::Value =
-        serde_json::from_value(base_val).map_err(|e| Error::from_reason(e.to_string()))?;
-    let current_yaml: serde_yaml::Value =
-        serde_json::from_value(current_val).map_err(|e| Error::from_reason(e.to_string()))?;
-    let proposed_yaml: serde_yaml::Value =
-        serde_json::from_value(proposed_val).map_err(|e| Error::from_reason(e.to_string()))?;
-
-    let result = engine.merge(base_yaml, current_yaml, proposed_yaml);
+    let result = engine.merge(base_val, current_val, proposed_val);
     let result_json =
         serde_json::to_value(&result).map_err(|e| Error::from_reason(e.to_string()))?;
     Ok(result_json.to_string())
 }
 
 #[napi(js_name = "mergeDiff")]
-pub fn merge_diff(base: String, candidate: String) -> napi::Result<String> {
+pub fn merge_diff(schema_json: String, base: String, candidate: String) -> napi::Result<String> {
+    let sdl: nap_core::merge::sdl::SdlDocument =
+        serde_json::from_str(&schema_json).map_err(|e| Error::from_reason(e.to_string()))?;
     let base_val: serde_json::Value =
         serde_json::from_str(&base).map_err(|e| Error::from_reason(e.to_string()))?;
     let candidate_val: serde_json::Value =
         serde_json::from_str(&candidate).map_err(|e| Error::from_reason(e.to_string()))?;
 
-    let result = nap_core::merge::diff::diff(&base_val, &candidate_val);
+    let result = nap_core::merge::diff::diff(&base_val, &candidate_val, &sdl);
     let result_json =
         serde_json::to_value(&result).map_err(|e| Error::from_reason(e.to_string()))?;
     Ok(result_json.to_string())

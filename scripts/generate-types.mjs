@@ -38,13 +38,13 @@ export const targets = [
  * @param {(cmd: string, opts: object) => void} [opts.exec] - Exec function (defaults to execSync).
  * @param {(path: string) => boolean} [opts.exists] - File-existence checker (defaults to existsSync).
  */
-export function run({ exec = execSync, exists = existsSync } = {}) {
+export function run({ exec = execSync, exists = existsSync, log = console } = {}) {
   if (!exists(manifest)) {
     const msg =
       `FATAL: Cargo manifest not found at ${manifest}\n` +
       "The script at scripts/generate-types.mjs could not locate Cargo.toml.\n" +
       "Ensure the script has not been moved relative to the repository root.";
-    console.error(msg);
+    log.error(msg);
     process.exit(1);
   }
 
@@ -63,12 +63,12 @@ export function run({ exec = execSync, exists = existsSync } = {}) {
     try {
       exec(cmd, { stdio: "inherit", cwd: rootDir });
     } catch (err) {
-      console.error(`Failed to generate ${lang} types -> ${out}`);
+      log.error(`Failed to generate ${lang} types -> ${out}`);
       if (err instanceof Error && "stderr" in err) {
         const stderr = err.stderr?.toString().trim();
-        if (stderr) console.error(stderr);
+        if (stderr) log.error(stderr);
       } else if (err instanceof Error) {
-        console.error(err.message);
+        log.error(err.message);
       }
       process.exit(1);
     }

@@ -1,4 +1,9 @@
-#![allow(clippy::useless_conversion, unsafe_op_in_unsafe_fn)]
+#![allow(
+    clippy::useless_conversion,
+    unsafe_op_in_unsafe_fn,
+    deprecated,
+    unused_imports
+)]
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -7,7 +12,6 @@ use std::sync::OnceLock;
 use tokio::runtime::Runtime;
 
 use nap_core::{
-    VcsBackend,
     commit::{Change, ChangeOp, Commit},
     content::ContentHash,
     manifest::{Manifest, Representation},
@@ -279,7 +283,8 @@ fn content_hash_hex_digest(hash_str: String) -> PyResult<String> {
 // ═══════════════════════════════════════════════════════════════════════
 
 #[pyfunction]
-fn change_set(path: String, old_value: Option<String>, new_value: String) -> PyResult<String> {
+#[pyo3(signature = (path, new_value, old_value=None))]
+fn change_set(path: String, new_value: String, old_value: Option<String>) -> PyResult<String> {
     let change = Change::set(&path, old_value, new_value);
     serde_json::to_string(&change).map_err(|e| PyValueError::new_err(e.to_string()))
 }
@@ -297,12 +302,13 @@ fn change_append(path: String, new_value: String) -> PyResult<String> {
 }
 
 #[pyfunction]
+#[pyo3(signature = (author, message, manifest_hash, changes_json, parent=None))]
 fn commit_new(
-    parent: Option<String>,
     author: String,
     message: String,
     manifest_hash: String,
     changes_json: String,
+    parent: Option<String>,
 ) -> PyResult<String> {
     let changes: Vec<Change> =
         serde_json::from_str(&changes_json).map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -697,28 +703,22 @@ fn merge_merge(
     let proposed_val: serde_json::Value =
         serde_json::from_str(&proposed).map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-    // Convert JSON values to YAML values for the merge engine
-    let base_yaml: serde_yaml::Value =
-        serde_json::from_value(base_val).map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let current_yaml: serde_yaml::Value =
-        serde_json::from_value(current_val).map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let proposed_yaml: serde_yaml::Value =
-        serde_json::from_value(proposed_val).map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-    let result = engine.merge(base_yaml, current_yaml, proposed_yaml);
+    let result = engine.merge(base_val, current_val, proposed_val);
     let result_json =
         serde_json::to_value(&result).map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(result_json.to_string())
 }
 
 #[pyfunction]
-fn merge_diff(base: String, candidate: String) -> PyResult<String> {
+fn merge_diff(schema_json: String, base: String, candidate: String) -> PyResult<String> {
+    let sdl: nap_core::merge::sdl::SdlDocument =
+        serde_json::from_str(&schema_json).map_err(|e| PyValueError::new_err(e.to_string()))?;
     let base_val: serde_json::Value =
         serde_json::from_str(&base).map_err(|e| PyValueError::new_err(e.to_string()))?;
     let candidate_val: serde_json::Value =
         serde_json::from_str(&candidate).map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-    let result = nap_core::merge::diff::diff(&base_val, &candidate_val);
+    let result = nap_core::merge::diff::diff(&base_val, &candidate_val, &sdl);
     let result_json =
         serde_json::to_value(&result).map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(result_json.to_string())

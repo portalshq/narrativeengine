@@ -104,8 +104,9 @@ describe("generate-types.mjs run()", () => {
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(() => { throw new Error("process.exit"); });
+    const logSpy = { error: vi.fn() };
 
-    expect(() => mod.run({ exec: execMock })).toThrow("process.exit");
+    expect(() => mod.run({ exec: execMock, log: logSpy })).toThrow("process.exit");
 
     expect(execMock).toHaveBeenCalledTimes(1);
     expect(exitSpy).toHaveBeenCalledWith(1);
@@ -117,8 +118,9 @@ describe("generate-types.mjs run()", () => {
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(() => { throw new Error("process.exit"); });
+    const logSpy = { error: vi.fn() };
 
-    expect(() => mod.run({ exec: execMock, exists: () => false })).toThrow("process.exit");
+    expect(() => mod.run({ exec: execMock, exists: () => false, log: logSpy })).toThrow("process.exit");
 
     expect(execMock).toHaveBeenCalledTimes(0);
     expect(exitSpy).toHaveBeenCalledWith(1);
