@@ -649,7 +649,7 @@ mod tests {
         // This test verifies the runner returns an error for a missing
         // binary, which confirms the process-spawning path works.
         temp_env::with_var("NAPLORE_CLI", Some("lore-nonexistent-binary-12345"), || {
-            let result = LoreProcessRunner::run(&["--version"], None);
+            let result = LoreProcessRunner::run(["--version"], None);
             assert!(result.is_err());
             let err = result.unwrap_err().to_string();
             assert!(
@@ -696,7 +696,7 @@ mod tests {
         // Verify the edge case guards work for empty/bogus stdout.
         // The `[]` and `null` branches of `list_branches` are tested
         // through unit coverage of the deserialisation logic in `log`.
-        assert!(true, "edge-case guards checked in production code");
+        // edge-case guards checked in production code
     }
 
     #[test]
