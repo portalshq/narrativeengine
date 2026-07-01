@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Core library for the Narrative Addressing Protocol"
+repository = "https://github.com/DigitalCreationsCo/narrativeengine"
+homepage = "https://nap.sh"
 
 [dependencies]
 serde = { workspace = true }
