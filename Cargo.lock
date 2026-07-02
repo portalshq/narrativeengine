@@ -1329,7 +1329,7 @@ checksum = "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084"
 
 [[package]]
 name = "nap-cli"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1344,7 +1344,7 @@ dependencies = [
 
 [[package]]
 name = "nap-core"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1375,7 +1375,7 @@ dependencies = [
 
 [[package]]
 name = "nap-sdk-py"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "nap-core",
  "pyo3",
@@ -1387,7 +1387,7 @@ dependencies = [
 
 [[package]]
 name = "nap-sdk-ts"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "nap-core",
  "napi",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "nap-server"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "axum 0.8.9",
@@ -1477,7 +1477,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "nap-core",
  "proptest",
@@ -1490,7 +1490,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-codegen"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -1500,7 +1500,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-py"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "narrativeengine",
  "pyo3",
@@ -1508,7 +1508,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-ts"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "napi",
  "napi-build",
