@@ -87,6 +87,10 @@ pub enum NapError {
     #[error("permission denied: {0}")]
     PermissionDenied(String),
 
+    // ── gRPC ─────────────────────────────────────────────────────────────
+    #[error("gRPC error: {0}")]
+    GrpcError(String),
+
     // ── Catch-all ───────────────────────────────────────────────────────
     #[error("{0}")]
     Other(String),

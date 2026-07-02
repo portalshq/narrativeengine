@@ -11,6 +11,7 @@ pub mod commit;
 pub mod content;
 pub mod context_docs;
 pub mod error;
+pub mod grpc_client;
 pub mod manifest;
 pub mod merge;
 pub mod permission_gate;
