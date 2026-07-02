@@ -10,6 +10,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_dir = Path::new("proto");
     let revision_proto = proto_dir.join("lore/revision/v1/revision.proto");
 
+    // ── Ensure protoc is available ────────────────────────────────────
+    // Use vendored protoc so the build works on CI (no system protoc
+    // required).  The user can override via the PROTOC env var.
+    let protoc_path = protoc_bin_vendored::protoc_bin_path()
+        .expect("failed to locate vendored protoc binary; set PROTOC env var to override");
+    // Safety: build scripts run single-threaded, so set_var is sound here.
+    unsafe { std::env::set_var("PROTOC", &protoc_path) };
+
     // ── rebuild-on-change tracking ────────────────────────────────────
     println!("cargo:rerun-if-env-changed=PROTOC");
     walk_protos(proto_dir);
