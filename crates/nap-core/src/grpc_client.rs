@@ -100,15 +100,14 @@ impl Interceptor for GrpcAuthInterceptor {
         mut request: tonic::Request<()>,
     ) -> Result<tonic::Request<()>, tonic::Status> {
         // ── Authorization header ──────────────────────────────────────
-        if let Some(ref token) = self.token {
-            if !token.is_empty() {
-                let mut value: MetadataValue<_> =
-                    format!("Bearer {token}").parse().map_err(|e| {
-                        tonic::Status::invalid_argument(format!("bad token metadata: {e}"))
-                    })?;
-                value.set_sensitive(true);
-                request.metadata_mut().insert("authorization", value);
-            }
+        if let Some(ref token) = self.token
+            && !token.is_empty()
+        {
+            let mut value: MetadataValue<_> = format!("Bearer {token}")
+                .parse()
+                .map_err(|e| tonic::Status::invalid_argument(format!("bad token metadata: {e}")))?;
+            value.set_sensitive(true);
+            request.metadata_mut().insert("authorization", value);
         }
 
         // ── Repository-scope binary metadata ──────────────────────────
@@ -338,7 +337,7 @@ impl Builder {
         let token = std::env::var("NAP_LORE_GRPC_TOKEN").ok();
         let insecure = std::env::var("NAP_LORE_GRPC_INSECURE")
             .ok()
-            .map_or(false, |v| v == "1" || v == "true" || v == "yes");
+            .is_some_and(|v| v == "1" || v == "true" || v == "yes");
 
         let repository_id_bytes = std::env::var("NAP_LORE_GRPC_RID")
             .ok()
@@ -403,7 +402,7 @@ where
 
     // `&'static Runtime` is both `Send` and `Sync` because the static
     // reference lives forever.  It is safe to pass to a spawned thread.
-    let rt: &'static tokio::runtime::Runtime = &*RUNTIME;
+    let rt: &'static tokio::runtime::Runtime = &RUNTIME;
 
     thread::Builder::new()
         .name("nap-grpc".into())
