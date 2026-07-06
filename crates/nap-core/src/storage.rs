@@ -26,12 +26,12 @@
 //! * **Gitignore** — The local initialiser ensures `.nap-assets/` is present
 //!   in `<NAP_DIR>/.gitignore` so raw binaries never enter the Git graph.
 
+use blake3;
 use bytes::Bytes;
 use object_store::ObjectStore;
 use object_store::aws::AmazonS3Builder;
 use object_store::local::LocalFileSystem;
 use object_store::path::Path as StorePath;
-use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use thiserror::Error;
@@ -334,7 +334,7 @@ impl StorageEngine {
     ///
     /// This is the core ingestion pipeline:
     ///
-    /// 1. **Hash** — Compute `sha256:<hex>` from the byte slice.
+    /// 1. **Hash** — Compute `blake3:<hex>` from the byte slice.
     /// 2. **Idempotency check** — Send a HEAD request to see if the blob
     ///    already exists.  If it does, return the hash immediately without
     ///    any network / disk write.
@@ -349,15 +349,12 @@ impl StorageEngine {
     ///
     /// # Returns
     ///
-    /// The content-addressed hash string `sha256:<hex>`.
+    /// The content-addressed hash string `blake3:<hex>`.
     pub async fn ingest_media(&self, data: &[u8], format: &str) -> StorageResult<String> {
-        // ── Step 1: SHA-256 hash ────────────────────────────────────
-        let hex_digest = {
-            let mut hasher = Sha256::new();
-            hasher.update(data);
-            hex::encode(hasher.finalize())
-        };
-        let hash = format!("sha256:{hex_digest}");
+        // ── Step 1: BLAKE3 hash ────────────────────────────────────
+        let hash = blake3::hash(data);
+        let hex_digest = hash.to_hex();
+        let hash = format!("blake3:{hex_digest}");
         let filename = format!("{hex_digest}.{format}");
 
         debug!(
@@ -734,18 +731,19 @@ mod tests {
         );
     }
 
-    // ── SHA-256 hash format ─────────────────────────────────────────
+    // ── BLAKE3 hash format ──────────────────────────────────────────
 
     #[test]
-    fn test_sha256_hash_format() {
+    fn test_blake3_hash_format() {
         let data = b"hello world";
-        let mut hasher = Sha256::new();
-        hasher.update(data);
-        let hex_digest = hex::encode(hasher.finalize());
-        let hash = format!("sha256:{hex_digest}");
+        let hash = blake3::hash(data);
+        let hash_str = format!("blake3:{}", hash.to_hex());
 
-        assert!(hash.starts_with("sha256:"), "hash must start with sha256:");
-        assert_eq!(hash.len(), 71, "sha256:<64 hex chars> = 71 chars");
+        assert!(
+            hash_str.starts_with("blake3:"),
+            "hash must start with blake3:"
+        );
+        assert_eq!(hash_str.len(), 71, "blake3:<64 hex chars> = 71 chars");
     }
 
     // ── Display impl ────────────────────────────────────────────────
@@ -783,10 +781,10 @@ mod tests {
         let hash = engine.ingest_media(b"hello world", "txt").await.unwrap();
 
         assert!(
-            hash.starts_with("sha256:"),
-            "hash must start with 'sha256:', got: {hash}"
+            hash.starts_with("blake3:"),
+            "hash must start with 'blake3:', got: {hash}"
         );
-        assert_eq!(hash.len(), 71, "sha256:<64 hex chars> should be 71 chars");
+        assert_eq!(hash.len(), 71, "blake3:<64 hex chars> should be 71 chars");
     }
 
     #[tokio::test]
@@ -850,19 +848,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_ingest_media_content_integrity_verified_by_hash() {
-        // The returned hash must be the valid SHA-256 of the content.
+        // The returned hash must be the valid BLAKE3 of the content.
         let engine = in_memory_engine();
         let data = b"verify-me-please";
 
         let hash = engine.ingest_media(data, "bin").await.unwrap();
 
         // Compute expected hash independently.
-        let mut hasher = Sha256::new();
-        hasher.update(data);
-        let expected_hex = hex::encode(hasher.finalize());
-        let expected_hash = format!("sha256:{expected_hex}");
+        let expected_hash = format!("blake3:{}", blake3::hash(data).to_hex());
 
-        assert_eq!(hash, expected_hash, "hash must match SHA-256 of content");
+        assert_eq!(hash, expected_hash, "hash must match BLAKE3 of content");
     }
 
     #[tokio::test]
@@ -871,12 +866,11 @@ mod tests {
 
         let hash = engine.ingest_media(b"", "empty").await.unwrap();
 
-        assert!(hash.starts_with("sha256:"), "empty data should still hash");
-        // SHA-256 of empty string: e3b0c44298fc1c149afbf4c8996fb924
-        //                          27ae41e4649b934ca495991b7852b855
+        assert!(hash.starts_with("blake3:"), "empty data should still hash");
+        // BLAKE3 of empty string: af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262
         assert_eq!(
             &hash[7..],
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
         );
     }
 
@@ -888,7 +882,7 @@ mod tests {
             .ingest_media(b"\x00\x01\x02", "weird-format-123")
             .await
             .unwrap();
-        assert!(hash.starts_with("sha256:"));
+        assert!(hash.starts_with("blake3:"));
 
         // Verify it was stored under the correct key.
         let hex = &hash[7..];
@@ -904,7 +898,7 @@ mod tests {
         let data = vec![0xABu8; 1_000_000]; // 1 MB
 
         let hash = engine.ingest_media(&data, "bin").await.unwrap();
-        assert!(hash.starts_with("sha256:"));
+        assert!(hash.starts_with("blake3:"));
 
         // Verify size stored is correct.
         let hex = &hash[7..];

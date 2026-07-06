@@ -106,9 +106,10 @@ pub fn manifest_schema() -> Value {
             },
             "head": {
                 "type": "string",
-                "pattern": "^[a-f0-9]{40}$",
+                "pattern": "^[a-f0-9]{40}$|^[a-f0-9]{64}$",
                 "description": concat!(
-                    "Pointer to the latest VCS commit hash. ",
+                    "Pointer to the latest VCS commit hash (40-char Git SHA-1 ",
+                    "or 64-char BLAKE3). ",
                     "History lives in the VCS, not the manifest."
                 )
             },
@@ -125,10 +126,10 @@ pub fn manifest_schema() -> Value {
                 "properties": {
                     "hash": {
                         "type": "string",
-                        "pattern": "^sha256:[a-f0-9]{64}$",
+                        "pattern": "^blake3:[a-f0-9]{64}$",
                         "description": concat!(
-                            "SHA-256 content hash of the asset. ",
-                            "Format: sha256:<64-hex-chars>"
+                            "BLAKE3 content hash of the asset. ",
+                            "Format: blake3:<64-hex-chars>"
                         )
                     },
                     "format": {
@@ -168,8 +169,8 @@ pub fn manifest_schema() -> Value {
                     },
                     "prompt_hash": {
                         "type": "string",
-                        "pattern": "^sha256:[a-f0-9]{64}$",
-                        "description": "SHA-256 content hash of the generation prompt."
+                        "pattern": "^blake3:[a-f0-9]{64}$",
+                        "description": "BLAKE3 content hash of the generation prompt."
                     },
                     "seed": {
                         "type": "string",
@@ -220,7 +221,7 @@ pub fn commit_schema() -> Value {
             "id": {
                 "type": "string",
                 "pattern": "^[a-f0-9]{64}$",
-                "description": "SHA-256 content-addressed commit identifier."
+                "description": "BLAKE3 content-addressed commit identifier."
             },
             "parent": {
                 "type": "string",
@@ -252,9 +253,9 @@ pub fn commit_schema() -> Value {
             },
             "manifest_hash": {
                 "type": "string",
-                "pattern": "^sha256:[a-f0-9]{64}$",
+                "pattern": "^blake3:[a-f0-9]{64}$",
                 "description": concat!(
-                    "SHA-256 hash of the resulting manifest ",
+                    "BLAKE3 content hash of the resulting manifest ",
                     "after this commit."
                 )
             },

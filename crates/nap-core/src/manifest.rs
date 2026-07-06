@@ -39,7 +39,7 @@ use crate::types::EntityType;
 ///   species: human
 /// representations:
 ///   reference_image:
-///     hash: "sha256:e3b0c44..."
+///     hash: "blake3:af1349b9..."
 ///     format: png
 /// head: "a72c9f3b..."
 /// ```
@@ -84,7 +84,7 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provenance: Option<Provenance>,
 
-    /// Pointer to the latest commit hash. History lives in the VCS.
+    /// Pointer to the latest VCS commit hash (BLAKE3). History lives in the VCS.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub head: Option<String>,
 
@@ -112,7 +112,7 @@ pub struct Principal {
 /// A content-addressed representation of an entity.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Representation {
-    /// SHA-256 content hash. e.g., `"sha256:e3b0c44..."`.
+    /// BLAKE3 content hash. e.g., `"blake3:af1349b9..."`.
     pub hash: String,
 
     /// File format. e.g., `"png"`, `"glb"`, `"onnx"`, `"spz"`.
@@ -222,7 +222,7 @@ impl Manifest {
         serde_json::to_value(self).map_err(|e| NapError::ManifestValidationError(e.to_string()))
     }
 
-    /// Compute the SHA-256 hash of this manifest's YAML representation.
+    /// Compute the BLAKE3 hash of this manifest's YAML representation.
     pub fn content_hash(&self) -> Result<ContentHash, NapError> {
         let yaml = self.to_yaml()?;
         Ok(ContentHash::from_str_content(&yaml))
@@ -279,7 +279,8 @@ mod tests {
         manifest.set_representation(
             "reference_image",
             Representation {
-                hash: "sha256:abc123".to_string(),
+                hash: "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    .to_string(),
                 format: "png".to_string(),
                 uri: Some("gs://assets/luke/ref.png".to_string()),
                 tier: Some("production".to_string()),

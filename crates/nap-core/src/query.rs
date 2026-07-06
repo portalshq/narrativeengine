@@ -4,7 +4,7 @@
 //!
 //! ```text
 //! "appearances.audienceVotes"  → manifest["appearances"]["audienceVotes"]
-//! "representations.reference_image.hash" → the SHA-256 hash string
+//! "representations.reference_image.hash" → the BLAKE3 hash string
 //! "references.appears_in" → array of scene URIs
 //! ```
 //!
@@ -145,7 +145,7 @@ properties:
   affiliation: rebel_alliance
 representations:
   reference_image:
-    hash: "sha256:abc123"
+    hash: "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     format: png
 references:
   appears_in:
@@ -170,7 +170,13 @@ references:
         let root = test_manifest();
         let result =
             ManifestQuery::query(&root, "representations.reference_image.hash", "test").unwrap();
-        assert_eq!(result, Value::String("sha256:abc123".to_string()));
+        assert_eq!(
+            result,
+            Value::String(
+                "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    .to_string()
+            )
+        );
     }
 
     #[test]

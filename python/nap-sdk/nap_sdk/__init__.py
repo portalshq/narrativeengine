@@ -946,7 +946,6 @@ def resolve(
     repo_path: str | None = None,
     branch: str | None = None,
     commit: str | None = None,
-    tag: str | None = None,
     path: str | None = None,
 ) -> dict[str, Any]:
     """Resolve a NAP URI to a manifest or subtree.
@@ -955,16 +954,15 @@ def resolve(
         uri: NAP URI (e.g. ``"nap://starwars/character/lukeskywalker"``).
         repo_path: Base directory for universes (defaults to ``$NAP_DIR`` / ``~/.nap``).
         branch: Optional branch selector.
-        commit: Optional commit hash selector.
-        tag: Optional tag selector.
+        commit: Optional commit hash selector (BLAKE3).
         path: Optional subtree query path.
 
     Returns:
         The resolved manifest dict or subtree value.
     """
     repo_path = _resolve_repo_path(repo_path)
-    if branch is not None or commit is not None or tag is not None or path is not None:
-        result = _native.resolve_with_options(uri, repo_path, branch, commit, tag, path)
+    if branch is not None or commit is not None or path is not None:
+        result = _native.resolve_with_options(uri, repo_path, branch, commit, path)
     else:
         result = _native.resolve(uri, repo_path)
     return cast(dict[str, Any], json.loads(result))

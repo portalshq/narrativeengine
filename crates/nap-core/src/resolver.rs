@@ -4,7 +4,7 @@
 //! It handles:
 //! - Full manifest resolution: `nap://starwars/character/lukeskywalker`
 //! - Fragment queries: `nap://starwars/character/lukeskywalker#references.appears_in`
-//! - Version selectors: branch, commit, tag
+//! - Version selectors: branch, commit
 //! - Subtree extraction for efficient AI/application access
 //!
 //! Version and branch are NEVER in the URI. They are orthogonal selectors:
@@ -25,21 +25,44 @@ use crate::uri::NapUri;
 use crate::vcs::VcsBackend;
 use crate::vcs_lore::LoreBackend;
 
+/// Resolver configuration — set at construction time.
+///
+/// Controls how the resolver resolves URIs when no explicit branch or
+/// commit is provided by the caller.
+#[derive(Debug, Clone)]
+pub struct ResolveConfig {
+    /// Branch to resolve when neither `branch` nor `commit` is specified
+    /// in [`ResolveOptions`].  If `None`, resolves without a branch or
+    /// commit — this will trigger a [`NapError::NoDefaultBranch`] error
+    /// for any resolve call that omits both `branch` and `commit`.
+    pub default_branch: Option<String>,
+}
+
+impl Default for ResolveConfig {
+    fn default() -> Self {
+        // Rule 4 is the default — callers must explicitly configure
+        // `default_branch` or provide `branch`/`commit` on each resolve.
+        Self {
+            default_branch: None,
+        }
+    }
+}
+
 /// Options for resolving a NAP URI. All are optional — omitting all
-/// resolves the current HEAD of the default branch.
+/// causes the resolver to use its [`ResolveConfig::default_branch`] (if
+/// configured) or fail with [`NapError::NoDefaultBranch`].
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResolveOptions {
     /// Resolve at a specific branch. e.g., `"canon"`.
+    /// Takes precedence over [`ResolveConfig::default_branch`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
 
-    /// Resolve at a specific commit hash. e.g., `"a72c9f3b"`.
+    /// Resolve at a specific commit hash (BLAKE3). e.g.,
+    /// `"af1349b9f5f9a1a6a0404deb36d020949b834f2a42e37e5f8d2e4ba2765f1a2f"`.
+    /// Takes precedence over `branch` and [`ResolveConfig::default_branch`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
-
-    /// Resolve at a specific tag. e.g., `"episode-6"`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tag: Option<String>,
 
     /// Subtree query path (overrides URI fragment). e.g., `"appearances.audienceVotes"`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -47,17 +70,6 @@ pub struct ResolveOptions {
 }
 
 impl ResolveOptions {
-    /// Returns the Git ref to use, or None for HEAD / working tree.
-    fn git_ref(&self) -> Option<String> {
-        if let Some(ref commit) = self.commit {
-            Some(commit.clone())
-        } else if let Some(ref tag) = self.tag {
-            Some(format!("refs/tags/{tag}"))
-        } else {
-            self.branch.clone()
-        }
-    }
-
     /// Returns the query path (from options or URI fragment).
     fn query_path(&self, uri: &NapUri) -> Option<String> {
         self.path.clone().or_else(|| uri.fragment.clone())
@@ -80,10 +92,16 @@ pub struct Resolver {
     base_path: PathBuf,
     /// VCS backend factory (creates backend per-repo).
     vcs_factory: fn() -> Box<dyn VcsBackend>,
+    /// Resolution configuration (default branch, etc.).
+    config: ResolveConfig,
 }
 
 impl Resolver {
     /// Create a resolver that looks for universe repos under `base_path`.
+    ///
+    /// Uses [`ResolveConfig::default()`] — meaning `default_branch` is
+    /// `None` and any resolve that omits both `branch` and `commit` will
+    /// fail with [`NapError::NoDefaultBranch`].
     ///
     /// # Example layout
     /// ```text
@@ -96,14 +114,20 @@ impl Resolver {
         Self {
             base_path: base_path.to_path_buf(),
             vcs_factory: || Box::new(LoreBackend::from_env()),
+            config: ResolveConfig::default(),
         }
     }
 
-    /// Create a resolver with a custom VCS backend factory.
-    pub fn with_vcs_factory(base_path: &Path, factory: fn() -> Box<dyn VcsBackend>) -> Self {
+    /// Create a resolver with a custom VCS backend factory and config.
+    pub fn with_vcs_factory(
+        base_path: &Path,
+        factory: fn() -> Box<dyn VcsBackend>,
+        config: ResolveConfig,
+    ) -> Self {
         Self {
             base_path: base_path.to_path_buf(),
             vcs_factory: factory,
+            config,
         }
     }
 
@@ -151,17 +175,38 @@ impl Resolver {
         );
 
         let repo = self.open_repo(&uri.universe)?;
-        let git_ref = options.git_ref();
         let query_path = options.query_path(uri);
 
-        // Read the manifest (at ref or from working tree)
-        let manifest = match git_ref {
-            Some(ref reference) => {
-                debug!(reference = %reference, "resolving at specific ref");
-                repo.read_manifest_at_ref(uri.entity_type, &uri.entity_id, reference)?
+        // ── 4-Rule Resolution ────────────────────────────────────────
+        // Rule 1: commit provided → use directly (bypass branch logic)
+        // Rule 2: branch provided, no commit → resolve branch head
+        // Rule 3: both null → use default_branch from config
+        // Rule 4: both null and no default_branch → hard error
+        // ──────────────────────────────────────────────────────────────
+
+        let revision = match (options.commit.as_ref(), options.branch.as_ref()) {
+            (Some(commit), _) => {
+                debug!(%commit, "resolve: rule 1 — commit provided");
+                commit.clone()
             }
-            None => repo.read_manifest(uri.entity_type, &uri.entity_id)?,
+            (None, Some(branch)) => {
+                debug!(%branch, "resolve: rule 2 — branch provided");
+                repo.resolve_branch_head(branch)?
+            }
+            (None, None) => match &self.config.default_branch {
+                Some(default_branch) => {
+                    debug!(%default_branch, "resolve: rule 3 — using default_branch");
+                    repo.resolve_branch_head(default_branch)?
+                }
+                None => {
+                    debug!("resolve: rule 4 — no branch, no commit, no default_branch");
+                    return Err(NapError::NoDefaultBranch);
+                }
+            },
         };
+
+        // Read the manifest at the resolved revision
+        let manifest = repo.read_manifest_at_ref(uri.entity_type, &uri.entity_id, &revision)?;
 
         // Apply query if present
         match query_path {
@@ -263,7 +308,13 @@ mod tests {
         )
         .unwrap();
 
-        let resolver = Resolver::new(tmp.path());
+        let resolver = Resolver::with_vcs_factory(
+            tmp.path(),
+            || Box::new(GitBackend::new()),
+            ResolveConfig {
+                default_branch: Some("main".to_string()),
+            },
+        );
         (tmp, resolver)
     }
 
