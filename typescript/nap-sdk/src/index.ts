@@ -912,8 +912,7 @@ export function repoPull(
  * @param uri - NAP URI (e.g. `"nap://starwars/character/lukeskywalker"`)
  * @param repoPath - Base directory for universes (defaults to `$NAP_DIR` / `~/.nap`)
  * @param branch - Optional branch selector
- * @param commit - Optional commit hash selector
- * @param tag - Optional tag selector
+ * @param commit - Optional commit hash selector (BLAKE3)
  * @param path - Optional subtree query path
  * @returns Resolved manifest or subtree value
  */
@@ -922,12 +921,11 @@ export function resolve(
   repoPath?: string,
   branch?: string,
   commit?: string,
-  tag?: string,
   path?: string,
 ): Record<string, unknown> {
   const rp = resolveRepoPath(repoPath);
-  if (branch !== undefined || commit !== undefined || tag !== undefined || path !== undefined) {
-    return JSON.parse(native.resolveWithOptions(uri, rp, branch, commit, tag, path)) as Record<string, unknown>;
+  if (branch !== undefined || commit !== undefined || path !== undefined) {
+    return JSON.parse(native.resolveWithOptions(uri, rp, branch, commit, path)) as Record<string, unknown>;
   }
   return JSON.parse(native.resolve(uri, rp)) as Record<string, unknown>;
 }

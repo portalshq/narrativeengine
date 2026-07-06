@@ -556,6 +556,47 @@ impl VcsBackend for LoreBackend {
         Ok(signature.to_string())
     }
 
+    fn resolve_branch_head(&self, path: &Path, branch: &str) -> Result<String, NapError> {
+        let stdout = LoreProcessRunner::run(
+            [
+                "log",
+                "--branch",
+                branch,
+                "--limit",
+                "1",
+                "--format",
+                "json",
+                "--non-interactive",
+            ],
+            Some(path),
+        )?;
+
+        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+            return Err(NapError::VcsError(format!(
+                "no commits found on branch '{branch}'"
+            )));
+        }
+
+        #[derive(serde::Deserialize)]
+        struct BranchRev {
+            signature: String,
+        }
+        let revs: Vec<BranchRev> = serde_json::from_str(&stdout).map_err(|e| {
+            NapError::VcsError(format!(
+                "failed to parse lore log JSON for resolve_branch_head: {e}. Raw: {stdout}"
+            ))
+        })?;
+
+        revs.into_iter()
+            .next()
+            .map(|r| r.signature)
+            .ok_or_else(|| {
+                NapError::VcsError(format!(
+                    "empty revision list for branch '{branch}'"
+                ))
+            })
+    }
+
     // ── remotes ──────────────────────────────────────────────────────
     fn add_remote(&self, path: &Path, name: &str, url: &str) -> Result<(), NapError> {
         LoreProcessRunner::run(

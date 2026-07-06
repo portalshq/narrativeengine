@@ -1,4 +1,4 @@
-//! SHA-256 content addressing for NAP resources.
+//! BLAKE3 content addressing for NAP resources.
 //!
 //! Every representation (image, voice model, mesh, etc.) is hash-addressable.
 //! Manifests point at content by hash, making everything:
@@ -7,47 +7,44 @@
 //! - **Deduplicated** — identical content shares one hash
 //! - **Verifiable** — compare hash to verify integrity
 
-use sha2::{Digest, Sha256};
 use std::fmt;
 use std::path::Path;
 
 use crate::error::NapError;
 
-/// A SHA-256 content hash, displayed as `sha256:<hex>`.
+/// A BLAKE3 content hash, displayed as `blake3:<hex>`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct ContentHash(String);
 
 impl ContentHash {
-    /// Compute the SHA-256 hash of raw bytes.
+    /// Compute the BLAKE3 hash of raw bytes.
     pub fn from_bytes(data: &[u8]) -> Self {
-        let mut hasher = Sha256::new();
-        hasher.update(data);
-        let digest = hasher.finalize();
-        ContentHash(format!("sha256:{}", hex::encode(digest)))
+        let hash = blake3::hash(data);
+        ContentHash(format!("blake3:{}", hash.to_hex()))
     }
 
-    /// Compute the SHA-256 hash of a string.
+    /// Compute the BLAKE3 hash of a string.
     pub fn from_str_content(s: &str) -> Self {
         Self::from_bytes(s.as_bytes())
     }
 
-    /// Compute the SHA-256 hash of a file's contents.
+    /// Compute the BLAKE3 hash of a file's contents.
     pub fn from_file(path: &Path) -> Result<Self, NapError> {
         let data = std::fs::read(path)?;
         Ok(Self::from_bytes(&data))
     }
 
-    /// Parse a `sha256:<hex>` string into a ContentHash.
+    /// Parse a `blake3:<hex>` string into a ContentHash.
     pub fn parse(s: &str) -> Result<Self, NapError> {
-        if !s.starts_with("sha256:") {
+        if !s.starts_with("blake3:") {
             return Err(NapError::Other(format!(
-                "content hash must start with 'sha256:', got '{s}'"
+                "content hash must start with 'blake3:', got '{s}'"
             )));
         }
         let hex_part = &s[7..];
         if hex_part.len() != 64 {
             return Err(NapError::Other(format!(
-                "SHA-256 hex digest must be 64 chars, got {}",
+                "BLAKE3 hex digest must be 64 chars, got {}",
                 hex_part.len()
             )));
         }
@@ -57,12 +54,12 @@ impl ContentHash {
         Ok(ContentHash(s.to_string()))
     }
 
-    /// Returns the raw hex digest without the `sha256:` prefix.
+    /// Returns the raw hex digest without the `blake3:` prefix.
     pub fn hex_digest(&self) -> &str {
         &self.0[7..]
     }
 
-    /// Returns the full `sha256:<hex>` string.
+    /// Returns the full `blake3:<hex>` string.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -107,7 +104,7 @@ mod tests {
     #[test]
     fn test_hash_format() {
         let hash = ContentHash::from_str_content("test");
-        assert!(hash.as_str().starts_with("sha256:"));
+        assert!(hash.as_str().starts_with("blake3:"));
         assert_eq!(hash.hex_digest().len(), 64);
     }
 
@@ -120,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_parse_invalid_prefix() {
-        assert!(ContentHash::parse("md5:abc123").is_err());
+        assert!(ContentHash::parse("sha256:abc123").is_err());
     }
 
     #[test]

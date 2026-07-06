@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 /// A NAP commit — snapshot + patch metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Commit {
-    /// SHA-256 of commit content (self-referential hash).
+    /// BLAKE3 of commit content (self-referential hash).
     pub id: String,
 
     /// Parent commit hash. `None` for the initial commit.
@@ -36,7 +36,7 @@ pub struct Commit {
     /// Human-readable commit message.
     pub message: String,
 
-    /// SHA-256 of the resulting manifest after this commit.
+    /// BLAKE3 content hash of the resulting manifest after this commit.
     pub manifest_hash: String,
 
     /// What changed in this commit (patch metadata for audit).
@@ -101,12 +101,10 @@ impl Commit {
         commit
     }
 
-    /// Compute the content-addressed ID (SHA-256) of this commit.
+    /// Compute the content-addressed ID (BLAKE3) of this commit.
     /// Hashes: parent + timestamp + author + message + manifest_hash + changes.
     fn compute_id(&self) -> String {
-        use sha2::{Digest, Sha256};
-
-        let mut hasher = Sha256::new();
+        let mut hasher = blake3::Hasher::new();
         hasher.update(self.parent.as_deref().unwrap_or("root").as_bytes());
         hasher.update(self.timestamp.to_rfc3339().as_bytes());
         hasher.update(self.author.as_bytes());
@@ -120,7 +118,7 @@ impl Commit {
         }
 
         let digest = hasher.finalize();
-        hex::encode(digest)
+        hex::encode(digest.as_bytes())
     }
 
     /// Re-compute and verify the commit ID matches the stored value.
@@ -174,7 +172,7 @@ mod tests {
             None,
             "test-author",
             "initial commit",
-            "sha256:abc123",
+            "blake3:0000000000000000000000000000000000000000000000000000000000000000",
             vec![Change::set("properties.name", None, "Luke".to_string())],
         );
         assert!(commit.verify_id());
@@ -186,14 +184,14 @@ mod tests {
             None,
             "test-author",
             "initial commit",
-            "sha256:abc123",
+            "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             vec![],
         );
         let child_commit = Commit::new(
             Some(parent_commit.id.clone()),
             "test-author",
             "update homeworld",
-            "sha256:def456",
+            "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             vec![Change::set(
                 "properties.homeworld",
                 None,

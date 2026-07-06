@@ -388,6 +388,11 @@ impl Repository {
         self.vcs.head_hash(&self.root)
     }
 
+    /// Resolve the most recent commit hash on a given branch.
+    pub fn resolve_branch_head(&self, branch: &str) -> Result<String, NapError> {
+        self.vcs.resolve_branch_head(&self.root, branch)
+    }
+
     // ── Remote operations ─────────────────────────────────────────
 
     /// Add a remote to the repository.
@@ -472,7 +477,7 @@ mod mock_backend {
         fn commit(&self, _path: &Path, message: &str, author: &str) -> Result<String, NapError> {
             let n = self.counter.fetch_add(1, Ordering::SeqCst);
             // Use a valid 40-char hex hash so manifest schema validation passes.
-            let hash = format!("{:040x}", n);
+            let hash = format!("{:064x}", n);
             let mut commits = self.commits.lock().unwrap();
             let parent = commits.last().map(|c| c.id.clone());
             let info = CommitInfo {
@@ -537,9 +542,19 @@ mod mock_backend {
                 .ok_or_else(|| NapError::VcsError("no commits".to_string()))
         }
 
+        fn resolve_branch_head(&self, _path: &Path, _branch: &str) -> Result<String, NapError> {
+            // MockBackend stores commits in a flat list — use the last one
+            // regardless of branch name for test simplicity.
+            let commits = self.commits.lock().unwrap();
+            commits
+                .last()
+                .map(|c| c.id.clone())
+                .ok_or_else(|| NapError::VcsError("no commits on branch".to_string()))
+        }
+
         fn revert(&self, _repo_path: &Path, commit_hash: &str) -> Result<String, NapError> {
             let n = self.counter.fetch_add(1, Ordering::SeqCst);
-            let hash = format!("{:040x}", n);
+            let hash = format!("{:064x}", n);
             let info = CommitInfo {
                 id: hash.clone(),
                 parent: Some(commit_hash.to_string()),

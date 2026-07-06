@@ -83,6 +83,12 @@ pub enum NapError {
     #[error("merge validation error: {reason}")]
     MergeValidationError { reason: String },
 
+    // ── Resolution Errors ───────────────────────────────────────────────
+    #[error(
+        "no branch or commit specified and no default_branch configured. "
+    )]
+    NoDefaultBranch,
+
     // ── Permission ──────────────────────────────────────────────────────
     #[error("permission denied: {0}")]
     PermissionDenied(String),

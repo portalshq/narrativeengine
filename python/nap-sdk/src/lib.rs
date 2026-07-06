@@ -614,14 +614,12 @@ fn resolve_with_options(
     repo_base_path: String,
     branch: Option<String>,
     commit: Option<String>,
-    tag: Option<String>,
     path: Option<String>,
 ) -> PyResult<String> {
     let resolver = Resolver::new(Path::new(&repo_base_path));
     let options = ResolveOptions {
         branch,
         commit,
-        tag,
         path,
     };
     let result = resolver.resolve(&uri_str, &options).map_err(map_error)?;

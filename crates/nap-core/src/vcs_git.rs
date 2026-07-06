@@ -221,6 +221,17 @@ impl VcsBackend for GitBackend {
         Self::run_git(path, &["rev-parse", "HEAD"])
     }
 
+    fn resolve_branch_head(&self, path: &Path, branch: &str) -> Result<String, NapError> {
+        let output = Self::run_git(path, &["rev-parse", branch])?;
+        let hash = output.trim().to_string();
+        if hash.is_empty() {
+            return Err(NapError::VcsError(format!(
+                "branch '{branch}' has no commits"
+            )));
+        }
+        Ok(hash)
+    }
+
     fn list_branches(&self, path: &Path) -> Result<Vec<String>, NapError> {
         let output = Self::run_git(path, &["branch", "--format=%(refname:short)"])?;
         Ok(output

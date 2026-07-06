@@ -220,6 +220,17 @@ pub trait VcsBackend: Send + Sync {
     /// List all tags.
     fn list_tags(&self, path: &Path) -> Result<Vec<String>, NapError>;
 
+    /// Resolve the most recent commit hash on a given branch.
+    ///
+    /// The default implementation returns an error — backends that support
+    /// branch-based resolution must override this.
+    fn resolve_branch_head(&self, path: &Path, branch: &str) -> Result<String, NapError> {
+        let _ = (path, branch);
+        Err(NapError::VcsError(format!(
+            "resolve_branch_head not supported by this VCS backend"
+        )))
+    }
+
     // ── Remote operations ────────────────────────────────────────────
 
     /// Add a remote.

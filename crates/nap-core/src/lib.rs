@@ -55,7 +55,7 @@ pub use permission_gate::PermissionGate;
 pub use query::ManifestQuery;
 pub use repo_service::RepoService;
 pub use repository::Repository;
-pub use resolver::{ResolveOptions, Resolver};
+pub use resolver::{ResolveConfig, ResolveOptions, Resolver};
 pub use storage::{StorageBackend, StorageConfig, StorageEngine, StorageError, get_engine};
 pub use types::EntityType;
 pub use uri::NapUri;
