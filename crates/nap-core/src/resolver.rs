@@ -54,6 +54,10 @@ pub struct ResolveOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
 
+    /// Resolve at a specific tag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
+
     /// Subtree query path (overrides URI fragment). e.g., `"appearances.audienceVotes"`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
