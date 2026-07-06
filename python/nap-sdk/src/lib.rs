@@ -620,6 +620,7 @@ fn resolve_with_options(
     let options = ResolveOptions {
         branch,
         commit,
+        tag: None,
         path,
     };
     let result = resolver.resolve(&uri_str, &options).map_err(map_error)?;
