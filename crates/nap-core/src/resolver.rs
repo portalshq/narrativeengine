@@ -29,23 +29,13 @@ use crate::vcs_lore::LoreBackend;
 ///
 /// Controls how the resolver resolves URIs when no explicit branch or
 /// commit is provided by the caller.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ResolveConfig {
     /// Branch to resolve when neither `branch` nor `commit` is specified
     /// in [`ResolveOptions`].  If `None`, resolves without a branch or
     /// commit — this will trigger a [`NapError::NoDefaultBranch`] error
     /// for any resolve call that omits both `branch` and `commit`.
     pub default_branch: Option<String>,
-}
-
-impl Default for ResolveConfig {
-    fn default() -> Self {
-        // Rule 4 is the default — callers must explicitly configure
-        // `default_branch` or provide `branch`/`commit` on each resolve.
-        Self {
-            default_branch: None,
-        }
-    }
 }
 
 /// Options for resolving a NAP URI. All are optional — omitting all

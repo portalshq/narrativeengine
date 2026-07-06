@@ -226,9 +226,9 @@ pub trait VcsBackend: Send + Sync {
     /// branch-based resolution must override this.
     fn resolve_branch_head(&self, path: &Path, branch: &str) -> Result<String, NapError> {
         let _ = (path, branch);
-        Err(NapError::VcsError(format!(
-            "resolve_branch_head not supported by this VCS backend"
-        )))
+        Err(NapError::VcsError(
+            "resolve_branch_head not supported by this VCS backend".to_string(),
+        ))
     }
 
     // ── Remote operations ────────────────────────────────────────────
