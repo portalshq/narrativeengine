@@ -1,9 +1,12 @@
 {
-  "name": "nap-mcp-server",
+  "name": "@portalshq/nap-mcp-server",
   "version": "1.0.0",
   "description": "MCP server for the Narrative Addressing Protocol (NAP) — let LLMs resolve, query, create, and manage narrative universes",
   "type": "module",
   "main": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",

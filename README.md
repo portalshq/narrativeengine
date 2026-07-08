@@ -146,7 +146,7 @@ cargo build --release
 #### Python SDK (prebuilt wheel, no Rust needed)
 
 ```bash
-pip install narrativeengine
+pip install portalshq-narrativeengine
 ```
 
 ```python
@@ -159,11 +159,11 @@ candidate = generate_candidate(block)
 #### TypeScript SDK (prebuilt binary, no Rust needed)
 
 ```bash
-npm install narrativeengine
+npm install @portalshq/narrativeengine
 ```
 
 ```typescript
-import { createBlock } from "narrativeengine";
+import { createBlock } from "@portalshq/narrativeengine";
 
 const block = createBlock("char-1", "A brave adventurer");
 ```
@@ -291,7 +291,7 @@ representations:
 nap/
 ├── Cargo.toml                      ← workspace root (7 crates)
 ├── crates/
-│   ├── nap-core/                   ← core library (URI, manifest, resolver, VCS)
+│   ├── nap-core/                   ← core library (URI, manifest, resolver, VCS; published as `portalshq-nap-core`)
 │   │   └── src/
 │   │       ├── lib.rs              ← crate root, re-exports
 │   │       ├── uri.rs             ← NapUri parser/builder
@@ -305,12 +305,12 @@ nap/
 │   │       ├── error.rs            ← NapError types
 │   │       ├── vcs.rs              ← VcsBackend trait
 │   │       └── vcs_git.rs          ← Git backend implementation
-│   ├── nap-cli/                    ← CLI binary (nap)
-│   ├── nap-server/                 ← HTTP server binary (nap-server)
-│   ├── narrativeengine-core/       ← narrative engine (AI story generation)
-│   ├── narrativeengine-py/         ← Python bindings (PyO3)
-│   ├── narrativeengine-ts/         ← TypeScript/NAPI bindings
-│   └── narrativeengine-codegen/    ← schema/code generation tooling
+│   ├── nap-cli/                    ← CLI binary (`nap`; published as `portalshq-nap-cli`)
+│   ├── nap-server/                 ← HTTP server binary (`nap-server`; published as `portalshq-nap-server`)
+│   ├── narrativeengine-core/       ← narrative engine (AI story generation; published as `portalshq-narrativeengine`)
+│   ├── narrativeengine-py/         ← Python bindings (PyO3; published as `portalshq-narrativeengine-py`)
+│   ├── narrativeengine-ts/         ← TypeScript/NAPI bindings (published as `portalshq-narrativeengine-ts`)
+│   └── narrativeengine-codegen/    ← schema/code generation tooling (published as `portalshq-narrativeengine-codegen`)
 ├── python/                         ← Python SDK package
 │   └── pyproject.toml
 └── typescript/                     ← TypeScript SDK package
@@ -348,21 +348,21 @@ cargo build --workspace
 cargo build --release --workspace
 
 # Build individual crates
-cargo build -p nap-core
-cargo build -p nap-cli
-cargo build -p nap-server
-cargo build -p narrativeengine-core
-cargo build -p narrativeengine-codegen
+cargo build -p portalshq-nap-core
+cargo build -p portalshq-nap-cli
+cargo build -p portalshq-nap-server
+cargo build -p portalshq-narrativeengine
+cargo build -p portalshq-narrativeengine-codegen
 ```
 
 ### Test
 
 ```bash
 # Run all tests (excluding Python bindings which need Python headers)
-cargo test --workspace --exclude narrativeengine-py --exclude narrativeengine-ts
+cargo test --workspace --exclude portalshq-narrativeengine-py --exclude portalshq-narrativeengine-ts
 
 # Run tests for a specific crate
-cargo test -p nap-core
+cargo test -p portalshq-nap-core
 
 # Run doc tests
 cargo test --doc

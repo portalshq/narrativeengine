@@ -1,5 +1,5 @@
 [package]
-name = "narrativeengine-ts"
+name = "portalshq-narrativeengine-ts"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,7 @@ description = "NAPI-RS bindings for the NarrativeEngine SDK."
 crate-type = ["cdylib"]
 
 [dependencies]
-narrativeengine = { path = "../../crates/narrativeengine" }
+narrativeengine = { path = "../../crates/narrativeengine", package = "portalshq-narrativeengine" }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 

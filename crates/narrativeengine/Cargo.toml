@@ -1,5 +1,5 @@
 [package]
-name = "narrativeengine"
+name = "portalshq-narrativeengine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,7 @@ description = "A deterministic retrieval-driven contextual storytelling engine."
 crate-type = ["rlib"]
 
 [dependencies]
-nap-core = { path = "../nap-core" }
+nap-core = { path = "../nap-core", package = "portalshq-nap-core" }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

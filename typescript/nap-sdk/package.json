@@ -1,7 +1,10 @@
 {
-  "name": "nap-sdk",
+  "name": "@portalshq/nap-core",
   "version": "0.3.5",
   "description": "TypeScript SDK for NAP (Narrative Addressing Protocol), powered by Rust and NAPI-RS.",
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,8 +30,8 @@
     "test": "vitest run"
   },
   "napi": {
-    "name": "nap-sdk",
-    "binaryName": "nap-sdk",
+    "name": "nap-core",
+    "binaryName": "nap-core",
     "triples": {
       "defaults": true
     }

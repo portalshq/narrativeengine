@@ -1,5 +1,5 @@
 [package]
-name = "nap-cli"
+name = "portalshq-nap-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ name = "nap"
 path = "src/main.rs"
 
 [dependencies]
-nap-core = { path = "../nap-core" }
+nap-core = { path = "../nap-core", package = "portalshq-nap-core" }
 clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

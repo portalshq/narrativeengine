@@ -1,5 +1,5 @@
 [package]
-name = "nap-sdk-ts"
+name = "portalshq-nap-core-ts"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,7 @@ description = "NAPI-RS bindings for the NAP (Narrative Addressing Protocol) SDK.
 crate-type = ["cdylib"]
 
 [dependencies]
-nap-core = { path = "../../crates/nap-core" }
+nap-core = { path = "../../crates/nap-core", package = "portalshq-nap-core" }
 napi = { workspace = true, features = ["tokio_rt"] }
 napi-derive = { workspace = true }
 serde_json = { workspace = true }

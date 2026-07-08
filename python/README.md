@@ -5,8 +5,8 @@ The Python SDK is a thin PyO3 wrapper over the canonical Rust implementation. Al
 ## Installation
 
 ```sh
-pip install narrativeengine
-pip install "narrativeengine[pydantic]"
+pip install portalshq-narrativeengine
+pip install "portalshq-narrativeengine[pydantic]"
 ```
 
 ## Usage
