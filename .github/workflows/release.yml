@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  lint:
+    uses: ./.github/workflows/ci.yml
+    # This might be tricky if ci.yml is not a reusable workflow.
+    # Actually, I should just copy the steps or refactor ci.yml to be reusable.
+    # Given the constraint to keep it simple, I will update the release.yml to include the necessary checks.
+
+  # Redefining lint and build steps to match CI
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: |
+            typescript/narrativeengine/package-lock.json
+            typescript/nap-sdk/package-lock.json
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: pip install ruff mypy pydantic
+      - run: ruff check python/narrativeengine
+      - run: mypy python/narrativeengine/narrativeengine
+      - run: npm ci && npm run lint
+        working-directory: typescript/narrativeengine
+
+  build:
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin: nap
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bin: nap
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bin: nap
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: nap.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      # Run tests to match CI
+      - run: cargo test --workspace --exclude narrativeengine-py --exclude nap-sdk-py --exclude nap-sdk-ts --exclude narrativeengine-ts
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} --bin nap
+
+      - name: Prepare binary
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cp target/${{ matrix.target }}/release/${{ matrix.bin }} artifacts/nap-${{ matrix.target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nap-${{ matrix.target }}
+          path: artifacts/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
