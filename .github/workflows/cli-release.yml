@@ -113,7 +113,7 @@ jobs:
           path: artifacts
           merge-multiple: true
       - run: |
-          cp install.sh artifacts/install.sh
+          cp scripts/install.sh artifacts/install.sh
           chmod +x artifacts/install.sh
       - working-directory: artifacts
         run: |
