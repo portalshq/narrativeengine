@@ -138,6 +138,9 @@ impl Resolver {
     /// // Full manifest
     /// resolver.resolve("nap://starwars/character/lukeskywalker", &Default::default())
     ///
+    /// // Without scheme (auto-normalized)
+    /// resolver.resolve("starwars/character/lukeskywalker", &Default::default())
+    ///
     /// // With branch
     /// resolver.resolve("nap://starwars/character/lukeskywalker", &ResolveOptions {
     ///     branch: Some("canon".to_string()),
@@ -152,7 +155,20 @@ impl Resolver {
         uri_str: &str,
         options: &ResolveOptions,
     ) -> Result<ResolveResult, NapError> {
-        let uri: NapUri = uri_str.parse()?;
+        // ── Normalization: Prepend nap:// if missing ─────────────────────
+        let normalized_uri_str = if uri_str.starts_with("nap://") {
+            uri_str.to_string()
+        } else {
+            format!("nap://{}", uri_str.trim_start_matches('/'))
+        };
+
+        debug!(
+            original_uri = %uri_str,
+            normalized_uri = %normalized_uri_str,
+            "normalized NAP URI"
+        );
+
+        let uri: NapUri = normalized_uri_str.parse()?;
         self.resolve_uri(&uri, options)
     }
 
@@ -391,5 +407,65 @@ mod tests {
         let (_tmp, resolver) = setup();
         let result = resolver.resolve("nap://starwars/character/nonexistent", &Default::default());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resolve_without_scheme() {
+        let (_tmp, resolver) = setup();
+        let result = resolver
+            .resolve("starwars/character/lukeskywalker", &Default::default())
+            .unwrap();
+        match result {
+            ResolveResult::Full(m) => {
+                assert_eq!(m.name, "Luke Skywalker");
+                assert_eq!(m.entity_type, EntityType::Character);
+            }
+            _ => panic!("expected full manifest"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_without_scheme_with_fragment() {
+        let (_tmp, resolver) = setup();
+        let result = resolver
+            .resolve(
+                "starwars/character/lukeskywalker#properties.species",
+                &Default::default(),
+            )
+            .unwrap();
+        match result {
+            ResolveResult::Subtree(v) => {
+                assert_eq!(v.as_str(), Some("human"));
+            }
+            _ => panic!("expected subtree"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_without_leading_slash() {
+        let (_tmp, resolver) = setup();
+        let result = resolver
+            .resolve("starwars/character/lukeskywalker", &Default::default())
+            .unwrap();
+        match result {
+            ResolveResult::Full(m) => {
+                assert_eq!(m.name, "Luke Skywalker");
+            }
+            _ => panic!("expected full manifest"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_with_leading_slash_without_scheme() {
+        let (_tmp, resolver) = setup();
+        let result = resolver
+            .resolve("/starwars/character/lukeskywalker", &Default::default())
+            .unwrap();
+        match result {
+            ResolveResult::Full(m) => {
+                assert_eq!(m.name, "Luke Skywalker");
+            }
+            _ => panic!("expected full manifest"),
+        }
     }
 }
