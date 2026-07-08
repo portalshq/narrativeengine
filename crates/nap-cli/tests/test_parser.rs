@@ -38,8 +38,12 @@ mod tests {
 
         assert_eq!(cli.base_dir.to_str().unwrap(), ".");
 
-        assert_eq!(cli.command.uri, "star-ocean/character/hiro");
-        assert_eq!(cli.command.key, "name");
-        assert_eq!(cli.command.value, "Hiro");
+        match cli.command {
+            Commands::Set { uri, key, value } => {
+                assert_eq!(uri, "star-ocean/character/hiro");
+                assert_eq!(key, "name");
+                assert_eq!(value, "Hiro");
+            }
+        }
     }
 }
