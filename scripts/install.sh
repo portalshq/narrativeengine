@@ -6,7 +6,7 @@ set -euo pipefail
 # Configuration
 ###############################################################################
 
-REPO="YOUR_GITHUB_ORG/nap"
+REPO="portalshq/narrativeengine"
 BINARY_NAME="nap"
 VERSION="${VERSION:-latest}"
 
