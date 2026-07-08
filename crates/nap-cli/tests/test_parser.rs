@@ -38,12 +38,8 @@ mod tests {
 
         assert_eq!(cli.base_dir.to_str().unwrap(), ".");
 
-        if let Commands::Set { uri, key, value } = cli.command {
-            assert_eq!(uri, "star-ocean/character/hiro");
-            assert_eq!(key, "name");
-            assert_eq!(value, "Hiro");
-        } else {
-            panic!("Expected Set subcommand");
-        }
+        assert_eq!(cli.command.uri, "star-ocean/character/hiro");
+        assert_eq!(cli.command.key, "name");
+        assert_eq!(cli.command.value, "Hiro");
     }
 }
