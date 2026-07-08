@@ -28,6 +28,8 @@ echo "── Pre-commit checks ────────────────�
 if [ "$HAS_RUST" -eq 1 ]; then
   echo "→ cargo fmt ($CHANGED_RUST changed .rs files)..."
   cargo fmt --all -- --check
+  echo "→ cargo clippy ($CHANGED_RUST changed .rs files)..."
+  cargo clippy --workspace --all-targets -- -D warnings
 else
   echo "→ cargo fmt — skipped (no Rust changes)"
 fi
