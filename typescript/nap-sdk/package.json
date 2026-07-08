@@ -1,6 +1,6 @@
 {
   "name": "@portalshq/nap-sdk",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "description": "TypeScript SDK for NAP (Narrative Addressing Protocol), powered by Rust and NAPI-RS.",
   "publishConfig": {
     "access": "public"
