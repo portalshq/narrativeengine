@@ -107,7 +107,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n install.sh
+      - run: bash -n scripts/install.sh
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
