@@ -1,13 +1,15 @@
-name: Release
+name: cli-release
 
 on:
   push:
     tags:
       - 'v*'
-
+permissions:
+  contents: read
 jobs:
   lint:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -32,8 +34,26 @@ jobs:
       - run: npm ci && npm run lint
         working-directory: typescript/narrativeengine
 
-  build:
+  test:
+    name: Test
     needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: >
+          cargo test
+          --locked
+          --workspace
+          --exclude narrativeengine-py
+          --exclude nap-sdk-py
+          --exclude nap-sdk-ts
+          --exclude narrativeengine-ts
+
+  build:
+    needs: test
     strategy:
       fail-fast: false
       matrix:
@@ -59,22 +79,26 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
 
-      # Run tests to match CI
-      - run: cargo test --workspace --exclude narrativeengine-py --exclude nap-sdk-py --exclude nap-sdk-ts --exclude narrativeengine-ts
-
       - name: Build
         run: cargo build --release --target ${{ matrix.target }} --bin nap
 
       - name: Prepare binary
         shell: bash
-        run: |
+       run: |
           mkdir -p artifacts
-          cp target/${{ matrix.target }}/release/${{ matrix.bin }} artifacts/nap-${{ matrix.target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          NAME="nap-${{ matrix.target }}"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            NAME="${NAME}.exe"
+          fi
+          cp \
+            "target/${{ matrix.target }}/release/${{ matrix.binary }}" \
+            "artifacts/${NAME}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: nap-${{ matrix.target }}
-          path: artifacts/
+          path: artifacts/*
+          if-no-files-found: error
 
   release:
     needs: build
@@ -82,11 +106,21 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v
+      - run: bash -n install.sh
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
-
+      - run: |
+          cp install.sh artifacts/install.sh
+          chmod +x artifacts/install.sh
+      - working-directory: artifacts
+        run: |
+          sha256sum * > SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          overwrite_files: true
+          generate_release_notes: true
+          files: |
+            artifacts/*
