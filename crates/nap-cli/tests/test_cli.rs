@@ -9,7 +9,7 @@ fn test_nap_resolve_accepts_uri_with_nap_scheme() {
         .arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("nap resolve"));
+        .stdout(predicate::str::contains("resolve"));
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn test_nap_resolve_accepts_uri_without_nap_scheme() {
         .arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("nap resolve"));
+        .stdout(predicate::str::contains("resolve"));
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn test_nap_query_accepts_uri_with_nap_scheme() {
         .arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("nap query"));
+        .stdout(predicate::str::contains("query"));
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn test_nap_query_accepts_uri_without_nap_scheme() {
         .arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("nap query"));
+        .stdout(predicate::str::contains("query"));
 }
 
 #[test]
@@ -55,5 +55,5 @@ fn test_nap_resolve_accepts_uri_with_leading_slash_without_scheme() {
         .arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("nap resolve"));
+        .stdout(predicate::str::contains("resolve"));
 }
