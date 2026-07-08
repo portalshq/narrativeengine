@@ -80,18 +80,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --bin nap
+        run: cargo build --locked --release --target ${{ matrix.target }} --bin nap
 
       - name: Prepare binary
         shell: bash
-       run: |
+        run: |
           mkdir -p artifacts
           NAME="nap-${{ matrix.target }}"
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             NAME="${NAME}.exe"
           fi
           cp \
-            "target/${{ matrix.target }}/release/${{ matrix.binary }}" \
+            "target/${{ matrix.target }}/release/${{ matrix.bin }}" \
             "artifacts/${NAME}"
 
       - uses: actions/upload-artifact@v4
@@ -106,7 +106,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v
+      - uses: actions/checkout@v4
       - run: bash -n install.sh
       - uses: actions/download-artifact@v4
         with:
