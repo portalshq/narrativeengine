@@ -1,7 +1,21 @@
+---
+name: nap-entity-mutation
+description: Update entity properties in a creative workflow and properly store creative assets back into the entity manifest, ensuring proper provenance.
+metadata:
+  author: portals
+  version: "0.1.0"
+---
+
 # NAP Skill: Entity Mutation and Creative Workflow Integration
 
-## Description
-This skill directs the agent on how to update entity properties and properly store AI-generated creative assets (text descriptions, images, audio) back into the NAP manifest, ensuring proper provenance and content-addressing.
+Update entity properties in a creative workflow and properly store creative assets back into the entity manifest, ensuring proper provenance.
+
+## When to Apply
+
+Reference these guidelines when:
+- Making changes to entity properties in a creative workflow
+- Generating new assets as part of a creative workflow
+- Storing assets back into the entity manifest
 
 ## Core Commands
 

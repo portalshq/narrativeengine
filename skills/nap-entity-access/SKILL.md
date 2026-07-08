@@ -1,7 +1,21 @@
+---
+name: nap-entity-access
+description: Create new narrative entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for creative AI workflows.
+metadata:
+  author: portals
+  version: "0.1.0"
+---
+
 # NAP Skill: Entity Creation and Resolution
 
-## Description
-This skill allows the agent to create new narrative entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for creative AI workflows. 
+Create new narrative entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for creative AI workflows. 
+
+## When to Apply
+
+Reference these guidelines when:
+- Creating new entities (e.g., characters, locations, items, events)
+- Resolving NAP URIs into manifests
+- Querying subtree data for creative workflows
 
 ## Core Commands
 

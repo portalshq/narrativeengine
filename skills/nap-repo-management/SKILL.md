@@ -1,7 +1,20 @@
+---
+name: nap-repo-management
+description: Initialize NAP universes, including creating new universes, cloning repositories, and branching existing ones.
+metadata:
+  author: portals
+  version: "0.1.0"
+---
+
 # NAP Skill: Repository Management
 
-## Description
-This skill enables the agent to initialize and manage Narrative Addressing Protocol (NAP) universes using the CLI. A universe is the top-level repository that contains entities like characters, locations, and assets.
+A universe is the top-level repository that contains entities like characters, locations, and assets. 
+
+## When to Apply
+
+Reference these guidelines when:
+- Initializing a new NAP universe
+- Branching a NAP universe
 
 ## Core Commands
 
