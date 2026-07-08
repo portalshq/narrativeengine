@@ -1,5 +1,5 @@
 [package]
-name = "portalshq-nap-core"
+name = "nap-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

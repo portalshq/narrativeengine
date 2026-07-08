@@ -1,5 +1,5 @@
 [package]
-name = "portalshq-narrativeengine"
+name = "narrativeengine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ name = "narrativeengine"
 crate-type = ["rlib"]
 
 [dependencies]
-nap-core = { path = "../nap-core", package = "portalshq-nap-core" }
+nap-core = { path = "../nap-core" }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

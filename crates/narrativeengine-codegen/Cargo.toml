@@ -1,5 +1,5 @@
 [package]
-name = "portalshq-narrativeengine-codegen"
+name = "narrativeengine-codegen"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ name = "narrativeengine-codegen"
 path = "src/main.rs"
 
 [dependencies]
-narrativeengine = { path = "../narrativeengine", package = "portalshq-narrativeengine" }
+narrativeengine = { path = "../narrativeengine" }
 anyhow = { workspace = true }
 clap = { workspace = true }
 serde_json = { workspace = true }

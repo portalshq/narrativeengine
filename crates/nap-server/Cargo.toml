@@ -1,5 +1,5 @@
 [package]
-name = "portalshq-nap-server"
+name = "nap-server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ authors.workspace = true
 description = "HTTP resolver server for the Narrative Addressing Protocol"
 
 [dependencies]
-nap-core = { path = "../nap-core", package = "portalshq-nap-core" }
+nap-core = { path = "../nap-core" }
 axum = { workspace = true }
 tokio = { workspace = true }
 tower = { workspace = true }

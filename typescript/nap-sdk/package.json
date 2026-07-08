@@ -1,5 +1,5 @@
 {
-  "name": "@portalshq/nap-core",
+  "name": "@portalshq/nap-sdk",
   "version": "0.3.5",
   "description": "TypeScript SDK for NAP (Narrative Addressing Protocol), powered by Rust and NAPI-RS.",
   "publishConfig": {
@@ -30,8 +30,8 @@
     "test": "vitest run"
   },
   "napi": {
-    "name": "nap-core",
-    "binaryName": "nap-core",
+    "name": "nap-sdk",
+    "binaryName": "nap-sdk",
     "triples": {
       "defaults": true
     }

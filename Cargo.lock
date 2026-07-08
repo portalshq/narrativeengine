@@ -1697,14 +1697,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
 
 [[package]]
-name = "portalshq-nap-cli"
+name = "nap-cli"
 version = "0.3.5"
 dependencies = [
  "anyhow",
  "assert_cmd",
  "chrono",
  "clap",
- "portalshq-nap-core",
+ "nap-core",
  "predicates",
  "serde",
  "serde_json",
@@ -1715,7 +1715,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "portalshq-nap-core"
+name = "nap-core"
 version = "0.3.5"
 dependencies = [
  "anyhow",
@@ -1746,10 +1746,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "portalshq-nap-core-py"
+name = "nap-core-py"
 version = "0.3.5"
 dependencies = [
- "portalshq-nap-core",
+ "nap-core",
  "pyo3",
  "serde",
  "serde_json",
@@ -1758,27 +1758,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "portalshq-nap-core-ts"
+name = "nap-core-ts"
 version = "0.3.5"
 dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "portalshq-nap-core",
+ "nap-core",
  "serde",
  "serde_json",
  "serde_yaml",
 ]
 
 [[package]]
-name = "portalshq-nap-server"
+name = "nap-server"
 version = "0.3.5"
 dependencies = [
  "anyhow",
  "axum 0.8.9",
  "base64",
  "chrono",
- "portalshq-nap-core",
+ "nap-core",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1790,11 +1790,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "portalshq-narrativeengine"
+name = "narrativeengine"
 version = "0.3.5"
 dependencies = [
- "portalshq-nap-core",
- "portalshq-narrativeengine",
+ "nap-core",
+ "narrativeengine",
  "proptest",
  "rstest",
  "schemars",
@@ -1804,31 +1804,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "portalshq-narrativeengine-codegen"
+name = "narrativeengine-codegen"
 version = "0.3.5"
 dependencies = [
  "anyhow",
  "clap",
- "portalshq-narrativeengine",
+ "narrativeengine",
  "serde_json",
 ]
 
 [[package]]
-name = "portalshq-narrativeengine-py"
+name = "narrativeengine-py"
 version = "0.3.5"
 dependencies = [
- "portalshq-narrativeengine",
+ "narrativeengine",
  "pyo3",
 ]
 
 [[package]]
-name = "portalshq-narrativeengine-ts"
+name = "narrativeengine-ts"
 version = "0.3.5"
 dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "portalshq-narrativeengine",
+ "narrativeengine",
 ]
 
 [[package]]

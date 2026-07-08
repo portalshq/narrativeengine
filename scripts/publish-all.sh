@@ -6,15 +6,15 @@ cd "$ROOT_DIR"
 
 CURRENT_VERSION=$(grep '^version = ' "$ROOT_DIR/Cargo.toml" | head -1 | sed 's/^version = "\(.*\)"/\1/')
 WORKSPACE_PACKAGES=(
-  "portalshq-nap-cli"
-  "portalshq-nap-core"
-  "portalshq-nap-server"
-  "portalshq-narrativeengine"
-  "portalshq-narrativeengine-codegen"
-  "portalshq-narrativeengine-py"
-  "portalshq-narrativeengine-ts"
-  "portalshq-nap-core-py"
-  "portalshq-nap-core-ts"
+  "nap-cli"
+  "nap-core"
+  "nap-server"
+  "narrativeengine"
+  "narrativeengine-codegen"
+  "narrativeengine-py"
+  "narrativeengine-ts"
+  "nap-sdk-py"
+  "nap-sdk-ts"
 )
 
 usage() {
@@ -121,15 +121,15 @@ root = Path(sys.argv[1])
 current = sys.argv[2]
 new = sys.argv[3]
 workspace_packages = [
-    "portalshq-nap-cli",
-    "portalshq-nap-core",
-    "portalshq-nap-server",
-    "portalshq-narrativeengine",
-    "portalshq-narrativeengine-codegen",
-    "portalshq-narrativeengine-py",
-    "portalshq-narrativeengine-ts",
-    "portalshq-nap-core-py",
-    "portalshq-nap-core-ts",
+    "nap-cli",
+    "nap-core",
+    "nap-server",
+    "narrativeengine",
+    "narrativeengine-codegen",
+    "narrativeengine-py",
+    "narrativeengine-ts",
+    "nap-sdk-py",
+    "nap-sdk-ts",
     ]
 
 replacements = {

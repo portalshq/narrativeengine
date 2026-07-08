@@ -1,5 +1,5 @@
 [package]
-name = "portalshq-nap-core-py"
+name = "nap-sdk-py"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ name = "_native"
 crate-type = ["cdylib"]
 
 [dependencies]
-nap-core = { path = "../../crates/nap-core", package = "portalshq-nap-core" }
+nap-core = { path = "../../crates/nap-core" }
 pyo3 = { workspace = true, features = ["extension-module"] }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }

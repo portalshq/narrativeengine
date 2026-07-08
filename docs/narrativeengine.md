@@ -35,14 +35,14 @@ NarrativeEngine is a SDK platform for interactive enterinment. Domain models, va
 Rust:
 
 ```sh
-cargo add portalshq-narrativeengine
+cargo add narrativeengine
 ```
 
 Python:
 
 ```sh
-pip install portalshq-narrativeengine
-pip install "portalshq-narrativeengine[pydantic]"
+pip install narrativeengine
+pip install "narrativeengine[pydantic]"
 ```
 
 TypeScript:
@@ -117,8 +117,8 @@ const candidate = generateCandidate(
 # 1. Generate type definitions (optional if schemas haven't changed)
 ./scripts/generate-types.sh
 
-# 2. Rust core + codegen (cargo build + test, excluding portalshq-narrativeengine-py from tests)
-cargo build --workspace && cargo test -p portalshq-narrativeengine -p portalshq-narrativeengine-codegen
+# 2. Rust core + codegen (cargo build + test, excluding narrativeengine-py from tests)
+cargo build --workspace && cargo test -p narrativeengine -p narrativeengine-codegen
 
 # 3. Python bindings (maturin develop, pytest, lint)
 ./scripts/build-python.sh
@@ -142,9 +142,9 @@ export PYO3_PYTHON="/absolute/path/to/.venv-python/bin/python3"
 ./scripts/build-all.sh
 ```
 
-> **Why `PYO3_PYTHON` matters**: The `portalshq-narrativeengine-py` crate uses PyO3 which probes `python3` on your `$PATH` at build time. If your system Python (e.g. miniforge3's 3.13) differs from the project venv (3.12), the test binary links against the wrong `libpython`. Setting `PYO3_PYTHON` to the venv's interpreter ensures correct linking.
+> **Why `PYO3_PYTHON` matters**: The `narrativeengine-py` crate uses PyO3 which probes `python3` on your `$PATH` at build time. If your system Python (e.g. miniforge3's 3.13) differs from the project venv (3.12), the test binary links against the wrong `libpython`. Setting `PYO3_PYTHON` to the venv's interpreter ensures correct linking.
 
-> **Why `cargo test --workspace` fails on `portalshq-narrativeengine-py`**: The `portalshq-narrativeengine-py` crate is a `cdylib` that loads *into* a Python process. `cargo test` builds a standalone test **binary** that embeds Python, requiring `libpython.dylib` at runtime — but the rpath is not set up correctly outside of `maturin`. Always use `maturin develop` (via `build-python.sh`) to build and test the Python bindings. For CI, pass `--workspace --exclude portalshq-narrativeengine-py` to `cargo test`.
+> **Why `cargo test --workspace` fails on `narrativeengine-py`**: The `narrativeengine-py` crate is a `cdylib` that loads *into* a Python process. `cargo test` builds a standalone test **binary** that embeds Python, requiring `libpython.dylib` at runtime — but the rpath is not set up correctly outside of `maturin`. Always use `maturin develop` (via `build-python.sh`) to build and test the Python bindings. For CI, pass `--workspace --exclude narrativeengine-py` to `cargo test`.
 
 ### ES module + CJS native loader
 
