@@ -31,13 +31,21 @@ use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 /// Expand a path, resolving a leading `~` to the user's home directory.
+/// Supports both Unix (HOME) and Windows (USERPROFILE) environments.
 fn expand_path(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
-    if s.starts_with('~')
-        && let Ok(home) = std::env::var("HOME")
-    {
-        let rest = s.strip_prefix('~').unwrap_or("");
-        return PathBuf::from(format!("{home}{rest}"));
+    if s.starts_with('~') {
+        let home = std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .unwrap_or_else(|| {
+                // Fallback: keep path as-is if no home env var is available
+                std::ffi::OsString::from("")
+            });
+
+        if !home.is_empty() {
+            let rest = s.strip_prefix('~').unwrap_or("");
+            return PathBuf::from(home).join(rest.trim_start_matches('/'));
+        }
     }
     path.to_path_buf()
 }
