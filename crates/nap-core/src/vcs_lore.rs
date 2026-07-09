@@ -234,6 +234,11 @@ impl LoreBackend {
 }
 
 impl VcsBackend for LoreBackend {
+    /// Get the remote URL base for constructing repository URLs.
+    fn remote_url_base(&self) -> Result<String, NapError> {
+        Ok(self.remote_url.clone())
+    }
+
     // ── init ─────────────────────────────────────────────────────────
     fn init(&self, path: &Path) -> Result<(), NapError> {
         // For Lore, "init" means:

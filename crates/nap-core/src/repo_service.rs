@@ -150,12 +150,17 @@ impl RepoService {
         repo_id: &str,
         _opts: RepoOptions,
     ) -> Result<Repository, NapError> {
-        let remote_url = format!(
-            "{}/{}",
-            std::env::var("NAP_LORE_URL_BASE")
-                .unwrap_or_else(|_| "lore://localhost:8700".to_string()),
-            repo_id
-        );
+        // The backend (LoreBackend) already contains the configured remote URL base
+        // from NAP_LORE_URL_BASE via its from_env() constructor. We derive the full
+        // repository URL from the backend's internal state rather than reading env vars
+        // directly here, ensuring a single source of truth for configuration.
+        let remote_url = match self.backend.remote_url_base() {
+            Ok(base) => format!("{}/{}", base.trim_end_matches('/'), repo_id),
+            Err(_) => {
+                // Fallback for backends that don't support remote_url_base
+                format!("lore://localhost:8700/{}", repo_id)
+            }
+        };
 
         // Init creates the remote repo + clones locally.
         self.backend.init(&self.workspace_root)?;

@@ -249,6 +249,16 @@ pub trait VcsBackend: Send + Sync {
     /// Pull the current branch from its upstream / a named remote.
     fn pull(&self, path: &Path, remote: Option<&str>, branch: Option<&str>)
     -> Result<(), NapError>;
+
+    /// Get the remote URL base for constructing repository URLs.
+    ///
+    /// The default implementation returns an error — backends that support
+    /// remote URL construction must override this.
+    fn remote_url_base(&self) -> Result<String, NapError> {
+        Err(NapError::VcsError(
+            "remote_url_base not supported by this VCS backend".to_string(),
+        ))
+    }
 }
 
 // ---------------------------------------------------------------------------
