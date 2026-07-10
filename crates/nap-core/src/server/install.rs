@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use tracing::{info, warn, error};
+use tracing::{error, info};
 
 /// Lore installer for managing Lore CLI and server installation
 pub struct LoreInstaller {
@@ -42,7 +42,10 @@ impl LoreInstaller {
 
     /// Install Lore CLI
     pub fn install_cli(&self) -> Result<()> {
-        info!("Installing Lore CLI from {} version {}", self.repo, self.version);
+        info!(
+            "Installing Lore CLI from {} version {}",
+            self.repo, self.version
+        );
 
         self.run_install_script(&["--version", &self.version])?;
 
@@ -52,7 +55,10 @@ impl LoreInstaller {
 
     /// Install Lore server
     pub fn install_server(&self) -> Result<()> {
-        info!("Installing Lore server from {} version {}", self.repo, self.version);
+        info!(
+            "Installing Lore server from {} version {}",
+            self.repo, self.version
+        );
 
         self.run_install_script(&["--server", "--version", &self.version])?;
 
@@ -62,7 +68,10 @@ impl LoreInstaller {
 
     /// Install both CLI and server
     pub fn install_all(&self) -> Result<()> {
-        info!("Installing Lore CLI and server from {} version {}", self.repo, self.version);
+        info!(
+            "Installing Lore CLI and server from {} version {}",
+            self.repo, self.version
+        );
 
         self.run_install_script(&["--version", &self.version])?;
 
@@ -95,7 +104,7 @@ impl LoreInstaller {
             "--install-dir",
             self.install_dir.to_str().unwrap(),
         ];
-        cmd_args.extend(args.iter().map(|s| *s));
+        cmd_args.extend(args.iter().copied());
 
         // Execute script
         let output = Command::new("bash")
@@ -117,21 +126,19 @@ impl LoreInstaller {
 
     /// Download install script to temporary location
     fn download_script(&self, url: &str) -> Result<std::path::PathBuf> {
-        let response = reqwest::blocking::get(url)
-            .context("Failed to download Lore install script")?;
+        let response =
+            reqwest::blocking::get(url).context("Failed to download Lore install script")?;
 
         if !response.status().is_success() {
             anyhow::bail!("Failed to download script: HTTP {}", response.status());
         }
 
-        let script_content = response.text()
-            .context("Failed to read script content")?;
+        let script_content = response.text().context("Failed to read script content")?;
 
         // Write to temporary file
         let temp_dir = std::env::temp_dir();
         let script_path = temp_dir.join("lore-install.sh");
-        fs::write(&script_path, script_content)
-            .context("Failed to write install script")?;
+        fs::write(&script_path, script_content).context("Failed to write install script")?;
 
         Ok(script_path)
     }
@@ -184,20 +191,28 @@ impl LoreInstaller {
 
     /// Add install directory to PATH
     pub fn add_to_path(&self) -> Result<()> {
-        let install_dir_str = self.install_dir.to_str()
+        let install_dir_str = self
+            .install_dir
+            .to_str()
             .context("Install directory path is not valid UTF-8")?;
 
         // Check if already in PATH
-        if let Ok(current_path) = std::env::var("PATH") {
-            if current_path.contains(install_dir_str) {
-                info!("Install directory already in PATH");
-                return Ok(());
-            }
+        if let Ok(current_path) = std::env::var("PATH")
+            && current_path.contains(install_dir_str)
+        {
+            info!("Install directory already in PATH");
+            return Ok(());
         }
 
         // Add to current process PATH
-        let new_path = format!("{}:{}", install_dir_str, std::env::var("PATH").unwrap_or_default());
-        unsafe { std::env::set_var("PATH", &new_path); }
+        let new_path = format!(
+            "{}:{}",
+            install_dir_str,
+            std::env::var("PATH").unwrap_or_default()
+        );
+        unsafe {
+            std::env::set_var("PATH", &new_path);
+        }
 
         info!("Added {} to PATH for current process", install_dir_str);
         Ok(())
@@ -224,13 +239,19 @@ impl VerificationResult {
         let mut parts = vec![];
 
         if self.cli_installed {
-            parts.push(format!("Lore CLI installed ({})", self.cli_version.as_deref().unwrap_or("unknown")));
+            parts.push(format!(
+                "Lore CLI installed ({})",
+                self.cli_version.as_deref().unwrap_or("unknown")
+            ));
         } else {
             parts.push("Lore CLI not installed".to_string());
         }
 
         if self.server_installed {
-            parts.push(format!("Lore server installed ({})", self.server_version.as_deref().unwrap_or("unknown")));
+            parts.push(format!(
+                "Lore server installed ({})",
+                self.server_version.as_deref().unwrap_or("unknown")
+            ));
         } else {
             parts.push("Lore server not installed".to_string());
         }
@@ -273,6 +294,10 @@ mod tests {
 
         assert!(!result.is_complete());
         assert!(result.status_message().contains("Lore CLI installed"));
-        assert!(result.status_message().contains("Lore server not installed"));
+        assert!(
+            result
+                .status_message()
+                .contains("Lore server not installed")
+        );
     }
 }

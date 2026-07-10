@@ -6,7 +6,6 @@
 
 use anyhow::{Context, Result};
 use tracing::{info, warn};
-use async_trait::async_trait;
 
 use super::{Provider, ProviderStatus, ProviderType};
 
@@ -16,6 +15,12 @@ pub struct PortalsCloudProvider {
     workspace_id: String,
     account_id: Option<String>,
     auth_token: Option<String>,
+}
+
+impl Default for PortalsCloudProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PortalsCloudProvider {
@@ -61,13 +66,18 @@ impl PortalsCloudProvider {
     /// Get Lore server URL from Portals Cloud
     fn resolve_lore_url(&self) -> Result<String> {
         if !self.is_authenticated() {
-            anyhow::bail!("Portals Cloud provider requires authentication (NAP_PORTALS_ACCOUNT_ID and NAP_PORTALS_AUTH_TOKEN)");
+            anyhow::bail!(
+                "Portals Cloud provider requires authentication (NAP_PORTALS_ACCOUNT_ID and NAP_PORTALS_AUTH_TOKEN)"
+            );
         }
 
         // In a real implementation, this would query the Portals Cloud API
         // to get the Lore server URL for the account/workspace
         // For now, return a placeholder
-        Ok(format!("lore://{}.portals.sh", self.account_id.as_ref().unwrap()))
+        Ok(format!(
+            "lore://{}.portals.sh",
+            self.account_id.as_ref().unwrap()
+        ))
     }
 }
 
@@ -103,11 +113,15 @@ impl Provider for PortalsCloudProvider {
 
         // Check connectivity to Portals Cloud API
         let health_url = format!("{}/health", self.api_url);
-        let response = reqwest::get(&health_url).await
+        let response = reqwest::get(&health_url)
+            .await
             .context("Failed to connect to Portals Cloud API")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Portals Cloud API health check failed: {}", response.status());
+            anyhow::bail!(
+                "Portals Cloud API health check failed: {}",
+                response.status()
+            );
         }
 
         info!("Portals Cloud provider is ready");
@@ -138,7 +152,8 @@ impl Provider for PortalsCloudProvider {
         let authenticated = self.is_authenticated();
         let healthy = self.health_check().await.unwrap_or(false);
         let url_base = if authenticated {
-            self.lore_url_base().unwrap_or_else(|_| "unknown".to_string())
+            self.lore_url_base()
+                .unwrap_or_else(|_| "unknown".to_string())
         } else {
             "not authenticated".to_string()
         };

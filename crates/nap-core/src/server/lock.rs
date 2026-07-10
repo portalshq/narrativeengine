@@ -43,13 +43,19 @@ impl ProcessLock {
         // Check if lock file exists
         if self.lock_file.exists() {
             // Read existing PID
-            let existing_pid = fs::read_to_string(&self.lock_file)
-                .with_context(|| format!("Failed to read PID lock file at {}", self.lock_file.display()))?;
-            
-            let existing_pid: u32 = existing_pid
-                .trim()
-                .parse()
-                .with_context(|| format!("Failed to parse PID from lock file at {}", self.lock_file.display()))?;
+            let existing_pid = fs::read_to_string(&self.lock_file).with_context(|| {
+                format!(
+                    "Failed to read PID lock file at {}",
+                    self.lock_file.display()
+                )
+            })?;
+
+            let existing_pid: u32 = existing_pid.trim().parse().with_context(|| {
+                format!(
+                    "Failed to parse PID from lock file at {}",
+                    self.lock_file.display()
+                )
+            })?;
 
             // Check if process is still running
             if self.is_process_running(existing_pid) {
@@ -68,8 +74,12 @@ impl ProcessLock {
                     "Removing stale lock file (PID {} no longer running)",
                     existing_pid
                 );
-                fs::remove_file(&self.lock_file)
-                    .with_context(|| format!("Failed to remove stale lock file at {}", self.lock_file.display()))?;
+                fs::remove_file(&self.lock_file).with_context(|| {
+                    format!(
+                        "Failed to remove stale lock file at {}",
+                        self.lock_file.display()
+                    )
+                })?;
             }
         }
 
@@ -77,11 +87,15 @@ impl ProcessLock {
         // The real daemon PID should be written via write_daemon_pid()
         // after the daemon process is spawned.
         let current_pid = process::id();
-        fs::write(&self.lock_file, current_pid.to_string())
-            .with_context(|| format!("Failed to write lock file at {}", self.lock_file.display()))?;
+        fs::write(&self.lock_file, current_pid.to_string()).with_context(|| {
+            format!("Failed to write lock file at {}", self.lock_file.display())
+        })?;
 
         self.acquired = true;
-        tracing::info!(pid = current_pid, "Acquired process lock (placeholder PID written)");
+        tracing::info!(
+            pid = current_pid,
+            "Acquired process lock (placeholder PID written)"
+        );
         Ok(true)
     }
 
@@ -90,12 +104,11 @@ impl ProcessLock {
     /// Call this after spawning the Lore daemon process to replace
     /// the placeholder PID with the real daemon PID.
     pub fn write_daemon_pid(&self, daemon_pid: u32) -> Result<()> {
-        fs::write(&self.lock_file, daemon_pid.to_string())
-            .context(format!(
-                "Failed to write daemon PID {} to lock file at {}",
-                daemon_pid,
-                self.lock_file.display()
-            ))?;
+        fs::write(&self.lock_file, daemon_pid.to_string()).context(format!(
+            "Failed to write daemon PID {} to lock file at {}",
+            daemon_pid,
+            self.lock_file.display()
+        ))?;
         tracing::info!(
             daemon_pid,
             lock_file = %self.lock_file.display(),
@@ -109,18 +122,22 @@ impl ProcessLock {
         if !self.lock_file.exists() {
             return Ok(None);
         }
-        let content = fs::read_to_string(&self.lock_file)
-            .context(format!("Failed to read PID from lock file at {}", self.lock_file.display()))?;
-        let pid = content.trim().parse::<u32>()
-            .context(format!("Failed to parse PID '{}' from lock file at {}", content.trim(), self.lock_file.display()))?;
+        let content = fs::read_to_string(&self.lock_file).context(format!(
+            "Failed to read PID from lock file at {}",
+            self.lock_file.display()
+        ))?;
+        let pid = content.trim().parse::<u32>().context(format!(
+            "Failed to parse PID '{}' from lock file at {}",
+            content.trim(),
+            self.lock_file.display()
+        ))?;
         Ok(Some(pid))
     }
 
     /// Release the lock
     pub fn release(&mut self) -> Result<()> {
         if self.acquired && self.lock_file.exists() {
-            fs::remove_file(&self.lock_file)
-                .context("Failed to remove lock file")?;
+            fs::remove_file(&self.lock_file).context("Failed to remove lock file")?;
             self.acquired = false;
             tracing::info!("Released process lock");
         }
@@ -131,9 +148,9 @@ impl ProcessLock {
     #[cfg(unix)]
     fn is_process_running(&self, pid: u32) -> bool {
         // On Unix, send signal 0 to check if process exists
-        use nix::sys::signal::{kill, Signal};
+        use nix::sys::signal::kill;
         use nix::unistd::Pid;
-        
+
         kill(Pid::from_raw(pid as i32), None).is_ok()
     }
 
@@ -142,7 +159,7 @@ impl ProcessLock {
         // On Windows, use OpenProcess to check if process exists
         use windows_sys::Win32::Foundation::CloseHandle;
         use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION};
-        
+
         unsafe {
             let handle = OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid);
             if handle == 0 {

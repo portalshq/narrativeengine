@@ -168,11 +168,37 @@ import { createBlock } from "@portalshq/narrativeengine";
 const block = createBlock("char-1", "A brave adventurer");
 ```
 
+### Initialize NAP
+
+```bash
+# Initialize NAP with provider selection (default: local)
+nap init --provider local
+
+# Initialize with remote provider
+nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
+
+# Initialize with Portals Cloud
+nap init --provider portals-cloud
+
+# Change backend provider
+nap choose backend --provider local
+nap choose backend --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
+
+# Check system status
+nap status
+
+# Run diagnostics
+nap doctor
+
+# Run diagnostics with auto-repair
+nap doctor --repair
+```
+
 ### Create a Universe
 
 ```bash
-# Initialize a new universe
-nap init starwars
+# Initialize a new universe (legacy command)
+nap init-universe starwars
 
 # See what you created
 ls starwars/
@@ -214,6 +240,12 @@ nap branch starwars canon
 
 # Create tags
 nap tag starwars episode-4
+
+# Sync with remote
+nap sync starwars
+
+# Publish to remote
+nap publish starwars
 ```
 
 ### Output Formats

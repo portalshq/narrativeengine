@@ -16,14 +16,11 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 use std::time::Duration;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use super::{
-    cert::{generate_certificates, CertificateFiles},
-    config::{generate_local_config, ConfigFiles},
-    lock::ProcessLock,
-    process::LoreProcessManager,
-    version::{verify_lore_installation, LoreInstallationStatus},
+    cert::generate_certificates, config::generate_local_config, lock::ProcessLock,
+    process::LoreProcessManager, version::verify_lore_installation,
 };
 
 /// Server manager for Lore repository backend
@@ -58,9 +55,9 @@ impl ServerManager {
     /// Ensure Lore is installed
     pub fn ensure_installed(&self) -> Result<()> {
         info!("Checking Lore installation");
-        
-        let status = verify_lore_installation()
-            .context("Failed to verify Lore installation status")?;
+
+        let status =
+            verify_lore_installation().context("Failed to verify Lore installation status")?;
 
         if !status.is_fully_compatible() {
             let message = status.status_message();
@@ -94,22 +91,20 @@ impl ServerManager {
         info!(nap_home = %self.nap_home.display(), "Ensuring Lore configuration");
 
         // Generate configuration
-        let config_files = generate_local_config(&self.nap_home)
-            .context(format!(
-                "Failed to generate Lore configuration at '{}'. \
+        let config_files = generate_local_config(&self.nap_home).context(format!(
+            "Failed to generate Lore configuration at '{}'. \
                  Check directory permissions and disk space.",
-                self.nap_home.display()
-            ))?;
+            self.nap_home.display()
+        ))?;
         tracing::debug!(config_path = %config_files.config_path.display(), "Lore config generated");
 
         // Generate certificates
         let cert_dir = self.nap_home.join("lore").join("certs");
-        let cert_files = generate_certificates(&cert_dir)
-            .context(format!(
-                "Failed to generate Lore certificates at '{}'. \
+        let cert_files = generate_certificates(&cert_dir).context(format!(
+            "Failed to generate Lore certificates at '{}'. \
                  Check directory permissions.",
-                cert_dir.display()
-            ))?;
+            cert_dir.display()
+        ))?;
         tracing::debug!(
             cert = %cert_files.cert_path.display(),
             key = %cert_files.key_path.display(),
@@ -128,7 +123,8 @@ impl ServerManager {
         let mut lock = ProcessLock::new(&self.nap_home);
         if !lock.try_acquire()? {
             // Server lock is held - check if daemon is actually healthy
-            let daemon_pid = lock.read_daemon_pid()
+            let daemon_pid = lock
+                .read_daemon_pid()
                 .unwrap_or(None)
                 .map(|p| p.to_string())
                 .unwrap_or_else(|| "unknown".to_string());
@@ -182,9 +178,10 @@ impl ServerManager {
     /// Internal start implementation
     async fn start_internal(&self, lock: &mut ProcessLock) -> Result<()> {
         let process_manager = LoreProcessManager::new(&self.nap_home);
-        
+
         // Start the process
-        let child = process_manager.start()
+        let child = process_manager
+            .start()
             .context("Failed to start Lore server process")?;
 
         // Write the actual daemon PID to the lock file
@@ -192,10 +189,7 @@ impl ServerManager {
         lock.write_daemon_pid(daemon_pid)
             .context("Failed to write daemon PID to lock file")?;
 
-        tracing::info!(
-            daemon_pid,
-            "Lore daemon spawned, waiting for health check"
-        );
+        tracing::info!(daemon_pid, "Lore daemon spawned, waiting for health check");
 
         // Wait for server to become healthy
         let mut retries = 0;
@@ -204,7 +198,9 @@ impl ServerManager {
                 self.http_port,
                 self.startup_timeout,
                 self.retry_interval,
-            ).await {
+            )
+            .await
+            {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     retries += 1;
@@ -228,7 +224,11 @@ impl ServerManager {
             "Lore server failed to become healthy after {} retries. \
              Check logs at '{}' for startup errors.",
             self.max_retries,
-            self.nap_home.join("lore").join("logs").join("loreserver.log").display()
+            self.nap_home
+                .join("lore")
+                .join("logs")
+                .join("loreserver.log")
+                .display()
         );
     }
 
@@ -236,37 +236,36 @@ impl ServerManager {
     pub fn stop(&self) -> Result<()> {
         let lock_file = self.nap_home.join("lore").join("pid");
         if !lock_file.exists() {
-            info!("No lock file found at '{}', server may not be running", lock_file.display());
+            info!(
+                "No lock file found at '{}', server may not be running",
+                lock_file.display()
+            );
             return Ok(());
         }
 
-        let pid_str = std::fs::read_to_string(&lock_file)
-            .context(format!(
-                "Failed to read PID lock file at '{}'",
-                lock_file.display()
-            ))?;
-        let pid: u32 = pid_str.trim().parse()
-            .context(format!(
-                "Failed to parse PID '{}' from lock file at '{}'",
-                pid_str.trim(),
-                lock_file.display()
-            ))?;
+        let pid_str = std::fs::read_to_string(&lock_file).context(format!(
+            "Failed to read PID lock file at '{}'",
+            lock_file.display()
+        ))?;
+        let pid: u32 = pid_str.trim().parse().context(format!(
+            "Failed to parse PID '{}' from lock file at '{}'",
+            pid_str.trim(),
+            lock_file.display()
+        ))?;
 
         info!(pid, "Stopping Lore server process");
 
-        LoreProcessManager::stop(pid)
-            .context(format!(
-                "Failed to stop Lore server process (PID {}). \
+        LoreProcessManager::stop(pid).context(format!(
+            "Failed to stop Lore server process (PID {}). \
                  The process may have already exited.",
-                pid
-            ))?;
+            pid
+        ))?;
 
         // Remove lock file
-        std::fs::remove_file(&lock_file)
-            .context(format!(
-                "Failed to remove lock file at '{}'",
-                lock_file.display()
-            ))?;
+        std::fs::remove_file(&lock_file).context(format!(
+            "Failed to remove lock file at '{}'",
+            lock_file.display()
+        ))?;
 
         info!(pid, "Lore server stopped successfully");
         Ok(())
@@ -287,13 +286,15 @@ impl ServerManager {
     /// Get server status
     pub async fn status(&self) -> Result<ServerStatus> {
         let lock_file = self.nap_home.join("lore").join("pid");
-        
+
         let running = if lock_file.exists() {
-            let pid_str = std::fs::read_to_string(&lock_file)
-                .context("Failed to read lock file")?;
-            let pid: u32 = pid_str.trim().parse()
+            let pid_str =
+                std::fs::read_to_string(&lock_file).context("Failed to read lock file")?;
+            let pid: u32 = pid_str
+                .trim()
+                .parse()
                 .context("Failed to parse PID from lock file")?;
-            
+
             LoreProcessManager::is_running(pid)
         } else {
             false
@@ -305,7 +306,12 @@ impl ServerManager {
             false
         };
 
-        let configured = self.nap_home.join("lore").join("config").join("local.toml").exists();
+        let configured = self
+            .nap_home
+            .join("lore")
+            .join("config")
+            .join("local.toml")
+            .exists();
 
         Ok(ServerStatus {
             running,

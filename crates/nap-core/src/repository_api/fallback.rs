@@ -6,11 +6,10 @@
 //! cloud services are unavailable.
 
 use anyhow::{Context, Result};
-use std::sync::Arc;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 use super::RepositoryApi;
-use crate::provider::{Provider, ProviderFactory, ProviderType};
+use crate::provider::{ProviderFactory, ProviderType};
 
 /// Fallback strategy for provider failures
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,9 +38,7 @@ pub enum FallbackResult {
         error: String,
     },
     /// Fallback declined by user
-    Declined {
-        original_provider: ProviderType,
-    },
+    Declined { original_provider: ProviderType },
 }
 
 /// Provider fallback handler
@@ -72,31 +69,41 @@ impl FallbackHandler {
         original_provider: ProviderType,
         error: &str,
     ) -> Result<FallbackResult> {
-        warn!("Provider failure detected: {} - {}", original_provider.as_str(), error);
+        warn!(
+            "Provider failure detected: {} - {}",
+            original_provider.as_str(),
+            error
+        );
 
         // Only fallback from cloud providers to local
-        if !matches!(original_provider, ProviderType::PortalsCloud | ProviderType::Remote) {
+        if !matches!(
+            original_provider,
+            ProviderType::PortalsCloud | ProviderType::Remote
+        ) {
             return Ok(FallbackResult::Failed {
                 original_provider,
-                error: format!("Cannot fallback from {} provider", original_provider.as_str()),
+                error: format!(
+                    "Cannot fallback from {} provider",
+                    original_provider.as_str()
+                ),
             });
         }
 
         match self.strategy {
-            FallbackStrategy::None => {
-                Ok(FallbackResult::Failed {
-                    original_provider,
-                    error: "Fallback disabled".to_string(),
-                })
-            }
+            FallbackStrategy::None => Ok(FallbackResult::Failed {
+                original_provider,
+                error: "Fallback disabled".to_string(),
+            }),
             FallbackStrategy::Auto => {
-                self.perform_fallback(repository_api, original_provider).await
+                self.perform_fallback(repository_api, original_provider)
+                    .await
             }
             FallbackStrategy::Prompt => {
                 // In a real implementation, this would prompt the user
                 // For now, we'll simulate a prompt and default to yes
                 info!("Prompting user for fallback to local provider");
-                self.perform_fallback(repository_api, original_provider).await
+                self.perform_fallback(repository_api, original_provider)
+                    .await
             }
         }
     }
@@ -110,22 +117,30 @@ impl FallbackHandler {
         info!("Attempting fallback to local provider");
 
         let factory = ProviderFactory::new(&self.nap_home);
-        let local_provider = factory.create_provider(ProviderType::Local)
+        let local_provider = factory
+            .create_provider(ProviderType::Local)
             .context("Failed to create local provider for fallback")?;
 
         // Initialize local provider
-        local_provider.initialize().await
+        local_provider
+            .initialize()
+            .await
             .context("Failed to initialize local provider during fallback")?;
 
         // Ensure local provider is ready
-        local_provider.ensure_ready().await
+        local_provider
+            .ensure_ready()
+            .await
             .context("Failed to ensure local provider ready during fallback")?;
 
         // Update repository API with local provider
-        repository_api.provider_manager_mut().set_active_provider(local_provider.clone());
+        repository_api
+            .provider_manager_mut()
+            .set_active_provider(local_provider.clone());
 
         // Save new provider configuration
-        repository_api.provider_manager_mut()
+        repository_api
+            .provider_manager_mut()
             .save_provider_config(local_provider.as_ref())?;
 
         info!("Fallback to local provider successful");
@@ -139,30 +154,26 @@ impl FallbackHandler {
     /// Check if fallback should be offered based on error type
     pub fn should_offer_fallback(&self, error: &str) -> bool {
         // Offer fallback for network/connectivity errors
-        error.to_lowercase().contains("unavailable") ||
-        error.to_lowercase().contains("timeout") ||
-        error.to_lowercase().contains("connection") ||
-        error.to_lowercase().contains("network")
+        error.to_lowercase().contains("unavailable")
+            || error.to_lowercase().contains("timeout")
+            || error.to_lowercase().contains("connection")
+            || error.to_lowercase().contains("network")
     }
 
     /// Get user-friendly fallback message
     pub fn fallback_message(&self, original_provider: ProviderType) -> String {
         match original_provider {
-            ProviderType::PortalsCloud => {
-                "Portals Cloud is currently unavailable.\n\
+            ProviderType::PortalsCloud => "Portals Cloud is currently unavailable.\n\
                  Start a local Lore server instead?\n\
                  Changes will remain local until synchronization.\n\
-                 [Y/n]".to_string()
-            }
-            ProviderType::Remote => {
-                "Remote Lore server is currently unavailable.\n\
+                 [Y/n]"
+                .to_string(),
+            ProviderType::Remote => "Remote Lore server is currently unavailable.\n\
                  Start a local Lore server instead?\n\
                  Changes will remain local until synchronization.\n\
-                 [Y/n]".to_string()
-            }
-            ProviderType::Local => {
-                "Local provider failed. No fallback available.".to_string()
-            }
+                 [Y/n]"
+                .to_string(),
+            ProviderType::Local => "Local provider failed. No fallback available.".to_string(),
         }
     }
 }
@@ -185,47 +196,40 @@ pub trait RepositoryApiFallback {
 
     /// Check provider health and fallback if needed.
     /// Returns `Ok(true)` if provider is healthy or fallback succeeded.
-    fn ensure_provider_with_fallback(&mut self) -> impl std::future::Future<Output = Result<bool>> + Send;
+    fn ensure_provider_with_fallback(
+        &mut self,
+    ) -> impl std::future::Future<Output = Result<bool>> + Send;
 }
 
 impl RepositoryApiFallback for RepositoryApi {
-    fn with_fallback<F, Fut, T>(
-        &mut self,
-        mut operation: F,
-    ) -> impl std::future::Future<Output = Result<T>> + Send
+    async fn with_fallback<F, Fut, T>(&mut self, mut operation: F) -> Result<T>
     where
         F: FnMut(&mut Self) -> Fut + Send,
         Fut: std::future::Future<Output = Result<T>> + Send,
         T: Send + 'static,
     {
-        async move {
-            // Try the operation
-            let result = operation(self).await;
+        // Try the operation
+        let result = operation(self).await;
 
-            if let Err(e) = &result {
-                // Check if we should offer fallback
-                if let Some(provider) = self.active_provider() {
-                    let handler = FallbackHandler::new(&self.nap_home);
-                    let provider_type = provider.provider_type();
+        if let Err(e) = &result {
+            // Check if we should offer fallback
+            if let Some(provider) = self.active_provider() {
+                let handler = FallbackHandler::new(&self.nap_home);
+                let provider_type = provider.provider_type();
 
-                    if handler.should_offer_fallback(&e.to_string()) {
-                        let fallback_result = handler.handle_provider_failure(
-                            self,
-                            provider_type,
-                            &e.to_string(),
-                        ).await?;
+                if handler.should_offer_fallback(&e.to_string()) {
+                    let fallback_result = handler
+                        .handle_provider_failure(self, provider_type, &e.to_string())
+                        .await?;
 
-                        match fallback_result {
-                            FallbackResult::Success { .. } => {
-                                // Retry operation with fallback provider
-                                operation(self).await
-                            }
-                            FallbackResult::Declined { .. } => result,
-                            FallbackResult::Failed { error, .. } => Err(anyhow::anyhow!(error)),
-                            FallbackResult::NotNeeded => result,
+                    match fallback_result {
+                        FallbackResult::Success { .. } => {
+                            // Retry operation with fallback provider
+                            operation(self).await
                         }
-                    } else {
-                        result
+                        FallbackResult::Declined { .. } => result,
+                        FallbackResult::Failed { error, .. } => Err(anyhow::anyhow!(error)),
+                        FallbackResult::NotNeeded => result,
                     }
                 } else {
                     result
@@ -233,40 +237,38 @@ impl RepositoryApiFallback for RepositoryApi {
             } else {
                 result
             }
+        } else {
+            result
         }
     }
 
-    fn ensure_provider_with_fallback(&mut self) -> impl std::future::Future<Output = Result<bool>> + Send {
-        async move {
-            let handler = FallbackHandler::new(&self.nap_home);
+    async fn ensure_provider_with_fallback(&mut self) -> Result<bool> {
+        let handler = FallbackHandler::new(&self.nap_home);
 
-            if let Some(provider) = self.active_provider() {
-                let provider_type = provider.provider_type();
+        if let Some(provider) = self.active_provider() {
+            let provider_type = provider.provider_type();
 
-                // Check if provider is healthy
-                let is_healthy = provider.health_check().await.unwrap_or(false);
+            // Check if provider is healthy
+            let is_healthy = provider.health_check().await.unwrap_or(false);
 
-                if is_healthy {
-                    Ok(true)
-                } else {
-                    // Provider is unhealthy, try fallback
-                    let fallback_result = handler.handle_provider_failure(
-                        self,
-                        provider_type,
-                        "Provider health check failed",
-                    ).await
+            if is_healthy {
+                Ok(true)
+            } else {
+                // Provider is unhealthy, try fallback
+                let fallback_result = handler
+                    .handle_provider_failure(self, provider_type, "Provider health check failed")
+                    .await
                     .map_err(|e| anyhow::anyhow!(e))?;
 
-                    match fallback_result {
-                        FallbackResult::Success { .. } => Ok(true),
-                        FallbackResult::Declined { .. } => Ok(false),
-                        FallbackResult::Failed { error, .. } => Err(anyhow::anyhow!(error)),
-                        FallbackResult::NotNeeded => Ok(true),
-                    }
+                match fallback_result {
+                    FallbackResult::Success { .. } => Ok(true),
+                    FallbackResult::Declined { .. } => Ok(false),
+                    FallbackResult::Failed { error, .. } => Err(anyhow::anyhow!(error)),
+                    FallbackResult::NotNeeded => Ok(true),
                 }
-            } else {
-                Ok(false)
             }
+        } else {
+            Ok(false)
         }
     }
 }
@@ -286,8 +288,7 @@ mod tests {
     #[test]
     fn test_fallback_strategy() {
         let temp_dir = TempDir::new().unwrap();
-        let handler = FallbackHandler::new(temp_dir.path())
-            .with_strategy(FallbackStrategy::Auto);
+        let handler = FallbackHandler::new(temp_dir.path()).with_strategy(FallbackStrategy::Auto);
         assert_eq!(handler.strategy, FallbackStrategy::Auto);
     }
 

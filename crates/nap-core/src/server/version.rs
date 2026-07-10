@@ -6,22 +6,19 @@
 //! verify compatibility with the SDK's pinned version.
 
 use anyhow::{Context, Result};
-use std::process::Command;
 use semver::Version;
+use std::process::Command;
 
 /// Pinned Lore version that NAP SDK requires
 pub const PINNED_LORE_VERSION: &str = "0.8.5-nightly";
 
 /// Detect the installed Lore CLI version
 pub fn detect_lore_version() -> Result<Version> {
-    let output = Command::new("lore")
-        .arg("--version")
-        .output()
-        .context(
-            "Failed to execute 'lore --version'. \
+    let output = Command::new("lore").arg("--version").output().context(
+        "Failed to execute 'lore --version'. \
              Lore CLI is not installed or not on PATH. \
-             Install it with: nap install lore"
-        )?;
+             Install it with: nap install lore",
+    )?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -44,7 +41,7 @@ pub fn detect_loreserver_version() -> Result<Version> {
         .context(
             "Failed to execute 'loreserver --version'. \
              Lore server is not installed or not on PATH. \
-             Install it with: nap install lore"
+             Install it with: nap install lore",
         )?;
 
     if !output.status.success() {
@@ -63,24 +60,20 @@ pub fn detect_loreserver_version() -> Result<Version> {
 /// Parse Lore version string into semver::Version
 fn parse_lore_version(version_str: &str) -> Result<Version> {
     // Lore version format: "lore 0.8.5-nightly" or "loreserver 0.8.5-nightly"
-    let version_part = version_str
-        .split_whitespace()
-        .nth(1)
-        .context(format!(
-            "Failed to parse Lore version string '{}'. \
+    let version_part = version_str.split_whitespace().nth(1).context(format!(
+        "Failed to parse Lore version string '{}'. \
              Expected format: 'lore <version>' (e.g., 'lore 0.8.5-nightly')",
-            version_str.trim()
-        ))?;
+        version_str.trim()
+    ))?;
 
     // Handle nightly versions by stripping the suffix for comparison
     let version_for_semver = version_part.trim_end_matches("-nightly");
-    
-    Version::parse(version_for_semver)
-        .context(format!(
-            "Failed to parse '{}' as semver version. \
+
+    Version::parse(version_for_semver).context(format!(
+        "Failed to parse '{}' as semver version. \
              Lore version string may be in an unexpected format.",
-            version_for_semver
-        ))
+        version_for_semver
+    ))
 }
 
 /// Check if installed Lore version is compatible with pinned version
@@ -95,12 +88,8 @@ pub fn check_lore_compatibility(installed_version: &Version) -> Result<bool> {
         installed_version.minor,
         installed_version.patch,
     );
-    
-    let pinned_clean = Version::new(
-        pinned.major,
-        pinned.minor,
-        pinned.patch,
-    );
+
+    let pinned_clean = Version::new(pinned.major, pinned.minor, pinned.patch);
 
     Ok(installed_clean == pinned_clean)
 }
@@ -234,7 +223,7 @@ mod tests {
             server_compatible: false,
             pinned_version: "0.8.5-nightly".to_string(),
         };
-        
+
         let message = status.status_message();
         assert!(message.contains("Lore CLI is not installed"));
         assert!(message.contains("Lore server is not installed"));

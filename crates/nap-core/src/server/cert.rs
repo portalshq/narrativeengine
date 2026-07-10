@@ -14,8 +14,7 @@ use std::path::Path;
 /// Creates a certificate and private key pair suitable for Lore's QUIC endpoint.
 /// Certificates are persisted across restarts and only regenerated if missing or invalid.
 pub fn generate_certificates(cert_dir: &Path) -> Result<CertificateFiles> {
-    fs::create_dir_all(cert_dir)
-        .context("Failed to create certificate directory")?;
+    fs::create_dir_all(cert_dir).context("Failed to create certificate directory")?;
 
     let cert_path = cert_dir.join("cert.pem");
     let key_path = cert_dir.join("key.pem");
@@ -32,7 +31,7 @@ pub fn generate_certificates(cert_dir: &Path) -> Result<CertificateFiles> {
     tracing::info!("Generating self-signed certificates for Lore QUIC");
 
     let mut params = CertificateParams::default();
-    
+
     // Set distinguished name
     let mut dn = DistinguishedName::new();
     dn.push(rcgen::DnType::CommonName, "localhost");
@@ -52,24 +51,31 @@ pub fn generate_certificates(cert_dir: &Path) -> Result<CertificateFiles> {
 
     // Write certificate
     let cert_pem = cert.pem();
-    fs::write(&cert_path, cert_pem)
-        .context("Failed to write certificate file")?;
+    fs::write(&cert_path, cert_pem).context("Failed to write certificate file")?;
 
     // Write private key
     let key_pem = key_pair.serialize_pem();
-    fs::write(&key_path, key_pem)
-        .context("Failed to write private key file")?;
+    fs::write(&key_path, key_pem).context("Failed to write private key file")?;
 
     // Set restrictive permissions on private key
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let mut perms = fs::metadata(&key_path)
-            .with_context(|| format!("Failed to read key file permissions at {}", key_path.display()))?
+            .with_context(|| {
+                format!(
+                    "Failed to read key file permissions at {}",
+                    key_path.display()
+                )
+            })?
             .permissions();
         perms.set_mode(0o600); // owner read/write only
-        fs::set_permissions(&key_path, perms)
-            .with_context(|| format!("Failed to set restrictive permissions on key file at {}", key_path.display()))?;
+        fs::set_permissions(&key_path, perms).with_context(|| {
+            format!(
+                "Failed to set restrictive permissions on key file at {}",
+                key_path.display()
+            )
+        })?;
         tracing::debug!("Set key file permissions to 0600 (owner-only)");
     }
 
@@ -77,7 +83,9 @@ pub fn generate_certificates(cert_dir: &Path) -> Result<CertificateFiles> {
     {
         // On Windows, mark the key file as hidden and system to discourage
         // casual access. NTFS ACLs provide stricter protection if needed.
-        use windows_sys::Win32::Storage::FileSystem::{SetFileAttributesW, FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_SYSTEM};
+        use windows_sys::Win32::Storage::FileSystem::{
+            FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_SYSTEM, SetFileAttributesW,
+        };
 
         let key_wide: Vec<u16> = key_path
             .as_os_str()

@@ -208,7 +208,7 @@ impl LoreBackend {
     /// |-----------------------|---------------------------|
     /// | `NAP_LORE_URL_BASE`   | `lore://localhost:41337`  |
     /// | `NAP_WORKSPACE_ID`    | `default`                 |
-    /// 
+    ///
     /// Note: For new code, prefer using the RepositoryApi with Provider architecture
     /// instead of this legacy environment-based constructor.
     pub fn from_env() -> Self {
@@ -239,10 +239,12 @@ impl LoreBackend {
             workspace_id = %workspace_id,
             "Creating LoreBackend from provider configuration"
         );
-        
+
         // Convert lore:// URL to gRPC endpoint format
-        let grpc_endpoint = url_base.replace("lore://", "https://").replace("lores://", "https://");
-        
+        let grpc_endpoint = url_base
+            .replace("lore://", "https://")
+            .replace("lores://", "https://");
+
         let grpc_client = crate::grpc_client::Builder::default()
             .endpoint(grpc_endpoint)
             .insecure(true) // Local development uses self-signed certs

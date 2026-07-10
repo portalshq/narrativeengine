@@ -4,7 +4,7 @@
 //! Repository structure:
 //!
 //! ```text
-//! starwars/               ← universe root 
+//! starwars/               ← universe root
 //! ├── .nap/               ← NAP metadata
 //! │   └── config.yaml     ← repository config
 //! ├── universe.yaml       ← world manifest (root-level)

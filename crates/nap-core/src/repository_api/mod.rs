@@ -27,19 +27,19 @@ impl RepositoryApi {
     /// Create a new repository API
     pub fn new(nap_home: &Path) -> Result<Self> {
         // Ensure NAP home directory exists with proper error handling
-        std::fs::create_dir_all(nap_home)
-            .with_context(|| {
-                format!(
-                    "Failed to create NAP home directory at '{}'. \
+        std::fs::create_dir_all(nap_home).with_context(|| {
+            format!(
+                "Failed to create NAP home directory at '{}'. \
                     Check permissions and disk space.",
-                    nap_home.display()
-                )
-            })?;
+                nap_home.display()
+            )
+        })?;
 
         let mut provider_manager = ProviderManager::new(nap_home);
-        
+
         // Try to load configured provider
-        provider_manager.load_configured_provider()
+        provider_manager
+            .load_configured_provider()
             .with_context(|| {
                 format!(
                     "Failed to load provider configuration from '{}'",
@@ -66,12 +66,13 @@ impl RepositoryApi {
         // Prompt for provider selection (in real implementation, this would be interactive)
         // For now, default to Local
         let provider_type = ProviderType::Local;
-        
+
         let factory = super::provider::ProviderFactory::new(&self.nap_home);
-        let provider = factory.create_provider(provider_type.clone())?;
-        
+        let provider = factory.create_provider(provider_type)?;
+
         self.provider_manager.set_active_provider(provider.clone());
-        self.provider_manager.save_provider_config(provider.as_ref())?;
+        self.provider_manager
+            .save_provider_config(provider.as_ref())?;
 
         info!("Selected provider: {}", provider_type.as_str());
         Ok(provider_type)
@@ -83,7 +84,9 @@ impl RepositoryApi {
             provider.ensure_ready().await?;
             Ok(())
         } else {
-            anyhow::bail!("No active provider configured. Call initialize_provider_selection() first.");
+            anyhow::bail!(
+                "No active provider configured. Call initialize_provider_selection() first."
+            );
         }
     }
 
@@ -95,26 +98,25 @@ impl RepositoryApi {
     ) -> Result<RepositoryHandle> {
         info!("Creating repository: {}", repo_id);
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         // Ensure provider is ready
-        provider.ensure_ready().await
-            .with_context(|| {
-                format!(
-                    "Failed to ensure provider '{}' is ready for repository creation",
-                    provider.name()
-                )
-            })?;
+        provider.ensure_ready().await.with_context(|| {
+            format!(
+                "Failed to ensure provider '{}' is ready for repository creation",
+                provider.name()
+            )
+        })?;
 
         // Get Lore URL base and workspace ID
-        let lore_url_base = provider.lore_url_base()
-            .with_context(|| {
-                format!(
-                    "Failed to get Lore URL base from provider '{}'",
-                    provider.name()
-                )
-            })?;
+        let lore_url_base = provider.lore_url_base().with_context(|| {
+            format!(
+                "Failed to get Lore URL base from provider '{}'",
+                provider.name()
+            )
+        })?;
         let workspace = workspace_id.unwrap_or(provider.workspace_id());
 
         // Create Lore backend using provider configuration
@@ -126,13 +128,12 @@ impl RepositoryApi {
 
         // Ensure parent directory exists
         if let Some(parent) = repo_path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| {
-                    format!(
-                        "Failed to create parent directory for repository at '{}'",
-                        repo_path.display()
-                    )
-                })?;
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "Failed to create parent directory for repository at '{}'",
+                    repo_path.display()
+                )
+            })?;
         }
 
         // Track initial state for potential rollback
@@ -168,7 +169,8 @@ impl RepositoryApi {
                 Err(anyhow::anyhow!(
                     "Failed to create repository '{}': {}. \
                      The operation has been rolled back and no partial state remains.",
-                    repo_id, e
+                    repo_id,
+                    e
                 ))
             }
         }
@@ -178,16 +180,16 @@ impl RepositoryApi {
     pub async fn open_repository(&self, repo_id: &str) -> Result<RepositoryHandle> {
         info!("Opening repository: {}", repo_id);
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
-        let lore_url_base = provider.lore_url_base()
-            .with_context(|| {
-                format!(
-                    "Failed to get Lore URL base from provider '{}'",
-                    provider.name()
-                )
-            })?;
+        let lore_url_base = provider.lore_url_base().with_context(|| {
+            format!(
+                "Failed to get Lore URL base from provider '{}'",
+                provider.name()
+            )
+        })?;
         let workspace_id = provider.workspace_id();
 
         let repo_path = self.nap_home.join(repo_id);
@@ -215,14 +217,16 @@ impl RepositoryApi {
     pub async fn publish(&self, repo_handle: &RepositoryHandle, message: &str) -> Result<String> {
         info!("Publishing changes to repository: {}", repo_handle.id);
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         let workspace_id = provider.workspace_id();
         let lore_backend = LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
 
         // Commit changes
-        let commit_hash = lore_backend.commit(&repo_handle.path, message, "nap")
+        let commit_hash = lore_backend
+            .commit(&repo_handle.path, message, "nap")
             .with_context(|| {
                 format!(
                     "Failed to commit changes to repository '{}' at '{}'. \
@@ -269,14 +273,19 @@ impl RepositoryApi {
                                  2. Reset to previous state: lore reset --hard HEAD~1 \
                                  3. Check repository status: lore status \
                                  Original push error: {}. Rollback error: {}",
-                                repo_handle.id, commit_hash, commit_hash, push_err, revert_err
+                                repo_handle.id,
+                                commit_hash,
+                                commit_hash,
+                                push_err,
+                                revert_err
                             ));
                         }
                         return Err(anyhow::anyhow!(
                             "Failed to push changes to remote for repository '{}'. \
                              The commit has been successfully rolled back. \
                              Original error: {}",
-                            repo_handle.id, push_err
+                            repo_handle.id,
+                            push_err
                         ));
                     }
                 }
@@ -287,16 +296,22 @@ impl RepositoryApi {
     }
 
     /// Get repository history
-    pub async fn history(&self, repo_handle: &RepositoryHandle, limit: usize) -> Result<Vec<CommitInfo>> {
+    pub async fn history(
+        &self,
+        repo_handle: &RepositoryHandle,
+        limit: usize,
+    ) -> Result<Vec<CommitInfo>> {
         info!("Getting history for repository: {}", repo_handle.id);
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         let workspace_id = provider.workspace_id();
         let lore_backend = LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
 
-        let commits = lore_backend.log(&repo_handle.path, None, limit)
+        let commits = lore_backend
+            .log(&repo_handle.path, None, limit)
             .with_context(|| {
                 format!(
                     "Failed to get history for repository '{}' at '{}'. \
@@ -310,22 +325,30 @@ impl RepositoryApi {
     }
 
     /// Create a branch
-    pub async fn create_branch(&self, repo_handle: &RepositoryHandle, branch_name: &str) -> Result<()> {
-        info!("Creating branch: {} in repository: {}", branch_name, repo_handle.id);
+    pub async fn create_branch(
+        &self,
+        repo_handle: &RepositoryHandle,
+        branch_name: &str,
+    ) -> Result<()> {
+        info!(
+            "Creating branch: {} in repository: {}",
+            branch_name, repo_handle.id
+        );
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         let workspace_id = provider.workspace_id();
         let lore_backend = LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
 
-        lore_backend.create_branch(&repo_handle.path, branch_name)
+        lore_backend
+            .create_branch(&repo_handle.path, branch_name)
             .with_context(|| {
                 format!(
                     "Failed to create branch '{}' in repository '{}'. \
                      Verify branch name is valid and repository is in a valid state.",
-                    branch_name,
-                    repo_handle.id
+                    branch_name, repo_handle.id
                 )
             })?;
 
@@ -333,22 +356,30 @@ impl RepositoryApi {
     }
 
     /// Switch to a branch
-    pub async fn switch_branch(&self, repo_handle: &RepositoryHandle, branch_name: &str) -> Result<()> {
-        info!("Switching to branch: {} in repository: {}", branch_name, repo_handle.id);
+    pub async fn switch_branch(
+        &self,
+        repo_handle: &RepositoryHandle,
+        branch_name: &str,
+    ) -> Result<()> {
+        info!(
+            "Switching to branch: {} in repository: {}",
+            branch_name, repo_handle.id
+        );
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         let workspace_id = provider.workspace_id();
         let lore_backend = LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
 
-        lore_backend.switch_branch(&repo_handle.path, branch_name)
+        lore_backend
+            .switch_branch(&repo_handle.path, branch_name)
             .with_context(|| {
                 format!(
                     "Failed to switch to branch '{}' in repository '{}'. \
                      Verify branch exists and repository is in a clean state.",
-                    branch_name,
-                    repo_handle.id
+                    branch_name, repo_handle.id
                 )
             })?;
 
@@ -359,13 +390,15 @@ impl RepositoryApi {
     pub async fn list_branches(&self, repo_handle: &RepositoryHandle) -> Result<Vec<String>> {
         info!("Listing branches in repository: {}", repo_handle.id);
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         let workspace_id = provider.workspace_id();
         let lore_backend = LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
 
-        let branches = lore_backend.list_branches(&repo_handle.path)
+        let branches = lore_backend
+            .list_branches(&repo_handle.path)
             .with_context(|| {
                 format!(
                     "Failed to list branches in repository '{}'. \
@@ -381,8 +414,9 @@ impl RepositoryApi {
     pub async fn sync(&self, repo_handle: &RepositoryHandle) -> Result<()> {
         info!("Synchronizing repository: {}", repo_handle.id);
 
-        let provider = self.provider_manager.active_provider()
-            .context("No active provider configured. Call initialize_provider_selection() first.")?;
+        let provider = self.provider_manager.active_provider().context(
+            "No active provider configured. Call initialize_provider_selection() first.",
+        )?;
 
         match provider.provider_type() {
             ProviderType::Local => {
@@ -391,12 +425,14 @@ impl RepositoryApi {
             }
             ProviderType::PortalsCloud | ProviderType::Remote => {
                 let workspace_id = provider.workspace_id();
-                let lore_backend = LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
+                let lore_backend =
+                    LoreBackend::from_provider(&repo_handle.lore_url_base, workspace_id);
 
                 // Record current head before pull for potential rollback
                 let head_before_pull = lore_backend.head_hash(&repo_handle.path).ok();
 
-                lore_backend.pull(&repo_handle.path, None, None)
+                lore_backend
+                    .pull(&repo_handle.path, None, None)
                     .with_context(|| {
                         format!(
                             "Failed to pull changes for repository '{}'. \
@@ -436,7 +472,11 @@ impl RepositoryApi {
                                      2. Check repository status: lore status \
                                      3. Force sync from remote: lore pull --force \
                                      Original push error: {}. Rollback error: {}",
-                                    repo_handle.id, old_head, old_head, push_err, revert_err
+                                    repo_handle.id,
+                                    old_head,
+                                    old_head,
+                                    push_err,
+                                    revert_err
                                 ));
                             }
                             return Err(anyhow::anyhow!(
@@ -444,7 +484,9 @@ impl RepositoryApi {
                                  Pull was attempted but push failed. \
                                  Successfully rolled back to previous state '{}'. \
                                  Original error: {}",
-                                repo_handle.id, old_head, push_err
+                                repo_handle.id,
+                                old_head,
+                                push_err
                             ));
                         }
                         Err(anyhow::anyhow!(
@@ -452,7 +494,8 @@ impl RepositoryApi {
                              Pull was attempted but push failed. \
                              Could not rollback (no previous state recorded). \
                              Original error: {}",
-                            repo_handle.id, push_err
+                            repo_handle.id,
+                            push_err
                         ))
                     }
                 }
@@ -465,14 +508,13 @@ impl RepositoryApi {
         info!("Deleting repository: {}", repo_handle.id);
 
         // Remove repository directory
-        std::fs::remove_dir_all(&repo_handle.path)
-            .with_context(|| {
-                format!(
-                    "Failed to remove repository directory at '{}'. \
+        std::fs::remove_dir_all(&repo_handle.path).with_context(|| {
+            format!(
+                "Failed to remove repository directory at '{}'. \
                      Check file permissions and ensure no processes are using the repository.",
-                    repo_handle.path.display()
-                )
-            })?;
+                repo_handle.path.display()
+            )
+        })?;
 
         info!("Repository deleted: {}", repo_handle.id);
         Ok(())
@@ -495,7 +537,9 @@ impl RepositoryApi {
 
     /// Get provider status
     pub async fn provider_status(&self) -> Result<super::provider::ProviderStatus> {
-        let provider = self.provider_manager.active_provider()
+        let provider = self
+            .provider_manager
+            .active_provider()
             .context("No active provider configured")?;
 
         provider.status().await

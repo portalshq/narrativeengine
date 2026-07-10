@@ -5,16 +5,13 @@
 //! Performs comprehensive diagnostics on the NAP SDK environment and
 //! provides repair capabilities for common issues.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
-use tracing::{info, warn, error};
+use tracing::{error, info};
 
 use super::{
-    config::generate_local_config,
-    cert::generate_certificates,
-    install::LoreInstaller,
-    manager::ServerManager,
-    version::verify_lore_installation,
+    cert::generate_certificates, config::generate_local_config, install::LoreInstaller,
+    manager::ServerManager, version::verify_lore_installation,
 };
 
 /// NAP doctor for diagnostics and repair
@@ -91,14 +88,17 @@ impl NapDoctor {
         }
 
         let repair_report = RepairReport { repairs };
-        info!("Repair complete: {} repairs attempted", repair_report.repairs.len());
+        info!(
+            "Repair complete: {} repairs attempted",
+            repair_report.repairs.len()
+        );
         Ok(repair_report)
     }
 
     /// Check NAP configuration
     fn check_nap_configuration(&self) -> CheckResult {
         let name = "NAP Configuration";
-        
+
         let config_exists = self.nap_home.exists();
         let config_dir = self.nap_home.join("lore").join("config");
         let lore_config_exists = config_dir.exists();
@@ -123,7 +123,7 @@ impl NapDoctor {
     /// Check Lore installation
     fn check_lore_installation(&self) -> CheckResult {
         let name = "Lore Installation";
-        
+
         match verify_lore_installation() {
             Ok(status) => {
                 if status.is_fully_compatible() {
@@ -142,23 +142,21 @@ impl NapDoctor {
                     }
                 }
             }
-            Err(e) => {
-                CheckResult {
-                    name: name.to_string(),
-                    passed: false,
-                    message: format!("Failed to check Lore installation: {}", e),
-                    severity: CheckSeverity::Error,
-                }
-            }
+            Err(e) => CheckResult {
+                name: name.to_string(),
+                passed: false,
+                message: format!("Failed to check Lore installation: {}", e),
+                severity: CheckSeverity::Error,
+            },
         }
     }
 
     /// Check Lore configuration
     fn check_lore_configuration(&self) -> CheckResult {
         let name = "Lore Configuration";
-        
+
         let config_path = self.nap_home.join("lore").join("config").join("local.toml");
-        
+
         if config_path.exists() {
             CheckResult {
                 name: name.to_string(),
@@ -179,11 +177,11 @@ impl NapDoctor {
     /// Check Lore certificates
     fn check_lore_certificates(&self) -> CheckResult {
         let name = "Lore Certificates";
-        
+
         let cert_dir = self.nap_home.join("lore").join("certs");
         let cert_path = cert_dir.join("cert.pem");
         let key_path = cert_dir.join("key.pem");
-        
+
         if cert_path.exists() && key_path.exists() {
             CheckResult {
                 name: name.to_string(),
@@ -204,9 +202,9 @@ impl NapDoctor {
     /// Check Lore server status
     async fn check_lore_server_status(&self) -> CheckResult {
         let name = "Lore Server Status";
-        
+
         let server_manager = ServerManager::new(&self.nap_home);
-        
+
         match server_manager.status().await {
             Ok(status) => {
                 if status.is_ready() {
@@ -225,24 +223,22 @@ impl NapDoctor {
                     }
                 }
             }
-            Err(e) => {
-                CheckResult {
-                    name: name.to_string(),
-                    passed: false,
-                    message: format!("Failed to check server status: {}", e),
-                    severity: CheckSeverity::Error,
-                }
-            }
+            Err(e) => CheckResult {
+                name: name.to_string(),
+                passed: false,
+                message: format!("Failed to check server status: {}", e),
+                severity: CheckSeverity::Error,
+            },
         }
     }
 
     /// Check store directories
     fn check_store_directories(&self) -> CheckResult {
         let name = "Store Directories";
-        
+
         let immutable_dir = self.nap_home.join("lore").join("store").join("immutable");
         let mutable_dir = self.nap_home.join("lore").join("store").join("mutable");
-        
+
         if immutable_dir.exists() && mutable_dir.exists() {
             CheckResult {
                 name: name.to_string(),
@@ -263,7 +259,7 @@ impl NapDoctor {
     /// Check provider connectivity
     async fn check_provider_connectivity(&self) -> CheckResult {
         let name = "Provider Connectivity";
-        
+
         // For now, just check if we can reach localhost
         match reqwest::get("http://127.0.0.1:41339/health_check").await {
             Ok(resp) => {
@@ -283,14 +279,12 @@ impl NapDoctor {
                     }
                 }
             }
-            Err(e) => {
-                CheckResult {
-                    name: name.to_string(),
-                    passed: false,
-                    message: format!("Provider connectivity failed: {}", e),
-                    severity: CheckSeverity::Warning,
-                }
-            }
+            Err(e) => CheckResult {
+                name: name.to_string(),
+                passed: false,
+                message: format!("Provider connectivity failed: {}", e),
+                severity: CheckSeverity::Warning,
+            },
         }
     }
 
@@ -306,10 +300,7 @@ impl NapDoctor {
                 })
             }
             "Lore Installation" => {
-                let install_dir = dirs::home_dir()
-                    .unwrap()
-                    .join(".local")
-                    .join("bin");
+                let install_dir = dirs::home_dir().unwrap().join(".local").join("bin");
                 let installer = LoreInstaller::new(&install_dir);
                 installer.install_all()?;
                 Ok(RepairResult {
@@ -391,9 +382,15 @@ pub struct DoctorReport {
 impl DoctorReport {
     /// Get overall health status
     pub fn overall_health(&self) -> HealthStatus {
-        let has_errors = self.checks.iter().any(|c| c.severity == CheckSeverity::Error && !c.passed);
-        let has_warnings = self.checks.iter().any(|c| c.severity == CheckSeverity::Warning && !c.passed);
-        
+        let has_errors = self
+            .checks
+            .iter()
+            .any(|c| c.severity == CheckSeverity::Error && !c.passed);
+        let has_warnings = self
+            .checks
+            .iter()
+            .any(|c| c.severity == CheckSeverity::Warning && !c.passed);
+
         if has_errors {
             HealthStatus::Unhealthy
         } else if has_warnings {
@@ -446,7 +443,11 @@ impl RepairReport {
 
     /// Get summary message
     pub fn summary(&self) -> String {
-        format!("{} successful, {} failed", self.successful_count(), self.failed_count())
+        format!(
+            "{} successful, {} failed",
+            self.successful_count(),
+            self.failed_count()
+        )
     }
 }
 

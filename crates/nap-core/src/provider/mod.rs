@@ -9,7 +9,6 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 pub mod local;
 pub mod portals_cloud;
@@ -57,7 +56,7 @@ pub fn is_debug_enabled() -> bool {
 
 impl ProviderType {
     /// Parse provider type from string
-    pub fn from_str(s: &str) -> Result<Self> {
+    pub fn parse_from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "local" => Ok(ProviderType::Local),
             "portals-cloud" | "portalscloud" => Ok(ProviderType::PortalsCloud),
@@ -176,53 +175,65 @@ impl ProviderManager {
         let config_path = self.nap_home.join("provider.toml");
 
         if !config_path.exists() {
-            tracing::debug!("No provider configuration found at {}", config_path.display());
+            tracing::debug!(
+                "No provider configuration found at {}",
+                config_path.display()
+            );
             if is_debug_enabled() {
-                tracing::debug!("NAP debug mode: Provider config path does not exist: {}", config_path.display());
+                tracing::debug!(
+                    "NAP debug mode: Provider config path does not exist: {}",
+                    config_path.display()
+                );
             }
             return Ok(None);
         }
 
-        let config_content = std::fs::read_to_string(&config_path)
-            .context(format!(
-                "Failed to read provider configuration from '{}'",
-                config_path.display()
-            ))?;
+        let config_content = std::fs::read_to_string(&config_path).context(format!(
+            "Failed to read provider configuration from '{}'",
+            config_path.display()
+        ))?;
 
         if is_debug_enabled() {
-            tracing::debug!("NAP debug mode: Loaded provider config from {}", config_path.display());
+            tracing::debug!(
+                "NAP debug mode: Loaded provider config from {}",
+                config_path.display()
+            );
             // Limit config content logging to avoid performance issues with large configs
             let config_preview = if config_content.len() > 500 {
-                format!("{}... (truncated, {} total chars)", &config_content[..500], config_content.len())
+                format!(
+                    "{}... (truncated, {} total chars)",
+                    &config_content[..500],
+                    config_content.len()
+                )
             } else {
                 config_content.clone()
             };
             tracing::debug!("NAP debug mode: Config content: {}", config_preview);
         }
-        
-        let config: ProviderConfig = toml::from_str(&config_content)
-            .context(format!(
-                "Failed to parse provider configuration from '{}'. \
+
+        let config: ProviderConfig = toml::from_str(&config_content).context(format!(
+            "Failed to parse provider configuration from '{}'. \
                  The file may be corrupted. Delete it and run 'nap init' to reconfigure.",
-                config_path.display()
-            ))?;
+            config_path.display()
+        ))?;
 
         // Validate the configuration
-        config.validate()
-            .context(format!(
-                "Invalid provider configuration in '{}'",
-                config_path.display()
-            ))?;
+        config.validate().context(format!(
+            "Invalid provider configuration in '{}'",
+            config_path.display()
+        ))?;
 
         let factory = ProviderFactory::new(&self.nap_home);
-        
+
         let provider = match config.provider_type.as_str() {
             "local" => Some(factory.create_provider(ProviderType::Local)?),
             "portals-cloud" => Some(factory.create_provider(ProviderType::PortalsCloud)?),
             "remote" => {
-                let url_base = config.remote_url
+                let url_base = config
+                    .remote_url
                     .context("Remote provider requires remote_url in provider.toml")?;
-                let workspace_id = config.workspace_id
+                let workspace_id = config
+                    .workspace_id
                     .context("Remote provider requires workspace_id in provider.toml")?;
                 Some(factory.create_remote_provider(&url_base, &workspace_id)?)
             }
@@ -233,7 +244,10 @@ impl ProviderManager {
             self.active_provider = Some(provider.clone());
             if is_debug_enabled() {
                 tracing::debug!("NAP debug mode: Loaded provider: {}", provider.name());
-                tracing::debug!("NAP debug mode: Provider type: {:?}", provider.provider_type());
+                tracing::debug!(
+                    "NAP debug mode: Provider type: {:?}",
+                    provider.provider_type()
+                );
             }
             tracing::info!(
                 provider = %provider.name(),
@@ -299,16 +313,18 @@ impl ProviderConfig {
     /// Uses manual validation with descriptive error messages for better UX than schema validation.
     fn validate(&self) -> Result<()> {
         if is_debug_enabled() {
-            tracing::debug!("NAP debug mode: Validating provider config for type: {}", self.provider_type);
+            tracing::debug!(
+                "NAP debug mode: Validating provider config for type: {}",
+                self.provider_type
+            );
         }
         // Validate provider_type is known
-        let provider_type = ProviderType::from_str(&self.provider_type)
-            .context(format!(
-                "Invalid provider_type '{}' in provider.toml. \
+        let provider_type = ProviderType::parse_from_str(&self.provider_type).context(format!(
+            "Invalid provider_type '{}' in provider.toml. \
                  Expected one of: 'local', 'portals-cloud', 'remote'. \
                  Fix the file at the NAP home directory or run 'nap init' to reconfigure.",
-                self.provider_type
-            ))?;
+            self.provider_type
+        ))?;
 
         // Validate type-specific required fields
         match provider_type {
@@ -349,7 +365,10 @@ impl ProviderConfig {
         }
 
         if is_debug_enabled() {
-            tracing::debug!("NAP debug mode: Provider config validation successful for type: {}", self.provider_type);
+            tracing::debug!(
+                "NAP debug mode: Provider config validation successful for type: {}",
+                self.provider_type
+            );
         }
         Ok(())
     }
@@ -362,10 +381,22 @@ mod tests {
 
     #[test]
     fn test_provider_type_from_str() {
-        assert_eq!(ProviderType::from_str("local").unwrap(), ProviderType::Local);
-        assert_eq!(ProviderType::from_str("portals-cloud").unwrap(), ProviderType::PortalsCloud);
-        assert_eq!(ProviderType::from_str("portalscloud").unwrap(), ProviderType::PortalsCloud);
-        assert_eq!(ProviderType::from_str("remote").unwrap(), ProviderType::Remote);
+        assert_eq!(
+            ProviderType::parse_from_str("local").unwrap(),
+            ProviderType::Local
+        );
+        assert_eq!(
+            ProviderType::parse_from_str("portals-cloud").unwrap(),
+            ProviderType::PortalsCloud
+        );
+        assert_eq!(
+            ProviderType::parse_from_str("portalscloud").unwrap(),
+            ProviderType::PortalsCloud
+        );
+        assert_eq!(
+            ProviderType::parse_from_str("remote").unwrap(),
+            ProviderType::Remote
+        );
     }
 
     #[test]
@@ -377,9 +408,14 @@ mod tests {
 
     #[test]
     fn test_provider_type_from_str_unknown() {
-        let result = ProviderType::from_str("nonexistent");
+        let result = ProviderType::parse_from_str("nonexistent");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unknown provider type"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown provider type")
+        );
     }
 
     #[test]
@@ -457,20 +493,25 @@ mod tests {
         };
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid provider_type"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid provider_type")
+        );
     }
 
     #[test]
     fn test_provider_factory_creation() {
         let temp_dir = TempDir::new().unwrap();
         let factory = ProviderFactory::new(temp_dir.path());
-        
+
         let local = factory.create_provider(ProviderType::Local).unwrap();
         assert_eq!(local.provider_type(), ProviderType::Local);
-        
+
         let cloud = factory.create_provider(ProviderType::PortalsCloud).unwrap();
         assert_eq!(cloud.provider_type(), ProviderType::PortalsCloud);
-        
+
         // Remote without config should fail
         let remote = factory.create_provider(ProviderType::Remote);
         assert!(remote.is_err());
@@ -480,8 +521,10 @@ mod tests {
     fn test_provider_factory_remote_with_config() {
         let temp_dir = TempDir::new().unwrap();
         let factory = ProviderFactory::new(temp_dir.path());
-        
-        let remote = factory.create_remote_provider("lore://localhost:41337", "test-ws").unwrap();
+
+        let remote = factory
+            .create_remote_provider("lore://localhost:41337", "test-ws")
+            .unwrap();
         assert_eq!(remote.provider_type(), ProviderType::Remote);
         assert_eq!(remote.workspace_id(), "test-ws");
     }
@@ -489,19 +532,21 @@ mod tests {
     #[test]
     fn test_provider_manager_save_and_load() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Create and save a provider config
         let mut manager = ProviderManager::new(temp_dir.path());
         let factory = ProviderFactory::new(temp_dir.path());
         let local_provider = factory.create_provider(ProviderType::Local).unwrap();
-        
+
         manager.set_active_provider(local_provider.clone());
-        manager.save_provider_config(local_provider.as_ref()).unwrap();
-        
+        manager
+            .save_provider_config(local_provider.as_ref())
+            .unwrap();
+
         // Verify config file was written
         let config_path = temp_dir.path().join("provider.toml");
         assert!(config_path.exists());
-        
+
         // Load it back
         let mut manager2 = ProviderManager::new(temp_dir.path());
         let loaded = manager2.load_configured_provider().unwrap();
@@ -516,14 +561,17 @@ mod tests {
             remote_url: Some("lore://host:41337".to_string()),
             workspace_id: Some("my-workspace".to_string()),
         };
-        
+
         let serialized = toml::to_string_pretty(&config).unwrap();
         assert!(serialized.contains("remote"));
         assert!(serialized.contains("lore://host:41337"));
-        
+
         let deserialized: ProviderConfig = toml::from_str(&serialized).unwrap();
         assert_eq!(deserialized.provider_type, "remote");
-        assert_eq!(deserialized.remote_url, Some("lore://host:41337".to_string()));
+        assert_eq!(
+            deserialized.remote_url,
+            Some("lore://host:41337".to_string())
+        );
         assert_eq!(deserialized.workspace_id, Some("my-workspace".to_string()));
     }
 }

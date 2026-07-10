@@ -19,8 +19,7 @@ pub fn generate_local_config(nap_home: &Path) -> Result<ConfigFiles> {
     let lore_config_dir = nap_home.join("lore").join("config");
     let local_toml_path = lore_config_dir.join("local.toml");
 
-    fs::create_dir_all(&lore_config_dir)
-        .context("Failed to create Lore config directory")?;
+    fs::create_dir_all(&lore_config_dir).context("Failed to create Lore config directory")?;
 
     // Only regenerate if missing
     if local_toml_path.exists() {
@@ -34,8 +33,7 @@ pub fn generate_local_config(nap_home: &Path) -> Result<ConfigFiles> {
     tracing::info!("Generating Lore server configuration");
 
     let config = generate_config_toml(nap_home);
-    fs::write(&local_toml_path, config)
-        .context("Failed to write Lore configuration file")?;
+    fs::write(&local_toml_path, config).context("Failed to write Lore configuration file")?;
 
     tracing::info!("Lore configuration generated at {:?}", local_toml_path);
 
@@ -49,8 +47,8 @@ pub fn generate_local_config(nap_home: &Path) -> Result<ConfigFiles> {
 fn generate_config_toml(nap_home: &Path) -> String {
     let immutable_path = nap_home.join("lore").join("store").join("immutable");
     let mutable_path = nap_home.join("lore").join("store").join("mutable");
-    let cert_path = nap_home.join("lore").join("certs").join("cert.pem");
-    let key_path = nap_home.join("lore").join("certs").join("key.pem");
+    let _cert_path = nap_home.join("lore").join("certs").join("cert.pem");
+    let _key_path = nap_home.join("lore").join("certs").join("key.pem");
 
     format!(
         r#"
@@ -200,9 +198,9 @@ mod tests {
     fn test_config_toml_content() {
         let temp_dir = TempDir::new().unwrap();
         let nap_home = temp_dir.path();
-        
+
         let config = generate_config_toml(nap_home);
-        
+
         // Verify key configuration sections
         assert!(config.contains("[server.quic]"));
         assert!(config.contains("port = 41337"));

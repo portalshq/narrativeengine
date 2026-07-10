@@ -1,34 +1,42 @@
 //! NAP CLI — command-line interface for the Narrative Addressing Protocol.
 //!
 //! Commands:
-//!   init     — Initialize a universe repository
-//!   create   — Create an entity manifest
-//!   resolve  — Resolve a NAP URI (with optional fragment query)
-//!   query    — Query a subtree from a manifest
-//!   commit   — Commit changes to a manifest
-//!   history  — View commit history for an entity
-//!   list     — List entities or universes
-//!   branch   — Create or list branches
-//!   tag      — Create or list tags
-//!   pull     — Clone or pull a universe from a remote
-//!   push     — Push a universe to a remote
-//!   remote   — Manage git remotes on a universe
-//!   sign     — Sign a manifest (stub for v0)
-//!   verify   — Verify a manifest signature (stub for v0)
+//!   init         — Initialize NAP with provider selection
+//!   choose       — Choose backend provider
+//!   doctor       — Run diagnostics and repair
+//!   publish      — Publish changes to remote
+//!   status       — Show system status
+//!   sync         — Sync with remote
+//!   create       — Create an entity manifest
+//!   resolve      — Resolve a NAP URI (with optional fragment query)
+//!   query        — Query a subtree from a manifest
+//!   commit       — Commit changes to a manifest
+//!   history      — View commit history for an entity
+//!   list         — List entities or universes
+//!   branch       — Create or list branches
+//!   tag          — Create or list tags
+//!   pull         — Clone or pull a universe from a remote
+//!   push         — Push a universe to a remote
+//!   remote       — Manage git remotes on a universe
+//!   sign         — Sign a manifest (stub for v0)
+//!   verify       — Verify a manifest signature (stub for v0)
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use nap_core::{
     commit::Change,
     manifest::Representation,
+    provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
     resolver::{ResolveOptions, ResolveResult, Resolver},
+    server::NapDoctor,
     types::EntityType,
     uri::NapUri,
     vcs_lore::LoreBackend,
 };
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 /// Expand a path, resolving a leading `~` to the user's home directory.
 /// Supports both Unix (HOME) and Windows (USERPROFILE) environments.
@@ -104,10 +112,72 @@ enum RemoteCmd {
     },
 }
 
+/// Subcommands for `nap choose`.
+#[derive(Subcommand, Debug)]
+enum ChooseCmd {
+    /// Choose backend provider.
+    Backend {
+        /// Provider type: local, portals-cloud, or remote.
+        provider: String,
+
+        /// Remote URL (required for remote provider).
+        #[arg(long)]
+        remote_url: Option<String>,
+
+        /// Workspace ID (for remote provider).
+        #[arg(long)]
+        workspace_id: Option<String>,
+    },
+}
+
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Initialize a new universe repository.
+    /// Initialize NAP with provider selection.
     Init {
+        /// Provider type: local, portals-cloud, or remote.
+        #[arg(long, default_value = "local")]
+        provider: String,
+
+        /// Remote URL (required for remote provider).
+        #[arg(long)]
+        remote_url: Option<String>,
+
+        /// Workspace ID (for remote provider).
+        #[arg(long)]
+        workspace_id: Option<String>,
+    },
+
+    /// Choose backend provider.
+    Choose {
+        /// Subcommand for choose.
+        #[command(subcommand)]
+        cmd: ChooseCmd,
+    },
+
+    /// Run diagnostics and repair.
+    Doctor {
+        /// Auto-repair detected issues.
+        #[arg(long)]
+        repair: bool,
+    },
+
+    /// Publish changes to remote.
+    Publish {
+        /// Universe name.
+        universe: String,
+    },
+
+    /// Show system status.
+    Status,
+
+    /// Sync with remote.
+    Sync {
+        /// Universe name.
+        universe: String,
+    },
+
+    /// Initialize a new universe repository (legacy).
+    InitUniverse {
         /// Universe name (e.g., "starwars", "toystory").
         universe: String,
 
@@ -457,7 +527,24 @@ fn main() -> Result<()> {
         .with_context(|| format!("failed to create base directory '{}'", base_dir.display()))?;
 
     let result = match cli.command {
-        Commands::Init { universe, remote } => cmd_init(&base_dir, &universe, remote.as_deref()),
+        Commands::Init {
+            provider,
+            remote_url,
+            workspace_id,
+        } => cmd_init(
+            &base_dir,
+            &provider,
+            remote_url.as_deref(),
+            workspace_id.as_deref(),
+        ),
+        Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
+        Commands::Doctor { repair } => cmd_doctor(&base_dir, repair),
+        Commands::Publish { universe } => cmd_publish(&base_dir, &universe),
+        Commands::Status => cmd_status(&base_dir),
+        Commands::Sync { universe } => cmd_sync(&base_dir, &universe),
+        Commands::InitUniverse { universe, remote } => {
+            cmd_init_universe(&base_dir, &universe, remote.as_deref())
+        }
         Commands::Create {
             entity_type,
             entity_id,
@@ -561,7 +648,57 @@ fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
         .context(format!("failed to open universe '{universe}'"))
 }
 
-fn cmd_init(base_dir: &Path, universe: &str, remote: Option<&str>) -> Result<()> {
+fn cmd_init(
+    base_dir: &Path,
+    provider_str: &str,
+    remote_url: Option<&str>,
+    workspace_id: Option<&str>,
+) -> Result<()> {
+    let provider_type = ProviderType::parse_from_str(provider_str)
+        .context(format!("invalid provider type '{provider_str}'"))?;
+
+    let factory = ProviderFactory::new(base_dir);
+    let provider = match provider_type {
+        ProviderType::Local => factory.create_provider(ProviderType::Local)?,
+        ProviderType::PortalsCloud => factory.create_provider(ProviderType::PortalsCloud)?,
+        ProviderType::Remote => {
+            let url = remote_url
+                .as_ref()
+                .context("remote provider requires --remote-url")?;
+            let ws_id = workspace_id
+                .as_ref()
+                .context("remote provider requires --workspace-id")?;
+            factory.create_remote_provider(url, ws_id)?
+        }
+    };
+
+    let mut provider_manager = ProviderManager::new(base_dir);
+    provider_manager.set_active_provider(provider.clone());
+    provider_manager
+        .save_provider_config(provider.as_ref())
+        .context("failed to save provider configuration")?;
+
+    // Initialize and verify the provider
+    let rt = get_tokio_runtime();
+    rt.block_on(provider.initialize())
+        .context("failed to initialize provider")?;
+
+    emit(format!(
+        "✓ Initialized NAP with provider: {}",
+        provider.name()
+    ));
+    emit(format!("  Provider type: {}", provider_type.as_str()));
+    if let Some(url) = &remote_url {
+        emit(format!("  Remote URL: {}", url));
+    }
+    if let Some(ws_id) = &workspace_id {
+        emit(format!("  Workspace ID: {}", ws_id));
+    }
+
+    Ok(())
+}
+
+fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> Result<()> {
     let repo = Repository::init(base_dir, universe, Box::new(LoreBackend::from_env()))
         .context(format!("failed to initialize universe '{universe}'"))?;
     emit(format!(
@@ -576,6 +713,212 @@ fn cmd_init(base_dir: &Path, universe: &str, remote: Option<&str>) -> Result<()>
     }
 
     Ok(())
+}
+
+fn cmd_choose(base_dir: &Path, cmd: ChooseCmd) -> Result<()> {
+    match cmd {
+        ChooseCmd::Backend {
+            provider,
+            remote_url,
+            workspace_id,
+        } => {
+            let provider_type = ProviderType::parse_from_str(&provider)
+                .context(format!("invalid provider type '{provider}'"))?;
+
+            let factory = ProviderFactory::new(base_dir);
+            let provider = match provider_type {
+                ProviderType::Local => factory.create_provider(ProviderType::Local)?,
+                ProviderType::PortalsCloud => {
+                    factory.create_provider(ProviderType::PortalsCloud)?
+                }
+                ProviderType::Remote => {
+                    let url = remote_url
+                        .as_ref()
+                        .context("remote provider requires --remote-url")?;
+                    let ws_id = workspace_id
+                        .as_ref()
+                        .context("remote provider requires --workspace-id")?;
+                    factory.create_remote_provider(url, ws_id)?
+                }
+            };
+
+            let mut provider_manager = ProviderManager::new(base_dir);
+            provider_manager.set_active_provider(provider.clone());
+            provider_manager
+                .save_provider_config(provider.as_ref())
+                .context("failed to save provider configuration")?;
+
+            // Initialize and verify the provider
+            let rt = get_tokio_runtime();
+            rt.block_on(provider.initialize())
+                .context("failed to initialize provider")?;
+
+            emit(format!("✓ Changed backend to: {}", provider.name()));
+            emit(format!("  Provider type: {}", provider_type.as_str()));
+            if let Some(url) = &remote_url {
+                emit(format!("  Remote URL: {}", url));
+            }
+            if let Some(ws_id) = &workspace_id {
+                emit(format!("  Workspace ID: {}", ws_id));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
+    let doctor = NapDoctor::new(base_dir);
+
+    // Use shared tokio runtime for async doctor operations
+    let rt = get_tokio_runtime();
+
+    let report = rt
+        .block_on(doctor.diagnose())
+        .context("failed to run diagnostics")?;
+
+    if std::io::stdout().is_terminal() {
+        emit("NAP Doctor Report");
+        emit("==================");
+
+        for check in &report.checks {
+            let status = if check.passed { "✓" } else { "✗" };
+            let severity = match check.severity {
+                nap_core::server::CheckSeverity::Info => "INFO",
+                nap_core::server::CheckSeverity::Warning => "WARN",
+                nap_core::server::CheckSeverity::Error => "ERROR",
+            };
+            emit(format!("{} [{}] {}", status, severity, check.name));
+            if !check.message.is_empty() {
+                emit(format!("  {}", check.message));
+            }
+        }
+
+        let passed = report.checks.iter().filter(|c| c.passed).count();
+        let total = report.checks.len();
+        emit(String::new());
+        emit(format!("Summary: {}/{} checks passed", passed, total));
+    } else {
+        // Manual JSON output for report since it doesn't implement Serialize
+        let checks_json: Vec<serde_json::Value> = report
+            .checks
+            .iter()
+            .map(|c| {
+                serde_json::json!({
+                    "name": c.name,
+                    "passed": c.passed,
+                    "severity": format!("{:?}", c.severity),
+                    "message": c.message,
+                })
+            })
+            .collect();
+        let output = serde_json::json!({
+            "nap_home": report.nap_home,
+            "checks": checks_json,
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    }
+
+    if repair {
+        let repair_report = rt
+            .block_on(doctor.repair(&report))
+            .context("failed to run repairs")?;
+
+        if std::io::stdout().is_terminal() {
+            emit(String::new());
+            emit("Repair Results");
+            emit("===============");
+            for repair_result in &repair_report.repairs {
+                let status = if repair_result.success { "✓" } else { "✗" };
+                emit(format!("{} {}", status, repair_result.check_name));
+                emit(format!("  {}", repair_result.message));
+            }
+        } else {
+            // Manual JSON output for repair report since it doesn't implement Serialize
+            let repairs_json: Vec<serde_json::Value> = repair_report
+                .repairs
+                .iter()
+                .map(|r| {
+                    serde_json::json!({
+                        "check_name": r.check_name,
+                        "success": r.success,
+                        "message": r.message,
+                    })
+                })
+                .collect();
+            let output = serde_json::json!({
+                "repairs": repairs_json,
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+        }
+    }
+
+    Ok(())
+}
+
+fn cmd_publish(base_dir: &Path, universe: &str) -> Result<()> {
+    let repo = open_repo(base_dir, universe)?;
+    repo.push(Some("origin"), None)
+        .context("failed to publish to remote")?;
+    emit(format!("✓ Published '{universe}' to remote"));
+    Ok(())
+}
+
+fn cmd_status(base_dir: &Path) -> Result<()> {
+    let mut provider_manager = ProviderManager::new(base_dir);
+
+    if let Some(provider) = provider_manager.load_configured_provider()? {
+        let rt = get_tokio_runtime();
+
+        let status = rt
+            .block_on(provider.status())
+            .context("failed to get provider status")?;
+
+        if std::io::stdout().is_terminal() {
+            emit("NAP Status");
+            emit("==========");
+            emit(format!("Provider: {}", status.provider_type.as_str()));
+            emit(format!(
+                "Ready: {}",
+                if status.ready { "Yes" } else { "No" }
+            ));
+            emit(format!(
+                "Healthy: {}",
+                if status.healthy { "Yes" } else { "No" }
+            ));
+            emit(format!("URL: {}", status.url_base));
+            emit(format!("Workspace: {}", status.workspace_id));
+            emit(format!("Message: {}", status.message));
+        } else {
+            // Manual JSON output for status since it doesn't implement Serialize
+            let output = serde_json::json!({
+                "provider_type": format!("{:?}", status.provider_type),
+                "ready": status.ready,
+                "healthy": status.healthy,
+                "url_base": status.url_base,
+                "workspace_id": status.workspace_id,
+                "message": status.message,
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+        }
+    } else {
+        emit("No provider configured. Run 'nap init' to set up NAP.");
+    }
+
+    Ok(())
+}
+
+fn cmd_sync(base_dir: &Path, universe: &str) -> Result<()> {
+    let repo = open_repo(base_dir, universe)?;
+    repo.pull(None, None)
+        .context("failed to sync from remote")?;
+    emit(format!("✓ Synced '{universe}' with remote"));
+    Ok(())
+}
+
+/// Get or create a shared tokio runtime for async operations
+fn get_tokio_runtime() -> &'static tokio::runtime::Runtime {
+    static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    RT.get_or_init(|| tokio::runtime::Runtime::new().expect("failed to create tokio runtime"))
 }
 
 fn cmd_create(

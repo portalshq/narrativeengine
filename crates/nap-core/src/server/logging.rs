@@ -5,21 +5,20 @@
 //! Provides structured logging to persistent files for diagnostics and support.
 
 use anyhow::{Context, Result};
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::path::Path;
-use tracing::{Level, Subscriber};
+
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Initialize persistent logging for NAP SDK
 pub fn init_persistent_logging(nap_home: &Path) -> Result<()> {
     let logs_dir = nap_home.join("logs");
-    std::fs::create_dir_all(&logs_dir)
-        .context("Failed to create logs directory")?;
+    std::fs::create_dir_all(&logs_dir).context("Failed to create logs directory")?;
 
     // NAP SDK log file
     let nap_log_path = logs_dir.join("nap.log");
-    
+
     // Lore server log file
     let lore_log_path = logs_dir.join("loreserver.log");
 
@@ -30,14 +29,13 @@ pub fn init_persistent_logging(nap_home: &Path) -> Result<()> {
         .open(&nap_log_path)
         .context("Failed to open NAP log file")?;
 
-    let lore_file = OpenOptions::new()
+    let _lore_file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(&lore_log_path)
         .context("Failed to open Lore server log file")?;
 
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(env_filter)
@@ -54,25 +52,15 @@ pub fn init_persistent_logging(nap_home: &Path) -> Result<()> {
 /// Initialize rolling log files with rotation
 pub fn init_rolling_logging(nap_home: &Path) -> Result<()> {
     let logs_dir = nap_home.join("logs");
-    std::fs::create_dir_all(&logs_dir)
-        .context("Failed to create logs directory")?;
+    std::fs::create_dir_all(&logs_dir).context("Failed to create logs directory")?;
 
     // Rolling file appender for NAP logs (daily rotation)
-    let nap_appender = RollingFileAppender::new(
-        Rotation::DAILY,
-        &logs_dir,
-        "nap.log",
-    );
+    let nap_appender = RollingFileAppender::new(Rotation::DAILY, &logs_dir, "nap.log");
 
     // Rolling file appender for Lore server logs (daily rotation)
-    let lore_appender = RollingFileAppender::new(
-        Rotation::DAILY,
-        &logs_dir,
-        "loreserver.log",
-    );
+    let lore_appender = RollingFileAppender::new(Rotation::DAILY, &logs_dir, "loreserver.log");
 
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(env_filter)
@@ -98,11 +86,10 @@ pub fn lore_log_path(nap_home: &Path) -> std::path::PathBuf {
 
 /// Read recent log entries from a file
 pub fn read_recent_logs(log_path: &Path, line_count: usize) -> Result<Vec<String>> {
-    let content = std::fs::read_to_string(log_path)
-        .context("Failed to read log file")?;
+    let content = std::fs::read_to_string(log_path).context("Failed to read log file")?;
 
     let lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
-    
+
     let recent_lines = if lines.len() > line_count {
         lines[lines.len() - line_count..].to_vec()
     } else {
@@ -120,7 +107,7 @@ pub fn tail_log(log_path: &Path, line_count: usize) -> Result<Vec<String>> {
 /// Clear log files
 pub fn clear_logs(nap_home: &Path) -> Result<()> {
     let logs_dir = nap_home.join("logs");
-    
+
     if !logs_dir.exists() {
         return Ok(());
     }
@@ -129,13 +116,11 @@ pub fn clear_logs(nap_home: &Path) -> Result<()> {
     let lore_log = lore_log_path(nap_home);
 
     if nap_log.exists() {
-        std::fs::write(&nap_log, "")
-            .context("Failed to clear NAP log")?;
+        std::fs::write(&nap_log, "").context("Failed to clear NAP log")?;
     }
 
     if lore_log.exists() {
-        std::fs::write(&lore_log, "")
-            .context("Failed to clear Lore server log")?;
+        std::fs::write(&lore_log, "").context("Failed to clear Lore server log")?;
     }
 
     tracing::info!("Logs cleared");
@@ -144,8 +129,7 @@ pub fn clear_logs(nap_home: &Path) -> Result<()> {
 
 /// Get log file size in bytes
 pub fn log_file_size(log_path: &Path) -> Result<u64> {
-    let metadata = std::fs::metadata(log_path)
-        .context("Failed to get log file metadata")?;
+    let metadata = std::fs::metadata(log_path).context("Failed to get log file metadata")?;
     Ok(metadata.len())
 }
 
@@ -184,13 +168,21 @@ pub fn log_files_info(nap_home: &Path) -> Result<Vec<LogFileInfo>> {
 
     files.push(LogFileInfo {
         path: nap_log.clone(),
-        size_bytes: if nap_log.exists() { log_file_size(&nap_log)? } else { 0 },
+        size_bytes: if nap_log.exists() {
+            log_file_size(&nap_log)?
+        } else {
+            0
+        },
         exists: nap_log.exists(),
     });
 
     files.push(LogFileInfo {
         path: lore_log.clone(),
-        size_bytes: if lore_log.exists() { log_file_size(&lore_log)? } else { 0 },
+        size_bytes: if lore_log.exists() {
+            log_file_size(&lore_log)?
+        } else {
+            0
+        },
         exists: lore_log.exists(),
     });
 
@@ -209,7 +201,10 @@ mod tests {
         let lore_log = lore_log_path(temp_dir.path());
 
         assert_eq!(nap_log, temp_dir.path().join("logs").join("nap.log"));
-        assert_eq!(lore_log, temp_dir.path().join("logs").join("loreserver.log"));
+        assert_eq!(
+            lore_log,
+            temp_dir.path().join("logs").join("loreserver.log")
+        );
     }
 
     #[test]

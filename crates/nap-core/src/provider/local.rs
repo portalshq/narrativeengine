@@ -8,14 +8,12 @@ use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
 use tracing::info;
-use async_trait::async_trait;
 
 use super::{Provider, ProviderStatus, ProviderType};
 use crate::server::ServerManager;
 
 /// Local provider that manages a local Lore daemon
 pub struct LocalProvider {
-    nap_home: std::path::PathBuf,
     server_manager: Arc<ServerManager>,
     workspace_id: String,
 }
@@ -25,7 +23,6 @@ impl LocalProvider {
     pub fn new(nap_home: &Path) -> Self {
         let server_manager = Arc::new(ServerManager::new(nap_home));
         Self {
-            nap_home: nap_home.to_path_buf(),
             server_manager,
             workspace_id: super::get_default_workspace_id(),
         }
@@ -118,8 +115,7 @@ mod tests {
     #[test]
     fn test_local_provider_custom_workspace() {
         let temp_dir = TempDir::new().unwrap();
-        let provider = LocalProvider::new(temp_dir.path())
-            .with_workspace_id("custom-workspace");
+        let provider = LocalProvider::new(temp_dir.path()).with_workspace_id("custom-workspace");
         assert_eq!(provider.workspace_id(), "custom-workspace");
     }
 }

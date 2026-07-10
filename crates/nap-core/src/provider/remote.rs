@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: MIT
 //! Remote provider for Lore server
 //!
-//! Manages repository operations on a remote Lore server.
+//! Manages repository operations on a remote Lore instance.
 
 use anyhow::{Context, Result};
 use tracing::info;
-use async_trait::async_trait;
 
 use super::{Provider, ProviderStatus, ProviderType};
 
@@ -80,11 +79,15 @@ impl Provider for RemoteProvider {
 
         // Check connectivity to remote server
         let health_url = self.http_health_url()?;
-        let response = reqwest::get(&health_url).await
+        let response = reqwest::get(&health_url)
+            .await
             .context("Failed to connect to remote Lore server")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Remote Lore server health check failed: {}", response.status());
+            anyhow::bail!(
+                "Remote Lore server health check failed: {}",
+                response.status()
+            );
         }
 
         info!("Remote provider is ready");
@@ -150,9 +153,15 @@ mod tests {
     #[test]
     fn test_http_health_url() {
         let provider = RemoteProvider::new("lore://localhost:41337", "default");
-        assert_eq!(provider.http_health_url().unwrap(), "http://localhost:41337/health_check");
+        assert_eq!(
+            provider.http_health_url().unwrap(),
+            "http://localhost:41337/health_check"
+        );
 
         let provider = RemoteProvider::new("lores://example.com:41337", "default");
-        assert_eq!(provider.http_health_url().unwrap(), "https://example.com:41337/health_check");
+        assert_eq!(
+            provider.http_health_url().unwrap(),
+            "https://example.com:41337/health_check"
+        );
     }
 }

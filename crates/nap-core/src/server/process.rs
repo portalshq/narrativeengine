@@ -11,9 +11,10 @@ use std::time::Duration;
 
 /// Lore server process manager
 pub struct LoreProcessManager {
+    #[allow(dead_code)]
     nap_home: std::path::PathBuf,
-    config_path: std::path::PathBuf,
     log_path: std::path::PathBuf,
+    config_path: std::path::PathBuf,
 }
 
 impl LoreProcessManager {
@@ -33,8 +34,7 @@ impl LoreProcessManager {
     pub fn start(&self) -> Result<Child> {
         // Ensure log directory exists
         if let Some(parent) = self.log_path.parent() {
-            std::fs::create_dir_all(parent)
-                .context("Failed to create log directory")?;
+            std::fs::create_dir_all(parent).context("Failed to create log directory")?;
         }
 
         // Verify configuration exists
@@ -48,8 +48,8 @@ impl LoreProcessManager {
         }
 
         // Open log file for output
-        let log_file = std::fs::File::create(&self.log_path)
-            .context("Failed to create log file")?;
+        let log_file =
+            std::fs::File::create(&self.log_path).context("Failed to create log file")?;
 
         tracing::info!(
             config = %self.config_path.display(),
@@ -66,10 +66,7 @@ impl LoreProcessManager {
             .spawn()
             .context("Failed to start Lore server. Is loreserver installed and on PATH?")?;
 
-        tracing::info!(
-            pid = child.id(),
-            "Lore server started successfully"
-        );
+        tracing::info!(pid = child.id(), "Lore server started successfully");
 
         Ok(child)
     }
@@ -80,18 +77,20 @@ impl LoreProcessManager {
 
         #[cfg(unix)]
         {
-            use nix::sys::signal::{kill, Signal};
+            use nix::sys::signal::kill;
             use nix::unistd::Pid;
-            
-            kill(Pid::from_raw(pid as i32), Signal::SIGTERM)
+
+            kill(Pid::from_raw(pid as i32), nix::sys::signal::Signal::SIGTERM)
                 .context("Failed to send SIGTERM to Lore server")?;
         }
 
         #[cfg(windows)]
         {
             use windows_sys::Win32::Foundation::CloseHandle;
-            use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
-            
+            use windows_sys::Win32::System::Threading::{
+                OpenProcess, PROCESS_TERMINATE, TerminateProcess,
+            };
+
             unsafe {
                 let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
                 if handle == 0 {
@@ -113,9 +112,9 @@ impl LoreProcessManager {
     pub fn is_running(pid: u32) -> bool {
         #[cfg(unix)]
         {
-            use nix::sys::signal::{kill, Signal};
+            use nix::sys::signal::kill;
             use nix::unistd::Pid;
-            
+
             kill(Pid::from_raw(pid as i32), None).is_ok()
         }
 
@@ -123,7 +122,7 @@ impl LoreProcessManager {
         {
             use windows_sys::Win32::Foundation::CloseHandle;
             use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION};
-            
+
             unsafe {
                 let handle = OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid);
                 if handle == 0 {
@@ -138,16 +137,13 @@ impl LoreProcessManager {
     /// Perform health check on Lore server
     pub async fn health_check(port: u16, timeout: Duration) -> Result<bool> {
         let url = format!("http://127.0.0.1:{}/health_check", port);
-        
+
         let client = reqwest::Client::builder()
             .timeout(timeout)
             .build()
             .context("Failed to build HTTP client for Lore health check")?;
 
-        let response = client
-            .get(&url)
-            .send()
-            .await;
+        let response = client.get(&url).send().await;
 
         match response {
             Ok(resp) => {
@@ -198,10 +194,14 @@ impl LoreProcessManager {
     }
 
     /// Wait for Lore server to become healthy
-    pub async fn wait_for_healthy(port: u16, timeout: Duration, retry_interval: Duration) -> Result<()> {
+    pub async fn wait_for_healthy(
+        port: u16,
+        timeout: Duration,
+        retry_interval: Duration,
+    ) -> Result<()> {
         let start = std::time::Instant::now();
         let mut attempt = 0;
-        
+
         while start.elapsed() < timeout {
             attempt += 1;
             tracing::debug!(
@@ -258,8 +258,22 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let manager = LoreProcessManager::new(temp_dir.path());
 
-        assert_eq!(manager.config_path(), temp_dir.path().join("lore").join("config").join("local.toml"));
-        assert_eq!(manager.log_path(), temp_dir.path().join("lore").join("logs").join("loreserver.log"));
+        assert_eq!(
+            manager.config_path(),
+            temp_dir
+                .path()
+                .join("lore")
+                .join("config")
+                .join("local.toml")
+        );
+        assert_eq!(
+            manager.log_path(),
+            temp_dir
+                .path()
+                .join("lore")
+                .join("logs")
+                .join("loreserver.log")
+        );
     }
 
     #[test]

@@ -57,8 +57,8 @@ pub use repository::Repository;
 pub use repository_api::{RepositoryApi, RepositoryHandle};
 pub use resolver::{ResolveConfig, ResolveOptions, Resolver};
 pub use server::{
-    LoreInstaller, LoreProcessManager, NapDoctor, ServerManager,
-    generate_certificates, generate_local_config, verify_lore_installation,
+    LoreInstaller, LoreProcessManager, NapDoctor, ServerManager, generate_certificates,
+    generate_local_config, verify_lore_installation,
 };
 pub use storage::{StorageBackend, StorageConfig, StorageEngine, StorageError, get_engine};
 pub use types::EntityType;

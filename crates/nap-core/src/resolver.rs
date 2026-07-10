@@ -284,7 +284,8 @@ mod tests {
 
     fn setup() -> (TempDir, Resolver) {
         let tmp = TempDir::new().unwrap();
-        let repo = Repository::init(tmp.path(), "starwars", Box::new(LoreBackend::from_env())).unwrap();
+        let repo =
+            Repository::init(tmp.path(), "starwars", Box::new(LoreBackend::from_env())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
