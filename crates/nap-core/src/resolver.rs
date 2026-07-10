@@ -279,12 +279,12 @@ impl Resolver {
 mod tests {
     use super::*;
     use crate::types::EntityType;
-    use crate::vcs_git::GitBackend;
+    use crate::vcs_lore::LoreBackend;
     use tempfile::TempDir;
 
     fn setup() -> (TempDir, Resolver) {
         let tmp = TempDir::new().unwrap();
-        let repo = Repository::init(tmp.path(), "starwars", Box::new(GitBackend::new())).unwrap();
+        let repo = Repository::init(tmp.path(), "starwars", Box::new(LoreBackend::from_env())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
@@ -320,7 +320,7 @@ mod tests {
 
         let resolver = Resolver::with_vcs_factory(
             tmp.path(),
-            || Box::new(GitBackend::new()),
+            || Box::new(LoreBackend::from_env()),
             ResolveConfig {
                 default_branch: Some("main".to_string()),
             },
