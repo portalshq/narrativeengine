@@ -244,10 +244,7 @@ impl MergeEngine {
         proposed: &Value,
     ) -> Option<Conflict> {
         // Only applicable for array strategies with identity rules
-        let identity = match &def.merge.identity {
-            Some(id) => id,
-            None => return None,
-        };
+        let identity = def.merge.identity.as_ref()?;
 
         let identity_key = match identity {
             IdentityRule::Key { key } => key,
