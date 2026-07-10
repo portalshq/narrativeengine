@@ -52,6 +52,21 @@ anyhow = "1"
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+
+# Bytes and object storage
+bytes = "1"
+object_store = "0.11"
+
+# Async traits
+async-trait = "0.1"
+
+# Thread pool
+threadpool = "1.8"
+
+# gRPC
+tonic = { version = "0.12", default-features = false }
+prost = "0.13"
 
 # JSON Schema validation
 jsonschema = "0.30"

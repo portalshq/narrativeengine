@@ -1,14 +1,12 @@
 //! VCS backend abstraction and Lore VCS type system.
 //!
-//! NAP's v0 used Git (via `git` CLI).  As of the Lore VCS migration, the
-//! default and only production backend is **Lore** — a centralized VCS with
+//! **Lore** — a centralized VCS with
 //! global revision numbers, file-level metadata, dependency graphs, and
 //! git-style branching.
 //!
 //! The [`VcsBackend`] trait is the low-level seam between NAP and any VCS.
 //! [`LoreBackend`](crate::vcs_lore::LoreBackend) is the only production
-//! implementation.  Higher-level workflows (context docs, permissions,
-//! autopublish) live in [`RepoService`].
+//! implementation.  Higher-level workflows (context docs, permissions) live in [`RepoService`].
 //!
 //! ## Architecture
 //!
@@ -71,7 +69,7 @@ pub enum WorkspaceMode {
 
 /// A single revision (commit) in the Lore VCS.
 ///
-/// Lore revisions have both a content-hash **signature** (like a Git SHA)
+/// Lore revisions have both a content-hash **signature** (BLAKE3 SHA)
 /// and a monotonically incrementing global **number** (like an SVN revision
 /// or Perforce changelist).  NAP exposes both.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -162,11 +160,10 @@ pub struct CommitInfo {
 
 /// Low-level abstraction over a version control system.
 ///
-/// Implementors: [`GitBackend`](crate::vcs_git::GitBackend) (deprecated),
-/// [`LoreBackend`](crate::vcs_lore::LoreBackend) (production).
+/// [`LoreBackend`](crate::vcs_lore::LoreBackend)
 ///
 /// Most consumer code should use [`RepoService`] instead — it adds
-/// permissions, context-document management, autopublish, and a
+/// permissions, context-document management, and a
 /// workspace-lifecycle API on top of this trait.
 pub trait VcsBackend: Send + Sync {
     /// Initialize a new repository at the given path.

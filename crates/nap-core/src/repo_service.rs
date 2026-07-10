@@ -4,7 +4,7 @@
 //! ## Design principle
 //!
 //! **No call site outside the Lore adapter may shell out to `lore`, link
-//! against a Lore client library, or assume git/SVN semantics.**
+//! against a Lore client library.**
 //!
 //! `RepoService` is the **only interface** through which the rest of
 //! nap-sdk touches version control.  It wraps:
@@ -12,7 +12,6 @@
 //! - A [`VcsBackend`] implementation (production: [`LoreBackend`])
 //! - A [`PermissionGate`]
 //! - A [`ContextDocsManager`]
-//! - An optional [`AutopublishWorker`]
 //!
 //! ## Lifecycle
 //!
@@ -28,13 +27,10 @@
 //! service.write_file("characters/hero.yaml", "...", "alice")?;
 //! service.commit("add hero", "alice")?;
 //!
-//! // 4. Autopublish for long-running agents.
-//! let handle = service.start_autopublish(AutopublishConfig::default())?;
 //! ```
 
 use std::path::{Path, PathBuf};
 
-use crate::autopublish::{AutopublishConfig, AutopublishHandle, AutopublishWorker};
 use crate::context_docs::ContextDocsManager;
 use crate::error::NapError;
 use crate::permission_gate::PermissionGate;
@@ -298,23 +294,6 @@ impl RepoService {
     /// Get all context documents.
     pub fn all_context_docs(&self) -> Result<Vec<ContextDocument>, NapError> {
         self.context_docs.all_documents()
-    }
-
-    // ── Autopublish ──────────────────────────────────────────────────
-
-    /// Start the autopublish worker.
-    ///
-    /// The worker takes ownership of a **new** backend instance (created
-    /// from env variables) so the shared `RepoService` backend is not
-    /// consumed.  If you need a worker with a specific backend, construct
-    /// [`AutopublishWorker`] directly.
-    pub fn start_autopublish(
-        &self,
-        config: AutopublishConfig,
-    ) -> Result<AutopublishHandle, NapError> {
-        let worker_backend: Box<dyn VcsBackend> = Box::new(LoreBackend::from_env());
-        let worker = AutopublishWorker::new(self.workspace_root.clone(), worker_backend, config);
-        worker.start()
     }
 }
 

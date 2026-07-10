@@ -1,7 +1,7 @@
 //! Lore VCS backend implementation.
 //!
 //! [`LoreBackend`] implements [`VcsBackend`] by shelling out to the `lore`
-//! CLI.  No calls to `git(1)` are made.  All processes are run
+//! CLI. All processes are run
 //! non-interactively with structured JSON output where possible.
 //!
 //! ## CLI command mapping
@@ -206,11 +206,14 @@ impl LoreBackend {
     ///
     /// | Env var               | Default                   |
     /// |-----------------------|---------------------------|
-    /// | `NAP_LORE_URL_BASE`   | `lore://localhost:8700`   |
+    /// | `NAP_LORE_URL_BASE`   | `lore://localhost:41337`  |
     /// | `NAP_WORKSPACE_ID`    | `default`                 |
+    /// 
+    /// Note: For new code, prefer using the RepositoryApi with Provider architecture
+    /// instead of this legacy environment-based constructor.
     pub fn from_env() -> Self {
         let base = std::env::var("NAP_LORE_URL_BASE")
-            .unwrap_or_else(|_| "lore://localhost:8700".to_string());
+            .unwrap_or_else(|_| "lore://localhost:41337".to_string());
         let workspace_id =
             std::env::var("NAP_WORKSPACE_ID").unwrap_or_else(|_| "default".to_string());
         // Try to create a gRPC client from environment variables.
@@ -223,6 +226,36 @@ impl LoreBackend {
         Self {
             remote_url: base,
             workspace_id,
+            grpc_client,
+        }
+    }
+
+    /// Create LoreBackend from provider configuration
+    ///
+    /// This is the preferred constructor for new code using the Provider architecture.
+    pub fn from_provider(url_base: &str, workspace_id: &str) -> Self {
+        tracing::debug!(
+            url_base = %url_base,
+            workspace_id = %workspace_id,
+            "Creating LoreBackend from provider configuration"
+        );
+        
+        // Convert lore:// URL to gRPC endpoint format
+        let grpc_endpoint = url_base.replace("lore://", "https://").replace("lores://", "https://");
+        
+        let grpc_client = crate::grpc_client::Builder::default()
+            .endpoint(grpc_endpoint)
+            .insecure(true) // Local development uses self-signed certs
+            .build()
+            .map_err(|e| {
+                tracing::warn!("failed to initialise gRPC client from provider URL: {e}");
+                e
+            })
+            .ok();
+
+        Self {
+            remote_url: url_base.to_string(),
+            workspace_id: workspace_id.to_string(),
             grpc_client,
         }
     }

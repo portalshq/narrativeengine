@@ -6,7 +6,6 @@
 //! - **Commit**: History — snapshot + delta metadata
 //! - **Resolver**: Resolution — URI → Manifest, with query/version selectors
 
-pub mod autopublish;
 pub mod commit;
 pub mod content;
 pub mod context_docs;
@@ -15,25 +14,24 @@ pub mod grpc_client;
 pub mod manifest;
 pub mod merge;
 pub mod permission_gate;
+pub mod provider;
 pub mod query;
 pub mod repo_service;
 pub mod repository;
+pub mod repository_api;
 pub mod resolver;
 pub mod schema;
+pub mod server;
 pub mod storage;
 pub mod types;
 pub mod uri;
 pub mod validation;
 pub mod vcs;
 
-// Git-backed VCS (deprecated — use vcs_lore for new development).
-pub mod vcs_git;
-
 // Lore VCS backend (production).
 pub mod vcs_lore;
 
 // Re-exports for ergonomic top-level usage
-pub use autopublish::{AutopublishConfig, AutopublishHandle, AutopublishWorker};
 pub use commit::{Change, ChangeOp, Commit};
 pub use content::ContentHash;
 pub use context_docs::ContextDocsManager;
@@ -52,13 +50,18 @@ pub use merge::{
     strategies,
 };
 pub use permission_gate::PermissionGate;
+pub use provider::{Provider, ProviderFactory, ProviderManager, ProviderType};
 pub use query::ManifestQuery;
 pub use repo_service::RepoService;
 pub use repository::Repository;
+pub use repository_api::{RepositoryApi, RepositoryHandle};
 pub use resolver::{ResolveConfig, ResolveOptions, Resolver};
+pub use server::{
+    LoreInstaller, LoreProcessManager, NapDoctor, ServerManager,
+    generate_certificates, generate_local_config, verify_lore_installation,
+};
 pub use storage::{StorageBackend, StorageConfig, StorageEngine, StorageError, get_engine};
 pub use types::EntityType;
 pub use uri::NapUri;
 pub use vcs::{AccessLevel, CommitInfo, ContextDocument, Permission, Revision, VcsBackend};
-pub use vcs_git::GitBackend;
 pub use vcs_lore::LoreBackend;
