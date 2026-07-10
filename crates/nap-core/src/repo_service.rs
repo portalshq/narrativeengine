@@ -305,10 +305,11 @@ impl RepoService {
 mod tests {
     use super::*;
     use crate::vcs::AccessLevel;
+    use crate::test_utils::MockBackend;
 
     #[test]
     fn test_open_workspace_fails_on_missing() {
-        let backend = LoreBackend::new("lore://localhost:8700", "test");
+        let backend = MockBackend::new();
         let service = RepoService::with_gate(
             Box::new(backend),
             Path::new("/nonexistent-12345"),
@@ -331,7 +332,7 @@ mod tests {
             access: AccessLevel::Write,
         }];
         let gate = PermissionGate::from_permissions(dir.path(), &perms, AccessLevel::None);
-        let backend = LoreBackend::new("lore://localhost:8700", "test");
+        let backend = MockBackend::new();
 
         let service = RepoService::with_gate(Box::new(backend), dir.path(), gate);
 
@@ -360,7 +361,7 @@ mod tests {
             access: AccessLevel::Read,
         }];
         let gate = PermissionGate::from_permissions(dir.path(), &perms, AccessLevel::None);
-        let backend = LoreBackend::new("lore://localhost:8700", "test");
+        let backend = MockBackend::new();
 
         let service = RepoService::with_gate(Box::new(backend), dir.path(), gate);
 
@@ -378,7 +379,7 @@ mod tests {
     #[test]
     fn test_context_docs_integration() {
         let dir = tempfile::TempDir::new().unwrap();
-        let backend = LoreBackend::new("lore://localhost:8700", "test");
+        let backend = MockBackend::new();
         let service = RepoService::with_gate(
             Box::new(backend),
             dir.path(),

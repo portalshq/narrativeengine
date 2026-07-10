@@ -8,6 +8,11 @@ description = "Core library for the Narrative Addressing Protocol"
 repository = "https://github.com/DigitalCreationsCo/narrativeengine"
 homepage = "https://nap.sh"
 
+[features]
+default = []
+lore-integration = []
+test-utils = ["dep:tempfile"]
+
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -24,38 +29,20 @@ jsonschema = { workspace = true }
 similar = { workspace = true }
 rand = { workspace = true }
 toml = "0.8"
-
-# Certificate generation for Lore QUIC
 rcgen = "0.13"
-
-# Platform-independent directory paths
 dirs = "5.0"
-
-# HTTP client for health checks
 reqwest = { version = "0.12", features = ["json"] }
-
-# Semantic versioning for compatibility checks
 semver = "1.0"
-
-# Async traits - must be in main dependencies for async_trait macro
 async-trait = "0.1"
-
-# Tracing and logging
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-
-# gRPC client for lore-server mutable store (branch ref sync)
 tonic = { version = "0.12", features = ["prost", "tls", "tls-native-roots", "codegen", "transport", "channel"] }
 prost = "0.13"
 bytes = "1"
-
-# Object storage backends
 object_store = { version = "0.11", features = ["aws"] }
-
-# Tokio runtime for sync→async gRPC bridge
 tokio = { version = "1", features = ["full"] }
+tempfile = { workspace = true, optional = true }
 
-# Platform-specific process management
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["process", "signal"] }
 

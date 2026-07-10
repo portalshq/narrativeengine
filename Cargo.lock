@@ -1605,6 +1605,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nap-test-utils"
+version = "0.3.12"
+dependencies = [
+ "chrono",
+ "nap-core",
+ "serde_yaml",
+ "tempfile",
+]
+
+[[package]]
 name = "napi"
 version = "2.16.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"

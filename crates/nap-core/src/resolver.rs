@@ -93,6 +93,9 @@ pub struct Resolver {
 impl Resolver {
     /// Create a resolver that looks for universe repos under `base_path`.
     ///
+    /// WARNING: Uses [`LoreBackend::from_env()`] by default. For testing,
+    /// use [`Resolver::with_vcs_factory()`] with a mock backend.
+    ///
     /// Uses [`ResolveConfig::default()`] — meaning `default_branch` is
     /// `None` and any resolve that omits both `branch` and `commit` will
     /// fail with [`NapError::NoDefaultBranch`].
@@ -276,16 +279,15 @@ impl Resolver {
 }
 
 #[cfg(test)]
-mod tests {
+mod unit_tests {
     use super::*;
     use crate::types::EntityType;
-    use crate::vcs_lore::LoreBackend;
+    use crate::test_utils::{MockBackend, mock_repo};
     use tempfile::TempDir;
 
     fn setup() -> (TempDir, Resolver) {
         let tmp = TempDir::new().unwrap();
-        let repo =
-            Repository::init(tmp.path(), "starwars", Box::new(LoreBackend::from_env())).unwrap();
+        let repo = Repository::init(tmp.path(), "starwars", Box::new(MockBackend::new())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
@@ -321,7 +323,7 @@ mod tests {
 
         let resolver = Resolver::with_vcs_factory(
             tmp.path(),
-            || Box::new(LoreBackend::from_env()),
+            || Box::new(MockBackend::new()),
             ResolveConfig {
                 default_branch: Some("main".to_string()),
             },
@@ -461,6 +463,66 @@ mod tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve("/starwars/character/lukeskywalker", &Default::default())
+            .unwrap();
+        match result {
+            ResolveResult::Full(m) => {
+                assert_eq!(m.name, "Luke Skywalker");
+            }
+            _ => panic!("expected full manifest"),
+        }
+    }
+}
+
+#[cfg(all(test, feature = "lore-integration"))]
+mod lore_tests {
+    use super::*;
+    use crate::vcs_lore::LoreBackend;
+    use tempfile::TempDir;
+
+    fn setup_lore() -> (TempDir, Resolver) {
+        let tmp = TempDir::new().unwrap();
+        let repo =
+            Repository::init(tmp.path(), "starwars", Box::new(LoreBackend::from_env())).unwrap();
+
+        // Create a character
+        let (mut manifest, _) = repo
+            .create_entity(
+                crate::types::EntityType::Character,
+                "lukeskywalker",
+                "Luke Skywalker",
+                "test",
+            )
+            .unwrap();
+
+        // Add properties and commit
+        manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
+        use crate::commit::Change;
+        repo.commit_manifest(
+            &mut manifest,
+            "add Luke Skywalker details",
+            "test",
+            vec![Change::set("properties.species", None, "human".to_string())],
+        )
+        .unwrap();
+
+        let resolver = Resolver::with_vcs_factory(
+            tmp.path(),
+            || Box::new(LoreBackend::from_env()),
+            ResolveConfig {
+                default_branch: Some("main".to_string()),
+            },
+        );
+        (tmp, resolver)
+    }
+
+    #[test]
+    fn test_resolve_lore_full_manifest() {
+        let (_tmp, resolver) = setup_lore();
+        let result = resolver
+            .resolve(
+                "nap://starwars/character/lukeskywalker",
+                &Default::default(),
+            )
             .unwrap();
         match result {
             ResolveResult::Full(m) => {

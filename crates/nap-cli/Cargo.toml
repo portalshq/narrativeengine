@@ -10,6 +10,10 @@ description = "CLI for the Narrative Addressing Protocol"
 name = "nap"
 path = "src/main.rs"
 
+[features]
+default = []
+lore-e2e = []
+
 [dependencies]
 nap-core = { path = "../nap-core" }
 clap = { workspace = true }

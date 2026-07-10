@@ -20,6 +20,8 @@ pub mod repo_service;
 pub mod repository;
 pub mod repository_api;
 pub mod resolver;
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
 pub mod schema;
 pub mod server;
 pub mod storage;

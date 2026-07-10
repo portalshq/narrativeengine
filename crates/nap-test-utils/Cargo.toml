@@ -1,0 +1,10 @@
+[package]
+name = "nap-test-utils"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+nap-core = { workspace = true }
+tempfile = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }

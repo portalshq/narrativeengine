@@ -4,6 +4,7 @@ members = [
     "crates/nap-core",
     "crates/nap-cli",
     "crates/nap-server",
+    "crates/nap-test-utils",
     "crates/narrativeengine",
     "crates/narrativeengine-codegen",
     "python/nap-sdk",
@@ -19,6 +20,7 @@ license = "MIT"
 authors = ["Cinematic Canvas <team@cinematiccanvas.com>"]
 
 [workspace.dependencies]
+nap-core = { path = "crates/nap-core" }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
