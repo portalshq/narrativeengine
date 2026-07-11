@@ -4,16 +4,61 @@
 //!
 //! Provides utilities to detect installed Lore CLI/server versions and
 //! verify compatibility with the SDK's pinned version.
+//!
+//! NAP requires an **exact match** of the full version string (including the
+//! nightly/release suffix) against [`PINNED_LORE_VERSION`].  A bare `0.8.5`
+//! or an alternate channel like `0.8.5-stable` will **not** pass the
+//! compatibility gate.
 
 use anyhow::{Context, Result};
 use semver::Version;
 use std::process::Command;
 
-/// Pinned Lore version that NAP SDK requires
+/// Pinned Lore version that NAP SDK requires.
+///
+/// During initialization NAP verifies that the installed `loreserver`
+/// reports **exactly** this string (e.g. `0.8.5-nightly`).
 pub const PINNED_LORE_VERSION: &str = "0.8.5-nightly";
 
+// ── Detected version info ───────────────────────────────────────────────
+
+/// A detected Lore version with both parsed semver and raw string forms.
+///
+/// The `raw` field preserves the full version string reported by the CLI
+/// (e.g. `"0.8.5-nightly"`) so that compatibility checks can enforce an
+/// exact match — not just major.minor.patch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoreVersionInfo {
+    /// Parsed semver (e.g. `0.8.5`).  The nightly suffix is stripped here
+    /// because `semver::Version` has no concept of release channels.
+    pub parsed: Version,
+    /// Raw version string exactly as reported by the binary
+    /// (e.g. `"0.8.5-nightly"`).
+    pub raw: String,
+}
+
+impl std::fmt::Display for LoreVersionInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.raw)
+    }
+}
+
+// ── Version detection ───────────────────────────────────────────────────
+
+/// Extract the raw version token from CLI output.
+///
+/// Given `"lore 0.8.5-nightly\n"`, returns `"0.8.5-nightly"`.
+fn extract_version_string(version_str: &str) -> Result<String> {
+    let version_part = version_str.split_whitespace().nth(1).context(format!(
+        "Failed to parse Lore version string '{}'. \
+             Expected format: 'lore <version>' (e.g., 'lore 0.8.5-nightly')",
+        version_str.trim()
+    ))?;
+    Ok(version_part.trim().to_string())
+}
+
 /// Detect the installed Lore CLI version
-pub fn detect_lore_version() -> Result<Version> {
+pub fn detect_lore_version() -> Result<LoreVersionInfo> {
     let output = Command::new("lore").arg("--version").output().context(
         "Failed to execute 'lore --version'. \
              Lore CLI is not installed or not on PATH. \
@@ -30,11 +75,13 @@ pub fn detect_lore_version() -> Result<Version> {
     }
 
     let version_str = String::from_utf8_lossy(&output.stdout);
-    parse_lore_version(&version_str)
+    let raw = extract_version_string(&version_str)?;
+    let parsed = parse_lore_version(&version_str)?;
+    Ok(LoreVersionInfo { parsed, raw })
 }
 
 /// Detect the installed Lore server version
-pub fn detect_loreserver_version() -> Result<Version> {
+pub fn detect_loreserver_version() -> Result<LoreVersionInfo> {
     let output = Command::new("loreserver")
         .arg("--version")
         .output()
@@ -54,10 +101,18 @@ pub fn detect_loreserver_version() -> Result<Version> {
     }
 
     let version_str = String::from_utf8_lossy(&output.stdout);
-    parse_lore_version(&version_str)
+    let raw = extract_version_string(&version_str)?;
+    let parsed = parse_lore_version(&version_str)?;
+    Ok(LoreVersionInfo { parsed, raw })
 }
 
-/// Parse Lore version string into semver::Version
+// ── Version parsing ─────────────────────────────────────────────────────
+
+/// Parse Lore version string into `semver::Version`.
+///
+/// Strips the nightly/release suffix before parsing because
+/// `semver::Version` does not model release channels.  Use
+/// [`extract_version_string`] when you need the full, unparsed token.
 fn parse_lore_version(version_str: &str) -> Result<Version> {
     // Lore version format: "lore 0.8.5-nightly" or "loreserver 0.8.5-nightly"
     let version_part = version_str.split_whitespace().nth(1).context(format!(
@@ -66,7 +121,7 @@ fn parse_lore_version(version_str: &str) -> Result<Version> {
         version_str.trim()
     ))?;
 
-    // Handle nightly versions by stripping the suffix for comparison
+    // Handle nightly versions by stripping the suffix for semver parsing
     let version_for_semver = version_part.trim_end_matches("-nightly");
 
     Version::parse(version_for_semver).context(format!(
@@ -76,23 +131,17 @@ fn parse_lore_version(version_str: &str) -> Result<Version> {
     ))
 }
 
-/// Check if installed Lore version is compatible with pinned version
-pub fn check_lore_compatibility(installed_version: &Version) -> Result<bool> {
-    let pinned = Version::parse(PINNED_LORE_VERSION.trim_end_matches("-nightly"))
-        .context("Failed to parse pinned Lore version")?;
+// ── Compatibility gate ──────────────────────────────────────────────────
 
-    // For now, require exact match on major.minor.patch
-    // Nightly suffix is ignored for comparison
-    let installed_clean = Version::new(
-        installed_version.major,
-        installed_version.minor,
-        installed_version.patch,
-    );
-
-    let pinned_clean = Version::new(pinned.major, pinned.minor, pinned.patch);
-
-    Ok(installed_clean == pinned_clean)
+/// Check if the installed Lore version **exactly** matches the pinned version.
+///
+/// The comparison is a strict string equality of the raw version tokens,
+/// so `"0.8.5-nightly"` matches but `"0.8.5"` or `"0.8.5-stable"` does not.
+pub fn check_lore_compatibility(installed: &LoreVersionInfo) -> Result<bool> {
+    Ok(installed.raw == PINNED_LORE_VERSION)
 }
+
+// ── Full installation verification ──────────────────────────────────────
 
 /// Verify Lore installation and compatibility
 pub fn verify_lore_installation() -> Result<LoreInstallationStatus> {
@@ -133,14 +182,16 @@ pub fn verify_lore_installation() -> Result<LoreInstallationStatus> {
     })
 }
 
+// ── Installation status ─────────────────────────────────────────────────
+
 /// Status of Lore installation
 #[derive(Debug, Clone)]
 pub struct LoreInstallationStatus {
     pub cli_installed: bool,
-    pub cli_version: Option<Version>,
+    pub cli_version: Option<LoreVersionInfo>,
     pub cli_compatible: bool,
     pub server_installed: bool,
-    pub server_version: Option<Version>,
+    pub server_version: Option<LoreVersionInfo>,
     pub server_compatible: bool,
     pub pinned_version: String,
 }
@@ -159,8 +210,12 @@ impl LoreInstallationStatus {
             messages.push("Lore CLI is not installed".to_string());
         } else if !self.cli_compatible {
             messages.push(format!(
-                "Lore CLI version {:?} is incompatible with pinned version {}",
-                self.cli_version, self.pinned_version
+                "Lore CLI version '{}' is incompatible with required version '{}'",
+                self.cli_version
+                    .as_ref()
+                    .map(|v| v.raw.as_str())
+                    .unwrap_or("unknown"),
+                self.pinned_version
             ));
         }
 
@@ -168,8 +223,12 @@ impl LoreInstallationStatus {
             messages.push("Lore server is not installed".to_string());
         } else if !self.server_compatible {
             messages.push(format!(
-                "Lore server version {:?} is incompatible with pinned version {}",
-                self.server_version, self.pinned_version
+                "Lore server version '{}' is incompatible with required version '{}'",
+                self.server_version
+                    .as_ref()
+                    .map(|v| v.raw.as_str())
+                    .unwrap_or("unknown"),
+                self.pinned_version
             ));
         }
 
@@ -181,9 +240,32 @@ impl LoreInstallationStatus {
     }
 }
 
+// ── Unit tests ──────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_extract_version_string() {
+        assert_eq!(
+            extract_version_string("lore 0.8.5-nightly").unwrap(),
+            "0.8.5-nightly"
+        );
+        assert_eq!(
+            extract_version_string("loreserver 0.8.5-nightly").unwrap(),
+            "0.8.5-nightly"
+        );
+        assert_eq!(extract_version_string("lore 0.8.5\n").unwrap(), "0.8.5");
+    }
+
+    #[test]
+    fn test_extract_version_string_failure() {
+        // Single-word input has no second token → should fail
+        assert!(extract_version_string("lore").is_err());
+        // Empty string → should fail
+        assert!(extract_version_string("").is_err());
+    }
 
     #[test]
     fn test_parse_lore_version() {
@@ -204,12 +286,41 @@ mod tests {
     }
 
     #[test]
-    fn test_compatibility_check() {
-        let installed = Version::new(0, 8, 5);
+    fn test_compatibility_exact_match() {
+        let installed = LoreVersionInfo {
+            parsed: Version::new(0, 8, 5),
+            raw: "0.8.5-nightly".to_string(),
+        };
         assert!(check_lore_compatibility(&installed).unwrap());
+    }
 
-        let incompatible = Version::new(0, 7, 0);
-        assert!(!check_lore_compatibility(&incompatible).unwrap());
+    #[test]
+    fn test_compatibility_rejects_bare_version() {
+        // Bare "0.8.5" without the "-nightly" suffix must NOT be compatible.
+        let installed = LoreVersionInfo {
+            parsed: Version::new(0, 8, 5),
+            raw: "0.8.5".to_string(),
+        };
+        assert!(!check_lore_compatibility(&installed).unwrap());
+    }
+
+    #[test]
+    fn test_compatibility_rejects_wrong_channel() {
+        // Same major.minor.patch but "-stable" instead of "-nightly"
+        let installed = LoreVersionInfo {
+            parsed: Version::new(0, 8, 5),
+            raw: "0.8.5-stable".to_string(),
+        };
+        assert!(!check_lore_compatibility(&installed).unwrap());
+    }
+
+    #[test]
+    fn test_compatibility_rejects_wrong_version() {
+        let installed = LoreVersionInfo {
+            parsed: Version::new(0, 7, 0),
+            raw: "0.7.0-nightly".to_string(),
+        };
+        assert!(!check_lore_compatibility(&installed).unwrap());
     }
 
     #[test]
@@ -227,5 +338,37 @@ mod tests {
         let message = status.status_message();
         assert!(message.contains("Lore CLI is not installed"));
         assert!(message.contains("Lore server is not installed"));
+    }
+
+    #[test]
+    fn test_installation_status_message_incompatible() {
+        let status = LoreInstallationStatus {
+            cli_installed: true,
+            cli_version: Some(LoreVersionInfo {
+                parsed: Version::new(0, 8, 5),
+                raw: "0.8.5-stable".to_string(),
+            }),
+            cli_compatible: false,
+            server_installed: true,
+            server_version: Some(LoreVersionInfo {
+                parsed: Version::new(0, 8, 5),
+                raw: "0.8.5-stable".to_string(),
+            }),
+            server_compatible: false,
+            pinned_version: "0.8.5-nightly".to_string(),
+        };
+
+        let message = status.status_message();
+        assert!(message.contains("'0.8.5-stable'"));
+        assert!(message.contains("'0.8.5-nightly'"));
+        assert!(!status.is_fully_compatible());
+    }
+
+    #[test]
+    fn test_pinned_version_constant() {
+        // This test documents the contract: the pinned version must be
+        // "0.8.5-nightly".  If you intentionally change it, update this
+        // test and the integration test as well.
+        assert_eq!(PINNED_LORE_VERSION, "0.8.5-nightly");
     }
 }

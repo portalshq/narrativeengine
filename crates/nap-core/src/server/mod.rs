@@ -27,6 +27,6 @@ pub use logging::{
 pub use manager::{ServerManager, ServerStatus};
 pub use process::LoreProcessManager;
 pub use version::{
-    LoreInstallationStatus, PINNED_LORE_VERSION, check_lore_compatibility, detect_lore_version,
-    detect_loreserver_version, verify_lore_installation,
+    LoreInstallationStatus, LoreVersionInfo, PINNED_LORE_VERSION, check_lore_compatibility,
+    detect_lore_version, detect_loreserver_version, verify_lore_installation,
 };
