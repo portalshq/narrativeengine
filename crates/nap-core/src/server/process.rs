@@ -93,7 +93,7 @@ impl LoreProcessManager {
 
             unsafe {
                 let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
-                if handle == 0 {
+                if handle == std::ptr::null_mut() {
                     anyhow::bail!("Failed to open process handle for PID {}", pid);
                 }
                 let result = TerminateProcess(handle, 1);
@@ -125,7 +125,7 @@ impl LoreProcessManager {
 
             unsafe {
                 let handle = OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid);
-                if handle == 0 {
+                if handle == std::ptr::null_mut() {
                     return false;
                 }
                 CloseHandle(handle);

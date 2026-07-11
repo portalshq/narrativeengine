@@ -83,6 +83,7 @@ pub fn generate_certificates(cert_dir: &Path) -> Result<CertificateFiles> {
     {
         // On Windows, mark the key file as hidden and system to discourage
         // casual access. NTFS ACLs provide stricter protection if needed.
+        use std::os::windows::ffi::OsStrExt;
         use windows_sys::Win32::Storage::FileSystem::{
             FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_SYSTEM, SetFileAttributesW,
         };
