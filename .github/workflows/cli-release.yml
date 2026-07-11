@@ -61,7 +61,7 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             bin: nap
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             bin: nap
           - os: macos-latest
@@ -78,6 +78,9 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Build
         run: cargo build --locked --release --target ${{ matrix.target }} --bin nap
