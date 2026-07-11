@@ -1,6 +1,6 @@
 {
   "name": "@portalshq/narrativeengine",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "TypeScript SDK for NarrativeEngine, powered by Rust and NAPI-RS.",
   "publishConfig": {
     "access": "public"
