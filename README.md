@@ -131,6 +131,11 @@ starwars/                    ← universe root (Git repo)
 
 ### Install
 
+#### Install Commands
+```bash
+curl -fsSL https://github.com/portalshq/narrativeengine/releases/download/v0.4.2/install.sh | bash
+```
+
 #### CLI & Server (Rust — compile from source)
 
 ```bash
