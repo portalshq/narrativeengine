@@ -45,3 +45,6 @@ toystory/
 
 # Secrets
 .env
+
+# Lore workspace data
+.lore/

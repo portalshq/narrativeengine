@@ -1,23 +1,21 @@
-use crate::vcs::VcsBackend;
-use tempfile::TempDir;
-use crate::types::EntityType;
 use crate::commit::Change;
 use crate::repository::Repository;
+use crate::types::EntityType;
+use crate::vcs::VcsBackend;
+use tempfile::TempDir;
 
 pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
     let tmp = TempDir::new().unwrap();
-    let repo = Repository::init(
-        tmp.path(), "contract-test", Box::new(backend)
-    ).unwrap();
+    let repo = Repository::init(tmp.path(), "contract-test", Box::new(backend)).unwrap();
 
     // Contract: init creates structure
     assert!(repo.root.join(".nap").exists());
     assert!(repo.root.join("universe.yaml").exists());
 
     // Contract: create and read entity
-    let (manifest, _) = repo.create_entity(
-        EntityType::Character, "hero", "Test Hero", "contract"
-    ).unwrap();
+    let (manifest, _) = repo
+        .create_entity(EntityType::Character, "hero", "Test Hero", "contract")
+        .unwrap();
     assert_eq!(manifest.name, "Test Hero");
 
     let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();

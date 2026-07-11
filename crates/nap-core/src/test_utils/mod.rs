@@ -1,5 +1,5 @@
-pub mod mock_backend;
 pub mod contract;
+pub mod mock_backend;
 pub mod mock_repository;
 
 pub use mock_backend::MockBackend;

@@ -277,11 +277,12 @@ impl VcsBackend for LoreBackend {
     // ── init ─────────────────────────────────────────────────────────
     fn init(&self, path: &Path) -> Result<(), NapError> {
         // For Lore, "init" means:
-        //   1. `lore repository create <repo_url> --id <workspace_id>`
-        //   2. `lore clone <repo_url> <path>`
+        //   1. `lore repository create <repo_url> --id <ws> --repository <server_path>`
+        //   2. `lore clone <repo_url> <local_path>`
         //
-        // We derive a repo id from the leaf directory of `path` and use
-        // `from_env` defaults as a fallback.
+        // We derive a repo id from the leaf directory of `path`.
+        // The server-side data is stored at `<parent>/.lore-server/<repo_id>`
+        // to avoid collision with the clone destination.
 
         let repo_id = path
             .file_name()
@@ -289,6 +290,14 @@ impl VcsBackend for LoreBackend {
             .unwrap_or("nap-repo");
 
         let url = self.repo_url(repo_id);
+        let path_str = path.to_str().unwrap_or(".");
+
+        // Server-side storage lives alongside the repo, not inside it.
+        let server_path = path
+            .parent()
+            .unwrap_or(path)
+            .join(".lore-server")
+            .join(repo_id);
 
         // Step 1: Create the remote repository.
         LoreProcessRunner::run(
@@ -298,6 +307,8 @@ impl VcsBackend for LoreBackend {
                 &url,
                 "--id",
                 &self.workspace_id,
+                "--repository",
+                server_path.to_str().unwrap_or("."),
                 "--non-interactive",
             ],
             None,
@@ -307,21 +318,14 @@ impl VcsBackend for LoreBackend {
         })?;
 
         // Step 2: Clone it locally.
-        LoreProcessRunner::run(
-            [
-                "clone",
-                &url,
-                path.to_str().unwrap_or("."),
-                "--non-interactive",
-            ],
-            None,
-        )
-        .map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to clone lore repository to {:?}: {}",
-                path, e
-            ))
-        })?;
+        LoreProcessRunner::run(["clone", &url, path_str, "--non-interactive"], None).map_err(
+            |e| {
+                NapError::VcsError(format!(
+                    "failed to clone lore repository to {:?}: {}",
+                    path, e
+                ))
+            },
+        )?;
 
         Ok(())
     }
@@ -330,14 +334,13 @@ impl VcsBackend for LoreBackend {
     fn commit(&self, path: &Path, message: &str, author: &str) -> Result<String, NapError> {
         // Lore requires an explicit stage step.
         // Stage 1: Discover and stage all changes.
-        LoreProcessRunner::run(["stage", "--scan", "--non-interactive"], Some(path))?;
+        LoreProcessRunner::run(["stage", "--scan", ".", "--non-interactive"], Some(path))?;
 
         // Stage 2: Commit with identity.
         let stdout = LoreProcessRunner::run(
             [
                 "revision",
                 "commit",
-                "--message",
                 message,
                 "--identity",
                 author,
@@ -346,18 +349,27 @@ impl VcsBackend for LoreBackend {
             Some(path),
         )?;
 
-        // Parse the revision signature from stdout.  Lore outputs:
-        // "Created revision <signature> (#<number>)"
-        // We extract just the signature.
+        // Parse the revision signature from stdout. Lore now outputs a
+        // multi-line report. We look for the "Signature :" line.
         let signature = stdout
             .lines()
-            .next()
-            .unwrap_or(&stdout)
-            .trim()
-            .strip_prefix("Created revision ")
-            .and_then(|s| s.split_whitespace().next())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| stdout.trim().to_string());
+            .find_map(|line| {
+                line.strip_prefix("Signature :")
+                    .or_else(|| line.strip_prefix("Signature:"))
+            })
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|| {
+                // Fallback: try the old "Created revision <sig> (#<num>)" format.
+                stdout
+                    .lines()
+                    .next()
+                    .unwrap_or(&stdout)
+                    .trim()
+                    .strip_prefix("Created revision ")
+                    .and_then(|s| s.split_whitespace().next())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| stdout.trim().to_string())
+            });
 
         Ok(signature)
     }
@@ -367,77 +379,111 @@ impl VcsBackend for LoreBackend {
         &self,
         repo_path: &Path,
         file_path: &str,
-        reference: Option<&str>,
+        _reference: Option<&str>,
     ) -> Result<String, NapError> {
-        let mut args = vec!["file", "cat", file_path, "--non-interactive"];
-        if let Some(ref_str) = reference {
-            args.push("--revision");
-            args.push(ref_str);
-        }
-        LoreProcessRunner::run(&args, Some(repo_path))
+        // lore file cat was removed from the CLI. Since the workspace is
+        // cloned at the current branch, read directly from disk.
+        let full_path = repo_path.join(file_path);
+        std::fs::read_to_string(&full_path).map_err(|e| {
+            NapError::VcsError(format!("failed to read {}: {}", full_path.display(), e))
+        })
     }
 
     // ── log ──────────────────────────────────────────────────────────
     fn log(
         &self,
         path: &Path,
-        file: Option<&str>,
+        _file: Option<&str>,
         limit: usize,
     ) -> Result<Vec<CommitInfo>, NapError> {
         let limit_str = limit.to_string();
-        let mut args = vec![
-            "log",
-            "--limit",
-            &limit_str,
-            "--format",
-            "json",
-            "--non-interactive",
-        ];
-        if let Some(f) = file {
-            args.push("--path");
-            args.push(f);
-        }
+        let args = vec!["history", &limit_str, "--non-interactive"];
 
         let stdout = LoreProcessRunner::run(&args, Some(path))?;
 
-        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+        if stdout.trim().is_empty() {
             return Ok(Vec::new());
         }
 
-        // Parse JSON array of revisions.
-        // Each revision has shape: { "signature": "...", "number": N,
-        //   "message": "...", "author": "...", "timestamp": "...",
-        //   "parent_signature": "..." | null }
-        #[derive(serde::Deserialize)]
-        struct LoreRevision {
-            signature: String,
-            #[allow(dead_code)]
-            number: u64,
-            message: String,
-            author: String,
-            timestamp: Option<String>,
-            parent_signature: Option<String>,
+        // Parse plain text output. Each revision is a block:
+        //   Revision  : N
+        //   Signature : <hex>
+        //   Branch    : <id>
+        //   Date      : <date>
+        //       <message>
+        //   Creator   : <author>
+        //   Committer : <author>
+        let mut commits = Vec::new();
+        let mut current_signature = String::new();
+        let mut current_author = String::new();
+        let mut current_message = String::new();
+        let mut current_timestamp = String::new();
+        let mut current_parent: Option<String> = None;
+        let mut in_message = false;
+
+        for line in stdout.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("Signature :") || trimmed.starts_with("Signature:") {
+                // Save previous commit if we have one.
+                if !current_signature.is_empty() {
+                    commits.push(CommitInfo {
+                        id: std::mem::take(&mut current_signature),
+                        parent: current_parent.take(),
+                        author: std::mem::take(&mut current_author),
+                        message: std::mem::take(&mut current_message),
+                        timestamp: std::mem::take(&mut current_timestamp),
+                    });
+                }
+                current_signature = trimmed
+                    .strip_prefix("Signature :")
+                    .or_else(|| trimmed.strip_prefix("Signature:"))
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
+                in_message = false;
+            } else if trimmed.starts_with("Date      :") || trimmed.starts_with("Date:") {
+                current_timestamp = trimmed
+                    .split_once(':')
+                    .map(|(_, v)| v.trim().to_string())
+                    .unwrap_or_default();
+                in_message = true;
+            } else if trimmed.starts_with("Creator   :") || trimmed.starts_with("Creator:") {
+                current_author = trimmed
+                    .split_once(':')
+                    .map(|(_, v)| v.trim().to_string())
+                    .unwrap_or_default();
+                in_message = false;
+            } else if trimmed.starts_with("Revision  :")
+                || trimmed.starts_with("Revision:")
+                || trimmed.starts_with("Branch    :")
+                || trimmed.starts_with("Branch:")
+                || trimmed.starts_with("Committer :")
+                || trimmed.starts_with("Committer:")
+            {
+                in_message = false;
+            } else if in_message {
+                if trimmed.is_empty() || trimmed == "Commit succeeded" {
+                    in_message = false;
+                } else {
+                    if !current_message.is_empty() {
+                        current_message.push('\n');
+                    }
+                    current_message.push_str(trimmed);
+                }
+            }
+        }
+        // Push the last commit.
+        if !current_signature.is_empty() {
+            commits.push(CommitInfo {
+                id: current_signature,
+                parent: current_parent,
+                author: current_author,
+                message: current_message,
+                timestamp: current_timestamp,
+            });
         }
 
-        let revs: Vec<LoreRevision> = serde_json::from_str(&stdout).map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to parse lore log output as JSON: {}. Raw output: {}",
-                e, stdout
-            ))
-        })?;
-
-        Ok(revs
-            .into_iter()
-            .map(|r| {
-                CommitInfo::from_lore_revision(
-                    &r.signature,
-                    r.parent_signature.as_deref(),
-                    &r.author,
-                    &r.message,
-                    r.timestamp.as_deref().unwrap_or(""),
-                )
-            })
-            .collect())
+        Ok(commits)
     }
 
     // ── branching ────────────────────────────────────────────────────
@@ -457,20 +503,34 @@ impl VcsBackend for LoreBackend {
     }
 
     fn list_branches(&self, path: &Path) -> Result<Vec<String>, NapError> {
-        let stdout = LoreProcessRunner::run(
-            ["branch", "list", "--format", "json", "--non-interactive"],
-            Some(path),
-        )?;
-        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+        let stdout = LoreProcessRunner::run(["branch", "list", "--non-interactive"], Some(path))?;
+        if stdout.is_empty() {
             return Ok(Vec::new());
         }
-        // Expect JSON array: ["main", "feature-x", ...]
-        let branches: Vec<String> = serde_json::from_str(&stdout).map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to parse lore branch list JSON: {}. Raw: {}",
-                e, stdout
-            ))
-        })?;
+        // Parse plain text output:
+        //   Local branches:
+        //   * main
+        //     feature-x
+        //   Remote branches:
+        //     main
+        let mut branches = Vec::new();
+        let mut in_local = false;
+        for line in stdout.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("Local branches") {
+                in_local = true;
+                continue;
+            }
+            if trimmed.starts_with("Remote branches") {
+                in_local = false;
+                continue;
+            }
+            if in_local && !trimmed.is_empty() {
+                // Strip "* " prefix for current branch marker.
+                let name = trimmed.strip_prefix("* ").unwrap_or(trimmed);
+                branches.push(name.to_string());
+            }
+        }
         Ok(branches)
     }
 
@@ -549,38 +609,28 @@ impl VcsBackend for LoreBackend {
 
     // ── head / revert ────────────────────────────────────────────────
     fn head_hash(&self, path: &Path) -> Result<String, NapError> {
-        let stdout = LoreProcessRunner::run(
-            [
-                "log",
-                "--limit",
-                "1",
-                "--format",
-                "json",
-                "--non-interactive",
-            ],
-            Some(path),
-        )?;
+        let stdout = LoreProcessRunner::run(["history", "1", "--non-interactive"], Some(path))?;
 
-        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+        if stdout.trim().is_empty() {
             return Err(NapError::VcsError(
                 "no commits in lore workspace".to_string(),
             ));
         }
 
-        #[derive(serde::Deserialize)]
-        struct HeadRev {
-            signature: String,
-        }
-        let revs: Vec<HeadRev> = serde_json::from_str(&stdout).map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to parse lore log JSON for head_hash: {}. Raw: {}",
-                e, stdout
-            ))
-        })?;
-        revs.into_iter()
-            .next()
-            .map(|r| r.signature)
-            .ok_or_else(|| NapError::VcsError("empty revision list".to_string()))
+        // Parse "Signature : <hex>" from plain text output.
+        stdout
+            .lines()
+            .find_map(|line| {
+                line.trim()
+                    .strip_prefix("Signature :")
+                    .or_else(|| line.trim().strip_prefix("Signature:"))
+            })
+            .map(|s| s.trim().to_string())
+            .ok_or_else(|| {
+                NapError::VcsError(format!(
+                    "failed to parse signature from lore history: {stdout}"
+                ))
+            })
     }
 
     fn revert(&self, path: &Path, commit_hash: &str) -> Result<String, NapError> {
@@ -598,39 +648,30 @@ impl VcsBackend for LoreBackend {
 
     fn resolve_branch_head(&self, path: &Path, branch: &str) -> Result<String, NapError> {
         let stdout = LoreProcessRunner::run(
-            [
-                "log",
-                "--branch",
-                branch,
-                "--limit",
-                "1",
-                "--format",
-                "json",
-                "--non-interactive",
-            ],
+            ["history", "1", "--branch", branch, "--non-interactive"],
             Some(path),
         )?;
 
-        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+        if stdout.trim().is_empty() {
             return Err(NapError::VcsError(format!(
                 "no commits found on branch '{branch}'"
             )));
         }
 
-        #[derive(serde::Deserialize)]
-        struct BranchRev {
-            signature: String,
-        }
-        let revs: Vec<BranchRev> = serde_json::from_str(&stdout).map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to parse lore log JSON for resolve_branch_head: {e}. Raw: {stdout}"
-            ))
-        })?;
-
-        revs.into_iter()
-            .next()
-            .map(|r| r.signature)
-            .ok_or_else(|| NapError::VcsError(format!("empty revision list for branch '{branch}'")))
+        // Parse "Signature : <hex>" from plain text output.
+        stdout
+            .lines()
+            .find_map(|line| {
+                line.trim()
+                    .strip_prefix("Signature :")
+                    .or_else(|| line.trim().strip_prefix("Signature:"))
+            })
+            .map(|s| s.trim().to_string())
+            .ok_or_else(|| {
+                NapError::VcsError(format!(
+                    "failed to parse signature from lore history on branch '{branch}': {stdout}"
+                ))
+            })
     }
 
     // ── remotes ──────────────────────────────────────────────────────
@@ -780,7 +821,7 @@ impl VcsBackend for LoreBackend {
 // Tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+#[cfg(all(test, feature = "lore-integration"))]
 mod tests {
     use super::*;
 

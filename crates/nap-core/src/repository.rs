@@ -439,7 +439,6 @@ mod tests {
         crate::test_utils::contract::run_repository_contract(MockBackend::new());
     }
 
-
     #[test]
     fn test_init_creates_structure() {
         let tmp = TempDir::new().unwrap();
@@ -588,4 +587,124 @@ mod tests {
     //     let remotes = repo.list_remotes().unwrap();
     //     assert!(remotes.is_empty());
     // }
+}
+
+// ── Integration tests: Repository + LoreBackend ─────────────────────
+// These require a running Lore server. Run with:
+//   cargo test --features lore-integration
+#[cfg(all(test, feature = "lore-integration"))]
+mod lore_integration_tests {
+    use super::*;
+    use crate::vcs_lore::LoreBackend;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    use tempfile::TempDir;
+
+    fn unique_suffix() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64
+    }
+
+    fn setup_lore_repo() -> (TempDir, Repository) {
+        let universe = format!("ri-{}", unique_suffix());
+        let tmp = TempDir::new().unwrap();
+        let repo =
+            Repository::init(tmp.path(), &universe, Box::new(LoreBackend::from_env())).unwrap();
+        (tmp, repo)
+    }
+
+    #[test]
+    fn test_lore_init_creates_structure() {
+        let (_tmp, repo) = setup_lore_repo();
+        assert!(repo.root.join(".nap").exists());
+        assert!(repo.root.join("universe.yaml").exists());
+    }
+
+    #[test]
+    fn test_lore_create_and_read_entity() {
+        let (_tmp, repo) = setup_lore_repo();
+
+        let (manifest, _hash) = repo
+            .create_entity(
+                EntityType::Character,
+                "hero",
+                "Test Hero",
+                "integration-test",
+            )
+            .unwrap();
+        assert_eq!(manifest.name, "Test Hero");
+
+        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        assert_eq!(read_back.name, "Test Hero");
+    }
+
+    #[test]
+    fn test_lore_commit_and_branch() {
+        let (_tmp, repo) = setup_lore_repo();
+
+        let (mut manifest, _) = repo
+            .create_entity(
+                EntityType::Character,
+                "hero",
+                "Test Hero",
+                "integration-test",
+            )
+            .unwrap();
+
+        manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
+        let changes = vec![Change::set("properties.species", None, "human".to_string())];
+        repo.commit_manifest(&mut manifest, "add species", "integration-test", changes)
+            .unwrap();
+
+        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        assert_eq!(read_back.version, 2);
+
+        repo.create_branch("feature-branch").unwrap();
+        let branches = repo.list_branches().unwrap();
+        assert!(branches.contains(&"feature-branch".to_string()));
+    }
+
+    #[test]
+    fn test_lore_delete_entity() {
+        let (_tmp, repo) = setup_lore_repo();
+
+        repo.create_entity(
+            EntityType::Character,
+            "hero",
+            "Test Hero",
+            "integration-test",
+        )
+        .unwrap();
+
+        repo.delete_entity(EntityType::Character, "hero", "integration-test")
+            .unwrap();
+
+        let entities = repo.list_entities(EntityType::Character).unwrap();
+        assert!(!entities.contains(&"hero".to_string()));
+    }
+
+    #[test]
+    fn test_lore_history() {
+        let (_tmp, repo) = setup_lore_repo();
+
+        let (mut manifest, _) = repo
+            .create_entity(
+                EntityType::Character,
+                "hero",
+                "Test Hero",
+                "integration-test",
+            )
+            .unwrap();
+
+        manifest.set_property(
+            "name",
+            serde_yaml::Value::String("Updated Hero".to_string()),
+        );
+        repo.commit_manifest(&mut manifest, "update name", "integration-test", vec![])
+            .unwrap();
+
+        let hist = repo.history(EntityType::Character, "hero", 10).unwrap();
+        assert!(hist.len() >= 2);
+    }
 }

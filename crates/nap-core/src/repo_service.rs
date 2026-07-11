@@ -304,8 +304,8 @@ impl RepoService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vcs::AccessLevel;
     use crate::test_utils::MockBackend;
+    use crate::vcs::AccessLevel;
 
     #[test]
     fn test_open_workspace_fails_on_missing() {

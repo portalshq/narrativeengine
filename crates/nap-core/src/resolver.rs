@@ -281,8 +281,8 @@ impl Resolver {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+    use crate::test_utils::MockBackend;
     use crate::types::EntityType;
-    use crate::test_utils::{MockBackend, mock_repo};
     use tempfile::TempDir;
 
     fn setup() -> (TempDir, Resolver) {
@@ -477,12 +477,21 @@ mod unit_tests {
 mod lore_tests {
     use super::*;
     use crate::vcs_lore::LoreBackend;
+    use std::time::{SystemTime, UNIX_EPOCH};
     use tempfile::TempDir;
 
-    fn setup_lore() -> (TempDir, Resolver) {
+    fn unique_suffix() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64
+    }
+
+    fn setup_lore() -> (TempDir, Resolver, String) {
+        let universe = format!("lr-{}", unique_suffix());
         let tmp = TempDir::new().unwrap();
         let repo =
-            Repository::init(tmp.path(), "starwars", Box::new(LoreBackend::from_env())).unwrap();
+            Repository::init(tmp.path(), &universe, Box::new(LoreBackend::from_env())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
@@ -512,18 +521,14 @@ mod lore_tests {
                 default_branch: Some("main".to_string()),
             },
         );
-        (tmp, resolver)
+        (tmp, resolver, universe)
     }
 
     #[test]
     fn test_resolve_lore_full_manifest() {
-        let (_tmp, resolver) = setup_lore();
-        let result = resolver
-            .resolve(
-                "nap://starwars/character/lukeskywalker",
-                &Default::default(),
-            )
-            .unwrap();
+        let (_tmp, resolver, universe) = setup_lore();
+        let uri = format!("nap://{}/character/lukeskywalker", universe);
+        let result = resolver.resolve(&uri, &Default::default()).unwrap();
         match result {
             ResolveResult::Full(m) => {
                 assert_eq!(m.name, "Luke Skywalker");

@@ -1,0 +1,13 @@
+[package]
+name = "nap-test-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Shared test utilities for NAP crates"
+
+[dependencies]
+nap-core = { path = "../nap-core", features = ["test-utils"] }
+chrono = { workspace = true }
+serde_yaml = { workspace = true }
+tempfile = { workspace = true }
