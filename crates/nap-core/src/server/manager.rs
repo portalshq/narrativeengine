@@ -63,9 +63,9 @@ impl ServerManager {
             let message = status.status_message();
             error!(
                 installed = status.cli_installed,
-                cli_version = ?status.cli_version,
+                cli_version = status.cli_version.as_ref().map(|v| v.raw.as_str()).unwrap_or("not detected"),
                 server_installed = status.server_installed,
-                server_version = ?status.server_version,
+                server_version = status.server_version.as_ref().map(|v| v.raw.as_str()).unwrap_or("not detected"),
                 pinned = %status.pinned_version,
                 "Lore installation incompatible: {}",
                 message
