@@ -42,7 +42,7 @@ impl Provider for LocalProvider {
     }
 
     fn name(&self) -> &str {
-        "Local Lore Daemon"
+        "Local Lore Server"
     }
 
     async fn initialize(&self) -> Result<()> {
@@ -108,7 +108,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let provider = LocalProvider::new(temp_dir.path());
         assert_eq!(provider.provider_type(), ProviderType::Local);
-        assert_eq!(provider.name(), "Local Lore Daemon");
+        assert_eq!(provider.name(), "Local Lore Server");
         assert_eq!(provider.workspace_id(), "default");
     }
 

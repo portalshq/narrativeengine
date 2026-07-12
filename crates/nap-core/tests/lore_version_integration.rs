@@ -19,7 +19,7 @@ use semver::Version;
 // integration test in this file.  The value **must** agree with the
 // production constant `PINNED_LORE_VERSION` or the contract tests below
 // will fail loudly.
-const EXPECTED_PINNED_VERSION: &str = "0.8.5-nightly";
+const EXPECTED_PINNED_VERSION: &str = "0.8.4";
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ fn make_version_info(raw: &str, major: u64, minor: u64, patch: u64) -> LoreVersi
 
 // ── Contract: constant value ────────────────────────────────────────────
 
-/// The pinned version constant must be exactly the expected nightly string.
+/// The pinned version constant must be exactly the expected version string.
 #[test]
 fn pinned_version_constant_matches_expected() {
     assert_eq!(
@@ -47,35 +47,35 @@ fn pinned_version_constant_matches_expected() {
 
 /// A lore server that reports the exact pinned version must be accepted.
 #[test]
-fn exact_nightly_version_is_compatible() {
-    let installed = make_version_info("0.8.5-nightly", 0, 8, 5);
+fn exact_pinned_version_is_compatible() {
+    let installed = make_version_info("0.8.4", 0, 8, 4);
     assert!(
         check_lore_compatibility(&installed).unwrap(),
-        "Version '0.8.5-nightly' should be compatible with pinned version '{}'",
+        "Version '0.8.4' should be compatible with pinned version '{}'",
         PINNED_LORE_VERSION
     );
 }
 
 // ── Contract: mismatches are rejected ───────────────────────────────────
 
-/// Bare version without channel suffix must be rejected.
+/// Nightly suffix must be rejected.
 #[test]
-fn bare_version_without_suffix_is_incompatible() {
-    let installed = make_version_info("0.8.5", 0, 8, 5);
+fn nightly_version_is_incompatible_with_release_pin() {
+    let installed = make_version_info("0.8.4-nightly", 0, 8, 4);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.8.5' (no suffix) must NOT be compatible with '{}'",
+        "Version '0.8.4-nightly' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
 
 /// Same semver but different channel suffix must be rejected.
 #[test]
-fn stable_channel_is_incompatible_with_nightly_pin() {
-    let installed = make_version_info("0.8.5-stable", 0, 8, 5);
+fn stable_channel_is_incompatible_with_release_pin() {
+    let installed = make_version_info("0.8.4-stable", 0, 8, 4);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.8.5-stable' must NOT be compatible with '{}'",
+        "Version '0.8.4-stable' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
@@ -83,10 +83,10 @@ fn stable_channel_is_incompatible_with_nightly_pin() {
 /// Different major.minor.patch must be rejected.
 #[test]
 fn wrong_semver_is_incompatible() {
-    let installed = make_version_info("0.9.0-nightly", 0, 9, 0);
+    let installed = make_version_info("0.9.0", 0, 9, 0);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.9.0-nightly' must NOT be compatible with '{}'",
+        "Version '0.9.0' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
@@ -94,32 +94,32 @@ fn wrong_semver_is_incompatible() {
 /// Older version must be rejected.
 #[test]
 fn older_version_is_incompatible() {
-    let installed = make_version_info("0.7.0-nightly", 0, 7, 0);
+    let installed = make_version_info("0.7.0", 0, 7, 0);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.7.0-nightly' must NOT be compatible with '{}'",
+        "Version '0.7.0' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
 
 /// Release-candidate suffix must be rejected.
 #[test]
-fn release_candidate_is_incompatible_with_nightly_pin() {
-    let installed = make_version_info("0.8.5-rc1", 0, 8, 5);
+fn release_candidate_is_incompatible_with_release_pin() {
+    let installed = make_version_info("0.8.4-rc1", 0, 8, 4);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.8.5-rc1' must NOT be compatible with '{}'",
+        "Version '0.8.4-rc1' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
 
 /// Pre-release suffix must be rejected.
 #[test]
-fn pre_release_suffix_is_incompatible_with_nightly_pin() {
-    let installed = make_version_info("0.8.5-pre", 0, 8, 5);
+fn pre_release_suffix_is_incompatible_with_release_pin() {
+    let installed = make_version_info("0.8.4-pre", 0, 8, 4);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.8.5-pre' must NOT be compatible with '{}'",
+        "Version '0.8.4-pre' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
@@ -127,10 +127,10 @@ fn pre_release_suffix_is_incompatible_with_nightly_pin() {
 /// Higher version must be rejected — compatibility is exact, not >=.
 #[test]
 fn newer_version_is_incompatible() {
-    let installed = make_version_info("0.9.0-nightly", 0, 9, 0);
+    let installed = make_version_info("0.9.0", 0, 9, 0);
     assert!(
         !check_lore_compatibility(&installed).unwrap(),
-        "Version '0.9.0-nightly' must NOT be compatible with '{}'",
+        "Version '0.9.0' must NOT be compatible with '{}'",
         PINNED_LORE_VERSION
     );
 }
@@ -140,14 +140,14 @@ fn newer_version_is_incompatible() {
 /// Verify that `LoreVersionInfo` preserves both raw and parsed representations.
 #[test]
 fn version_info_preserves_raw_and_parsed() {
-    let info = make_version_info("0.8.5-nightly", 0, 8, 5);
-    assert_eq!(info.raw, "0.8.5-nightly");
-    assert_eq!(info.parsed, Version::new(0, 8, 5));
+    let info = make_version_info("0.8.4", 0, 8, 4);
+    assert_eq!(info.raw, "0.8.4");
+    assert_eq!(info.parsed, Version::new(0, 8, 4));
 }
 
 /// Verify Display implementation shows the raw version.
 #[test]
 fn version_info_display_shows_raw() {
-    let info = make_version_info("0.8.5-nightly", 0, 8, 5);
-    assert_eq!(format!("{}", info), "0.8.5-nightly");
+    let info = make_version_info("0.8.4", 0, 8, 4);
+    assert_eq!(format!("{}", info), "0.8.4");
 }

@@ -75,7 +75,12 @@ impl LoreInstaller {
             self.repo, self.version
         );
 
-        self.run_install_script(&["--server", "--version", &self.version])?;
+        // The Lore install script installs one binary at a time:
+        //   no flags  → lore CLI only
+        //   --server  → loreserver only
+        // Run it twice to get both.
+        self.install_cli()?;
+        self.install_server()?;
 
         info!("Lore CLI and server installed successfully");
         Ok(())
@@ -310,7 +315,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()));
         assert_eq!(installer.repo, "EpicGames/lore");
-        assert_eq!(installer.version, "latest");
+        assert_eq!(installer.version, PINNED_LORE_VERSION);
     }
 
     #[test]
@@ -327,7 +332,7 @@ mod tests {
     fn test_verification_result() {
         let result = VerificationResult {
             cli_installed: true,
-            cli_version: Some("0.8.5-nightly".to_string()),
+            cli_version: Some("0.8.4".to_string()),
             server_installed: false,
             server_version: None,
         };
