@@ -26,10 +26,9 @@ mod e2e {
 
         nap_cmd()
             .arg("init")
+            .arg(universe)
             .arg("--base-dir")
             .arg(tmp.path())
-            .arg("--universe")
-            .arg(universe)
             .assert()
             .success();
 
@@ -49,10 +48,9 @@ mod e2e {
 
         nap_cmd()
             .arg("init")
+            .arg(universe)
             .arg("--base-dir")
             .arg(tmp.path())
-            .arg("--universe")
-            .arg(universe)
             .assert()
             .success();
 

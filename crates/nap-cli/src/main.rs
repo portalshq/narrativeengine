@@ -1,7 +1,7 @@
 //! NAP CLI — command-line interface for the Narrative Addressing Protocol.
 //!
 //! Commands:
-//!   init         — Initialize NAP with provider selection
+//!   init         — Initialize a universe repository and/or configure provider
 //!   choose       — Choose backend provider
 //!   doctor       — Run diagnostics and repair
 //!   publish      — Publish changes to remote
@@ -138,8 +138,20 @@ enum Commands {
         target: String,
     },
 
-    /// Initialize NAP with provider selection.
+    /// Initialize a universe repository and/or configure the backend provider.
+    ///
+    /// When a universe name is provided, creates the repository structure
+    /// (directories, config, universe manifest, initial Git commit).
+    /// When --provider is given (or no provider is configured), sets up the
+    /// backend provider. Both can be combined:
+    ///
+    ///   nap init starwars                     # create universe
+    ///   nap init starwars --provider local    # create universe + configure provider
+    ///   nap init --provider local             # configure provider only
     Init {
+        /// Universe name. If provided, initializes a new universe repository.
+        universe: Option<String>,
+
         /// Provider type: local, portals-cloud, or remote.
         #[arg(long)]
         provider: Option<String>,
@@ -151,6 +163,10 @@ enum Commands {
         /// Workspace ID (for remote provider).
         #[arg(long)]
         workspace_id: Option<String>,
+
+        /// Remote URL to add as origin after init.
+        #[arg(long)]
+        remote: Option<String>,
     },
 
     /// Choose backend provider.
@@ -180,16 +196,6 @@ enum Commands {
     Sync {
         /// Universe name.
         universe: String,
-    },
-
-    /// Initialize a new universe repository (legacy).
-    InitUniverse {
-        /// Universe name (e.g., "starwars", "toystory").
-        universe: String,
-
-        /// Remote URL to add as origin after init.
-        #[arg(long)]
-        remote: Option<String>,
     },
 
     /// Create a new entity manifest.
@@ -510,11 +516,11 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let is_piped = !std::io::stdout().is_terminal();
 
-    // Initialize tracing
+    // Initialize tracing — silent by default, verbose with -v
     let filter = if cli.verbose {
         "nap_core=trace,nap_cli=trace"
     } else {
-        "nap_core=info,nap_cli=info"
+        "nap_core=warn,nap_cli=warn"
     };
     tracing_subscriber::fmt()
         .with_env_filter(filter)
@@ -534,14 +540,18 @@ fn main() -> Result<()> {
 
     let result = match cli.command {
         Commands::Init {
+            universe,
             provider,
             remote_url,
             workspace_id,
+            remote,
         } => cmd_init(
             &base_dir,
+            universe.as_deref(),
             provider,
             remote_url,
             workspace_id,
+            remote.as_deref(),
         ),
         Commands::Install { target } => cmd_install(&base_dir, &target),
         Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
@@ -549,9 +559,6 @@ fn main() -> Result<()> {
         Commands::Publish { universe } => cmd_publish(&base_dir, &universe),
         Commands::Status => cmd_status(&base_dir),
         Commands::Sync { universe } => cmd_sync(&base_dir, &universe),
-        Commands::InitUniverse { universe, remote } => {
-            cmd_init_universe(&base_dir, &universe, remote.as_deref())
-        }
         Commands::Create {
             entity_type,
             entity_id,
@@ -683,53 +690,74 @@ fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
 
 fn cmd_init(
     base_dir: &Path,
+    universe: Option<&str>,
     provider_opt: Option<String>,
     remote_url: Option<String>,
     workspace_id: Option<String>,
+    remote: Option<&str>,
 ) -> Result<()> {
-    // Prompt for provider if not specified
-    let provider_str = if let Some(p) = provider_opt {
-        p
-    } else {
-        prompt_for_provider()?
-    };
+    // ── Step 1: Configure provider if requested or on first run ────────
+    let should_configure_provider = provider_opt.is_some()
+        || (universe.is_none() && {
+            // No universe name and no --provider: this is the only thing
+            // we can do, so prompt.
+            true
+        });
 
-    let provider_type = ProviderType::parse_from_str(&provider_str)
-        .context(format!("invalid provider type '{provider_str}'"))?;
+    if should_configure_provider {
+        let provider_str = if let Some(p) = provider_opt {
+            p
+        } else {
+            prompt_for_provider()?
+        };
 
-    let factory = ProviderFactory::new(base_dir);
-    let provider = match provider_type {
-        ProviderType::Local => factory.create_provider(ProviderType::Local)?,
-        ProviderType::PortalsCloud => factory.create_provider(ProviderType::PortalsCloud)?,
-        ProviderType::Remote => {
-            let url = remote_url
-                .as_ref()
-                .context("remote provider requires --remote-url")?;
-            let ws_id = workspace_id
-                .as_ref()
-                .context("remote provider requires --workspace-id")?;
-            factory.create_remote_provider(url, ws_id)?
+        let provider_type = ProviderType::parse_from_str(&provider_str)
+            .context(format!("invalid provider type '{provider_str}'"))?;
+
+        let factory = ProviderFactory::new(base_dir);
+        let provider = match provider_type {
+            ProviderType::Local => factory.create_provider(ProviderType::Local)?,
+            ProviderType::PortalsCloud => factory.create_provider(ProviderType::PortalsCloud)?,
+            ProviderType::Remote => {
+                let url = remote_url
+                    .as_ref()
+                    .context("remote provider requires --remote-url")?;
+                let ws_id = workspace_id
+                    .as_ref()
+                    .context("remote provider requires --workspace-id")?;
+                factory.create_remote_provider(url, ws_id)?
+            }
+        };
+
+        let mut provider_manager = ProviderManager::new(base_dir);
+        provider_manager.set_active_provider(provider.clone());
+        provider_manager
+            .save_provider_config(provider.as_ref())
+            .context("failed to save provider configuration")?;
+
+        // Initialize and verify the provider
+        match provider_type {
+            ProviderType::Local => emit("Setting up local services..."),
+            ProviderType::PortalsCloud => emit("Connecting to Portals Cloud..."),
+            ProviderType::Remote => emit("Configuring remote provider..."),
         }
-    };
 
-    let mut provider_manager = ProviderManager::new(base_dir);
-    provider_manager.set_active_provider(provider.clone());
-    provider_manager
-        .save_provider_config(provider.as_ref())
-        .context("failed to save provider configuration")?;
+        let rt = get_tokio_runtime();
+        rt.block_on(provider.initialize())
+            .context("failed to initialize provider")?;
 
-    // Initialize and verify the provider
-    let rt = get_tokio_runtime();
-    rt.block_on(provider.initialize())
-        .context("failed to initialize provider")?;
-
-    emit(format!("✓ Initialized NAP with {}.", provider.name()));
-    emit(format!("  Type: {}", provider_type.as_str()));
-    if let Some(url) = &remote_url {
-        emit(format!("  Remote URL: {}", url));
+        emit(format!(
+            "✓ Ready. NAP is configured with {}.",
+            provider.name()
+        ));
     }
-    if let Some(ws_id) = &workspace_id {
-        emit(format!("  Workspace ID: {}", ws_id));
+
+    // ── Step 2: Initialize universe repository if name given ───────────
+    if let Some(universe_name) = universe {
+        cmd_init_universe(base_dir, universe_name, remote)?;
+    } else if !should_configure_provider {
+        // No universe, no --provider → nothing to do
+        anyhow::bail!("Usage: nap init <universe>  or  nap init --provider <type>");
     }
 
     Ok(())
@@ -755,7 +783,7 @@ fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> R
 fn cmd_install(base_dir: &Path, target: &str) -> Result<()> {
     match target {
         "lore" => {
-            let installer = LoreInstaller::new(base_dir);
+            let installer = LoreInstaller::new(Some(base_dir.to_path_buf()));
             installer.install_all()?;
             emit("✓ Lore CLI and server installed successfully.");
         }

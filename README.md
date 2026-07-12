@@ -177,7 +177,13 @@ const block = createBlock("char-1", "A brave adventurer");
 ### Initialize NAP
 
 ```bash
-# Initialize NAP with provider selection (default: local)
+# Initialize a universe (prompts for provider on first run)
+nap init starwars
+
+# Initialize a universe with a specific provider
+nap init starwars --provider local
+
+# Configure provider only (no universe)
 nap init --provider local
 
 # Initialize with remote provider
@@ -203,8 +209,8 @@ nap doctor --repair
 ### Create a Universe
 
 ```bash
-# Initialize a new universe (legacy command)
-nap init-universe starwars
+# Initialize a new universe
+nap init starwars
 
 # See what you created
 ls starwars/

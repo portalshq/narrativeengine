@@ -8,8 +8,8 @@ import { z } from "zod";
 import { initUniverse, createEntity, deleteEntity, listBranches, createBranch, switchBranch, listTags, createTag, listRemotes, addRemote, removeRemote, pushUniverse, pullUniverse, computeContentHash, validateManifest, NapApiError, } from "../services/api.js";
 import { CONFIG, ENTITY_TYPES } from "../constants.js";
 export function registerManagementTools(server) {
-    // ── nap_init_universe ──────────────────────────────────────────────────
-    server.registerTool("nap_init_universe", {
+    // ── nap_init ────────────────────────────────────────────────────────
+    server.registerTool("nap_init", {
         title: "Initialize Universe",
         description: `Initialize a new NAP universe repository.
 

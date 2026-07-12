@@ -21,7 +21,7 @@ Nap addresses are stable -- entity references are immutable.
 
 ## Table of Contents
 
-- [Quick Reference](#quick-reference)
+- [Reference](#reference)
 - [1. Narrative Resource Addressing](#1-narrative-resource-addressing)
   - [1.1 URI Anatomy](#11-uri-anatomy)
   - [1.2 Cross-Reference Grid](#12-cross-reference-grid)
@@ -47,7 +47,7 @@ Nap addresses are stable -- entity references are immutable.
 
 ---
 
-## Quick Reference
+## Reference
 
 ```bash
 # Initialize a universe in ~/.nap/
@@ -848,7 +848,9 @@ starwars/                    ← universe root (Git repo)
 
 | Command | Description |
 |---|---|
-| `nap init <universe>` | Initialize a new universe repository |
+| `nap init <universe>` | Initialize a new universe repository (prompts for provider on first run) |
+| `nap init <universe> --provider <type>` | Initialize universe + configure provider |
+| `nap init --provider <type>` | Configure provider only (no universe) |
 | `nap create <type> <id> -u <universe> -n <name>` | Create a new entity manifest |
 | `nap resolve <uri>` | Resolve a NAP URI to a manifest or subtree |
 | `nap query <uri> <path>` | Query a subtree from a manifest |
@@ -858,9 +860,34 @@ starwars/                    ← universe root (Git repo)
 | `nap history <uri>` | View commit history for an entity |
 | `nap list [universe]` | List universes or entities |
 | `nap branch <universe> [name]` | Create or list branches |
+| `nap switch <universe> <branch>` | Switch to a branch |
 | `nap tag <universe> [name]` | Create or list tags |
+| `nap validate <uri>` | Validate a manifest against the NAP schema |
+| `nap publish <universe>` | Push current branch to origin (convenience shortcut) |
+| `nap push <universe>` | Push to a configurable remote (use `--remote` and `--branch`) |
+| `nap pull <url-or-name>` | Clone from URL or pull an existing universe |
+| `nap sync <universe>` | Pull current branch from default remote |
+| `nap remote add <universe> <name> <url>` | Add a remote |
+| `nap remote ls <universe>` | List remotes |
+| `nap remote rm <universe> <name>` | Remove a remote |
+| `nap revert <universe> -c <hash>` | Revert a commit |
+| `nap diff <base> <candidate>` | Diff two manifest files |
+| `nap merge <base> <current> <proposed>` | Three-way merge |
+| `nap content-hash <file>` | Compute SHA-256 content hash |
+| `nap schema <name>` | Print JSON schema (manifest or commit) |
 | `nap sign <uri>` | Sign a manifest (stub in v0) |
 | `nap verify <uri>` | Verify a manifest signature (stub in v0) |
+| `nap doctor [--repair]` | Run diagnostics and optionally auto-repair |
+| `nap status` | Show system status and provider info |
+| `nap choose backend --provider <type>` | Switch backend provider |
+
+### Command Notes
+
+**`publish` vs `push`:** `publish` is a convenience alias that always pushes the current branch to the `origin` remote. `push` is the full form — use `--remote` and `--branch` to control the target.
+
+**`sync` vs `pull`:** `sync` pulls the current branch from the default remote. `pull` accepts either a universe name (same as `sync`) or a URL (which clones the repository).
+
+**`init` vs `choose`:** `init` can both create a universe and configure a provider. `choose` only switches providers — use it when you want to change providers without creating a universe.
 
 Global options: `-d/--base-dir <path>` (default `~/.nap`), `-v/--verbose`, `-f/--format <yaml|json>`
 

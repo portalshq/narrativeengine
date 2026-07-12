@@ -28,9 +28,9 @@ import {
 import { CONFIG, ENTITY_TYPES } from "../constants.js";
 
 export function registerManagementTools(server: McpServer): void {
-  // ── nap_init_universe ──────────────────────────────────────────────────
+  // ── nap_init ────────────────────────────────────────────────────────
   server.registerTool(
-    "nap_init_universe",
+    "nap_init",
     {
       title: "Initialize Universe",
       description: `Initialize a new NAP universe repository.
