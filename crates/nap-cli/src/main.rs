@@ -29,12 +29,12 @@ use nap_core::{
     provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
     resolver::{ResolveOptions, ResolveResult, Resolver},
-    server::NapDoctor,
+    server::{LoreInstaller, NapDoctor},
     types::EntityType,
     uri::NapUri,
     vcs_lore::LoreBackend,
 };
-use std::io::IsTerminal;
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -132,11 +132,17 @@ enum ChooseCmd {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Install required dependencies.
+    Install {
+        /// Target to install (e.g., "lore").
+        target: String,
+    },
+
     /// Initialize NAP with provider selection.
     Init {
         /// Provider type: local, portals-cloud, or remote.
-        #[arg(long, default_value = "local")]
-        provider: String,
+        #[arg(long)]
+        provider: Option<String>,
 
         /// Remote URL (required for remote provider).
         #[arg(long)]
@@ -533,10 +539,11 @@ fn main() -> Result<()> {
             workspace_id,
         } => cmd_init(
             &base_dir,
-            &provider,
-            remote_url.as_deref(),
-            workspace_id.as_deref(),
+            provider,
+            remote_url,
+            workspace_id,
         ),
+        Commands::Install { target } => cmd_install(&base_dir, &target),
         Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
         Commands::Doctor { repair } => cmd_doctor(&base_dir, repair),
         Commands::Publish { universe } => cmd_publish(&base_dir, &universe),
@@ -642,6 +649,32 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+/// Prompt the user to select a provider type
+fn prompt_for_provider() -> Result<String> {
+    println!("Select where to store your projects:\n");
+    println!("  1. Local          Free. Installs local services.");
+    println!("  2. Portals Cloud  Sync and collaborate online.\n");
+    print!("Enter choice [1-2]: ");
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let choice = input.trim();
+
+    match choice {
+        "1" => Ok("local".to_string()),
+        "2" => Ok("portals-cloud".to_string()),
+        _ => {
+            // Accept direct provider names as well
+            if choice == "local" || choice == "portals-cloud" || choice == "remote" {
+                Ok(choice.to_string())
+            } else {
+                anyhow::bail!("Invalid choice. Please enter 1, 2, or a provider name.")
+            }
+        }
+    }
+}
+
 fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
     let repo_path = base_dir.join(universe);
     Repository::open(&repo_path, Box::new(LoreBackend::from_env()))
@@ -650,11 +683,18 @@ fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
 
 fn cmd_init(
     base_dir: &Path,
-    provider_str: &str,
-    remote_url: Option<&str>,
-    workspace_id: Option<&str>,
+    provider_opt: Option<String>,
+    remote_url: Option<String>,
+    workspace_id: Option<String>,
 ) -> Result<()> {
-    let provider_type = ProviderType::parse_from_str(provider_str)
+    // Prompt for provider if not specified
+    let provider_str = if let Some(p) = provider_opt {
+        p
+    } else {
+        prompt_for_provider()?
+    };
+
+    let provider_type = ProviderType::parse_from_str(&provider_str)
         .context(format!("invalid provider type '{provider_str}'"))?;
 
     let factory = ProviderFactory::new(base_dir);
@@ -683,11 +723,8 @@ fn cmd_init(
     rt.block_on(provider.initialize())
         .context("failed to initialize provider")?;
 
-    emit(format!(
-        "✓ Initialized NAP with provider: {}",
-        provider.name()
-    ));
-    emit(format!("  Provider type: {}", provider_type.as_str()));
+    emit(format!("✓ Initialized NAP with {}.", provider.name()));
+    emit(format!("  Type: {}", provider_type.as_str()));
     if let Some(url) = &remote_url {
         emit(format!("  Remote URL: {}", url));
     }
@@ -712,6 +749,18 @@ fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> R
         emit(format!("  Added remote 'origin' → {url}"));
     }
 
+    Ok(())
+}
+
+fn cmd_install(base_dir: &Path, target: &str) -> Result<()> {
+    match target {
+        "lore" => {
+            let installer = LoreInstaller::new(base_dir);
+            installer.install_all()?;
+            emit("✓ Lore CLI and server installed successfully.");
+        }
+        _ => anyhow::bail!("Unknown target '{}'. Available: 'lore'", target),
+    }
     Ok(())
 }
 
@@ -753,8 +802,8 @@ fn cmd_choose(base_dir: &Path, cmd: ChooseCmd) -> Result<()> {
             rt.block_on(provider.initialize())
                 .context("failed to initialize provider")?;
 
-            emit(format!("✓ Changed backend to: {}", provider.name()));
-            emit(format!("  Provider type: {}", provider_type.as_str()));
+            emit(format!("✓ Switched to {}.", provider.name()));
+            emit(format!("  Type: {}", provider_type.as_str()));
             if let Some(url) = &remote_url {
                 emit(format!("  Remote URL: {}", url));
             }
@@ -859,7 +908,7 @@ fn cmd_publish(base_dir: &Path, universe: &str) -> Result<()> {
     let repo = open_repo(base_dir, universe)?;
     repo.push(Some("origin"), None)
         .context("failed to publish to remote")?;
-    emit(format!("✓ Published '{universe}' to remote"));
+    emit(format!("✓ Published '{universe}'."));
     Ok(())
 }
 
@@ -901,7 +950,7 @@ fn cmd_status(base_dir: &Path) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     } else {
-        emit("No provider configured. Run 'nap init' to set up NAP.");
+        emit("No provider configured. Run 'nap init' to setup.");
     }
 
     Ok(())
@@ -911,7 +960,7 @@ fn cmd_sync(base_dir: &Path, universe: &str) -> Result<()> {
     let repo = open_repo(base_dir, universe)?;
     repo.pull(None, None)
         .context("failed to sync from remote")?;
-    emit(format!("✓ Synced '{universe}' with remote"));
+    emit(format!("✓ Synced '{universe}'."));
     Ok(())
 }
 
@@ -936,10 +985,7 @@ fn cmd_create(
     let (manifest, hash) = repo
         .create_entity(entity_type, entity_id, name, author)
         .context("failed to create entity")?;
-    emit(format!(
-        "✓ Created {} '{}' ({})",
-        entity_type, name, entity_id
-    ));
+    emit(format!("✓ Created {entity_type} '{name}'."));
     emit(format!("  URI:    {}", manifest.id));
     emit(format!("  Commit: {}", &hash[..12]));
     Ok(())

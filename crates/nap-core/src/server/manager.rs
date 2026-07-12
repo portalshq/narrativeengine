@@ -23,6 +23,9 @@ use super::{
     process::LoreProcessManager, version::verify_lore_installation,
 };
 
+use crate::server::error_ids;
+use crate::LoreInstaller;
+
 /// Server manager for Lore repository backend
 pub struct ServerManager {
     nap_home: std::path::PathBuf,
@@ -61,6 +64,27 @@ impl ServerManager {
 
         if !status.is_fully_compatible() {
             let message = status.status_message();
+            
+            // If completely missing, try to install automatically
+            if !status.cli_installed || !status.server_installed {
+                info!("Lore not detected, attempting automatic installation");
+                let installer = LoreInstaller::new(None);
+                installer.install_all().context(format!("[{}] Failed to automatically install Lore", error_ids::ERR_LORE_INSTALL_FAILED))?;
+                
+                // Re-verify after install
+                let new_status = verify_lore_installation()?;
+                if !new_status.is_fully_compatible() {
+                     anyhow::bail!(
+                        "[{}] Lore installation failed or is incompatible: {}. \
+                         Fix: run 'nap install lore' to manually install.",
+                        error_ids::ERR_LORE_INCOMPATIBLE,
+                        new_status.status_message()
+                    );
+                }
+                return Ok(());
+            }
+
+            // Incompatible but present
             error!(
                 installed = status.cli_installed,
                 cli_version = status.cli_version.as_ref().map(|v| v.raw.as_str()).unwrap_or("not detected"),
@@ -71,9 +95,10 @@ impl ServerManager {
                 message
             );
             anyhow::bail!(
-                "Lore installation is not compatible: {}. \
+                "[{}] Lore installation is incompatible: {}. \
                  Required version: {}. \
                  Fix: run 'nap install lore' to install the correct version.",
+                error_ids::ERR_LORE_INCOMPATIBLE,
                 message,
                 status.pinned_version
             );
@@ -92,8 +117,9 @@ impl ServerManager {
 
         // Generate configuration
         let config_files = generate_local_config(&self.nap_home).context(format!(
-            "Failed to generate Lore configuration at '{}'. \
+            "[{}] Failed to generate Lore configuration at '{}'. \
                  Check directory permissions and disk space.",
+            error_ids::ERR_LORE_CONFIG_FAILED,
             self.nap_home.display()
         ))?;
         tracing::debug!(config_path = %config_files.config_path.display(), "Lore config generated");
@@ -101,8 +127,9 @@ impl ServerManager {
         // Generate certificates
         let cert_dir = self.nap_home.join("lore").join("certs");
         let cert_files = generate_certificates(&cert_dir).context(format!(
-            "Failed to generate Lore certificates at '{}'. \
+            "[{}] Failed to generate Lore certificates at '{}'. \
                  Check directory permissions.",
+            error_ids::ERR_LORE_CERT_FAILED,
             cert_dir.display()
         ))?;
         tracing::debug!(
@@ -221,8 +248,9 @@ impl ServerManager {
         // Release lock on failure
         lock.release()?;
         anyhow::bail!(
-            "Lore server failed to become healthy after {} retries. \
+            "[{}] Lore server failed to become healthy after {} retries. \
              Check logs at '{}' for startup errors.",
+            error_ids::ERR_LORE_STARTUP_FAILED,
             self.max_retries,
             self.nap_home
                 .join("lore")

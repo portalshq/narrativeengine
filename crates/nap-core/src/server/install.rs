@@ -5,26 +5,28 @@
 //! Integrates the official Lore installer behind `nap install lore`
 //! to download, install, and verify Lore CLI and server binaries.
 
+use crate::PINNED_LORE_VERSION;
+use crate::server::error_ids;
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::Path;
 use std::process::Command;
 use tracing::{error, info};
+use which;
 
 /// Lore installer for managing Lore CLI and server installation
 pub struct LoreInstaller {
-    install_dir: std::path::PathBuf,
+    install_dir: Option<std::path::PathBuf>,
     repo: String,
     version: String,
 }
 
 impl LoreInstaller {
     /// Create a new Lore installer
-    pub fn new(install_dir: &Path) -> Self {
+    pub fn new(install_dir: Option<std::path::PathBuf>) -> Self {
         Self {
-            install_dir: install_dir.to_path_buf(),
+            install_dir,
             repo: "EpicGames/lore".to_string(),
-            version: "latest".to_string(),
+            version: PINNED_LORE_VERSION.to_string(),
         }
     }
 
@@ -73,7 +75,7 @@ impl LoreInstaller {
             self.repo, self.version
         );
 
-        self.run_install_script(&["--version", &self.version])?;
+        self.run_install_script(&["--server", "--version", &self.version])?;
 
         info!("Lore CLI and server installed successfully");
         Ok(())
@@ -99,23 +101,34 @@ impl LoreInstaller {
         }
 
         // Build command with install directory and other args
-        let mut cmd_args = vec![
-            script_path.to_str().unwrap(),
-            "--install-dir",
-            self.install_dir.to_str().unwrap(),
-        ];
+        let mut cmd_args = vec![script_path.to_str().unwrap()];
+        if let Some(dir) = &self.install_dir {
+            cmd_args.push("--install-dir");
+            cmd_args.push(dir.to_str().unwrap());
+        }
         cmd_args.extend(args.iter().copied());
 
         // Execute script
         let output = Command::new("bash")
             .args(&cmd_args)
             .output()
-            .context("Failed to execute Lore install script")?;
+            .context(format!(
+                "[{}] Failed to execute Lore install script",
+                error_ids::ERR_LORE_INSTALL_FAILED
+            ))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            error!("Lore install script failed: {}", stderr);
-            anyhow::bail!("Lore install script failed with status: {}", output.status);
+            error!(
+                "[{}] Lore install script failed: {}",
+                error_ids::ERR_LORE_INSTALL_FAILED,
+                stderr
+            );
+            anyhow::bail!(
+                "[{}] Lore install script failed with status: {}",
+                error_ids::ERR_LORE_INSTALL_FAILED,
+                output.status
+            );
         }
 
         // Clean up script
@@ -126,19 +139,31 @@ impl LoreInstaller {
 
     /// Download install script to temporary location
     fn download_script(&self, url: &str) -> Result<std::path::PathBuf> {
-        let response =
-            reqwest::blocking::get(url).context("Failed to download Lore install script")?;
+        let response = reqwest::blocking::get(url).context(format!(
+            "[{}] Failed to download Lore install script",
+            error_ids::ERR_LORE_DOWNLOAD_FAILED
+        ))?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Failed to download script: HTTP {}", response.status());
+            anyhow::bail!(
+                "[{}] Failed to download script: HTTP {}",
+                error_ids::ERR_LORE_DOWNLOAD_FAILED,
+                response.status()
+            );
         }
 
-        let script_content = response.text().context("Failed to read script content")?;
+        let script_content = response.text().context(format!(
+            "[{}] Failed to read script content",
+            error_ids::ERR_LORE_DOWNLOAD_FAILED
+        ))?;
 
         // Write to temporary file
         let temp_dir = std::env::temp_dir();
         let script_path = temp_dir.join("lore-install.sh");
-        fs::write(&script_path, script_content).context("Failed to write install script")?;
+        fs::write(&script_path, script_content).context(format!(
+            "[{}] Failed to write install script",
+            error_ids::ERR_LORE_DOWNLOAD_FAILED
+        ))?;
 
         Ok(script_path)
     }
@@ -170,17 +195,27 @@ impl LoreInstaller {
 
     /// Check if binary exists and is executable
     fn check_binary(&self, name: &str) -> bool {
-        let binary_path = self.install_dir.join(name);
-        binary_path.exists() && binary_path.is_file()
+        if let Some(dir) = &self.install_dir {
+            let binary_path = dir.join(name);
+            binary_path.exists() && binary_path.is_file()
+        } else {
+            // Check system PATH
+            which::which(name).is_ok()
+        }
     }
 
     /// Get version from binary
     fn get_binary_version(&self, name: &str) -> Result<String> {
-        let binary_path = self.install_dir.join(name);
+        let binary_path = if let Some(dir) = &self.install_dir {
+            dir.join(name).to_string_lossy().to_string()
+        } else {
+            name.to_string() // Rely on PATH
+        };
+
         let output = Command::new(&binary_path)
             .arg("--version")
             .output()
-            .context(format!("Failed to execute {} --version", name))?;
+            .context(format!("Failed to execute {} --version", binary_path))?;
 
         if !output.status.success() {
             anyhow::bail!("{} --version failed", name);
@@ -191,8 +226,13 @@ impl LoreInstaller {
 
     /// Add install directory to PATH
     pub fn add_to_path(&self) -> Result<()> {
-        let install_dir_str = self
-            .install_dir
+        let install_dir = if let Some(dir) = &self.install_dir {
+            dir
+        } else {
+            return Ok(()); // Already in PATH or system default
+        };
+
+        let install_dir_str = install_dir
             .to_str()
             .context("Install directory path is not valid UTF-8")?;
 
@@ -268,7 +308,7 @@ mod tests {
     #[test]
     fn test_installer_creation() {
         let temp_dir = TempDir::new().unwrap();
-        let installer = LoreInstaller::new(temp_dir.path());
+        let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()));
         assert_eq!(installer.repo, "EpicGames/lore");
         assert_eq!(installer.version, "latest");
     }
@@ -276,7 +316,7 @@ mod tests {
     #[test]
     fn test_installer_custom_repo() {
         let temp_dir = TempDir::new().unwrap();
-        let installer = LoreInstaller::new(temp_dir.path())
+        let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()))
             .with_repo("custom/repo")
             .with_version("v1.0.0");
         assert_eq!(installer.repo, "custom/repo");
