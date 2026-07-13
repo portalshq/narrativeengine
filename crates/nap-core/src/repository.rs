@@ -70,7 +70,7 @@ impl Repository {
 
     /// Initialize a new NAP repository.
     pub fn init(path: &Path, universe: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
-        let repo_root = path.join(universe);
+        let repo_root = path.to_path_buf();
         if repo_root.join(NAP_DIR).exists() {
             return Err(NapError::RepositoryAlreadyExists(
                 repo_root.display().to_string(),
@@ -609,8 +609,9 @@ mod lore_integration_tests {
     fn setup_lore_repo() -> (TempDir, Repository) {
         let universe = format!("ri-{}", unique_suffix());
         let tmp = TempDir::new().unwrap();
+        let repo_path = tmp.path().join(&universe);
         let repo =
-            Repository::init(tmp.path(), &universe, Box::new(LoreBackend::from_env())).unwrap();
+            Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env())).unwrap();
         (tmp, repo)
     }
 

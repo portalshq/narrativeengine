@@ -6,7 +6,8 @@ use tempfile::TempDir;
 
 pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
     let tmp = TempDir::new().unwrap();
-    let repo = Repository::init(tmp.path(), "contract-test", Box::new(backend)).unwrap();
+    let repo_path = tmp.path().join("contract-test");
+    let repo = Repository::init(&repo_path, "contract-test", Box::new(backend)).unwrap();
 
     // Contract: init creates structure
     assert!(repo.root.join(".nap").exists());

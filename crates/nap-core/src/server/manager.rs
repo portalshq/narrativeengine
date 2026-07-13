@@ -43,7 +43,7 @@ impl ServerManager {
             nap_home: nap_home.to_path_buf(),
             http_port: 41339, // Default Lore HTTP port
             health_check_timeout: Duration::from_secs(5),
-            startup_timeout: Duration::from_secs(30),
+            startup_timeout: Duration::from_secs(10),
             retry_interval: Duration::from_secs(1),
             max_retries: 3,
         }

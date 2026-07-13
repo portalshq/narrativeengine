@@ -801,6 +801,7 @@ fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> R
     std::fs::create_dir_all(&tmp_path).context("failed to create temporary directory for init")?;
 
     // 2. Perform initialization in temporary path
+    emit("Creating universe repository...");
     let result = Repository::init(&tmp_path, universe, Box::new(LoreBackend::from_env()));
 
     match result {

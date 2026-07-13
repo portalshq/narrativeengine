@@ -301,12 +301,9 @@ pub fn commit_verify_id(json_str: String) -> napi::Result<bool> {
 
 #[napi(js_name = "repoInit")]
 pub fn repo_init(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = Repository::init(
-        Path::new(&base_path),
-        &universe,
-        Box::new(LoreBackend::from_env()),
-    )
-    .map_err(map_error)?;
+    let repo_path = Path::new(&base_path).join(&universe);
+    let repo = Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env()))
+        .map_err(map_error)?;
     let result = serde_json::json!({
         "root": repo.root.to_string_lossy(),
         "universe": repo.universe,

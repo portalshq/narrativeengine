@@ -61,12 +61,8 @@ fn open_repo(base_path: &str, universe: &str) -> Result<Repository, PyErr> {
 
 /// Helper: init a repository at base_path/universe.
 fn init_repo(base_path: &str, universe: &str) -> Result<Repository, PyErr> {
-    Repository::init(
-        Path::new(base_path),
-        universe,
-        Box::new(LoreBackend::from_env()),
-    )
-    .map_err(map_error)
+    let repo_path = Path::new(base_path).join(universe);
+    Repository::init(&repo_path, universe, Box::new(LoreBackend::from_env())).map_err(map_error)
 }
 
 // ═══════════════════════════════════════════════════════════════════════

@@ -287,7 +287,8 @@ mod unit_tests {
 
     fn setup() -> (TempDir, Resolver) {
         let tmp = TempDir::new().unwrap();
-        let repo = Repository::init(tmp.path(), "starwars", Box::new(MockBackend::new())).unwrap();
+        let repo_path = tmp.path().join("starwars");
+        let repo = Repository::init(&repo_path, "starwars", Box::new(MockBackend::new())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
@@ -490,8 +491,9 @@ mod lore_tests {
     fn setup_lore() -> (TempDir, Resolver, String) {
         let universe = format!("lr-{}", unique_suffix());
         let tmp = TempDir::new().unwrap();
+        let repo_path = tmp.path().join(&universe);
         let repo =
-            Repository::init(tmp.path(), &universe, Box::new(LoreBackend::from_env())).unwrap();
+            Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo

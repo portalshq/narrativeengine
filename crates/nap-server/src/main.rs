@@ -249,27 +249,25 @@ async fn handle_init(
     State(state): State<Arc<AppState>>,
     Path(universe): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo = Repository::init(
-        &state.base_path,
-        &universe,
-        Box::new(LoreBackend::from_env()),
-    )
-    .map_err(|e| {
-        let (status, code) = match &e {
-            nap_core::NapError::RepositoryAlreadyExists(_) => {
-                (StatusCode::CONFLICT, "ALREADY_EXISTS")
-            }
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, "INIT_FAILED"),
-        };
-        error!(error = %e, universe = %universe, "init failed");
-        (
-            status,
-            Json(ApiError {
-                error: e.to_string(),
-                code: code.to_string(),
-            }),
-        )
-    })?;
+    let repo_path = state.base_path.join(&universe);
+    let repo = Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env())).map_err(
+        |e| {
+            let (status, code) = match &e {
+                nap_core::NapError::RepositoryAlreadyExists(_) => {
+                    (StatusCode::CONFLICT, "ALREADY_EXISTS")
+                }
+                _ => (StatusCode::INTERNAL_SERVER_ERROR, "INIT_FAILED"),
+            };
+            error!(error = %e, universe = %universe, "init failed");
+            (
+                status,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: code.to_string(),
+                }),
+            )
+        },
+    )?;
 
     Ok(Json(serde_json::json!({
         "success": true,
