@@ -105,14 +105,14 @@ mode = "local"
 
 [immutable_store.local]
 path = "{}"
-flush_delay_seconds = 10
+flush_delay_seconds = 0
 
 [mutable_store]
 mode = "local"
 
 [mutable_store.local]
 path = "{}"
-flush_delay_seconds = 10
+flush_delay_seconds = 0
 
 [lock_store]
 mode = "local"
