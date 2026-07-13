@@ -72,7 +72,9 @@ impl Provider for LocalProvider {
     }
 
     fn lore_url_base(&self) -> Result<String> {
-        Ok("lore://localhost:41337".to_string())
+        // Use HTTP instead of QUIC for local development to reduce connection overhead
+        // HTTP is faster for local development and avoids QUIC connection establishment delays
+        Ok("http://localhost:41339".to_string())
     }
 
     fn workspace_id(&self) -> &str {
