@@ -73,7 +73,7 @@ keep_alive = 500
 max_bidi_streams = 8
 num_listeners = 10
 transport_bits_per_second = 1_073_741_824  # 1 gbit/s
-transport_rtt = 100  # 100 ms
+transport_rtt = 1  # 1 ms for local development (was 100ms)
 handler_timeout_seconds = 50
 
 # gRPC server settings
