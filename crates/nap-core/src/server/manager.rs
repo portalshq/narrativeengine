@@ -218,7 +218,10 @@ impl ServerManager {
         lock.write_daemon_pid(daemon_pid)
             .context("Failed to write server PID to lock file")?;
 
-        tracing::info!(daemon_pid, "Lore daemon spawned in detached mode, waiting for health check");
+        tracing::info!(
+            daemon_pid,
+            "Lore daemon spawned in detached mode, waiting for health check"
+        );
 
         // Wait for server to become healthy
         let mut retries = 0;
@@ -317,7 +320,13 @@ impl ServerManager {
     pub async fn status(&self) -> Result<ServerStatus> {
         let lock_file = self.nap_home.join("lore").join("pid");
 
-        let running = if lock_file.exists() {
+        // Prioritize health check over PID tracking since the server may be re-parented
+        let healthy = LoreProcessManager::health_check(self.http_port, self.health_check_timeout).await?;
+
+        // Only check PID if health check fails, to provide better error messages
+        let running = if healthy {
+            true
+        } else if lock_file.exists() {
             let pid_str =
                 std::fs::read_to_string(&lock_file).context("Failed to read lock file")?;
             let pid: u32 = pid_str
@@ -326,12 +335,6 @@ impl ServerManager {
                 .context("Failed to parse PID from lock file")?;
 
             LoreProcessManager::is_running(pid)
-        } else {
-            false
-        };
-
-        let healthy = if running {
-            LoreProcessManager::health_check(self.http_port, self.health_check_timeout).await?
         } else {
             false
         };

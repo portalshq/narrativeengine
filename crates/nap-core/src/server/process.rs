@@ -30,33 +30,6 @@ impl LoreProcessManager {
         }
     }
 
-    /// Find the lore server PID by searching for processes with the name "loreserver"
-    #[cfg(unix)]
-    fn find_lore_server_pid(&self) -> Result<u32> {
-        use std::process::Command;
-        
-        // Give the process a moment to start
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        
-        // Use pgrep to find the lore server process
-        let output = Command::new("pgrep")
-            .arg("loreserver")
-            .output()
-            .context("Failed to run pgrep to find lore server process")?;
-        
-        if output.status.success() {
-            let pid_str = String::from_utf8_lossy(&output.stdout);
-            let pid = pid_str
-                .lines()
-                .next()
-                .and_then(|line| line.trim().parse().ok())
-                .context("Failed to parse lore server PID from pgrep output")?;
-            Ok(pid)
-        } else {
-            anyhow::bail!("pgrep failed to find lore server process");
-        }
-    }
-
     /// Start Lore server as a detached background process
     #[allow(clippy::needless_return)]
     pub fn start(&self) -> Result<u32> {
@@ -88,63 +61,20 @@ impl LoreProcessManager {
         // Launch Lore server with configuration in detached mode
         #[cfg(unix)]
         {
-            use nix::unistd::{fork, ForkResult, setsid};
-            use std::process::exit;
+            // Spawn lore server directly and drop the Child handle immediately.
+            // The process will be re-parented to init when the parent exits.
+            // We rely on health checks rather than PID tracking for server status.
+            let child = Command::new("loreserver")
+                .arg("--config")
+                .arg(&self.config_path)
+                .stdout(Stdio::from(log_file.try_clone()?))
+                .stderr(Stdio::from(log_file))
+                .spawn()
+                .context("Failed to start Lore server. Is loreserver installed and on PATH?")?;
 
-            // Double-fork to create a true daemon process that persists after parent exits
-            match unsafe { fork() } {
-                Ok(ForkResult::Parent { child }) => {
-                    // Parent: wait for first child to exit
-                    let _ = nix::sys::wait::waitpid(child, None);
-                    
-                    // The first child has forked again and exited, so the grandchild
-                    // (actual lore server) is now orphaned and re-parented to init
-                    // We need to find the lore server PID by searching for it
-                    let lore_pid = self.find_lore_server_pid()?;
-                    tracing::info!(pid = lore_pid, "Lore server started in detached mode");
-                    return Ok(lore_pid);
-                }
-                Ok(ForkResult::Child) => {
-                    // First child: create new session to detach from controlling terminal
-                    if setsid().is_err() {
-                        tracing::error!("Failed to create new session");
-                        exit(1);
-                    }
-
-                    // Second fork to ensure the grandchild is not a session leader
-                    match unsafe { fork() } {
-                        Ok(ForkResult::Parent { .. }) => {
-                            // First child exits immediately, grandchild becomes orphan
-                            exit(0);
-                        }
-                        Ok(ForkResult::Child) => {
-                            // Grandchild: this is the actual daemon process
-                            // Redirect stdout and stderr to log file
-                            let log_file_clone = log_file.try_clone()?;
-
-                            // Spawn the lore server process
-                            let _child = Command::new("loreserver")
-                                .arg("--config")
-                                .arg(&self.config_path)
-                                .stdout(Stdio::from(log_file_clone))
-                                .stderr(Stdio::from(log_file))
-                                .spawn()
-                                .context("Failed to spawn lore server process")?;
-
-                            // Grandchild exits immediately after spawning lore server
-                            // The lore server will be re-parented to init
-                            exit(0);
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to second fork: {}", e);
-                            exit(1);
-                        }
-                    }
-                }
-                Err(e) => {
-                    anyhow::bail!("Failed to fork: {}", e);
-                }
-            }
+            let pid = child.id();
+            tracing::info!(pid, "Lore server started in detached mode");
+            return Ok(pid);
         }
 
         #[cfg(windows)]
