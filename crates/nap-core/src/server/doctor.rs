@@ -300,8 +300,7 @@ impl NapDoctor {
                 })
             }
             "Lore Installation" => {
-                let install_dir = dirs::home_dir().unwrap().join(".local").join("bin");
-                let installer = LoreInstaller::new(&install_dir);
+                let installer = LoreInstaller::new(None);
                 installer.install_all()?;
                 Ok(RepairResult {
                     check_name: check.name.clone(),

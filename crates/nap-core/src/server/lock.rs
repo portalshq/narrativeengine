@@ -62,7 +62,7 @@ impl ProcessLock {
                 tracing::warn!(
                     pid = existing_pid,
                     lock_file = %self.lock_file.display(),
-                    "Lore server is already running (lock held by daemon PID {})",
+                    "Lore server is already running (lock held by PID {})",
                     existing_pid
                 );
                 return Ok(false);

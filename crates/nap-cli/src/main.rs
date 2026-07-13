@@ -696,13 +696,13 @@ fn cmd_init(
     workspace_id: Option<String>,
     remote: Option<&str>,
 ) -> Result<()> {
-    // ── Step 1: Configure provider if requested or on first run ────────
+    // ── Step 1: Check if provider is configured ────────
+    let mut provider_manager = ProviderManager::new(base_dir);
+    let provider_configured = provider_manager.load_configured_provider()?.is_some();
+
+    // ── Step 2: Configure provider if requested or on first run ────────
     let should_configure_provider = provider_opt.is_some()
-        || (universe.is_none() && {
-            // No universe name and no --provider: this is the only thing
-            // we can do, so prompt.
-            true
-        });
+        || (!provider_configured && (universe.is_some() || universe.is_none()));
 
     if should_configure_provider {
         let provider_str = if let Some(p) = provider_opt {
@@ -729,7 +729,6 @@ fn cmd_init(
             }
         };
 
-        let mut provider_manager = ProviderManager::new(base_dir);
         provider_manager.set_active_provider(provider.clone());
         provider_manager
             .save_provider_config(provider.as_ref())
@@ -752,8 +751,14 @@ fn cmd_init(
         ));
     }
 
-    // ── Step 2: Initialize universe repository if name given ───────────
+    // ── Step 3: Initialize universe repository if name given ───────────
     if let Some(universe_name) = universe {
+        // Ensure dependencies are installed before initializing
+        let installer = LoreInstaller::new(None);
+        emit("Installing Lore dependencies...");
+        installer.install_all()?;
+        emit("✓ Lore CLI and server installed.");
+
         cmd_init_universe(base_dir, universe_name, remote)?;
     } else if !should_configure_provider {
         // No universe, no --provider → nothing to do
@@ -764,26 +769,51 @@ fn cmd_init(
 }
 
 fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> Result<()> {
-    let repo = Repository::init(base_dir, universe, Box::new(LoreBackend::from_env()))
-        .context(format!("failed to initialize universe '{universe}'"))?;
-    emit(format!(
-        "✓ Initialized universe '{universe}' at {}/{universe}",
-        base_dir.display()
-    ));
+    // 1. Create a temporary path for atomic initialization
+    let tmp_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp_path = base_dir.join(format!(".__nap_init_{tmp_suffix}"));
+    std::fs::create_dir_all(&tmp_path).context("failed to create temporary directory for init")?;
 
-    if let Some(url) = remote {
-        repo.add_remote("origin", url)
-            .context(format!("failed to add remote origin '{url}'"))?;
-        emit(format!("  Added remote 'origin' → {url}"));
+    // 2. Perform initialization in temporary path
+    let result = Repository::init(&tmp_path, universe, Box::new(LoreBackend::from_env()));
+
+    match result {
+        Ok(repo) => {
+            // 3. Success: rename to final destination
+            let final_path = base_dir.join(universe);
+            std::fs::rename(&tmp_path, &final_path).context(format!(
+                "failed to move initialized universe to {}",
+                final_path.display()
+            ))?;
+
+            emit(format!(
+                "✓ Initialized universe '{universe}' at {}",
+                final_path.display()
+            ));
+
+            if let Some(url) = remote {
+                repo.add_remote("origin", url)
+                    .context(format!("failed to add remote origin '{url}'"))?;
+                emit(format!("  Added remote 'origin' → {url}"));
+            }
+            Ok(())
+        }
+        Err(e) => {
+            // 4. Failure: clean up temporary path
+            std::fs::remove_dir_all(&tmp_path).ok();
+            Err(e.into())
+        }
     }
-
-    Ok(())
 }
 
-fn cmd_install(base_dir: &Path, target: &str) -> Result<()> {
+fn cmd_install(_base_dir: &Path, target: &str) -> Result<()> {
     match target {
         "lore" => {
-            let installer = LoreInstaller::new(Some(base_dir.to_path_buf()));
+            let installer = LoreInstaller::new(None);
+            emit("Installing Lore CLI and server...");
             installer.install_all()?;
             emit("✓ Lore CLI and server installed successfully.");
         }

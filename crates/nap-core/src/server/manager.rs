@@ -23,8 +23,8 @@ use super::{
     process::LoreProcessManager, version::verify_lore_installation,
 };
 
-use crate::server::error_ids;
 use crate::LoreInstaller;
+use crate::server::error_ids;
 
 /// Server manager for Lore repository backend
 pub struct ServerManager {
@@ -64,17 +64,20 @@ impl ServerManager {
 
         if !status.is_fully_compatible() {
             let message = status.status_message();
-            
+
             // If completely missing, try to install automatically
             if !status.cli_installed || !status.server_installed {
                 info!("Lore not detected, attempting automatic installation");
                 let installer = LoreInstaller::new(None);
-                installer.install_all().context(format!("[{}] Failed to automatically install Lore", error_ids::ERR_LORE_INSTALL_FAILED))?;
-                
+                installer.install_all().context(format!(
+                    "[{}] Failed to automatically install Lore",
+                    error_ids::ERR_LORE_INSTALL_FAILED
+                ))?;
+
                 // Re-verify after install
                 let new_status = verify_lore_installation()?;
                 if !new_status.is_fully_compatible() {
-                     anyhow::bail!(
+                    anyhow::bail!(
                         "[{}] Lore installation failed or is incompatible: {}. \
                          Fix: run 'nap install lore' to manually install.",
                         error_ids::ERR_LORE_INCOMPATIBLE,
@@ -173,8 +176,8 @@ impl ServerManager {
                 self.nap_home.join("lore").join("pid").display()
             );
             anyhow::bail!(
-                "Server lock is held by daemon PID {} but the server is not responding to health checks. \
-                 The daemon may have crashed. Try: nap doctor, or manually remove '{}'.",
+                "Lore server (PID {}) is not responding. \
+                 It may have crashed. Try: nap doctor, or manually remove '{}'.",
                 daemon_pid,
                 self.nap_home.join("lore").join("pid").display()
             );
@@ -214,7 +217,7 @@ impl ServerManager {
         // Write the actual daemon PID to the lock file
         let daemon_pid = child.id();
         lock.write_daemon_pid(daemon_pid)
-            .context("Failed to write daemon PID to lock file")?;
+            .context("Failed to write server PID to lock file")?;
 
         tracing::info!(daemon_pid, "Lore daemon spawned, waiting for health check");
 

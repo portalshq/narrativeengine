@@ -133,10 +133,12 @@ fn parse_lore_version(version_str: &str) -> Result<Version> {
 
 /// Check if the installed Lore version **exactly** matches the pinned version.
 ///
-/// The comparison is a strict string equality of the raw version tokens,
-/// so `"0.8.4"` matches but `"0.8.4-nightly"` or `"0.8.4-stable"` does not.
+/// Build metadata after `+` (e.g. `0.8.4+283`) is stripped before
+/// comparison per the semver spec. Pre-release tags like `-nightly` or
+/// `-stable` are **not** stripped and will cause a mismatch.
 pub fn check_lore_compatibility(installed: &LoreVersionInfo) -> Result<bool> {
-    Ok(installed.raw == PINNED_LORE_VERSION)
+    let installed_version = installed.raw.split('+').next().unwrap_or(&installed.raw);
+    Ok(installed_version == PINNED_LORE_VERSION)
 }
 
 // ── Full installation verification ──────────────────────────────────────
@@ -146,7 +148,7 @@ pub fn verify_lore_installation() -> Result<LoreInstallationStatus> {
     let cli_version = match detect_lore_version() {
         Ok(v) => Some(v),
         Err(e) => {
-            tracing::warn!("Failed to detect Lore CLI version: {}", e);
+            tracing::debug!("Lore CLI not detected: {}", e);
             None
         }
     };
@@ -154,7 +156,7 @@ pub fn verify_lore_installation() -> Result<LoreInstallationStatus> {
     let server_version = match detect_loreserver_version() {
         Ok(v) => Some(v),
         Err(e) => {
-            tracing::warn!("Failed to detect Lore server version: {}", e);
+            tracing::debug!("Lore server not detected: {}", e);
             None
         }
     };
@@ -246,14 +248,8 @@ mod tests {
 
     #[test]
     fn test_extract_version_string() {
-        assert_eq!(
-            extract_version_string("lore 0.8.4").unwrap(),
-            "0.8.4"
-        );
-        assert_eq!(
-            extract_version_string("loreserver 0.8.4").unwrap(),
-            "0.8.4"
-        );
+        assert_eq!(extract_version_string("lore 0.8.4").unwrap(), "0.8.4");
+        assert_eq!(extract_version_string("loreserver 0.8.4").unwrap(), "0.8.4");
         assert_eq!(extract_version_string("lore 0.8.4\n").unwrap(), "0.8.4");
     }
 
@@ -298,6 +294,17 @@ mod tests {
         let installed = LoreVersionInfo {
             parsed: Version::new(0, 8, 4),
             raw: "0.8.4".to_string(),
+        };
+        assert!(check_lore_compatibility(&installed).unwrap());
+    }
+
+    #[test]
+    fn test_compatibility_ignores_build_metadata() {
+        // "0.8.4+283" must match pinned "0.8.4" — build metadata is
+        // ignored per the semver specification.
+        let installed = LoreVersionInfo {
+            parsed: Version::new(0, 8, 4),
+            raw: "0.8.4+283".to_string(),
         };
         assert!(check_lore_compatibility(&installed).unwrap());
     }

@@ -42,6 +42,19 @@ impl LoreInstaller {
         self
     }
 
+    /// Return the version with a `v` prefix for GitHub release tag lookups.
+    ///
+    /// GitHub releases use tags like `v0.8.4`, but [`PINNED_LORE_VERSION`]
+    /// and `lore --version` report `0.8.4` (no prefix). The install script
+    /// resolves releases by tag, so we must add the prefix here.
+    fn tag_version(&self) -> String {
+        if self.version.starts_with('v') {
+            self.version.clone()
+        } else {
+            format!("v{}", self.version)
+        }
+    }
+
     /// Install Lore CLI
     pub fn install_cli(&self) -> Result<()> {
         info!(
@@ -49,7 +62,7 @@ impl LoreInstaller {
             self.repo, self.version
         );
 
-        self.run_install_script(&["--version", &self.version])?;
+        self.run_install_script(&["--version", &self.tag_version()])?;
 
         info!("Lore CLI installed successfully");
         Ok(())
@@ -62,7 +75,7 @@ impl LoreInstaller {
             self.repo, self.version
         );
 
-        self.run_install_script(&["--server", "--version", &self.version])?;
+        self.run_install_script(&["--server", "--version", &self.tag_version()])?;
 
         info!("Lore server installed successfully");
         Ok(())
@@ -316,6 +329,20 @@ mod tests {
         let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()));
         assert_eq!(installer.repo, "EpicGames/lore");
         assert_eq!(installer.version, PINNED_LORE_VERSION);
+        // Tag version must have the `v` prefix for GitHub release lookups
+        assert_eq!(installer.tag_version(), format!("v{}", PINNED_LORE_VERSION));
+    }
+
+    #[test]
+    fn test_tag_version_prefix() {
+        let temp_dir = TempDir::new().unwrap();
+        let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()));
+        assert_eq!(installer.tag_version(), "v0.8.4");
+
+        // Already prefixed — should not double-prefix
+        let installer2 =
+            LoreInstaller::new(Some(temp_dir.path().to_path_buf())).with_version("v1.0.0");
+        assert_eq!(installer2.tag_version(), "v1.0.0");
     }
 
     #[test]
