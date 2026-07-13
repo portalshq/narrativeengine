@@ -209,17 +209,16 @@ impl ServerManager {
     async fn start_internal(&self, lock: &mut ProcessLock) -> Result<()> {
         let process_manager = LoreProcessManager::new(&self.nap_home);
 
-        // Start the process
-        let child = process_manager
+        // Start the process in detached mode
+        let daemon_pid = process_manager
             .start()
             .context("Failed to start Lore server process")?;
 
         // Write the actual daemon PID to the lock file
-        let daemon_pid = child.id();
         lock.write_daemon_pid(daemon_pid)
             .context("Failed to write server PID to lock file")?;
 
-        tracing::info!(daemon_pid, "Lore daemon spawned, waiting for health check");
+        tracing::info!(daemon_pid, "Lore daemon spawned in detached mode, waiting for health check");
 
         // Wait for server to become healthy
         let mut retries = 0;

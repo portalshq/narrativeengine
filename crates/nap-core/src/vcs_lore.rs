@@ -34,6 +34,7 @@
 
 use std::path::Path;
 use std::process::Command;
+use std::time::Instant;
 
 use crate::error::NapError;
 use crate::grpc_client::{LoreGrpcClient, block_on_grpc};
@@ -72,14 +73,19 @@ impl LoreProcessRunner {
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
+        let args_vec: Vec<String> = args
+            .into_iter()
+            .map(|s| s.as_ref().to_string_lossy().into_owned())
+            .collect();
         let bin = Self::binary();
         let mut cmd = Command::new(&bin);
-        cmd.args(args);
+        cmd.args(&args_vec);
 
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
 
+        let start = Instant::now();
         // Safety: we capture output — no interactive TTY needed.
         let output = cmd.output().map_err(|e| {
             NapError::VcsError(format!(
@@ -87,6 +93,14 @@ impl LoreProcessRunner {
                 bin, e, bin
             ))
         })?;
+        let duration = start.elapsed();
+        if duration > std::time::Duration::from_secs(5) {
+            tracing::warn!(
+                duration_ms = duration.as_millis(),
+                command = format!("{} {:?}", bin, args_vec),
+                "lore command took > 5s — check Lore server health"
+            );
+        }
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -212,6 +226,16 @@ impl LoreBackend {
     /// Note: For new code, prefer using the RepositoryApi with Provider architecture
     /// instead of this legacy environment-based constructor.
     pub fn from_env() -> Self {
+        // Ensure the Lore server is running
+        if let Ok(nap_dir) = std::env::var("NAP_DIR") {
+            let manager = crate::server::manager::ServerManager::new(Path::new(&nap_dir));
+            let _ = tokio::runtime::Handle::try_current().map(|handle| {
+                handle.block_on(async {
+                    let _ = manager.ensure_running().await;
+                });
+            });
+        }
+
         let base = std::env::var("NAP_LORE_URL_BASE")
             .unwrap_or_else(|_| "lore://localhost:41337".to_string());
         let workspace_id =

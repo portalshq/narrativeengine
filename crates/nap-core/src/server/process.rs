@@ -6,7 +6,7 @@
 
 use anyhow::{Context, Result};
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 /// Lore server process manager
@@ -31,7 +31,7 @@ impl LoreProcessManager {
     }
 
     /// Start Lore server as a detached background process
-    pub fn start(&self) -> Result<Child> {
+    pub fn start(&self) -> Result<u32> {
         // Ensure log directory exists
         if let Some(parent) = self.log_path.parent() {
             std::fs::create_dir_all(parent).context("Failed to create log directory")?;
@@ -54,21 +54,62 @@ impl LoreProcessManager {
         tracing::info!(
             config = %self.config_path.display(),
             log = %self.log_path.display(),
-            "Starting Lore server"
+            "Starting Lore server in detached mode"
         );
 
-        // Launch Lore server with configuration
-        let child = Command::new("loreserver")
-            .arg("--config")
-            .arg(&self.config_path)
-            .stdout(Stdio::from(log_file.try_clone()?))
-            .stderr(Stdio::from(log_file))
-            .spawn()
-            .context("Failed to start Lore server. Is loreserver installed and on PATH?")?;
+        // Launch Lore server with configuration in detached mode
+        #[cfg(unix)]
+        {
+            // Use setsid to spawn the process in a new session, which prevents it from
+            // receiving SIGHUP when the parent process exits. This is the standard Unix
+            // way to run a daemon process.
+            let child = Command::new("setsid")
+                .arg("loreserver")
+                .arg("--config")
+                .arg(&self.config_path)
+                .stdout(Stdio::from(log_file.try_clone()?))
+                .stderr(Stdio::from(log_file))
+                .spawn()
+                .context("Failed to start Lore server. Is loreserver installed and on PATH?")?;
 
-        tracing::info!(pid = child.id(), "Lore server started successfully");
+            let pid = child.id();
+            tracing::info!(pid, "Lore server started in detached mode using setsid");
+            return Ok(pid);
+        }
 
-        Ok(child)
+        #[cfg(windows)]
+        {
+            use windows_sys::Win32::System::Threading::DETACHED_PROCESS;
+            use std::os::windows::process::CommandExt;
+
+            let child = Command::new("loreserver")
+                .arg("--config")
+                .arg(&self.config_path)
+                .stdout(Stdio::from(log_file.try_clone()?))
+                .stderr(Stdio::from(log_file))
+                .creation_flags(DETACHED_PROCESS)
+                .spawn()
+                .context("Failed to start Lore server. Is loreserver installed and on PATH?")?;
+
+            let pid = child.id();
+            tracing::info!(pid, "Lore server started in detached mode");
+            return Ok(pid);
+        }
+
+        #[cfg(not(any(unix, windows)))]
+        {
+            let child = Command::new("loreserver")
+                .arg("--config")
+                .arg(&self.config_path)
+                .stdout(Stdio::from(log_file.try_clone()?))
+                .stderr(Stdio::from(log_file))
+                .spawn()
+                .context("Failed to start Lore server. Is loreserver installed and on PATH?")?;
+
+            let pid = child.id();
+            tracing::info!(pid, "Lore server started");
+            Ok(pid)
+        }
     }
 
     /// Stop Lore server by PID
