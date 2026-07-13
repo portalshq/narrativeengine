@@ -29,7 +29,7 @@ use nap_core::{
     provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
     resolver::{ResolveOptions, ResolveResult, Resolver},
-    server::{LoreInstaller, NapDoctor},
+    server::{LoreInstaller, NapDoctor, ServerManager},
     types::EntityType,
     uri::NapUri,
     vcs_lore::LoreBackend,
@@ -753,11 +753,34 @@ fn cmd_init(
 
     // ── Step 3: Initialize universe repository if name given ───────────
     if let Some(universe_name) = universe {
-        // Ensure dependencies are installed before initializing
+        let provider_type = provider_manager
+            .active_provider()
+            .map(|p| p.provider_type())
+            .unwrap_or(ProviderType::Local);
+
+        // Install dependencies based on provider type
         let installer = LoreInstaller::new(None);
-        emit("Installing Lore dependencies...");
-        installer.install_all()?;
-        emit("✓ Lore CLI and server installed.");
+        match provider_type {
+            ProviderType::Local => {
+                emit("Installing Lore dependencies...");
+                installer.install_all()?;
+                emit("✓ Lore CLI and server installed.");
+            }
+            _ => {
+                emit("Installing Lore CLI...");
+                installer.install_cli()?;
+                emit("✓ Lore CLI installed.");
+            }
+        }
+
+        // For Local provider, ensure the server is running before init
+        if provider_type == ProviderType::Local {
+            emit("Starting local Lore server...");
+            let rt = get_tokio_runtime();
+            let server_manager = ServerManager::new(base_dir);
+            rt.block_on(server_manager.ensure_running())?;
+            emit("✓ Local Lore server is running.");
+        }
 
         cmd_init_universe(base_dir, universe_name, remote)?;
     } else if !should_configure_provider {
