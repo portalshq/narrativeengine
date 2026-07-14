@@ -58,24 +58,26 @@ impl LoreInstaller {
     /// Install Lore CLI (only if not already installed with correct version)
     pub fn install_cli(&self) -> Result<()> {
         // Check if already installed with correct version
-        if let Ok(verification) = self.verify_installation() {
-            if verification.cli_installed {
-                if let Some(installed_version) = &verification.cli_version {
-                    // Strip build metadata for comparison (e.g., "0.8.4+283" -> "0.8.4")
-                    let installed_version_clean = installed_version.split('+').next().unwrap_or(installed_version);
-                    if installed_version_clean == self.version {
-                        info!(
-                            "Lore CLI already installed with correct version {}",
-                            installed_version
-                        );
-                        return Ok(());
-                    }
-                    info!(
-                        "Lore CLI installed but version mismatch: installed {}, required {}",
-                        installed_version, self.version
-                    );
-                }
+        if let Ok(verification) = self.verify_installation()
+            && verification.cli_installed
+            && let Some(installed_version) = &verification.cli_version
+        {
+            // Strip build metadata for comparison (e.g., "0.8.4+283" -> "0.8.4")
+            let installed_version_clean = installed_version
+                .split('+')
+                .next()
+                .unwrap_or(installed_version);
+            if installed_version_clean == self.version {
+                info!(
+                    "Lore CLI already installed with correct version {}",
+                    installed_version
+                );
+                return Ok(());
             }
+            info!(
+                "Lore CLI installed but version mismatch: installed {}, required {}",
+                installed_version, self.version
+            );
         }
 
         info!(
@@ -92,24 +94,26 @@ impl LoreInstaller {
     /// Install Lore server (only if not already installed with correct version)
     pub fn install_server(&self) -> Result<()> {
         // Check if already installed with correct version
-        if let Ok(verification) = self.verify_installation() {
-            if verification.server_installed {
-                if let Some(installed_version) = &verification.server_version {
-                    // Strip build metadata for comparison (e.g., "0.8.4+283" -> "0.8.4")
-                    let installed_version_clean = installed_version.split('+').next().unwrap_or(installed_version);
-                    if installed_version_clean == self.version {
-                        info!(
-                            "Lore server already installed with correct version {}",
-                            installed_version
-                        );
-                        return Ok(());
-                    }
-                    info!(
-                        "Lore server installed but version mismatch: installed {}, required {}",
-                        installed_version, self.version
-                    );
-                }
+        if let Ok(verification) = self.verify_installation()
+            && verification.server_installed
+            && let Some(installed_version) = &verification.server_version
+        {
+            // Strip build metadata for comparison (e.g., "0.8.4+283" -> "0.8.4")
+            let installed_version_clean = installed_version
+                .split('+')
+                .next()
+                .unwrap_or(installed_version);
+            if installed_version_clean == self.version {
+                info!(
+                    "Lore server already installed with correct version {}",
+                    installed_version
+                );
+                return Ok(());
             }
+            info!(
+                "Lore server installed but version mismatch: installed {}, required {}",
+                installed_version, self.version
+            );
         }
 
         info!(

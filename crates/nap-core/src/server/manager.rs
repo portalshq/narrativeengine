@@ -321,7 +321,8 @@ impl ServerManager {
         let lock_file = self.nap_home.join("lore").join("pid");
 
         // Prioritize health check over PID tracking since the server may be re-parented
-        let healthy = LoreProcessManager::health_check(self.http_port, self.health_check_timeout).await?;
+        let healthy =
+            LoreProcessManager::health_check(self.http_port, self.health_check_timeout).await?;
 
         // Only check PID if health check fails, to provide better error messages
         let running = if healthy {
