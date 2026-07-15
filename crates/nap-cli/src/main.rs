@@ -1088,6 +1088,8 @@ fn cmd_resolve(
         commit,
         tag,
         path: None,
+        recursive: None,
+        max_depth: None,
     };
     let result = resolver
         .resolve(uri_str, &options)
@@ -1444,10 +1446,17 @@ fn cmd_add_repr(
     let hash = nap_core::ContentHash::from_file(file)
         .context(format!("failed to hash file '{}'", file.display()))?;
 
+    // Stage file in Lore immutable store
+    let file_path_str = file.display().to_string();
+    let args = vec!["file", "stage", "--scan", &file_path_str, "--non-interactive"];
+    nap_core::vcs_lore::LoreProcessRunner::run(&args, Some(&repo.root))
+        .context("failed to stage file in Lore immutable store")?;
+
+    // Store content hash directly (Lore's immutable store is content-addressed)
     let repr = Representation {
         hash: hash.as_str().to_string(),
         format: format.to_string(),
-        uri: Some(file.display().to_string()),
+        uri: Some(hash.as_str().to_string()), // Store hash directly, not a URI
         tier: None,
     };
 
@@ -1465,6 +1474,7 @@ fn cmd_add_repr(
         "✓ Added representation '{key}' ({format}) to {uri_str}"
     ));
     emit(format!("  Hash: {hash}"));
+    emit(format!("  Stored in Lore immutable store: {}", hash.as_str()));
     Ok(())
 }
 

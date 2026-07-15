@@ -23,8 +23,8 @@
 //! | `add_remote`                 | `lore repository add <url>`                              |
 //! | `remove_remote`              | `lore repository remove <url>`                           |
 //! | `list_remotes`               | `lore repository list`                                   |
-//! | `push`                       | `lore revision publish`                                  |
-//! | `pull`                       | `lore update`                                            |
+//! | `push`                       | `lore branch push`                                       |
+//! | `pull`                       | `lore sync`                                              |
 //!
 //! ## Error translation
 //!
@@ -37,7 +37,6 @@ use std::process::Command;
 use std::time::Instant;
 
 use crate::error::NapError;
-use crate::grpc_client::{LoreGrpcClient, block_on_grpc};
 use crate::vcs::{CommitInfo, VcsBackend};
 
 // ---------------------------------------------------------------------------
@@ -61,14 +60,14 @@ struct LoreProcessRunner;
 impl LoreProcessRunner {
     /// Path to the `lore` binary.  Override via `NAPLORE_CLI` env var, or
     /// default to `lore` (picked up from `$PATH`).
-    fn binary() -> String {
+    pub fn binary() -> String {
         std::env::var("NAPLORE_CLI").unwrap_or_else(|_| "lore".to_string())
     }
 
     /// Run a `lore` subcommand and return stdout on success.
     ///
     /// `cwd` sets the working directory (the Lore workspace directory).
-    fn run<I, S>(args: I, cwd: Option<&Path>) -> Result<String, NapError>
+    pub fn run<I, S>(args: I, cwd: Option<&Path>) -> Result<String, NapError>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
@@ -168,9 +167,6 @@ pub struct LoreBackend {
     remote_url: String,
     /// Workspace identifier (multi-tenancy scope).
     workspace_id: String,
-    /// Optional gRPC client for branch-ref synchronisation.
-    /// When `None`, `push`/`pull` fall back to CLI-only behaviour.
-    grpc_client: Option<LoreGrpcClient>,
 }
 
 impl LoreBackend {
@@ -182,19 +178,7 @@ impl LoreBackend {
         Self {
             remote_url: remote_url.to_string(),
             workspace_id: workspace_id.to_string(),
-            grpc_client: None,
         }
-    }
-
-    /// Attach a gRPC client for branch-ref synchronisation.
-    ///
-    /// When called, [`push`](VcsBackend::push) and
-    /// [`pull`](VcsBackend::pull) will use the gRPC client to fetch
-    /// and advance remote branch tips before / after the CLI blob
-    /// transfer.
-    pub fn with_grpc(mut self, client: LoreGrpcClient) -> Self {
-        self.grpc_client = Some(client);
-        self
     }
 
     /// Clone a remote Lore repository to a local path.
@@ -240,17 +224,9 @@ impl LoreBackend {
             .unwrap_or_else(|_| "lore://localhost:41337".to_string());
         let workspace_id =
             std::env::var("NAP_WORKSPACE_ID").unwrap_or_else(|_| "default".to_string());
-        // Try to create a gRPC client from environment variables.
-        // If NAP_LORE_GRPC_ENDPOINT is not set, this silently returns None.
-        let grpc_client = LoreGrpcClient::builder_from_env().unwrap_or_else(|e| {
-            // Log the error but don't fail — gRPC is an optimisation.
-            tracing::warn!("failed to initialise gRPC client from env: {e}");
-            None
-        });
         Self {
             remote_url: base,
             workspace_id,
-            grpc_client,
         }
     }
 
@@ -264,25 +240,9 @@ impl LoreBackend {
             "Creating LoreBackend from provider configuration"
         );
 
-        // Convert lore:// URL to gRPC endpoint format
-        let grpc_endpoint = url_base
-            .replace("lore://", "https://")
-            .replace("lores://", "https://");
-
-        let grpc_client = crate::grpc_client::Builder::default()
-            .endpoint(grpc_endpoint)
-            .insecure(true) // Local development uses self-signed certs
-            .build()
-            .map_err(|e| {
-                tracing::warn!("failed to initialise gRPC client from provider URL: {e}");
-                e
-            })
-            .ok();
-
         Self {
             remote_url: url_base.to_string(),
             workspace_id: workspace_id.to_string(),
-            grpc_client,
         }
     }
 
@@ -761,45 +721,27 @@ impl VcsBackend for LoreBackend {
     fn push(
         &self,
         path: &Path,
-        remote: Option<&str>,
+        _remote: Option<&str>,
         branch: Option<&str>,
     ) -> Result<(), NapError> {
-        // Step 1 — upload blob content via the lore CLI.
-        let mut args = vec!["revision", "publish", "--non-interactive"];
-        if let Some(r) = remote {
-            args.push("--remote");
-            args.push(r);
-        }
+        // Resolve the branch name: prefer the caller-supplied value,
+        // fall back to the workspace's current branch, then "main".
+        let branch_name = match branch {
+            Some(b) => b.to_string(),
+            None => self
+                .current_branch(path)
+                .unwrap_or_else(|_| "main".to_string()),
+        };
+
+        // Push branch via lore CLI (handles blob upload + branch tip advancement internally)
+        let args = vec![
+            "branch",
+            "push",
+            &branch_name,
+            "--fast-forward-merge",
+            "--non-interactive",
+        ];
         LoreProcessRunner::run(&args, Some(path))?;
-
-        // Step 2 — advance the remote branch tip via gRPC (if configured).
-        if let Some(grpc) = self.grpc_client.clone() {
-            // Resolve the branch name: prefer the caller-supplied value,
-            // fall back to the workspace's current branch, then "main".
-            let branch_name = match branch {
-                Some(b) => b.to_string(),
-                None => self
-                    .current_branch(path)
-                    .unwrap_or_else(|_| "main".to_string()),
-            };
-
-            // Read the local HEAD revision signature (hex string) and
-            // convert to raw bytes for the gRPC BranchPush RPC.
-            let local_head = self.head_hash(path)?;
-            let sig_raw = hex::decode(&local_head).map_err(|e| {
-                NapError::VcsError(format!("cannot decode head hash '{local_head}': {e}"))
-            })?;
-            let sig_bytes = bytes::Bytes::from(sig_raw);
-
-            block_on_grpc(async move {
-                // Resolve branch name → branch UUID.
-                let branch_record = grpc.get_branch_by_name(&branch_name).await?;
-                // Push the new tip (allow fast-forward merge).
-                grpc.push_branch(branch_record.id, sig_bytes, false).await?;
-                tracing::debug!("gRPC ref sync: pushed {local_head} to branch {branch_name}");
-                Ok(())
-            })?;
-        }
 
         Ok(())
     }
@@ -807,34 +749,11 @@ impl VcsBackend for LoreBackend {
     fn pull(
         &self,
         path: &Path,
-        remote: Option<&str>,
-        branch: Option<&str>,
+        _remote: Option<&str>,
+        _branch: Option<&str>,
     ) -> Result<(), NapError> {
-        // Step 1 — check the remote branch tip via gRPC (if configured)
-        // before pulling blob content.
-        if let Some(grpc) = self.grpc_client.clone() {
-            let branch_name = match branch {
-                Some(b) => b.to_string(),
-                None => self
-                    .current_branch(path)
-                    .unwrap_or_else(|_| "main".to_string()),
-            };
-
-            let branch_for_grpc = branch_name.clone();
-            let remote_tip = block_on_grpc(async move {
-                let branch_record = grpc.get_branch_by_name(&branch_for_grpc).await?;
-                Ok::<String, NapError>(hex::encode(&branch_record.latest))
-            })?;
-
-            tracing::info!("remote branch '{branch_name}' tip: {remote_tip}");
-        }
-
-        // Step 2 — pull blob content via the lore CLI.
-        let mut args = vec!["update", "--non-interactive"];
-        if let Some(r) = remote {
-            args.push("--remote");
-            args.push(r);
-        }
+        // Sync via lore CLI (handles remote checking + blob download internally)
+        let args = vec!["sync", "--non-interactive", "--reset"];
         LoreProcessRunner::run(&args, Some(path))?;
 
         Ok(())
