@@ -274,11 +274,9 @@ impl Resolver {
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
-            // Check for config.toml or universe.yaml to identify valid repositories
-            let config_exists = path.join("config.toml").exists();
-            let universe_exists = path.join("universe.yaml").exists();
+            // Check for universe.yaml to identify valid repositories
             if path.is_dir()
-                && (config_exists || universe_exists)
+                && path.join("universe.yaml").exists()
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
                 universes.push(name.to_string());
