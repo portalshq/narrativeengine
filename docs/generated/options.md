@@ -2,7 +2,7 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 5db190b
+git_sha: daa092c
 source: clap
 ---
 

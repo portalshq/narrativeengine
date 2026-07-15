@@ -183,8 +183,8 @@ fn main() -> Result<()> {
         }
     }
 
-    // 19. Compose SKILL.md
-    match compose_skill::compose_skill(&workspace_root, &cargo_meta, &doc_meta) {
+    // 19. Compose SKILL.md (root)
+    match compose_skill::compose_root_skill(&workspace_root, &cargo_meta, &doc_meta) {
         Ok(skill) => {
             let skill_path = workspace_root.join("SKILL.md");
             if filesystem::write_if_changed(&skill_path, &skill)? {
@@ -198,7 +198,27 @@ fn main() -> Result<()> {
         }
     }
 
-    // 20. Summary
+    // 20. Compose per-skill SKILL.md files from skills/templates/
+    match compose_skill::compose_all_skills(&workspace_root, &cargo_meta, &doc_meta) {
+        Ok(skills) => {
+            for (skill_name, content) in skills {
+                let skill_dir = workspace_root.join("skills").join(&skill_name);
+                fs::create_dir_all(&skill_dir)
+                    .with_context(|| format!("failed to create skills/{skill_name}"))?;
+                let skill_path = skill_dir.join("SKILL.md");
+                if filesystem::write_if_changed(&skill_path, &content)? {
+                    files_written += 1;
+                } else {
+                    files_skipped += 1;
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("nap-docgen: per-skill composition skipped: {e}");
+        }
+    }
+
+    // 21. Summary
     eprintln!("nap-docgen: done.");
     eprintln!(
         "  Files written: {}, skipped (unchanged): {}",
