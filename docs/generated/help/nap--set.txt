@@ -1,0 +1,15 @@
+Set a property on an entity manifest
+
+Usage: nap set [OPTIONS] <URI> <KEY> <VALUE>
+
+Arguments:
+  <URI>    NAP URI
+  <KEY>    Property key (dot-notation)
+  <VALUE>  Property value
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -m, --message <MESSAGE>    Commit message [default: "set property"]
+  -a, --author <AUTHOR>      Author identifier [default: nap-cli]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

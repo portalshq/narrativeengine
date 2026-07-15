@@ -1,0 +1,15 @@
+Create a new entity manifest
+
+Usage: nap create [OPTIONS] --universe <UNIVERSE> --name <NAME> <ENTITY_TYPE> <ENTITY_ID>
+
+Arguments:
+  <ENTITY_TYPE>  Entity type: character, location, scene, prop, world
+  <ENTITY_ID>    Entity ID (slug). e.g., "lukeskywalker"
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -u, --universe <UNIVERSE>  Universe name
+  -n, --name <NAME>          Human-readable name
+  -v, --verbose              Enable verbose debug logging
+  -a, --author <AUTHOR>      Author identifier [default: nap-cli]
+  -h, --help                 Print help

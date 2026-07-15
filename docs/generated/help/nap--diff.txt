@@ -1,0 +1,13 @@
+Show diff between two manifest files or versions
+
+Usage: nap diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
+
+Arguments:
+  <BASE_FILE>       Base (left) manifest file
+  <CANDIDATE_FILE>  Candidate (right) manifest file
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -f, --format <FORMAT>      Output format: json, yaml [default: yaml]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

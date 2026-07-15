@@ -1,0 +1,12 @@
+List universes or entities within a universe
+
+Usage: nap list [OPTIONS] [UNIVERSE]
+
+Arguments:
+  [UNIVERSE]  Universe name. Omit to list all universes
+
+Options:
+  -d, --base-dir <BASE_DIR>        Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -t, --entity-type <ENTITY_TYPE>  Entity type to list (if universe is specified)
+  -v, --verbose                    Enable verbose debug logging
+  -h, --help                       Print help

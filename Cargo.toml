@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/nap-core",
     "crates/nap-cli",
+    "crates/nap-docgen",
     "crates/nap-server",
     "crates/nap-test-utils",
     "crates/narrativeengine",
@@ -12,6 +13,9 @@ members = [
     "typescript/nap-sdk",
     "typescript/narrativeengine",
 ]
+
+[alias]
+docgen = "run -p nap-docgen"
 
 [workspace.package]
 version = "0.4.5"

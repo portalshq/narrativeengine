@@ -1,0 +1,13 @@
+Query a subtree from a manifest
+
+Usage: nap query [OPTIONS] <URI> <PATH>
+
+Arguments:
+  <URI>   NAP URI
+  <PATH>  Dot-notation path. e.g., "appearances.audienceVotes"
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -f, --format <FORMAT>      Output format: yaml, json [env: NAP_OUTPUT=] [default: json]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

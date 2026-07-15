@@ -1,0 +1,35 @@
+Initialize a universe repository and/or configure the backend provider.
+
+When a universe name is provided, creates the repository structure (directories, config, universe manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
+
+nap init starwars                     # create universe nap init starwars --provider local    # create universe + configure provider nap init --provider local             # configure provider only
+
+Usage: nap init [OPTIONS] [UNIVERSE]
+
+Arguments:
+  [UNIVERSE]
+          Universe name. If provided, initializes a new universe repository
+
+Options:
+  -d, --base-dir <BASE_DIR>
+          Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+          
+          [env: NAP_DIR=]
+
+      --provider <PROVIDER>
+          Provider type: local, portals-cloud, or remote
+
+      --remote-url <REMOTE_URL>
+          Remote URL (required for remote provider)
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --workspace-id <WORKSPACE_ID>
+          Workspace ID (for remote provider)
+
+      --remote <REMOTE>
+          Remote URL to add as origin after init
+
+  -h, --help
+          Print help (see a summary with '-h')

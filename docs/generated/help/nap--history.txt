@@ -1,0 +1,12 @@
+View commit history for an entity
+
+Usage: nap history [OPTIONS] <URI>
+
+Arguments:
+  <URI>  NAP URI
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -n, --limit <LIMIT>        Maximum number of commits to show [default: 20]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

@@ -1,0 +1,13 @@
+Push the current branch to its configured upstream remote
+
+Usage: nap push [OPTIONS] <UNIVERSE>
+
+Arguments:
+  <UNIVERSE>  Universe name
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+      --remote <REMOTE>      Remote name (default: tracking branch's remote, or "origin") [default: origin]
+      --branch <BRANCH>      Branch to push (default: current branch)
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

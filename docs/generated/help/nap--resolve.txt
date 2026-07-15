@@ -1,0 +1,36 @@
+Resolve a NAP URI to its manifest or a subtree.
+
+Fragment queries are supported via the URI: nap resolve nap://starwars/character/lukeskywalker#references.appears_in
+
+Usage: nap resolve [OPTIONS] <URI>
+
+Arguments:
+  <URI>
+          NAP URI. e.g., "nap://starwars/character/lukeskywalker"
+
+Options:
+      --branch <BRANCH>
+          Resolve at a specific branch
+
+  -d, --base-dir <BASE_DIR>
+          Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+          
+          [env: NAP_DIR=]
+
+      --commit <COMMIT>
+          Resolve at a specific commit hash
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --tag <TAG>
+          Resolve at a specific tag
+
+  -f, --format <FORMAT>
+          Output format: yaml, json
+          
+          [env: NAP_OUTPUT=]
+          [default: yaml]
+
+  -h, --help
+          Print help (see a summary with '-h')

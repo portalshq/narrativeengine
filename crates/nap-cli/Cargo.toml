@@ -6,6 +6,10 @@ license.workspace = true
 authors.workspace = true
 description = "CLI for the Narrative Addressing Protocol"
 
+[lib]
+name = "nap_cli"
+path = "src/main.rs"
+
 [[bin]]
 name = "nap"
 path = "src/main.rs"

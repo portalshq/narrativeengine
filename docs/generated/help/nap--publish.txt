@@ -1,0 +1,11 @@
+Publish changes to remote
+
+Usage: nap publish [OPTIONS] <UNIVERSE>
+
+Arguments:
+  <UNIVERSE>  Universe name
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

@@ -1,0 +1,14 @@
+Three-way merge of JSON/YAML values
+
+Usage: nap merge [OPTIONS] <BASE> <CURRENT> <PROPOSED>
+
+Arguments:
+  <BASE>      Base (common ancestor) file
+  <CURRENT>   Current (ours) file
+  <PROPOSED>  Proposed (theirs) file
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -f, --format <FORMAT>      Output format: json, yaml [default: yaml]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

@@ -1,4 +1,4 @@
-# NAP — Narrative Addressing Protocol
+# nap — Narrative Addressing Protocol
 
 **NAP is a protocol that makes narrative resources addressable, resolvable, and interoperable across tools, storage systems, formats, and AI workflows.**
 
@@ -95,17 +95,6 @@ The resolver turns a `nap://` URI into a manifest (or a subtree of one). With op
 
 ---
 
-## Groups
-
-Groups are composite objects that can reference both entities and media. 
-
-Use cases: compound props, outfits, events, and more. 
-
-Examples: woody + buzzlightyear = group("woodyandbuzzflying"). 
-andy + truck = group("andysmovingtruck"). 
-
----
-
 ## Repository Layout
 
 Each universe is a Git repository on disk:
@@ -125,19 +114,18 @@ starwars/                    ← universe root (Git repo)
 └── props/
 ```
 
+
 ---
 
-## Quick Start
+## Installation
 
-### Install
-
-#### Installation Script
+### Installation Script
 
 ```bash
 curl -fsSL https://github.com/portalshq/narrativeengine/releases/download/v0.4.2/install.sh | bash
 ```
 
-#### CLI & Server (Rust — compile from source)
+### CLI & Server (Rust — compile from source)
 
 ```bash
 git clone https://github.com/cinematiccanvas/nap.git
@@ -149,7 +137,7 @@ cargo build --release
 #   nap-server   — HTTP resolver server
 ```
 
-#### Python SDK (prebuilt wheel, no Rust needed)
+### Python SDK (prebuilt wheel, no Rust needed)
 
 ```bash
 pip install narrativeengine
@@ -162,7 +150,7 @@ block = create_block("char-1", "A brave adventurer")
 candidate = generate_candidate(block)
 ```
 
-#### TypeScript SDK (prebuilt binary, no Rust needed)
+### TypeScript SDK (prebuilt binary, no Rust needed)
 
 ```bash
 npm install @portalshq/narrativeengine
@@ -174,13 +162,15 @@ import { createBlock } from "@portalshq/narrativeengine";
 const block = createBlock("char-1", "A brave adventurer");
 ```
 
-### Initialize NAP
+---
+
+## Quick Start
 
 ```bash
 # Initialize a universe (prompts for provider on first run)
 nap init starwars
 
-# Initialize a universe with a specific provider
+# Initialize with local provider
 nap init starwars --provider local
 
 # Configure provider only (no universe)
@@ -191,10 +181,6 @@ nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my
 
 # Initialize with Portals Cloud
 nap init --provider portals-cloud
-
-# Change backend provider
-nap choose backend --provider local
-nap choose backend --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
 
 # Check system status
 nap status
@@ -250,9 +236,6 @@ nap history nap://starwars/character/lukeskywalker
 # Create branches
 nap branch starwars canon
 
-# Create tags
-nap tag starwars episode-4
-
 # Sync with remote
 nap sync starwars
 
@@ -266,6 +249,84 @@ nap publish starwars
 nap resolve nap://starwars/character/lukeskywalker -f json
 nap resolve nap://starwars/character/lukeskywalker -f yaml
 ```
+
+
+---
+
+
+# NAP CLI Reference
+The `nap` command-line interface (v0.4.5) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+
+
+## Command Overview
+
+| Command | Description |
+|---|---|
+| [\`nap add-repr\`](docs/generated/commands/add-repr.md) | Add a representation to an entity manifest |
+| [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
+| [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
+| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a universe repository |
+| [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the SHA-256 content hash of a file |
+| [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
+| [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
+| [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
+| [\`nap head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
+| [\`nap history\`](docs/generated/commands/history.md) | View commit history for an entity |
+| [\`nap init\`](docs/generated/commands/init.md) | Initialize a universe repository and/or configure the backend provider |
+| [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
+| [\`nap list\`](docs/generated/commands/list.md) | List universes or entities within a universe |
+| [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
+| [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
+| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a universe from a remote |
+| [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
+| [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
+| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a universe |
+| [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
+| [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
+| [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
+| [\`nap set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
+| [\`nap sign\`](docs/generated/commands/sign.md) | Sign a manifest (stub for v0) |
+| [\`nap status\`](docs/generated/commands/status.md) | Show system status |
+| [\`nap switch\`](docs/generated/commands/switch.md) | Switch to a branch |
+| [\`nap sync\`](docs/generated/commands/sync.md) | Sync with remote |
+| [\`nap tag\`](docs/generated/commands/tag.md) | Create or list tags |
+| [\`nap validate\`](docs/generated/commands/validate.md) | Validate a manifest against the NAP schema |
+| [\`nap verify\`](docs/generated/commands/verify.md) | Verify a manifest signature (stub for v0) |
+
+
+## Global Options
+
+| Flag | Description | Default |
+|---|---|---|
+| -d, --base-dir <BASE\_DIR> | Base directory for universe repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -v, --verbose <VERBOSE> | Enable verbose debug logging |  |
+
+
+## Output Formats
+Most commands support `--format` (`-f`) with values `yaml` (default) or `json`.
+
+When stdout is not a terminal, JSON is used automatically. Override with `$NAP_OUTPUT`.
+
+
+## Common Examples
+```bash
+# Initialize a universe
+nap init starwars
+
+# Create an entity
+nap create character lukeskywalker -u starwars -n "Luke Skywalker"
+
+# Resolve a manifest
+nap resolve nap://starwars/character/lukeskywalker
+
+# Query a subtree
+nap query nap://starwars/character/lukeskywalker properties
+
+# View commit history
+nap history nap://starwars/character/lukeskywalker
+```
+
+
 
 ---
 
@@ -334,174 +395,86 @@ NAP core uses environment variables for configuration. All variables serve speci
 
 Query parameters for resolution: `branch`, `commit`, `tag`, `path` (subtree query).
 
----
-
-## AI Workflows
-
-NAP is designed for AI-native workflows from day one:
-
-**Subtree queries** let AI agents fetch exactly the data they need — 500 tokens instead of 40,000:
-```bash
-nap resolve nap://starwars/character/lukeskywalker#references.appears_in
-nap resolve nap://starwars/scene/cantina#properties.mood
-```
-
-**Provenance tracking** records AI generation metadata in the manifest itself:
-```yaml
-provenance:
-  model: "midjourney-v6"
-  prompt_hash: "sha256:abc123..."
-  seed: "42"
-  derived_from: "nap://starwars/character/lukeskywalker/v1"
-```
-
-**Content-addressed representations** link manifests to assets by hash:
-```yaml
-representations:
-  reference_image:
-    hash: "sha256:e3b0c44..."
-    format: png
-  voice_model:
-    hash: "sha256:def567..."
-    format: onnx
-```
 
 ---
 
-## Project Structure
 
-```
-nap/
-├── Cargo.toml                      ← workspace root (7 crates)
-├── crates/
-│   ├── nap-core/                   ← core library (URI, manifest, resolver, VCS)
-│   │   └── src/
-│   │       ├── lib.rs              ← crate root, re-exports
-│   │       ├── uri.rs             ← NapUri parser/builder
-│   │       ├── manifest.rs         ← Manifest, Representation, Provenance
-│   │       ├── commit.rs           ← Commit, Change, ChangeOp
-│   │       ├── resolver.rs         ← Resolver (URI → Manifest)
-│   │       ├── query.rs            ← Subtree query engine
-│   │       ├── repository.rs       ← Universe repository CRUD
-│   │       ├── types.rs            ← EntityType enum
-│   │       ├── content.rs          ← SHA-256 content hashing
-│   │       ├── error.rs            ← NapError types
-│   │       ├── vcs.rs              ← VcsBackend trait
-│   │       └── vcs_git.rs          ← Git backend implementation
-│   ├── nap-cli/                    ← CLI binary (`nap`)
-│   ├── nap-server/                 ← HTTP server binary (`nap-server`)
-│   ├── narrativeengine-core/       ← narrative engine (AI story generation)
-│   ├── narrativeengine-py/         ← Python bindings (PyO3)
-│   ├── narrativeengine-ts/         ← TypeScript/NAPI bindings
-│   └── narrativeengine-codegen/    ← schema/code generation tooling
-├── python/                         ← Python SDK package
-│   └── pyproject.toml
-└── typescript/                     ← TypeScript SDK package
-    ├── package.json
-    ├── index.cjs
-    └── index.d.ts
-```
+# CLI Command Reference
+Complete reference for all `nap` CLI commands.
 
----
 
-## Build & Test
+| Command | Description |
+|---|---|
+| [\`nap add-repr\`](docs/generated/commands/add-repr.md) | Add a representation to an entity manifest |
+| [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
+| [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
+| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a universe repository |
+| [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the SHA-256 content hash of a file |
+| [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
+| [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
+| [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
+| [\`nap head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
+| [\`nap history\`](docs/generated/commands/history.md) | View commit history for an entity |
+| [\`nap init\`](docs/generated/commands/init.md) | Initialize a universe repository and/or configure the backend provider |
+| [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
+| [\`nap list\`](docs/generated/commands/list.md) | List universes or entities within a universe |
+| [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
+| [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
+| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a universe from a remote |
+| [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
+| [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
+| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a universe |
+| [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
+| [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
+| [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
+| [\`nap set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
+| [\`nap sign\`](docs/generated/commands/sign.md) | Sign a manifest (stub for v0) |
+| [\`nap status\`](docs/generated/commands/status.md) | Show system status |
+| [\`nap switch\`](docs/generated/commands/switch.md) | Switch to a branch |
+| [\`nap sync\`](docs/generated/commands/sync.md) | Sync with remote |
+| [\`nap tag\`](docs/generated/commands/tag.md) | Create or list tags |
+| [\`nap validate\`](docs/generated/commands/validate.md) | Validate a manifest against the NAP schema |
+| [\`nap verify\`](docs/generated/commands/verify.md) | Verify a manifest signature (stub for v0) |
 
-### Prerequisites
 
-- [Rust](https://rustup.rs/) 2024 edition (1.85+) — only needed to build from source
-- Git (for the VCS backend)
-
-### Pre-commit Hooks
-
-This repo ships a pre-commit hook that runs fast checks (`cargo fmt`, `ruff`, `eslint`, `vitest`) before each commit. Activate it once per clone:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-The hook only runs checks relevant to the files you've staged — no Rust checks on pure Python changes, etc.
-
-### Build
-
-```bash
-# Build everything (debug)
-cargo build --workspace
-
-# Build everything (release)
-cargo build --release --workspace
-
-# Build individual crates
-cargo build -p nap-core
-cargo build -p nap-cli
-cargo build -p nap-server
-cargo build -p narrativeengine
-cargo build -p narrativeengine-codegen
-```
-
-### Test
-
-```bash
-# Run all tests (excluding Python bindings which need Python headers)
-cargo test --workspace --exclude narrativeengine 
-
-# Run tests for a specific crate
-cargo test -p nap-core
-
-# Run doc tests
-cargo test --doc
-```
-
-### Build SDK artifacts
-
-```bash
-# Python wheel (requires maturin)
-pip install maturin
-cd python
-maturin build --release
-
-# TypeScript prebuild (requires napi-rs toolchain)
-cd typescript
-npm install
-npm run build:native
-```
-
-### Run
-
-```bash
-# CLI
-cargo run -p nap-cli -- --help
-
-# Server
-cargo run -p nap-server
-```
 
 ---
 
 ## Design Principles
 
-**Manifest is current state. History is external.**
-- Manifests store only `head` — a pointer to the latest commit.
-- Full history lives in the VCS, preventing unbounded manifest growth.
+1. **Content-addressed** — Every piece of content is identified by its cryptographic hash. Manifests are immutable once committed.
 
-**Version/branch/tag are NEVER in the URI.**
-- They are orthogonal selectors passed alongside the URI (mirrors Git, OCI, package managers).
+2. **URI-addressed** — Every entity has a stable, portable URI. URIs are never invalidated by renames or moves.
 
-**Content-address everything.**
-- Every representation is identified by its SHA-256 hash.
-- Manifests are content-hashable for signing and verification.
+3. **Human-readable** — YAML manifests are readable by worldbuilders and AI agents alike.
 
-**Subtree queries are first-class.**
-- AI systems, CLI tools, and HTTP clients all use the same query engine.
-- Fragment queries enable efficient data access without fetching entire manifests.
+4. **Portable** — No runtime dependencies. A manifest is just a YAML file. A universe is just a Git repo.
+
+5. **AI-native** — Subtree queries let AI agents fetch exactly the data they need. Provenance tracking records generation metadata.
+
+6. **Schema-validated** — All manifests conform to a JSON Schema. Invalid manifests are rejected at commit time.
+
+7. **Decentralized** — Universes are Git repositories. They can be cloned, forked, merged, and published independently.
+
+8. **Extensible** — New entity types, representation formats, and merge strategies can be added without breaking existing data.
 
 ---
 
 ## Status
 
-NAP is in **v0 (prototype)** — the core data model and resolution engine are functional. Signing and verification are stubbed for future iterations.
-
----
+This is a v0 prototype. APIs and formats may change.
 
 ## License
 
-MIT © Cinematic Canvas
+MIT
+
+
+---
+
+## Status
+
+This is a v0 prototype. APIs and formats may change.
+
+## License
+
+MIT

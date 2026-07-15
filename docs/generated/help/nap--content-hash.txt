@@ -1,0 +1,11 @@
+Compute the SHA-256 content hash of a file
+
+Usage: nap content-hash [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>  Path to the file to hash
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

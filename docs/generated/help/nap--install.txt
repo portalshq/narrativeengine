@@ -1,0 +1,11 @@
+Install required dependencies
+
+Usage: nap install [OPTIONS] <TARGET>
+
+Arguments:
+  <TARGET>  Target to install (e.g., "lore")
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

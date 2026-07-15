@@ -106,9 +106,24 @@ clean:
 # Documentation
 # =============================================================================
 
-# Open documentation in browser
+# Generate documentation from source
+docgen:
+    cargo run -p nap-docgen
+
+# Open rustdoc documentation in browser
 docs:
     cargo doc --open
+
+# Validate that generated documentation is current
+docs-check:
+    cargo run -p nap-docgen
+    @echo "Checking for uncommitted documentation changes..."
+    @if git diff --exit-code docs/generated/ > /dev/null 2>&1; then \
+        echo "Documentation is up to date."; \
+    else \
+        echo "ERROR: Generated documentation is stale. Commit the changes."; \
+        exit 1; \
+    fi
 
 # =============================================================================
 # Quick Start Examples

@@ -1,0 +1,13 @@
+Add a remote to a universe repository
+
+Usage: nap remote add [OPTIONS] <UNIVERSE> <NAME> <URL>
+
+Arguments:
+  <UNIVERSE>  Universe name
+  <NAME>      Remote name (e.g., "origin")
+  <URL>       Remote URL
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

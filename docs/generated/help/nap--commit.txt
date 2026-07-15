@@ -1,0 +1,13 @@
+Commit changes to a universe repository
+
+Usage: nap commit [OPTIONS] --message <MESSAGE> <UNIVERSE>
+
+Arguments:
+  <UNIVERSE>  Universe name
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -m, --message <MESSAGE>    Commit message
+  -a, --author <AUTHOR>      Author identifier [default: nap-cli]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

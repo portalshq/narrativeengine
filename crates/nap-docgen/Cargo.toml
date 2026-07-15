@@ -1,0 +1,24 @@
+[package]
+name = "nap-docgen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Documentation generator for the NAP workspace"
+
+[[bin]]
+name = "nap-docgen"
+path = "src/main.rs"
+
+[dependencies]
+nap-cli = { path = "../nap-cli" }
+clap = { version = "4", features = ["derive", "env"] }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+camino = "1"
+walkdir = "2"
+indexmap = { version = "1", features = ["serde"] }
+tempfile = "3"
+toml = "0.8"

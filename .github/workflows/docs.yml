@@ -1,0 +1,31 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build workspace
+        run: cargo build --workspace
+
+      - name: Generate documentation
+        run: cargo run -p nap-docgen
+
+      - name: Check for stale documentation
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Generated documentation is stale. Run 'cargo run -p nap-docgen' locally and commit the changes."
+            echo ""
+            echo "Diff:"
+            git diff --stat
+            exit 1
+          fi

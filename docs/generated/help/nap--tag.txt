@@ -1,0 +1,12 @@
+Create or list tags
+
+Usage: nap tag [OPTIONS] <UNIVERSE> [NAME]
+
+Arguments:
+  <UNIVERSE>  Universe name
+  [NAME]      Tag name to create. Omit to list all tags
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

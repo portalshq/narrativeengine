@@ -1,0 +1,42 @@
+CLI for the Narrative Addressing Protocol
+
+Usage: nap [OPTIONS] <COMMAND>
+
+Commands:
+  install       Install required dependencies
+  init          Initialize a universe repository and/or configure the backend provider
+  choose        Choose backend provider
+  doctor        Run diagnostics and repair
+  publish       Publish changes to remote
+  status        Show system status
+  sync          Sync with remote
+  create        Create a new entity manifest
+  resolve       Resolve a NAP URI to its manifest or a subtree
+  query         Query a subtree from a manifest
+  commit        Commit changes to a universe repository
+  history       View commit history for an entity
+  list          List universes or entities within a universe
+  branch        Create or list branches
+  tag           Create or list tags
+  set           Set a property on an entity manifest
+  add-repr      Add a representation to an entity manifest
+  revert        Revert a commit by hash (undoes all changes in that commit)
+  pull          Clone or pull a universe from a remote
+  push          Push the current branch to its configured upstream remote
+  remote        Manage git remotes on a universe
+  sign          Sign a manifest (stub for v0)
+  verify        Verify a manifest signature (stub for v0)
+  switch        Switch to a branch
+  head-hash     Show the current HEAD commit hash
+  validate      Validate a manifest against the NAP schema
+  schema        Print a JSON Schema for manifest or commit types
+  diff          Show diff between two manifest files or versions
+  merge         Three-way merge of JSON/YAML values
+  content-hash  Compute the SHA-256 content hash of a file
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help
+  -V, --version              Print version

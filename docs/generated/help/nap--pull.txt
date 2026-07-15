@@ -1,0 +1,21 @@
+Clone or pull a universe from a remote.
+
+If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a universe name, the repo must already exist locally and will be updated via `git pull`.
+
+Usage: nap pull [OPTIONS] <URL_OR_NAME>
+
+Arguments:
+  <URL_OR_NAME>
+          URL (clone) or universe name (pull existing)
+
+Options:
+  -d, --base-dir <BASE_DIR>
+          Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+          
+          [env: NAP_DIR=]
+
+  -v, --verbose
+          Enable verbose debug logging
+
+  -h, --help
+          Print help (see a summary with '-h')

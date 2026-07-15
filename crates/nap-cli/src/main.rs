@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! NAP CLI — command-line interface for the Narrative Addressing Protocol.
 //!
 //! Commands:
@@ -63,18 +64,18 @@ fn expand_path(path: &Path) -> PathBuf {
 /// Identity, addressing, resolution, and attribution for entertainment media.
 #[derive(Parser, Debug)]
 #[command(name = "nap", version, about, long_about = None)]
-struct Cli {
+pub struct Cli {
     /// Base directory for universe repositories.
     /// Defaults to $NAP_DIR, or ~/.nap if unset.
-    #[arg(long, short = 'd', global = true)]
-    base_dir: Option<PathBuf>,
+    #[arg(long, short = 'd', global = true, env = "NAP_DIR")]
+    pub base_dir: Option<PathBuf>,
 
     /// Enable verbose debug logging.
     #[arg(long, short = 'v', global = true)]
-    verbose: bool,
+    pub verbose: bool,
 
     #[command(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
 /// Return `true` if `s` looks like a URL rather than a universe name.
@@ -88,7 +89,7 @@ fn looks_like_url(s: &str) -> bool {
 
 /// Subcommands for `nap remote`.
 #[derive(Subcommand, Debug)]
-enum RemoteCmd {
+pub enum RemoteCmd {
     /// Add a remote to a universe repository.
     Add {
         /// Universe name.
@@ -114,7 +115,7 @@ enum RemoteCmd {
 
 /// Subcommands for `nap choose`.
 #[derive(Subcommand, Debug)]
-enum ChooseCmd {
+pub enum ChooseCmd {
     /// Choose backend provider.
     Backend {
         /// Provider type: local, portals-cloud, or remote.
@@ -131,7 +132,7 @@ enum ChooseCmd {
 }
 
 #[derive(Subcommand, Debug)]
-enum Commands {
+pub enum Commands {
     /// Install required dependencies.
     Install {
         /// Target to install (e.g., "lore").
@@ -240,7 +241,7 @@ enum Commands {
         tag: Option<String>,
 
         /// Output format: yaml, json.
-        #[arg(long, short = 'f', default_value = "yaml")]
+        #[arg(long, short = 'f', default_value = "yaml", env = "NAP_OUTPUT")]
         format: String,
     },
 
@@ -253,7 +254,7 @@ enum Commands {
         path: String,
 
         /// Output format: yaml, json.
-        #[arg(long, short = 'f', default_value = "json")]
+        #[arg(long, short = 'f', default_value = "json", env = "NAP_OUTPUT")]
         format: String,
     },
 

@@ -1,0 +1,12 @@
+Create or list branches
+
+Usage: nap branch [OPTIONS] <UNIVERSE> [NAME]
+
+Arguments:
+  <UNIVERSE>  Universe name
+  [NAME]      Branch name to create. Omit to list all branches
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

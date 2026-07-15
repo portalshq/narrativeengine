@@ -1,0 +1,16 @@
+Add a representation to an entity manifest
+
+Usage: nap add-repr [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>
+
+Arguments:
+  <URI>   NAP URI
+  <KEY>   Representation key. e.g., "reference_image"
+  <FILE>  File path to the asset
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+      --format <FORMAT>      Asset format. e.g., "png", "glb"
+  -m, --message <MESSAGE>    Commit message [default: "add representation"]
+  -v, --verbose              Enable verbose debug logging
+  -a, --author <AUTHOR>      Author identifier [default: nap-cli]
+  -h, --help                 Print help
