@@ -2,6 +2,9 @@
 # PyO3 extension modules must NOT link libpython; symbols are resolved
 # at runtime by the Python interpreter that loads the .so file.
 # Without this, the macOS linker errors on __Py_NoneStruct and similar.
+[alias]
+docgen = "run -p nap-docgen"
+
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 
