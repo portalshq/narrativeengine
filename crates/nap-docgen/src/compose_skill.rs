@@ -4,35 +4,19 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Compose the root SKILL.md from SKILL.template.md (legacy).
-pub fn compose_root_skill(
-    workspace_root: &Path,
-    cargo_meta: &WorkspaceMeta,
-    meta: &DocMeta,
-) -> Result<String> {
-    let template_path = workspace_root.join("SKILL.template.md");
-    if !template_path.exists() {
-        anyhow::bail!("SKILL.template.md not found at {}", template_path.display());
-    }
-
-    let content = fs::read_to_string(&template_path)?;
-    let variables = crate::compose_readme::build_variables(workspace_root, cargo_meta, meta)?;
-    templates::expand_template(&content, workspace_root, &variables)
-}
-
 /// Discover all skill templates in skills/templates/*.md and compose
 /// each into skills/<skill-name>/SKILL.md.
 pub fn compose_all_skills(
     workspace_root: &Path,
-    cargo_meta: &WorkspaceMeta,
-    meta: &DocMeta,
+    _cargo_meta: &WorkspaceMeta,
+    _meta: &DocMeta,
 ) -> Result<Vec<(String, String)>> {
     let templates_dir = workspace_root.join("skills").join("templates");
     if !templates_dir.exists() {
         anyhow::bail!("skills/templates/ not found at {}", templates_dir.display());
     }
 
-    let variables = crate::compose_readme::build_variables(workspace_root, cargo_meta, meta)?;
+    let variables = crate::compose_readme::build_variables(workspace_root, _cargo_meta, _meta)?;
 
     let mut results = Vec::new();
 

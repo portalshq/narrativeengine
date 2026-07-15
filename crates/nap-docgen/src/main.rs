@@ -183,22 +183,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 19. Compose SKILL.md (root)
-    match compose_skill::compose_root_skill(&workspace_root, &cargo_meta, &doc_meta) {
-        Ok(skill) => {
-            let skill_path = workspace_root.join("SKILL.md");
-            if filesystem::write_if_changed(&skill_path, &skill)? {
-                files_written += 1;
-            } else {
-                files_skipped += 1;
-            }
-        }
-        Err(e) => {
-            eprintln!("nap-docgen: SKILL.md composition skipped: {e}");
-        }
-    }
-
-    // 20. Compose per-skill SKILL.md files from skills/templates/
+    // 19. Compose per-skill SKILL.md files from skills/templates/
     match compose_skill::compose_all_skills(&workspace_root, &cargo_meta, &doc_meta) {
         Ok(skills) => {
             for (skill_name, content) in skills {
