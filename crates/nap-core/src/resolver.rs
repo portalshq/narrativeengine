@@ -201,7 +201,12 @@ impl Resolver {
 
         // Handle recursive resolution
         if options.recursive.unwrap_or(false) {
-            return self.resolve_uri_recursive(uri, options, 0, &mut std::collections::HashSet::new());
+            return self.resolve_uri_recursive(
+                uri,
+                options,
+                0,
+                &mut std::collections::HashSet::new(),
+            );
         }
 
         self.resolve_uri_single(uri, options)
@@ -324,7 +329,8 @@ impl Resolver {
                 for nested_uri in nested_uris {
                     let nested_uri_parsed: NapUri = nested_uri.parse()?;
 
-                    let nested_result = self.resolve_uri_recursive(&nested_uri_parsed, options, depth + 1, visited)
+                    let nested_result = self
+                        .resolve_uri_recursive(&nested_uri_parsed, options, depth + 1, visited)
                         .map_err(|e| {
                             NapError::Other(format!(
                                 "failed to resolve nested URI '{}' while resolving '{}': {}",

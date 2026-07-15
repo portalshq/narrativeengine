@@ -55,7 +55,7 @@ use crate::vcs::{CommitInfo, VcsBackend};
 /// is the **only** code in the crate that calls `std::process::Command`.
 /// Every other module uses [`VcsBackend`] or [`RepoService`] and never
 /// touches the `lore` binary directly.
-struct LoreProcessRunner;
+pub struct LoreProcessRunner;
 
 impl LoreProcessRunner {
     /// Path to the `lore` binary.  Override via `NAPLORE_CLI` env var, or

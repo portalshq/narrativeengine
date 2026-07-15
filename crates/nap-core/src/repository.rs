@@ -135,7 +135,8 @@ impl Repository {
                 "nap".to_string(),
                 serde_yaml::to_value(serde_json::json!({
                     "default_branch": "main"
-                })).unwrap(),
+                }))
+                .unwrap(),
             );
 
             // Write back to file
@@ -192,7 +193,8 @@ impl Repository {
             "nap".to_string(),
             serde_yaml::to_value(serde_json::json!({
                 "default_branch": "main"
-            })).unwrap(),
+            }))
+            .unwrap(),
         );
 
         world_manifest.to_file(&repo_root.join("universe.yaml"))?;
