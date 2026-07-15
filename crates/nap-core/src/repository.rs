@@ -5,8 +5,7 @@
 //!
 //! ```text
 //! starwars/               ← universe root
-//! ├── .nap/               ← NAP metadata
-//! │   └── config.yaml     ← repository config
+//! ├── config.toml         ← repository config
 //! ├── universe.yaml       ← world manifest (root-level)
 //! ├── characters/
 //! │   ├── lukeskywalker.yaml
@@ -25,12 +24,10 @@ use tracing::{debug, info};
 use crate::commit::{Change, Commit};
 use crate::error::NapError;
 use crate::manifest::Manifest;
+use crate::resolver::ResolveConfig;
 use crate::types::EntityType;
 use crate::uri::NapUri;
 use crate::vcs::VcsBackend;
-
-/// NAP metadata directory name.
-const NAP_DIR: &str = ".nap";
 
 /// A NAP universe repository.
 pub struct Repository {
@@ -45,10 +42,14 @@ pub struct Repository {
 impl Repository {
     /// Open an existing NAP repository at the given path.
     pub fn open(path: &Path, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
-        let nap_dir = path.join(NAP_DIR);
-        if !nap_dir.exists() {
+        // Check for config.toml or universe.yaml to identify valid repository
+        let config_exists = path.join("config.toml").exists();
+        let universe_exists = path.join("universe.yaml").exists();
+
+        if !config_exists && !universe_exists {
             return Err(NapError::RepositoryNotFound(path.display().to_string()));
         }
+
         let universe = path
             .file_name()
             .and_then(|n| n.to_str())
@@ -68,10 +69,57 @@ impl Repository {
         })
     }
 
+    /// Read the resolve configuration from config.toml.
+    pub fn read_resolve_config(&self) -> ResolveConfig {
+        let config_path = self.root.join("config.toml");
+
+        if !config_path.exists() {
+            debug!(
+                path = %config_path.display(),
+                "config.toml not found, using default ResolveConfig"
+            );
+            return ResolveConfig::default();
+        }
+
+        let config_content = match std::fs::read_to_string(&config_path) {
+            Ok(content) => content,
+            Err(e) => {
+                debug!(
+                    path = %config_path.display(),
+                    error = %e,
+                    "failed to read config.toml, using default ResolveConfig"
+                );
+                return ResolveConfig::default();
+            }
+        };
+
+        // Parse TOML and extract resolve settings
+        let parsed: toml::Value = match toml::from_str(&config_content) {
+            Ok(value) => value,
+            Err(e) => {
+                debug!(
+                    path = %config_path.display(),
+                    error = %e,
+                    "failed to parse config.toml, using default ResolveConfig"
+                );
+                return ResolveConfig::default();
+            }
+        };
+
+        // Extract default_branch from resolve section
+        let default_branch = parsed
+            .get("resolve")
+            .and_then(|resolve| resolve.get("default_branch"))
+            .and_then(|branch| branch.as_str())
+            .map(|s| s.to_string());
+
+        ResolveConfig { default_branch }
+    }
+
     /// Initialize a new NAP repository.
     pub fn init(path: &Path, universe: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
         let repo_root = path.to_path_buf();
-        if repo_root.join(NAP_DIR).exists() {
+        if repo_root.join("config.toml").exists() {
             return Err(NapError::RepositoryAlreadyExists(
                 repo_root.display().to_string(),
             ));
@@ -85,18 +133,23 @@ impl Repository {
 
         // Create directory structure
         std::fs::create_dir_all(&repo_root)?;
-        std::fs::create_dir_all(repo_root.join(NAP_DIR))?;
 
         // Create entity type subdirectories
         for entity_type in EntityType::subdirectory_types() {
             std::fs::create_dir_all(repo_root.join(entity_type.directory_name()))?;
         }
 
-        // Create .nap/config.yaml
+        // Create config.toml at repository root
         let config = format!(
-            "# NAP Repository Configuration\nuniverse: {universe}\nprotocol_version: \"0.1.0\"\n"
+            r#"[nap]
+universe = "{universe}"
+protocol_version = "0.1.0"
+
+[resolve]
+default_branch = "main"
+"#
         );
-        std::fs::write(repo_root.join(NAP_DIR).join("config.yaml"), config)?;
+        std::fs::write(repo_root.join("config.toml"), config)?;
 
         // Create universe.yaml (world manifest)
         let world_manifest = Manifest::new(
@@ -444,7 +497,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        assert!(repo.root.join(".nap").exists());
+        assert!(repo.root.join("config.toml").exists());
         assert!(repo.root.join("universe.yaml").exists());
         assert!(repo.root.join("characters").exists());
         assert!(repo.root.join("locations").exists());

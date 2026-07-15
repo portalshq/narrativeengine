@@ -128,10 +128,12 @@ impl Resolver {
         }
     }
 
-    /// Open the repository for a given universe.
-    fn open_repo(&self, universe: &str) -> Result<Repository, NapError> {
+    /// Open the repository for a given universe and read its resolve config.
+    fn open_repo(&self, universe: &str) -> Result<(Repository, ResolveConfig), NapError> {
         let repo_path = self.base_path.join(universe);
-        Repository::open(&repo_path, (self.vcs_factory)())
+        let repo = Repository::open(&repo_path, (self.vcs_factory)())?;
+        let repo_config = repo.read_resolve_config();
+        Ok((repo, repo_config))
     }
 
     /// Resolve a NAP URI string with options.
@@ -187,13 +189,13 @@ impl Resolver {
             "resolving NAP URI"
         );
 
-        let repo = self.open_repo(&uri.universe)?;
+        let (repo, repo_config) = self.open_repo(&uri.universe)?;
         let query_path = options.query_path(uri);
 
         // ── 4-Rule Resolution ────────────────────────────────────────
         // Rule 1: commit provided → use directly (bypass branch logic)
         // Rule 2: branch provided, no commit → resolve branch head
-        // Rule 3: both null → use default_branch from config
+        // Rule 3: both null → use default_branch from repo config (fallback to global)
         // Rule 4: both null and no default_branch → hard error
         // ──────────────────────────────────────────────────────────────
 
@@ -206,15 +208,21 @@ impl Resolver {
                 debug!(%branch, "resolve: rule 2 — branch provided");
                 repo.resolve_branch_head(branch)?
             }
-            (None, None) => match &self.config.default_branch {
+            (None, None) => match &repo_config.default_branch {
                 Some(default_branch) => {
-                    debug!(%default_branch, "resolve: rule 3 — using default_branch");
+                    debug!(%default_branch, "resolve: rule 3 — using repo default_branch");
                     repo.resolve_branch_head(default_branch)?
                 }
-                None => {
-                    debug!("resolve: rule 4 — no branch, no commit, no default_branch");
-                    return Err(NapError::NoDefaultBranch);
-                }
+                None => match &self.config.default_branch {
+                    Some(global_default_branch) => {
+                        debug!(%global_default_branch, "resolve: rule 3 — using global default_branch");
+                        repo.resolve_branch_head(global_default_branch)?
+                    }
+                    None => {
+                        debug!("resolve: rule 4 — no branch, no commit, no default_branch");
+                        return Err(NapError::NoDefaultBranch);
+                    }
+                },
             },
         };
 
@@ -266,8 +274,11 @@ impl Resolver {
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
+            // Check for config.toml or universe.yaml to identify valid repositories
+            let config_exists = path.join("config.toml").exists();
+            let universe_exists = path.join("universe.yaml").exists();
             if path.is_dir()
-                && path.join(".nap").exists()
+                && (config_exists || universe_exists)
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
                 universes.push(name.to_string());

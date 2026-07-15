@@ -27,7 +27,7 @@ impl MockBackend {
     }
 
     fn commits_path(&self, repo_path: &Path) -> PathBuf {
-        repo_path.join(".nap/mock_commits.json")
+        repo_path.join(".mock_commits.json")
     }
 
     fn load_commits(&self, repo_path: &Path) -> Vec<CommitInfo> {
