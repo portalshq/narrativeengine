@@ -7,7 +7,7 @@
 
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Generate Lore server configuration for local deployment
 ///

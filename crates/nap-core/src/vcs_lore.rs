@@ -72,23 +72,12 @@ impl LoreProcessRunner {
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
-        let nap_home = std::env::var("NAP_DIR").unwrap_or_else(|_| ".nap".to_string());
-        let config_path = std::path::Path::new(&nap_home)
-            .join("lore")
-            .join("config")
-            .join("local.toml");
-
         let args_vec: Vec<String> = args
             .into_iter()
             .map(|s| s.as_ref().to_string_lossy().into_owned())
             .collect();
         let bin = Self::binary();
         let mut cmd = Command::new(&bin);
-
-        // Pass the explicit configuration path
-        cmd.arg("--config");
-        cmd.arg(config_path);
-
         cmd.args(&args_vec);
 
         if let Some(dir) = cwd {

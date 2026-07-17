@@ -3,25 +3,60 @@
 //! This suite tests nap functionality against a local lore server,
 //! following the "Quick Start" and "Usage Guide" workflows from documentation.
 //!
+//! Prerequisites:
+//!   - A running local lore server at lore://localhost:41337
+//!   - The `lore` binary in PATH
+//!
 //! Run with:
 //!   cargo test -p nap-cli --test workflow_integration_suite --features lore-e2e -- --test-threads=1
 
 use assert_cmd::Command;
 use predicates::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tempfile::TempDir;
 
-/// Helper to get the nap binary command, correctly configured for testing
+/// Helper to get the nap binary command, correctly configured for testing.
+///
+/// Uses `--provider remote` to avoid each test starting its own lore server
+/// daemon (which would conflict on ports 41337/41339).  The lore server must
+/// already be running at `lore://localhost:41337`.
 fn nap_cmd(nap_home: &Path) -> Command {
     let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
-    cmd.timeout(std::time::Duration::from_secs(120));
-    
+    cmd.timeout(std::time::Duration::from_secs(30));
+
     // Set NAP_DIR to the temporary home directory to isolate the config
     cmd.env("NAP_DIR", nap_home);
-    cmd.env("NAP_LORE_URL_BASE", "lore://localhost:41337");
+    // Use gRPC transport for tests — QUIC (lore://) may not work in all
+    // environments (e.g. macOS sandbox).  gRPC on TCP 41337 is reliable.
+    cmd.env("NAP_LORE_URL_BASE", "grpc://localhost:41337");
     cmd.env("NAP_WORKSPACE_ID", "default");
-    
+
     cmd
+}
+
+/// Initialize a provider and universe using `--provider remote`.
+///
+/// This avoids the port-conflict problem where multiple tests each try to
+/// spawn a lore daemon on the same port.
+fn init_provider_and_universe(nap_home: &Path, universe: &str) {
+    // Configure provider (no daemon startup)
+    nap_cmd(nap_home)
+        .arg("init")
+        .arg("--provider")
+        .arg("remote")
+        .arg("--remote-url")
+        .arg("lore://localhost:41337")
+        .arg("--workspace-id")
+        .arg("default")
+        .assert()
+        .success();
+
+    // Create the universe repository
+    nap_cmd(nap_home)
+        .arg("init")
+        .arg(universe)
+        .assert()
+        .success();
 }
 
 #[test]
@@ -31,13 +66,7 @@ fn test_readme_quick_start_workflow() {
     std::fs::create_dir_all(&nap_home).unwrap();
 
     // 1. Initialize a universe
-    nap_cmd(&nap_home)
-        .arg("init")
-        .arg("starwars")
-        .arg("--provider")
-        .arg("local")
-        .assert()
-        .success();
+    init_provider_and_universe(&nap_home, "starwars");
 
     // 2. Create entities
     nap_cmd(&nap_home)
@@ -85,13 +114,7 @@ fn test_usage_guide_world_building_workflow() {
     std::fs::create_dir_all(&nap_home).unwrap();
 
     // Initialize universe
-    nap_cmd(&nap_home)
-        .arg("init")
-        .arg("myworld")
-        .arg("--provider")
-        .arg("local")
-        .assert()
-        .success();
+    init_provider_and_universe(&nap_home, "myworld");
 
     // Define world metadata
     nap_cmd(&nap_home)
@@ -113,7 +136,7 @@ fn test_usage_guide_world_building_workflow() {
         .arg("Captain Rex")
         .assert()
         .success();
-    
+
     // Set character properties
     nap_cmd(&nap_home)
         .arg("set")

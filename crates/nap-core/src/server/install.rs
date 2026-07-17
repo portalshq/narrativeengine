@@ -269,9 +269,15 @@ impl LoreInstaller {
     }
 
     /// Get version from binary
+    ///
+    /// Handles both output formats:
+    /// - `"0.8.4+283"` (just the version)
+    /// - `"lore 0.8.4+283"` (program name prefix, common on macOS)
+    ///
+    /// Returns the clean version string (e.g. `"0.8.4+283"`).
     fn get_binary_version(&self, name: &str) -> Result<String> {
         let binary_path = if let Some(dir) = &self.install_dir {
-            dir.join(name).to_string_lossy().to_string()
+            dir.join(name).to_str().unwrap().to_string()
         } else {
             name.to_string() // Rely on PATH
         };
@@ -285,7 +291,18 @@ impl LoreInstaller {
             anyhow::bail!("{} --version failed", name);
         }
 
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+        // Strip program name prefix if present.
+        // `lore --version` may emit "lore 0.8.4+283" — we only want "0.8.4+283".
+        let version = if let Some(pos) = raw.rfind(' ') {
+            // Take the last token after the final space
+            raw[pos + 1..].to_string()
+        } else {
+            raw
+        };
+
+        Ok(version)
     }
 
     /// Add install directory to PATH
