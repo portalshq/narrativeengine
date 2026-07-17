@@ -4,8 +4,13 @@
 //! following the "Quick Start" and "Usage Guide" workflows from documentation.
 //!
 //! Prerequisites:
-//!   - A running local lore server at lore://localhost:41337
-//!   - The `lore` binary in PATH
+//!   - A running local lore server at `lore://localhost:41337` (for provider validation)
+//!     and `grpc://localhost:41337` (for actual CLI operations).
+//!   - The `lore` binary in PATH.
+//!
+//! Known Issues:
+//!   - QUIC transport (`lore://`) currently hangs on macOS in this environment.
+//!     `grpc://` is used for test CLI operations as a reliable transport.
 //!
 //! Run with:
 //!   cargo test -p nap-cli --test workflow_integration_suite --features lore-e2e -- --test-threads=1

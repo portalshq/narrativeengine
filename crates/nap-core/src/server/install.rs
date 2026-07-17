@@ -292,17 +292,7 @@ impl LoreInstaller {
         }
 
         let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
-        // Strip program name prefix if present.
-        // `lore --version` may emit "lore 0.8.4+283" — we only want "0.8.4+283".
-        let version = if let Some(pos) = raw.rfind(' ') {
-            // Take the last token after the final space
-            raw[pos + 1..].to_string()
-        } else {
-            raw
-        };
-
-        Ok(version)
+        Ok(parse_version_output(&raw))
     }
 
     /// Add install directory to PATH
@@ -339,6 +329,23 @@ impl LoreInstaller {
         Ok(())
     }
 }
+
+/// Parse the output of `lore --version` (or `loreserver --version`).
+///
+/// Handles:
+/// - `"0.8.4+283"` -> `"0.8.4+283"`
+/// - `"lore 0.8.4+283"` -> `"0.8.4+283"`
+/// - `"my-tool 1.2.3"` -> `"1.2.3"`
+pub fn parse_version_output(raw: &str) -> String {
+    let raw = raw.trim();
+    if let Some(pos) = raw.rfind(' ') {
+        // Take the last token after the final space
+        raw[pos + 1..].to_string()
+    } else {
+        raw.to_string()
+    }
+}
+
 
 /// Result of installation verification
 #[derive(Debug, Clone)]
@@ -406,6 +413,15 @@ mod tests {
         let installer2 =
             LoreInstaller::new(Some(temp_dir.path().to_path_buf())).with_version("v1.0.0");
         assert_eq!(installer2.tag_version(), "v1.0.0");
+    }
+
+    #[test]
+    fn test_parse_version_output() {
+        assert_eq!(parse_version_output("0.8.4+283"), "0.8.4+283");
+        assert_eq!(parse_version_output("lore 0.8.4+283"), "0.8.4+283");
+        assert_eq!(parse_version_output("loreserver 0.8.4+283"), "0.8.4+283");
+        assert_eq!(parse_version_output("my-tool 1.2.3"), "1.2.3");
+        assert_eq!(parse_version_output("some-tool"), "some-tool");
     }
 
     #[test]
