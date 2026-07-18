@@ -26,6 +26,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use nap_core::{
     commit::Change,
+    error::NapError,
     manifest::Representation,
     provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
@@ -651,8 +652,16 @@ fn main() -> Result<()> {
                 "code": "CLI_ERROR",
             });
             eprintln!("{}", serde_json::to_string(&error_json).unwrap());
+        } else {
+            if cli.verbose {
+                eprintln!("{:?}", err);
+            } else {
+                let err_msg = format!("{}", err);
+                let top_err = err_msg.split("\nCaused by:").next().unwrap_or(&err_msg);
+                eprintln!("Error: {}", top_err);
+            }
         }
-        return Err(err);
+        std::process::exit(1);
     }
     Ok(())
 }
@@ -685,8 +694,10 @@ fn prompt_for_provider() -> Result<String> {
 
 fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
     let repo_path = base_dir.join(universe);
-    Repository::open(&repo_path, Box::new(LoreBackend::from_env()))
-        .context(format!("failed to open universe '{universe}'"))
+    Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| match e {
+        NapError::RepositoryNotFound(_) => anyhow::anyhow!("repository not found: '{}'", universe),
+        _ => anyhow::anyhow!(e),
+    })
 }
 
 fn cmd_init(
