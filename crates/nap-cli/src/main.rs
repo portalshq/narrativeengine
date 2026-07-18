@@ -202,7 +202,7 @@ pub enum Commands {
 
     /// Create a new entity manifest.
     Create {
-        /// Entity type: character, location, scene, prop, world.
+        /// Entity type (any non-empty string, e.g. character, location, custom-type).
         entity_type: String,
 
         /// Entity ID (slug). e.g., "lukeskywalker".
@@ -1072,12 +1072,10 @@ fn cmd_create(
     name: &str,
     author: &str,
 ) -> Result<()> {
-    let entity_type: EntityType = entity_type_str
-        .parse()
-        .context(format!("unknown entity type '{entity_type_str}'"))?;
+    let entity_type = EntityType::new(entity_type_str);
     let repo = open_repo(base_dir, universe)?;
     let (manifest, hash) = repo
-        .create_entity(entity_type, entity_id, name, author)
+        .create_entity(&entity_type, entity_id, name, author)
         .context("failed to create entity")?;
     emit(format!("✓ Created {entity_type} '{name}'."));
     emit(format!("  URI:    {}", manifest.id));
@@ -1153,7 +1151,7 @@ fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
     let repo = open_repo(base_dir, &uri.universe)?;
     let history = repo
-        .history(uri.entity_type, &uri.entity_id, limit)
+        .history(&uri.entity_type, &uri.entity_id, limit)
         .context("failed to get history")?;
 
     if history.is_empty() {
@@ -1188,13 +1186,13 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
             let resolver = Resolver::new(base_dir);
             let universes = resolver
                 .list_universes()
-                .context("failed to list universes")?;
+                .context("failed to list repositories")?;
             if is_piped {
                 println!("{}", serde_json::to_string_pretty(&universes)?);
             } else if universes.is_empty() {
-                println!("No universes found in {}", base_dir.display());
+                println!("No repositories found in {}", base_dir.display());
             } else {
-                println!("Universes:");
+                println!("Repositories:");
                 for u in &universes {
                     println!("  nap://{u}/");
                 }
@@ -1205,8 +1203,8 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
             let is_piped = !std::io::stdout().is_terminal();
             match entity_type {
                 Some(et_str) => {
-                    let et: EntityType = et_str.parse().context("unknown entity type")?;
-                    let entities = repo.list_entities(et).context("failed to list entities")?;
+                    let et = EntityType::new(et_str);
+                    let entities = repo.list_entities(&et).context("failed to list entities")?;
                     if is_piped {
                         println!("{}", serde_json::to_string_pretty(&entities)?);
                     } else {
@@ -1217,10 +1215,13 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
                     }
                 }
                 None => {
-                    // Collect all entities grouped by type → JSON for piped, human for terminal
+                    // Discover all entity types dynamically
+                    let types = repo
+                        .list_entity_types()
+                        .context("failed to list entity types")?;
                     let mut all: Vec<serde_json::Value> = Vec::new();
-                    for et in EntityType::subdirectory_types() {
-                        let entities = repo.list_entities(*et).unwrap_or_default();
+                    for et in &types {
+                        let entities = repo.list_entities(et).unwrap_or_default();
                         if is_piped && !entities.is_empty() {
                             for e in &entities {
                                 all.push(serde_json::json!({
@@ -1417,7 +1418,7 @@ fn cmd_set(
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
     let repo = open_repo(base_dir, &uri.universe)?;
     let mut manifest = repo
-        .read_manifest(uri.entity_type, &uri.entity_id)
+        .read_manifest(&uri.entity_type, &uri.entity_id)
         .context("failed to read manifest")?;
 
     // Parse value — try as YAML for structured values, fallback to string
@@ -1450,7 +1451,7 @@ fn cmd_add_repr(
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
     let repo = open_repo(base_dir, &uri.universe)?;
     let mut manifest = repo
-        .read_manifest(uri.entity_type, &uri.entity_id)
+        .read_manifest(&uri.entity_type, &uri.entity_id)
         .context("failed to read manifest")?;
 
     // Compute content hash
@@ -1565,7 +1566,7 @@ fn cmd_validate(base_dir: &Path, uri: Option<&str>, file: Option<&Path>) -> Resu
             let uri_parsed: NapUri = uri_str.parse().context("invalid URI")?;
             let repo = open_repo(base_dir, &uri_parsed.universe)?;
             let manifest = repo
-                .read_manifest(uri_parsed.entity_type, &uri_parsed.entity_id)
+                .read_manifest(&uri_parsed.entity_type, &uri_parsed.entity_id)
                 .context("failed to read manifest")?;
             match nap_core::schema::validate_manifest(&manifest) {
                 Ok(()) => {

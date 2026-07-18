@@ -1,19 +1,21 @@
-//! Universe repository — filesystem layout and manifest CRUD.
+//! Repository — filesystem layout and manifest CRUD.
 //!
-//! A NAP repository represents a single fictional universe.
+//! A NAP repository is a self-contained directory of entities.
 //! Repository structure:
 //!
 //! ```text
-//! starwars/               ← universe root
-//! ├── universe.yaml       ← world manifest (root-level, includes nap config in metadata)
-//! ├── characters/
+//! starwars/               ← repository root
+//! ├── repository.yaml     ← repository metadata (name, description, nap config)
+//! ├── character/          ← entity type (has .entity-type marker)
+//! │   ├── .entity-type    ← marker file
 //! │   ├── lukeskywalker.yaml
 //! │   └── darthvader.yaml
-//! ├── locations/
+//! ├── location/
+//! │   ├── .entity-type
 //! │   └── tatooine.yaml
-//! ├── scenes/
-//! │   └── cantina-scene.yaml
-//! └── props/
+//! └── scene/
+//!     ├── .entity-type
+//!     └── cantina-scene.yaml
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -28,11 +30,14 @@ use crate::types::EntityType;
 use crate::uri::NapUri;
 use crate::vcs::VcsBackend;
 
-/// A NAP universe repository.
+/// Marker filename for entity type directories.
+pub const ENTITY_TYPE_MARKER: &str = ".entity-type";
+
+/// A NAP repository.
 pub struct Repository {
     /// Filesystem path to the repository root.
     pub root: PathBuf,
-    /// The universe name (derived from directory name).
+    /// The repository name (derived from directory name).
     pub universe: String,
     /// The VCS backend (Lore).
     vcs: Box<dyn VcsBackend>,
@@ -41,8 +46,8 @@ pub struct Repository {
 impl Repository {
     /// Open an existing NAP repository at the given path.
     pub fn open(path: &Path, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
-        // Check for universe.yaml to identify valid repository
-        if !path.join("universe.yaml").exists() {
+        // Check for repository.yaml or universe.yaml to identify valid repository
+        if !path.join("repository.yaml").exists() && !path.join("universe.yaml").exists() {
             return Err(NapError::RepositoryNotFound(path.display().to_string()));
         }
 
@@ -65,25 +70,27 @@ impl Repository {
         })
     }
 
-    /// Read the resolve configuration from universe.yaml metadata.
+    /// Read the resolve configuration from repository.yaml (or universe.yaml) metadata.
     pub fn read_resolve_config(&self) -> ResolveConfig {
-        let universe_path = self.root.join("universe.yaml");
-
-        if !universe_path.exists() {
-            debug!(
-                path = %universe_path.display(),
-                "universe.yaml not found, using default ResolveConfig"
-            );
+        // Prefer repository.yaml, fall back to universe.yaml
+        let repo_yaml_path = self.root.join("repository.yaml");
+        let universe_yaml_path = self.root.join("universe.yaml");
+        let config_path = if repo_yaml_path.exists() {
+            repo_yaml_path
+        } else if universe_yaml_path.exists() {
+            universe_yaml_path
+        } else {
+            debug!("no repository.yaml or universe.yaml found, using default ResolveConfig");
             return ResolveConfig::default();
-        }
+        };
 
-        let yaml_content = match std::fs::read_to_string(&universe_path) {
+        let yaml_content = match std::fs::read_to_string(&config_path) {
             Ok(content) => content,
             Err(e) => {
                 debug!(
-                    path = %universe_path.display(),
+                    path = %config_path.display(),
                     error = %e,
-                    "failed to read universe.yaml, using default ResolveConfig"
+                    "failed to read config, using default ResolveConfig"
                 );
                 return ResolveConfig::default();
             }
@@ -94,9 +101,9 @@ impl Repository {
             Ok(value) => value,
             Err(e) => {
                 debug!(
-                    path = %universe_path.display(),
+                    path = %config_path.display(),
                     error = %e,
-                    "failed to parse universe.yaml, using default ResolveConfig"
+                    "failed to parse config, using default ResolveConfig"
                 );
                 return ResolveConfig::default();
             }
@@ -113,16 +120,16 @@ impl Repository {
         // Auto-create nap metadata if missing
         if default_branch.is_none() {
             debug!(
-                path = %universe_path.display(),
+                path = %config_path.display(),
                 "nap metadata not found, auto-creating with default_branch = 'main'"
             );
 
             // Read the existing manifest
-            let mut manifest = match Manifest::from_file(&universe_path) {
+            let mut manifest = match Manifest::from_file(&config_path) {
                 Ok(m) => m,
                 Err(e) => {
                     debug!(
-                        path = %universe_path.display(),
+                        path = %config_path.display(),
                         error = %e,
                         "failed to read manifest, using default ResolveConfig"
                     );
@@ -140,9 +147,9 @@ impl Repository {
             );
 
             // Write back to file
-            if let Err(e) = manifest.to_file(&universe_path) {
+            if let Err(e) = manifest.to_file(&config_path) {
                 debug!(
-                    path = %universe_path.display(),
+                    path = %config_path.display(),
                     error = %e,
                     "failed to write nap metadata, using default ResolveConfig"
                 );
@@ -160,7 +167,7 @@ impl Repository {
     /// Initialize a new NAP repository.
     pub fn init(path: &Path, universe: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
         let repo_root = path.to_path_buf();
-        if repo_root.join("universe.yaml").exists() {
+        if repo_root.join("repository.yaml").exists() || repo_root.join("universe.yaml").exists() {
             return Err(NapError::RepositoryAlreadyExists(
                 repo_root.display().to_string(),
             ));
@@ -175,21 +182,16 @@ impl Repository {
         // Create directory structure
         std::fs::create_dir_all(&repo_root)?;
 
-        // Create entity type subdirectories
-        for entity_type in EntityType::subdirectory_types() {
-            std::fs::create_dir_all(repo_root.join(entity_type.directory_name()))?;
-        }
-
-        // Create universe.yaml (world manifest) with [nap] metadata
-        let mut world_manifest = Manifest::new(
+        // Create repository.yaml with [nap] metadata
+        let mut repo_manifest = Manifest::new(
             universe,
-            EntityType::World,
+            EntityType::new("world"),
             universe,
-            &format!("{universe} Universe"),
+            &format!("{universe} Repository"),
         );
 
         // Add nap configuration to metadata
-        world_manifest.metadata.insert(
+        repo_manifest.metadata.insert(
             "nap".to_string(),
             serde_yaml::to_value(serde_json::json!({
                 "default_branch": "main"
@@ -197,7 +199,7 @@ impl Repository {
             .unwrap(),
         );
 
-        world_manifest.to_file(&repo_root.join("universe.yaml"))?;
+        repo_manifest.to_file(&repo_root.join("repository.yaml"))?;
 
         // Initialize VCS
         vcs.init(&repo_root)?;
@@ -205,7 +207,7 @@ impl Repository {
         // Initial commit
         vcs.commit(
             &repo_root,
-            &format!("Initialize {universe} universe"),
+            &format!("Initialize {universe} repository"),
             "nap-init",
         )?;
 
@@ -223,15 +225,15 @@ impl Repository {
     }
 
     /// Get the full filesystem path to an entity's manifest file.
-    pub fn manifest_path(&self, entity_type: EntityType, entity_id: &str) -> PathBuf {
-        let uri = NapUri::new(&self.universe, entity_type, entity_id);
+    pub fn manifest_path(&self, entity_type: &EntityType, entity_id: &str) -> PathBuf {
+        let uri = NapUri::new(&self.universe, entity_type.clone(), entity_id);
         self.root.join(uri.manifest_path())
     }
 
     /// Read a manifest from the repository.
     pub fn read_manifest(
         &self,
-        entity_type: EntityType,
+        entity_type: &EntityType,
         entity_id: &str,
     ) -> Result<Manifest, NapError> {
         let path = self.manifest_path(entity_type, entity_id);
@@ -247,11 +249,11 @@ impl Repository {
     /// Read a manifest at a specific VCS ref (commit, branch, tag).
     pub fn read_manifest_at_ref(
         &self,
-        entity_type: EntityType,
+        entity_type: &EntityType,
         entity_id: &str,
         reference: &str,
     ) -> Result<Manifest, NapError> {
-        let uri = NapUri::new(&self.universe, entity_type, entity_id);
+        let uri = NapUri::new(&self.universe, entity_type.clone(), entity_id);
         let file_path = uri.manifest_path();
 
         debug!(
@@ -269,6 +271,11 @@ impl Repository {
     /// Write a manifest to the repository (does NOT commit).
     pub fn write_manifest(&self, manifest: &Manifest) -> Result<PathBuf, NapError> {
         let uri: NapUri = manifest.id.parse()?;
+        let entity_type = uri.entity_type.clone();
+
+        // Ensure the entity type directory and marker exist
+        self.ensure_entity_type_dir(&entity_type)?;
+
         let path = self.root.join(uri.manifest_path());
 
         debug!(
@@ -281,15 +288,43 @@ impl Repository {
         Ok(path)
     }
 
+    /// Ensure an entity type directory exists with its marker file.
+    fn ensure_entity_type_dir(&self, entity_type: &EntityType) -> Result<(), NapError> {
+        let dir = self.root.join(entity_type.directory_name());
+        if !dir.exists() {
+            std::fs::create_dir_all(&dir)?;
+            // Create .entity-type marker file
+            let marker = dir.join(ENTITY_TYPE_MARKER);
+            std::fs::write(&marker, "")?;
+            debug!(
+                entity_type = %entity_type,
+                path = %dir.display(),
+                "created entity type directory with marker"
+            );
+        }
+        Ok(())
+    }
+
     /// Create a new entity manifest and commit it.
     pub fn create_entity(
         &self,
-        entity_type: EntityType,
+        entity_type: &EntityType,
         entity_id: &str,
         name: &str,
         author: &str,
     ) -> Result<(Manifest, String), NapError> {
-        let mut manifest = Manifest::new(&self.universe, entity_type, entity_id, name);
+        // Ensure entity type directory exists
+        self.ensure_entity_type_dir(entity_type)?;
+
+        let mut manifest = Manifest::new(&self.universe, entity_type.clone(), entity_id, name);
+
+        // Check if entity already exists (idempotency guard)
+        let path = self.manifest_path(entity_type, entity_id);
+        if path.exists() {
+            return Err(NapError::Other(format!(
+                "entity '{entity_id}' of type '{entity_type}' already exists"
+            )));
+        }
 
         // Validate against schema before writing
         crate::schema::validate_manifest(&manifest)
@@ -368,20 +403,20 @@ impl Repository {
     /// Get the commit history for a specific entity.
     pub fn history(
         &self,
-        entity_type: EntityType,
+        entity_type: &EntityType,
         entity_id: &str,
         limit: usize,
     ) -> Result<Vec<crate::vcs::CommitInfo>, NapError> {
-        let uri = NapUri::new(&self.universe, entity_type, entity_id);
+        let uri = NapUri::new(&self.universe, entity_type.clone(), entity_id);
         let file_path = uri.manifest_path();
         self.vcs.log(&self.root, Some(&file_path), limit)
     }
 
     /// List all entity IDs of a given type in the repository.
-    pub fn list_entities(&self, entity_type: EntityType) -> Result<Vec<String>, NapError> {
+    pub fn list_entities(&self, entity_type: &EntityType) -> Result<Vec<String>, NapError> {
         let dir = self.root.join(entity_type.directory_name());
         if !dir.exists() {
-            return Ok(vec![]);
+            return Err(NapError::EntityTypeNotFound(entity_type.to_string()));
         }
 
         let mut entities = Vec::new();
@@ -398,10 +433,62 @@ impl Repository {
         Ok(entities)
     }
 
+    /// Discover all entity types in this repository.
+    ///
+    /// Scans the repository root for directories containing a `.entity-type`
+    /// marker file OR directories containing at least one `.yaml` file
+    /// (implicit discovery for backward compatibility).
+    pub fn list_entity_types(&self) -> Result<Vec<EntityType>, NapError> {
+        let mut types = Vec::new();
+        for entry in std::fs::read_dir(&self.root)? {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            // Skip hidden directories (.nap, .git, etc.)
+            let dir_name = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name,
+                None => continue,
+            };
+            if dir_name.starts_with('.') || dir_name == "target" {
+                continue;
+            }
+
+            // Check for .entity-type marker file (explicit)
+            if path.join(ENTITY_TYPE_MARKER).exists() {
+                types.push(EntityType::new(dir_name));
+                continue;
+            }
+
+            // Implicit: directory contains at least one .yaml file
+            let has_yaml = std::fs::read_dir(&path)
+                .ok()
+                .and_then(|entries| {
+                    entries
+                        .filter_map(|e| e.ok())
+                        .find(|e| {
+                            e.path()
+                                .extension()
+                                .and_then(|ext| ext.to_str())
+                                == Some("yaml")
+                        })
+                        .map(|_| true)
+                })
+                .unwrap_or(false);
+
+            if has_yaml {
+                types.push(EntityType::new(dir_name));
+            }
+        }
+        types.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        Ok(types)
+    }
+
     /// Delete an entity manifest and commit the deletion.
     pub fn delete_entity(
         &self,
-        entity_type: EntityType,
+        entity_type: &EntityType,
         entity_id: &str,
         author: &str,
     ) -> Result<String, NapError> {
@@ -444,21 +531,16 @@ impl Repository {
     }
 
     /// Revert a commit by creating a new VCS commit that undoes the specified one.
-    ///
-    /// The revert is a universe-level operation (not entity-scoped).
-    /// After reverting, working-tree files are restored to their pre-commit content
-    /// and a new revert commit is created in VCS history.
     pub fn revert_commit(&self, commit_hash: &str, author: &str) -> Result<String, NapError> {
         let new_hash = self.vcs.revert(&self.root, commit_hash)?;
 
         // Re-read all entity manifests and update their `head` pointer
-        // so manifests are consistent with the new VCS state.
-        for et in EntityType::subdirectory_types() {
-            if let Ok(ids) = self.list_entities(*et) {
+        for entity_type in self.list_entity_types()? {
+            if let Ok(ids) = self.list_entities(&entity_type) {
                 for id in &ids {
-                    if let Ok(mut manifest) = self.read_manifest(*et, id) {
+                    if let Ok(mut manifest) = self.read_manifest(&entity_type, id) {
                         manifest.head = Some(new_hash.clone());
-                        self.write_manifest(&manifest).ok();
+                        self.write_manifest(&manifest)?;
                     }
                 }
             }
@@ -517,9 +599,6 @@ impl Repository {
     }
 }
 
-// ── In-memory mock VcsBackend for testing ──────────────────────────────
-// (Moved to nap-test-utils)
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -536,11 +615,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        assert!(repo.root.join("universe.yaml").exists());
-        assert!(repo.root.join("characters").exists());
-        assert!(repo.root.join("locations").exists());
-        assert!(repo.root.join("scenes").exists());
-        assert!(repo.root.join("props").exists());
+        assert!(repo.root.join("repository.yaml").exists());
     }
 
     #[test]
@@ -549,15 +624,61 @@ mod tests {
         let repo = mock_repo(&tmp);
 
         let (manifest, _hash) = repo
-            .create_entity(EntityType::Character, "hero", "The Hero", "test-author")
+            .create_entity(&EntityType::new("character"), "hero", "The Hero", "test-author")
             .unwrap();
 
         assert_eq!(manifest.name, "The Hero");
-        assert_eq!(manifest.entity_type, EntityType::Character);
+        assert_eq!(manifest.entity_type.as_str(), "character");
 
         // Read it back
-        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
         assert_eq!(read_back.name, "The Hero");
+    }
+
+    #[test]
+    fn test_create_entity_auto_creates_type_directory() {
+        let tmp = TempDir::new().unwrap();
+        let repo = mock_repo(&tmp);
+
+        // Create entity of a custom type
+        repo.create_entity(
+            &EntityType::new("pokemon"),
+            "pikachu",
+            "Pikachu",
+            "test",
+        )
+        .unwrap();
+
+        // Verify the type directory and marker exist
+        assert!(repo.root.join("pokemon").exists());
+        assert!(repo.root.join("pokemon").join(".entity-type").exists());
+        assert!(repo.root.join("pokemon/pikachu.yaml").exists());
+    }
+
+    #[test]
+    fn test_list_entity_types() {
+        let tmp = TempDir::new().unwrap();
+        let repo = mock_repo(&tmp);
+
+        // Create entities of different types
+        repo.create_entity(
+            &EntityType::new("character"),
+            "hero",
+            "Hero",
+            "author",
+        )
+        .unwrap();
+        repo.create_entity(&EntityType::new("location"), "village", "Village", "author")
+            .unwrap();
+        repo.create_entity(&EntityType::new("pokemon"), "pikachu", "Pikachu", "author")
+            .unwrap();
+
+        let types = repo.list_entity_types().unwrap();
+        assert!(types.contains(&EntityType::new("character")));
+        assert!(types.contains(&EntityType::new("location")));
+        assert!(types.contains(&EntityType::new("pokemon")));
     }
 
     #[test]
@@ -565,12 +686,24 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        repo.create_entity(EntityType::Character, "alice", "Alice", "author")
-            .unwrap();
-        repo.create_entity(EntityType::Character, "bob", "Bob", "author")
-            .unwrap();
+        repo.create_entity(
+            &EntityType::new("character"),
+            "alice",
+            "Alice",
+            "author",
+        )
+        .unwrap();
+        repo.create_entity(
+            &EntityType::new("character"),
+            "bob",
+            "Bob",
+            "author",
+        )
+        .unwrap();
 
-        let chars = repo.list_entities(EntityType::Character).unwrap();
+        let chars = repo
+            .list_entities(&EntityType::new("character"))
+            .unwrap();
         assert_eq!(chars, vec!["alice", "bob"]);
     }
 
@@ -580,7 +713,7 @@ mod tests {
         let repo = mock_repo(&tmp);
 
         let (mut manifest, _) = repo
-            .create_entity(EntityType::Character, "hero", "The Hero", "author")
+            .create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
             .unwrap();
 
         // Modify and commit
@@ -594,7 +727,9 @@ mod tests {
         assert_eq!(commit.message, "set species to elf");
 
         // Verify version incremented
-        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
         assert!(read_back.version >= 2);
     }
 
@@ -604,7 +739,7 @@ mod tests {
         let repo = mock_repo(&tmp);
 
         let (mut manifest, _) = repo
-            .create_entity(EntityType::Character, "hero", "The Hero", "author")
+            .create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
             .unwrap();
 
         manifest.set_property(
@@ -614,7 +749,9 @@ mod tests {
         repo.commit_manifest(&mut manifest, "update name", "author", vec![])
             .unwrap();
 
-        let hist = repo.history(EntityType::Character, "hero", 10).unwrap();
+        let hist = repo
+            .history(&EntityType::new("character"), "hero", 10)
+            .unwrap();
         assert!(hist.len() >= 2);
     }
 
@@ -625,7 +762,7 @@ mod tests {
 
         // Create entity and note its name
         let (mut manifest, _) = repo
-            .create_entity(EntityType::Character, "hero", "The Hero", "author")
+            .create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
             .unwrap();
         assert_eq!(manifest.name, "The Hero");
 
@@ -637,15 +774,15 @@ mod tests {
             .unwrap();
 
         // Verify the property was set
-        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
         assert_eq!(
             read_back.properties.get("species").and_then(|v| v.as_str()),
             Some("elf")
         );
 
         // Get the VCS commit hash from the manifest's head pointer.
-        // After commit_manifest, this is the single VCS commit containing
-        // the property change (the head pointer update is left dirty).
         let vcs_hash = read_back
             .head
             .as_ref()
@@ -656,28 +793,17 @@ mod tests {
         assert!(!revert_hash.is_empty());
 
         // Verify the manifest head was updated to the revert commit
-        let after_revert = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        let after_revert = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
         assert_eq!(after_revert.head.as_deref(), Some(revert_hash.as_str()));
 
         // Verify the revert appears in history
-        let hist = repo.history(EntityType::Character, "hero", 10).unwrap();
+        let hist = repo
+            .history(&EntityType::new("character"), "hero", 10)
+            .unwrap();
         assert!(hist.iter().any(|c| c.id == revert_hash));
     }
-
-    // fn test_remote_operations() {
-    //     let tmp = TempDir::new().unwrap();
-    //     let repo = mock_repo(&tmp);
-
-    //     repo.add_remote("origin", "git@github.com:user/repo.git")
-    //         .unwrap();
-    //     let remotes = repo.list_remotes().unwrap();
-    //     assert_eq!(remotes.len(), 1);
-    //     assert_eq!(remotes[0].0, "origin");
-
-    //     repo.remove_remote("origin").unwrap();
-    //     let remotes = repo.list_remotes().unwrap();
-    //     assert!(remotes.is_empty());
-    // }
 }
 
 // ── Integration tests: Repository + LoreBackend ─────────────────────
@@ -710,7 +836,7 @@ mod lore_integration_tests {
     fn test_lore_init_creates_structure() {
         let (_tmp, repo) = setup_lore_repo();
         assert!(repo.root.join(".nap").exists());
-        assert!(repo.root.join("universe.yaml").exists());
+        assert!(repo.root.join("repository.yaml").exists());
     }
 
     #[test]
@@ -719,7 +845,7 @@ mod lore_integration_tests {
 
         let (manifest, _hash) = repo
             .create_entity(
-                EntityType::Character,
+                &EntityType::new("character"),
                 "hero",
                 "Test Hero",
                 "integration-test",
@@ -727,7 +853,9 @@ mod lore_integration_tests {
             .unwrap();
         assert_eq!(manifest.name, "Test Hero");
 
-        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
         assert_eq!(read_back.name, "Test Hero");
     }
 
@@ -737,7 +865,7 @@ mod lore_integration_tests {
 
         let (mut manifest, _) = repo
             .create_entity(
-                EntityType::Character,
+                &EntityType::new("character"),
                 "hero",
                 "Test Hero",
                 "integration-test",
@@ -749,7 +877,9 @@ mod lore_integration_tests {
         repo.commit_manifest(&mut manifest, "add species", "integration-test", changes)
             .unwrap();
 
-        let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
         assert_eq!(read_back.version, 2);
 
         repo.create_branch("feature-branch").unwrap();
@@ -762,17 +892,19 @@ mod lore_integration_tests {
         let (_tmp, repo) = setup_lore_repo();
 
         repo.create_entity(
-            EntityType::Character,
+            &EntityType::new("character"),
             "hero",
             "Test Hero",
             "integration-test",
         )
         .unwrap();
 
-        repo.delete_entity(EntityType::Character, "hero", "integration-test")
+        repo.delete_entity(&EntityType::new("character"), "hero", "integration-test")
             .unwrap();
 
-        let entities = repo.list_entities(EntityType::Character).unwrap();
+        let entities = repo
+            .list_entities(&EntityType::new("character"))
+            .unwrap();
         assert!(!entities.contains(&"hero".to_string()));
     }
 
@@ -782,7 +914,7 @@ mod lore_integration_tests {
 
         let (mut manifest, _) = repo
             .create_entity(
-                EntityType::Character,
+                &EntityType::new("character"),
                 "hero",
                 "Test Hero",
                 "integration-test",
@@ -796,7 +928,9 @@ mod lore_integration_tests {
         repo.commit_manifest(&mut manifest, "update name", "integration-test", vec![])
             .unwrap();
 
-        let hist = repo.history(EntityType::Character, "hero", 10).unwrap();
+        let hist = repo
+            .history(&EntityType::new("character"), "hero", 10)
+            .unwrap();
         assert!(hist.len() >= 2);
     }
 }

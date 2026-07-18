@@ -71,6 +71,8 @@ struct ResolveQuery {
     commit: Option<String>,
     tag: Option<String>,
     path: Option<String>,
+    recursive: Option<bool>,
+    max_depth: Option<usize>,
 }
 
 /// Request body for commits.
@@ -282,15 +284,7 @@ async fn handle_create(
     Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
     Json(body): Json<CreateRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "INVALID_ENTITY_TYPE".to_string(),
-            }),
-        )
-    })?;
+    let entity_type = EntityType::new(&entity_type_str);
 
     let repo_path = state.base_path.join(&universe);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
@@ -304,7 +298,7 @@ async fn handle_create(
     })?;
 
     let (manifest, commit_hash) = repo
-        .create_entity(entity_type, &entity_id, &body.name, &body.author)
+        .create_entity(&entity_type, &entity_id, &body.name, &body.author)
         .map_err(|e| {
             error!(error = %e, "create entity failed");
             (
@@ -330,15 +324,7 @@ async fn handle_delete(
     Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
     Json(body): Json<DeleteRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "INVALID_ENTITY_TYPE".to_string(),
-            }),
-        )
-    })?;
+    let entity_type = EntityType::new(&entity_type_str);
 
     let repo_path = state.base_path.join(&universe);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
@@ -352,7 +338,7 @@ async fn handle_delete(
     })?;
 
     let commit_hash = repo
-        .delete_entity(entity_type, &entity_id, &body.author)
+        .delete_entity(&entity_type, &entity_id, &body.author)
         .map_err(|e| {
             error!(error = %e, "delete entity failed");
             (
@@ -785,15 +771,7 @@ async fn handle_validate(
     State(state): State<Arc<AppState>>,
     Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "INVALID_ENTITY_TYPE".to_string(),
-            }),
-        )
-    })?;
+    let entity_type = EntityType::new(&entity_type_str);
 
     let repo_path = state.base_path.join(&universe);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
@@ -806,7 +784,7 @@ async fn handle_validate(
         )
     })?;
 
-    let manifest = repo.read_manifest(entity_type, &entity_id).map_err(|e| {
+    let manifest = repo.read_manifest(&entity_type, &entity_id).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -842,6 +820,8 @@ async fn handle_resolve(
         commit: query.commit,
         tag: query.tag,
         path: query.path,
+        recursive: query.recursive,
+        max_depth: query.max_depth,
     };
 
     let resolver = Resolver::new(&state.base_path);
@@ -865,9 +845,6 @@ async fn handle_resolve(
                 nap_core::NapError::ManifestNotFound(_) => (StatusCode::NOT_FOUND, "NOT_FOUND"),
                 nap_core::NapError::RepositoryNotFound(_) => {
                     (StatusCode::NOT_FOUND, "UNIVERSE_NOT_FOUND")
-                }
-                nap_core::NapError::UnknownEntityType(_) => {
-                    (StatusCode::BAD_REQUEST, "INVALID_ENTITY_TYPE")
                 }
                 nap_core::NapError::InvalidUri { .. } => (StatusCode::BAD_REQUEST, "INVALID_URI"),
                 nap_core::NapError::QueryPathNotFound { .. } => {
@@ -893,15 +870,7 @@ async fn handle_commit(
     Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
     Json(body): Json<CommitRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "INVALID_ENTITY_TYPE".to_string(),
-            }),
-        )
-    })?;
+    let entity_type = EntityType::new(&entity_type_str);
 
     let repo_path = state.base_path.join(&universe);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
@@ -914,7 +883,7 @@ async fn handle_commit(
         )
     })?;
 
-    let mut manifest = repo.read_manifest(entity_type, &entity_id).map_err(|e| {
+    let mut manifest = repo.read_manifest(&entity_type, &entity_id).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -1044,15 +1013,7 @@ async fn handle_history(
     State(state): State<Arc<AppState>>,
     Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let entity_type: EntityType = entity_type_str.parse().map_err(|e: nap_core::NapError| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "INVALID_ENTITY_TYPE".to_string(),
-            }),
-        )
-    })?;
+    let entity_type = EntityType::new(&entity_type_str);
 
     let repo_path = state.base_path.join(&universe);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
@@ -1065,7 +1026,7 @@ async fn handle_history(
         )
     })?;
 
-    let history = repo.history(entity_type, &entity_id, 50).map_err(|e| {
+    let history = repo.history(&entity_type, &entity_id, 50).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiError {
@@ -1115,13 +1076,26 @@ async fn handle_list_entities(
     let mut result = serde_json::Map::new();
     let type_filter = params.get("type");
 
-    for et in EntityType::subdirectory_types() {
+    // Discover all entity types dynamically
+    let types = repo
+        .list_entity_types()
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiError {
+                    error: e.to_string(),
+                    code: "TYPE_DISCOVERY_FAILED".to_string(),
+                }),
+            )
+        })?;
+
+    for et in types {
         if let Some(filter) = type_filter
             && et.to_string() != *filter
         {
             continue;
         }
-        let entities = repo.list_entities(*et).unwrap_or_default();
+        let entities = repo.list_entities(&et).unwrap_or_default();
         let uris: Vec<String> = entities
             .iter()
             .map(|e| format!("nap://{universe}/{et}/{e}"))

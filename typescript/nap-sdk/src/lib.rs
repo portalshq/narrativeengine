@@ -22,8 +22,7 @@ fn map_error(e: nap_core::NapError) -> Error {
 }
 
 fn parse_et(s: &str) -> Result<EntityType, Error> {
-    s.parse()
-        .map_err(|e: nap_core::NapError| Error::from_reason(e.to_string()))
+    EntityType::try_new(s).map_err(|e| Error::from_reason(e.to_string()))
 }
 
 fn open_repo(base_path: &str, universe: &str) -> Result<Repository, Error> {
@@ -91,7 +90,7 @@ pub fn uri_format(
 
 #[napi(js_name = "entityTypeParse")]
 pub fn entity_type_parse(s: String) -> napi::Result<String> {
-    let et: EntityType = s.parse().map_err(map_error)?;
+    let et = EntityType::try_new(&s).map_err(|e| Error::from_reason(e.to_string()))?;
     serde_json::to_string(&et).map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -102,18 +101,11 @@ pub fn entity_type_directory_name(entity_type: String) -> napi::Result<String> {
 }
 
 #[napi(js_name = "entityTypeList")]
-pub fn entity_type_list() -> napi::Result<String> {
-    let types: Vec<&str> = nap_core::types::EntityType::subdirectory_types()
-        .iter()
-        .map(|et| match et {
-            EntityType::Character => "character",
-            EntityType::Location => "location",
-            EntityType::Scene => "scene",
-            EntityType::Prop => "prop",
-            EntityType::World => "world",
-        })
-        .collect();
-    serde_json::to_string(&types).map_err(|e| Error::from_reason(e.to_string()))
+pub fn entity_type_list(base_path: String, universe: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &universe)?;
+    let types = repo.list_entity_types().map_err(map_error)?;
+    let names: Vec<String> = types.iter().map(|t| t.to_string()).collect();
+    serde_json::to_string(&names).map_err(|e| Error::from_reason(e.to_string()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -333,7 +325,7 @@ pub fn repo_create_entity(
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let (manifest, commit_hash) = repo
-        .create_entity(et, &entity_id, &name, &author)
+        .create_entity(&et, &entity_id, &name, &author)
         .map_err(map_error)?;
     let result = serde_json::json!({
         "manifest": serde_json::to_value(&manifest).map_err(|e| Error::from_reason(e.to_string()))?,
@@ -351,7 +343,7 @@ pub fn repo_read_manifest(
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let manifest = repo.read_manifest(et, &entity_id).map_err(map_error)?;
+    let manifest = repo.read_manifest(&et, &entity_id).map_err(map_error)?;
     serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -366,7 +358,7 @@ pub fn repo_read_manifest_at_ref(
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let manifest = repo
-        .read_manifest_at_ref(et, &entity_id, &reference)
+        .read_manifest_at_ref(&et, &entity_id, &reference)
         .map_err(map_error)?;
     serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
 }
@@ -396,7 +388,7 @@ pub fn repo_commit_manifest(
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let mut manifest = repo.read_manifest(et, &entity_id).map_err(map_error)?;
+    let mut manifest = repo.read_manifest(&et, &entity_id).map_err(map_error)?;
     let changes: Vec<Change> =
         serde_json::from_str(&changes_json).map_err(|e| Error::from_reason(e.to_string()))?;
     let commit = repo
@@ -420,7 +412,7 @@ pub fn repo_delete_entity(
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let hash = repo
-        .delete_entity(et, &entity_id, &author)
+        .delete_entity(&et, &entity_id, &author)
         .map_err(map_error)?;
     Ok(hash)
 }
@@ -436,7 +428,7 @@ pub fn repo_history(
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let history = repo
-        .history(et, &entity_id, limit as usize)
+        .history(&et, &entity_id, limit as usize)
         .map_err(map_error)?;
     serde_json::to_string(&history).map_err(|e| Error::from_reason(e.to_string()))
 }
@@ -449,7 +441,7 @@ pub fn repo_list_entities(
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let entities = repo.list_entities(et).map_err(map_error)?;
+    let entities = repo.list_entities(&et).map_err(map_error)?;
     serde_json::to_string(&entities).map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -605,6 +597,8 @@ pub fn resolve_with_options(
         commit,
         tag: None,
         path,
+        recursive: None,
+        max_depth: None,
     };
     let result = resolver.resolve(&uri_str, &options).map_err(map_error)?;
     match result {

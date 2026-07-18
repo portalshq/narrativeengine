@@ -346,7 +346,6 @@ pub fn parse_version_output(raw: &str) -> String {
     }
 }
 
-
 /// Result of installation verification
 #[derive(Debug, Clone)]
 pub struct VerificationResult {

@@ -256,7 +256,7 @@ impl Resolver {
         };
 
         // Read the manifest at the resolved revision
-        let manifest = repo.read_manifest_at_ref(uri.entity_type, &uri.entity_id, &revision)?;
+        let manifest = repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, &revision)?;
 
         // Apply query if present
         match query_path {
@@ -409,15 +409,15 @@ impl Resolver {
         }
     }
 
-    /// List all universe repositories available.
+    /// List all repositories available.
     pub fn list_universes(&self) -> Result<Vec<String>, NapError> {
         let mut universes = Vec::new();
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
-            // Check for universe.yaml to identify valid repositories
+            // Check for repository.yaml or universe.yaml to identify valid repositories
             if path.is_dir()
-                && path.join("universe.yaml").exists()
+                && (path.join("repository.yaml").exists() || path.join("universe.yaml").exists())
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
                 universes.push(name.to_string());
@@ -443,7 +443,7 @@ mod unit_tests {
         // Create a character
         let (mut manifest, _) = repo
             .create_entity(
-                EntityType::Character,
+                &EntityType::new("character"),
                 "lukeskywalker",
                 "Luke Skywalker",
                 "test",
@@ -494,7 +494,7 @@ mod unit_tests {
         match result {
             ResolveResult::Full(m) => {
                 assert_eq!(m.name, "Luke Skywalker");
-                assert_eq!(m.entity_type, EntityType::Character);
+                assert_eq!(m.entity_type.as_str(), "character");
             }
             _ => panic!("expected full manifest"),
         }
@@ -572,7 +572,7 @@ mod unit_tests {
         match result {
             ResolveResult::Full(m) => {
                 assert_eq!(m.name, "Luke Skywalker");
-                assert_eq!(m.entity_type, EntityType::Character);
+                assert_eq!(m.entity_type.as_str(), "character");
             }
             _ => panic!("expected full manifest"),
         }
@@ -648,7 +648,7 @@ mod lore_tests {
         // Create a character
         let (mut manifest, _) = repo
             .create_entity(
-                crate::types::EntityType::Character,
+                &EntityType::new("character"),
                 "lukeskywalker",
                 "Luke Skywalker",
                 "test",

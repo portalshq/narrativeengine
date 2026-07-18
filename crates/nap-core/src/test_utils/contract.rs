@@ -10,15 +10,17 @@ pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
     let repo = Repository::init(&repo_path, "contract-test", Box::new(backend)).unwrap();
 
     // Contract: init creates structure
-    assert!(repo.root.join("universe.yaml").exists());
+    assert!(repo.root.join("repository.yaml").exists());
 
     // Contract: create and read entity
     let (manifest, _) = repo
-        .create_entity(EntityType::Character, "hero", "Test Hero", "contract")
+        .create_entity(&EntityType::new("character"), "hero", "Test Hero", "contract")
         .unwrap();
     assert_eq!(manifest.name, "Test Hero");
 
-    let read_back = repo.read_manifest(EntityType::Character, "hero").unwrap();
+    let read_back = repo
+        .read_manifest(&EntityType::new("character"), "hero")
+        .unwrap();
     assert_eq!(read_back.name, "Test Hero");
 
     // Contract: commit updates version
@@ -31,15 +33,21 @@ pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
         vec![Change::set("properties.test", None, "true".to_string())],
     )
     .unwrap();
-    let after = repo.read_manifest(EntityType::Character, "hero").unwrap();
+    let after = repo
+        .read_manifest(&EntityType::new("character"), "hero")
+        .unwrap();
     assert!(after.version >= 2);
 
     // Contract: list entities
-    let entities = repo.list_entities(EntityType::Character).unwrap();
+    let entities = repo
+        .list_entities(&EntityType::new("character"))
+        .unwrap();
     assert!(entities.contains(&"hero".to_string()));
 
     // Contract: history is non-empty
-    let hist = repo.history(EntityType::Character, "hero", 10).unwrap();
+    let hist = repo
+        .history(&EntityType::new("character"), "hero", 10)
+        .unwrap();
     assert!(!hist.is_empty());
 
     // Contract: branch operations

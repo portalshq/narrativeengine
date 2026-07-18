@@ -49,8 +49,7 @@ fn map_storage_error(error: nap_core::storage::StorageError) -> PyErr {
 
 /// Helper: parse an entity type string, returning a PyErr on failure.
 fn parse_entity_type(s: &str) -> Result<EntityType, PyErr> {
-    s.parse()
-        .map_err(|e: nap_core::NapError| PyValueError::new_err(e.to_string()))
+    EntityType::try_new(s).map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
 /// Helper: open a repository at base_path/universe.
@@ -126,7 +125,7 @@ fn uri_format(
 
 #[pyfunction]
 fn entity_type_parse(s: String) -> PyResult<String> {
-    let et: EntityType = s.parse().map_err(map_error)?;
+    let et = EntityType::try_new(&s).map_err(|e| PyValueError::new_err(e.to_string()))?;
     serde_json::to_string(&et).map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
@@ -137,18 +136,11 @@ fn entity_type_directory_name(entity_type: String) -> PyResult<String> {
 }
 
 #[pyfunction]
-fn entity_type_list() -> PyResult<String> {
-    let types: Vec<&str> = EntityType::subdirectory_types()
-        .iter()
-        .map(|et| match et {
-            EntityType::Character => "character",
-            EntityType::Location => "location",
-            EntityType::Scene => "scene",
-            EntityType::Prop => "prop",
-            EntityType::World => "world",
-        })
-        .collect();
-    serde_json::to_string(&types).map_err(|e| PyValueError::new_err(e.to_string()))
+fn entity_type_list(base_path: String, universe: String) -> PyResult<String> {
+    let repo = open_repo(&base_path, &universe)?;
+    let types = repo.list_entity_types().map_err(map_error)?;
+    let names: Vec<String> = types.iter().map(|t| t.to_string()).collect();
+    serde_json::to_string(&names).map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -360,7 +352,7 @@ fn repo_create_entity(
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let (manifest, commit_hash) = repo
-        .create_entity(et, &entity_id, &name, &author)
+        .create_entity(&et, &entity_id, &name, &author)
         .map_err(map_error)?;
     let result = serde_json::json!({
         "manifest": serde_json::to_value(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))?,
@@ -378,7 +370,7 @@ fn repo_read_manifest(
 ) -> PyResult<String> {
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let manifest = repo.read_manifest(et, &entity_id).map_err(map_error)?;
+    let manifest = repo.read_manifest(&et, &entity_id).map_err(map_error)?;
     serde_json::to_string(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
@@ -393,7 +385,7 @@ fn repo_read_manifest_at_ref(
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let manifest = repo
-        .read_manifest_at_ref(et, &entity_id, &reference)
+        .read_manifest_at_ref(&et, &entity_id, &reference)
         .map_err(map_error)?;
     serde_json::to_string(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))
 }
@@ -423,7 +415,7 @@ fn repo_commit_manifest(
 ) -> PyResult<String> {
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let mut manifest = repo.read_manifest(et, &entity_id).map_err(map_error)?;
+    let mut manifest = repo.read_manifest(&et, &entity_id).map_err(map_error)?;
     let changes: Vec<Change> =
         serde_json::from_str(&changes_json).map_err(|e| PyValueError::new_err(e.to_string()))?;
     let commit = repo
@@ -447,7 +439,7 @@ fn repo_delete_entity(
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
     let hash = repo
-        .delete_entity(et, &entity_id, &author)
+        .delete_entity(&et, &entity_id, &author)
         .map_err(map_error)?;
     Ok(hash)
 }
@@ -462,7 +454,7 @@ fn repo_history(
 ) -> PyResult<String> {
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let history = repo.history(et, &entity_id, limit).map_err(map_error)?;
+    let history = repo.history(&et, &entity_id, limit).map_err(map_error)?;
     serde_json::to_string(&history).map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
@@ -474,7 +466,7 @@ fn repo_list_entities(
 ) -> PyResult<String> {
     let et = parse_entity_type(&entity_type)?;
     let repo = open_repo(&base_path, &universe)?;
-    let entities = repo.list_entities(et).map_err(map_error)?;
+    let entities = repo.list_entities(&et).map_err(map_error)?;
     serde_json::to_string(&entities).map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
@@ -618,6 +610,8 @@ fn resolve_with_options(
         commit,
         tag: None,
         path,
+        recursive: None,
+        max_depth: None,
     };
     let result = resolver.resolve(&uri_str, &options).map_err(map_error)?;
     match result {

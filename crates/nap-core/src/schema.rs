@@ -25,7 +25,7 @@ pub fn manifest_schema() -> Value {
         "properties": {
             "id": {
                 "type": "string",
-                "pattern": "^nap://[a-z0-9_-]+/[a-z]+/[a-z0-9_-]+$",
+                "pattern": "^nap://[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$",
                 "description": concat!(
                     "Canonical NAP URI. ",
                     "e.g., nap://starwars/character/lukeskywalker"
@@ -37,8 +37,8 @@ pub fn manifest_schema() -> Value {
             },
             "entity_type": {
                 "type": "string",
-                "enum": ["character", "location", "scene", "prop", "world"],
-                "description": "The kind of narrative entity this manifest describes"
+                "minLength": 1,
+                "description": "The kind of narrative entity this manifest describes (any non-empty string)"
             },
             "version": {
                 "type": "integer",
@@ -350,7 +350,7 @@ mod tests {
         use crate::manifest::Manifest;
         let m = Manifest::new(
             "starwars",
-            crate::types::EntityType::Character,
+            crate::types::EntityType::new("character"),
             "luke",
             "Luke Skywalker",
         );
@@ -358,13 +358,24 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_invalid_manifest_rejects_bad_entity_type() {
-        // Build a manifest-like JSON value with an invalid entity_type.
-        // We can't use Manifest deserialization because serde rejects the enum.
+    fn test_validate_manifest_with_custom_entity_type() {
+        use crate::manifest::Manifest;
+        let m = Manifest::new(
+            "lab",
+            crate::types::EntityType::new("scientific_paper"),
+            "fusion-2024",
+            "Cold Fusion Results",
+        );
+        assert!(validate_manifest(&m).is_ok());
+    }
+
+    #[test]
+    fn test_validate_manifest_rejects_empty_entity_type() {
+        // Build a manifest-like JSON value with an empty entity_type.
         let json = serde_json::json!({
             "id": "nap://starwars/character/luke",
             "name": "Luke",
-            "entity_type": "invalid_type",
+            "entity_type": "",
             "version": 1,
         });
         // Validate the raw JSON value directly against the schema
@@ -376,12 +387,7 @@ mod tests {
             .collect();
         assert!(
             !errors.is_empty(),
-            "expected validation errors for invalid entity_type"
-        );
-        let joined = errors.join(" ");
-        assert!(
-            joined.contains("entity_type"),
-            "expected entity_type error in output, got: {joined}"
+            "expected validation errors for empty entity_type"
         );
     }
 
@@ -394,21 +400,11 @@ mod tests {
         assert!(schema.get("properties").is_some());
         assert!(schema.get("definitions").is_some());
 
-        // Verify entity_type enum
+        // Verify entity_type is a string type (no enum constraint)
         let props = schema.get("properties").unwrap();
         let et = props.get("entity_type").unwrap();
-        let enum_vals = et.get("enum").unwrap();
-        let types: Vec<String> = enum_vals
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|v| v.as_str().unwrap().to_string())
-            .collect();
-        assert!(types.contains(&"character".to_string()));
-        assert!(types.contains(&"location".to_string()));
-        assert!(types.contains(&"scene".to_string()));
-        assert!(types.contains(&"prop".to_string()));
-        assert!(types.contains(&"world".to_string()));
+        assert_eq!(et.get("type").unwrap().as_str(), Some("string"));
+        assert!(et.get("enum").is_none());
     }
 
     #[test]

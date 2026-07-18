@@ -13,9 +13,6 @@ pub enum NapError {
     #[error("invalid NAP URI '{uri}': {reason}")]
     InvalidUri { uri: String, reason: String },
 
-    #[error("unknown entity type '{0}'")]
-    UnknownEntityType(String),
-
     // ── Manifest Errors ─────────────────────────────────────────────────
     #[error("manifest not found: {0}")]
     ManifestNotFound(String),
@@ -49,8 +46,9 @@ pub enum NapError {
     #[error("repository already exists at '{0}'")]
     RepositoryAlreadyExists(String),
 
-    #[error("universe '{0}' not found in repository root")]
-    UniverseNotFound(String),
+    // ── Entity Type Errors ─────────────────────────────────────────────
+    #[error("entity type not found: '{0}'")]
+    EntityTypeNotFound(String),
 
     // ── VCS Errors ──────────────────────────────────────────────────────
     #[error("VCS error: {0}")]

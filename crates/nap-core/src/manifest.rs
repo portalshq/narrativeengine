@@ -158,9 +158,10 @@ pub struct Provenance {
 impl Manifest {
     /// Create a new manifest with minimal required fields.
     pub fn new(universe: &str, entity_type: EntityType, entity_id: &str, name: &str) -> Self {
-        let id = match entity_type {
-            EntityType::World => format!("nap://{universe}/world/{universe}"),
-            _ => format!("nap://{universe}/{entity_type}/{entity_id}"),
+        let id = if entity_type.as_str() == "world" {
+            format!("nap://{universe}/world/{universe}")
+        } else {
+            format!("nap://{universe}/{entity_type}/{entity_id}")
         };
 
         Self {
@@ -257,13 +258,13 @@ mod tests {
     fn test_manifest_new() {
         let manifest = Manifest::new(
             "starwars",
-            EntityType::Character,
+            EntityType::new("character"),
             "lukeskywalker",
             "Luke Skywalker",
         );
         assert_eq!(manifest.id, "nap://starwars/character/lukeskywalker");
         assert_eq!(manifest.name, "Luke Skywalker");
-        assert_eq!(manifest.entity_type, EntityType::Character);
+        assert_eq!(manifest.entity_type.as_str(), "character");
         assert_eq!(manifest.version, 0);
     }
 
@@ -271,7 +272,7 @@ mod tests {
     fn test_manifest_yaml_roundtrip() {
         let mut manifest = Manifest::new(
             "starwars",
-            EntityType::Character,
+            EntityType::new("character"),
             "lukeskywalker",
             "Luke Skywalker",
         );
@@ -300,7 +301,7 @@ mod tests {
     fn test_manifest_world_uri() {
         let manifest = Manifest::new(
             "starwars",
-            EntityType::World,
+            EntityType::new("world"),
             "starwars",
             "Star Wars Universe",
         );
@@ -308,10 +309,22 @@ mod tests {
     }
 
     #[test]
+    fn test_manifest_custom_entity_type() {
+        let manifest = Manifest::new(
+            "lab",
+            EntityType::new("paper"),
+            "cold-fusion-v2",
+            "Cold Fusion Paper",
+        );
+        assert_eq!(manifest.id, "nap://lab/paper/cold-fusion-v2");
+        assert_eq!(manifest.entity_type.as_str(), "paper");
+    }
+
+    #[test]
     fn test_manifest_content_hash_deterministic() {
         let manifest = Manifest::new(
             "starwars",
-            EntityType::Character,
+            EntityType::new("character"),
             "lukeskywalker",
             "Luke Skywalker",
         );

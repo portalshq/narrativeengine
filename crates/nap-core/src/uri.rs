@@ -12,7 +12,7 @@
 //! - Version/branch/tag are NEVER encoded in the URI path. They are orthogonal
 //!   selectors passed alongside the URI (mirrors Git, OCI, package managers).
 //! - Fragment (`#`) carries the query path for subtree extraction.
-//! - Entity type is singular in the URI (`character`, not `characters`).
+//! - Entity type is any non-empty string — fully dynamic and user-defined.
 
 use std::fmt;
 use std::str::FromStr;
@@ -37,19 +37,19 @@ pub const NAP_SCHEME: &str = "nap://";
 ///     .unwrap();
 ///
 /// assert_eq!(uri.universe, "starwars");
-/// assert_eq!(uri.entity_type, nap_core::types::EntityType::Character);
+/// assert_eq!(uri.entity_type.as_str(), "character");
 /// assert_eq!(uri.entity_id, "lukeskywalker");
 /// assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NapUri {
-    /// The fictional universe (repository). e.g., `"starwars"`, `"toystory"`.
+    /// The repository name (directory under base_dir). e.g., `"starwars"`, `"pokemon"`.
     pub universe: String,
 
-    /// The kind of entity being addressed.
+    /// The kind of entity being addressed. Any non-empty string is valid.
     pub entity_type: EntityType,
 
-    /// The entity's identifier (slug). e.g., `"lukeskywalker"`, `"tatooine"`.
+    /// The entity's identifier (slug). e.g., `"lukeskywalker"`, `"pikachu"`.
     pub entity_id: String,
 
     /// Optional fragment for subtree queries. e.g., `"appearances.audienceVotes"`.
@@ -61,12 +61,12 @@ impl NapUri {
     /// Construct a new NAP URI without a fragment.
     pub fn new(
         universe: impl Into<String>,
-        entity_type: EntityType,
+        entity_type: impl Into<EntityType>,
         entity_id: impl Into<String>,
     ) -> Self {
         Self {
             universe: universe.into(),
-            entity_type,
+            entity_type: entity_type.into(),
             entity_id: entity_id.into(),
             fragment: None,
         }
@@ -75,13 +75,13 @@ impl NapUri {
     /// Construct a NAP URI with a fragment query path.
     pub fn with_fragment(
         universe: impl Into<String>,
-        entity_type: EntityType,
+        entity_type: impl Into<EntityType>,
         entity_id: impl Into<String>,
         fragment: impl Into<String>,
     ) -> Self {
         Self {
             universe: universe.into(),
-            entity_type,
+            entity_type: entity_type.into(),
             entity_id: entity_id.into(),
             fragment: Some(fragment.into()),
         }
@@ -97,17 +97,18 @@ impl NapUri {
     }
 
     /// Returns the relative filesystem path for this entity's manifest within
-    /// a universe repository.
+    /// a repository.
     ///
-    /// e.g., `"characters/lukeskywalker.yaml"` or `"universe.yaml"` for world.
+    /// e.g., `"character/lukeskywalker.yaml"` or `"repository.yaml"` for repo metadata.
     pub fn manifest_path(&self) -> String {
-        match self.entity_type {
-            EntityType::World => "universe.yaml".to_string(),
-            _ => format!(
+        if self.entity_type.as_str() == "world" {
+            "repository.yaml".to_string()
+        } else {
+            format!(
                 "{}/{}.yaml",
                 self.entity_type.directory_name(),
                 self.entity_id
-            ),
+            )
         }
     }
 }
@@ -163,7 +164,7 @@ impl FromStr for NapUri {
         }
 
         let universe = segments[0].to_string();
-        let entity_type: EntityType = segments[1].parse()?;
+        let entity_type = EntityType::new(segments[1]);
         // Join remaining segments to support entity IDs with slashes (defensive)
         let entity_id = segments[2..].join("/");
 
@@ -199,7 +200,7 @@ mod tests {
             .parse()
             .unwrap();
         assert_eq!(uri.universe, "starwars");
-        assert_eq!(uri.entity_type, EntityType::Character);
+        assert_eq!(uri.entity_type.as_str(), "character");
         assert_eq!(uri.entity_id, "lukeskywalker");
         assert_eq!(uri.fragment.as_deref(), Some("appearances.audienceVotes"));
     }
@@ -208,29 +209,37 @@ mod tests {
     fn test_parse_uri_without_fragment() {
         let uri: NapUri = "nap://toystory/location/pizzapalace".parse().unwrap();
         assert_eq!(uri.universe, "toystory");
-        assert_eq!(uri.entity_type, EntityType::Location);
+        assert_eq!(uri.entity_type.as_str(), "location");
         assert_eq!(uri.entity_id, "pizzapalace");
         assert!(uri.fragment.is_none());
     }
 
     #[test]
+    fn test_parse_custom_entity_type() {
+        let uri: NapUri = "nap://lab/paper/cold-fusion-v2".parse().unwrap();
+        assert_eq!(uri.universe, "lab");
+        assert_eq!(uri.entity_type.as_str(), "paper");
+        assert_eq!(uri.entity_id, "cold-fusion-v2");
+    }
+
+    #[test]
     fn test_parse_scene_uri() {
         let uri: NapUri = "nap://starwars/scene/cantina".parse().unwrap();
-        assert_eq!(uri.entity_type, EntityType::Scene);
+        assert_eq!(uri.entity_type.as_str(), "scene");
         assert_eq!(uri.entity_id, "cantina");
     }
 
     #[test]
     fn test_parse_world_uri() {
         let uri: NapUri = "nap://starwars/world/starwars".parse().unwrap();
-        assert_eq!(uri.entity_type, EntityType::World);
+        assert_eq!(uri.entity_type.as_str(), "world");
     }
 
     #[test]
     fn test_roundtrip_display_parse() {
         let original = NapUri::with_fragment(
             "starwars",
-            EntityType::Character,
+            EntityType::new("character"),
             "lukeskywalker",
             "references.appears_in",
         );
@@ -243,7 +252,7 @@ mod tests {
     fn test_identity_strips_fragment() {
         let uri = NapUri::with_fragment(
             "starwars",
-            EntityType::Character,
+            EntityType::new("character"),
             "lukeskywalker",
             "appearances",
         );
@@ -251,29 +260,36 @@ mod tests {
     }
 
     #[test]
-    fn test_manifest_path() {
-        let uri_char = NapUri::new("starwars", EntityType::Character, "lukeskywalker");
-        assert_eq!(uri_char.manifest_path(), "characters/lukeskywalker.yaml");
-
-        let uri_world = NapUri::new("starwars", EntityType::World, "starwars");
-        assert_eq!(uri_world.manifest_path(), "universe.yaml");
+    fn test_manifest_path_character() {
+        let uri = NapUri::new("starwars", EntityType::new("character"), "lukeskywalker");
+        assert_eq!(uri.manifest_path(), "character/lukeskywalker.yaml");
     }
 
     #[test]
-    fn test_invalid_scheme_or_entity_type() {
-        // "http:" is treated as the universe name, "starwars" fails as entity type
-        let result = "http://starwars/character/luke".parse::<NapUri>();
+    fn test_manifest_path_world() {
+        let uri = NapUri::new("starwars", EntityType::new("world"), "starwars");
+        assert_eq!(uri.manifest_path(), "repository.yaml");
+    }
+
+    #[test]
+    fn test_manifest_path_custom_type() {
+        let uri = NapUri::new("lab", EntityType::new("paper"), "cold-fusion-v2");
+        assert_eq!(uri.manifest_path(), "paper/cold-fusion-v2.yaml");
+    }
+
+    #[test]
+    fn test_invalid_too_few_segments() {
+        let result = "nap://starwars/character".parse::<NapUri>();
         assert!(result.is_err());
     }
 
     #[test]
     fn test_optional_scheme() {
-        // Bare path without nap:// scheme should resolve correctly
         let uri: NapUri = "starwars/character/lukeskywalker#references.appears_in"
             .parse()
             .unwrap();
         assert_eq!(uri.universe, "starwars");
-        assert_eq!(uri.entity_type, EntityType::Character);
+        assert_eq!(uri.entity_type.as_str(), "character");
         assert_eq!(uri.entity_id, "lukeskywalker");
         assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
     }
@@ -282,15 +298,9 @@ mod tests {
     fn test_bare_path_no_fragment() {
         let uri: NapUri = "toystory/location/pizzapalace".parse().unwrap();
         assert_eq!(uri.universe, "toystory");
-        assert_eq!(uri.entity_type, EntityType::Location);
+        assert_eq!(uri.entity_type.as_str(), "location");
         assert_eq!(uri.entity_id, "pizzapalace");
         assert!(uri.fragment.is_none());
-    }
-
-    #[test]
-    fn test_too_few_segments() {
-        let result = "nap://starwars/character".parse::<NapUri>();
-        assert!(result.is_err());
     }
 
     #[test]
