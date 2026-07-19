@@ -340,12 +340,7 @@ impl ServerManager {
             false
         };
 
-        let configured = self
-            .nap_home
-            .join("lore")
-            .join("config")
-            .join("local.toml")
-            .exists();
+        let configured = self.nap_home.join("lore").join("config").exists();
 
         Ok(ServerStatus {
             running,

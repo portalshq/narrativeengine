@@ -10,7 +10,6 @@ pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
     let repo = Repository::init(&repo_path, "contract-test", Box::new(backend)).unwrap();
 
     // Contract: init creates structure
-    assert!(repo.root.join(".nap").exists());
     assert!(repo.root.join("universe.yaml").exists());
 
     // Contract: create and read entity

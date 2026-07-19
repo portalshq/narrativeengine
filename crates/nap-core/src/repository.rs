@@ -5,9 +5,7 @@
 //!
 //! ```text
 //! starwars/               ← universe root
-//! ├── .nap/               ← NAP metadata
-//! │   └── config.yaml     ← repository config
-//! ├── universe.yaml       ← world manifest (root-level)
+//! ├── universe.yaml       ← world manifest (root-level, includes nap config in metadata)
 //! ├── characters/
 //! │   ├── lukeskywalker.yaml
 //! │   └── darthvader.yaml
@@ -25,12 +23,10 @@ use tracing::{debug, info};
 use crate::commit::{Change, Commit};
 use crate::error::NapError;
 use crate::manifest::Manifest;
+use crate::resolver::ResolveConfig;
 use crate::types::EntityType;
 use crate::uri::NapUri;
 use crate::vcs::VcsBackend;
-
-/// NAP metadata directory name.
-const NAP_DIR: &str = ".nap";
 
 /// A NAP universe repository.
 pub struct Repository {
@@ -45,10 +41,11 @@ pub struct Repository {
 impl Repository {
     /// Open an existing NAP repository at the given path.
     pub fn open(path: &Path, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
-        let nap_dir = path.join(NAP_DIR);
-        if !nap_dir.exists() {
+        // Check for universe.yaml to identify valid repository
+        if !path.join("universe.yaml").exists() {
             return Err(NapError::RepositoryNotFound(path.display().to_string()));
         }
+
         let universe = path
             .file_name()
             .and_then(|n| n.to_str())
@@ -68,10 +65,102 @@ impl Repository {
         })
     }
 
+    /// Read the resolve configuration from universe.yaml metadata.
+    pub fn read_resolve_config(&self) -> ResolveConfig {
+        let universe_path = self.root.join("universe.yaml");
+
+        if !universe_path.exists() {
+            debug!(
+                path = %universe_path.display(),
+                "universe.yaml not found, using default ResolveConfig"
+            );
+            return ResolveConfig::default();
+        }
+
+        let yaml_content = match std::fs::read_to_string(&universe_path) {
+            Ok(content) => content,
+            Err(e) => {
+                debug!(
+                    path = %universe_path.display(),
+                    error = %e,
+                    "failed to read universe.yaml, using default ResolveConfig"
+                );
+                return ResolveConfig::default();
+            }
+        };
+
+        // Parse YAML and extract nap metadata
+        let parsed: serde_yaml::Value = match serde_yaml::from_str(&yaml_content) {
+            Ok(value) => value,
+            Err(e) => {
+                debug!(
+                    path = %universe_path.display(),
+                    error = %e,
+                    "failed to parse universe.yaml, using default ResolveConfig"
+                );
+                return ResolveConfig::default();
+            }
+        };
+
+        // Extract default_branch from nap metadata
+        let default_branch = parsed
+            .get("metadata")
+            .and_then(|metadata| metadata.get("nap"))
+            .and_then(|nap| nap.get("default_branch"))
+            .and_then(|branch| branch.as_str())
+            .map(|s| s.to_string());
+
+        // Auto-create nap metadata if missing
+        if default_branch.is_none() {
+            debug!(
+                path = %universe_path.display(),
+                "nap metadata not found, auto-creating with default_branch = 'main'"
+            );
+
+            // Read the existing manifest
+            let mut manifest = match Manifest::from_file(&universe_path) {
+                Ok(m) => m,
+                Err(e) => {
+                    debug!(
+                        path = %universe_path.display(),
+                        error = %e,
+                        "failed to read manifest, using default ResolveConfig"
+                    );
+                    return ResolveConfig::default();
+                }
+            };
+
+            // Add nap metadata
+            manifest.metadata.insert(
+                "nap".to_string(),
+                serde_yaml::to_value(serde_json::json!({
+                    "default_branch": "main"
+                }))
+                .unwrap(),
+            );
+
+            // Write back to file
+            if let Err(e) = manifest.to_file(&universe_path) {
+                debug!(
+                    path = %universe_path.display(),
+                    error = %e,
+                    "failed to write nap metadata, using default ResolveConfig"
+                );
+                return ResolveConfig::default();
+            }
+
+            return ResolveConfig {
+                default_branch: Some("main".to_string()),
+            };
+        }
+
+        ResolveConfig { default_branch }
+    }
+
     /// Initialize a new NAP repository.
     pub fn init(path: &Path, universe: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
         let repo_root = path.to_path_buf();
-        if repo_root.join(NAP_DIR).exists() {
+        if repo_root.join("universe.yaml").exists() {
             return Err(NapError::RepositoryAlreadyExists(
                 repo_root.display().to_string(),
             ));
@@ -85,26 +174,29 @@ impl Repository {
 
         // Create directory structure
         std::fs::create_dir_all(&repo_root)?;
-        std::fs::create_dir_all(repo_root.join(NAP_DIR))?;
 
         // Create entity type subdirectories
         for entity_type in EntityType::subdirectory_types() {
             std::fs::create_dir_all(repo_root.join(entity_type.directory_name()))?;
         }
 
-        // Create .nap/config.yaml
-        let config = format!(
-            "# NAP Repository Configuration\nuniverse: {universe}\nprotocol_version: \"0.1.0\"\n"
-        );
-        std::fs::write(repo_root.join(NAP_DIR).join("config.yaml"), config)?;
-
-        // Create universe.yaml (world manifest)
-        let world_manifest = Manifest::new(
+        // Create universe.yaml (world manifest) with [nap] metadata
+        let mut world_manifest = Manifest::new(
             universe,
             EntityType::World,
             universe,
             &format!("{universe} Universe"),
         );
+
+        // Add nap configuration to metadata
+        world_manifest.metadata.insert(
+            "nap".to_string(),
+            serde_yaml::to_value(serde_json::json!({
+                "default_branch": "main"
+            }))
+            .unwrap(),
+        );
+
         world_manifest.to_file(&repo_root.join("universe.yaml"))?;
 
         // Initialize VCS
@@ -444,7 +536,6 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        assert!(repo.root.join(".nap").exists());
         assert!(repo.root.join("universe.yaml").exists());
         assert!(repo.root.join("characters").exists());
         assert!(repo.root.join("locations").exists());

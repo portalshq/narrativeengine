@@ -1088,6 +1088,8 @@ fn cmd_resolve(
         commit,
         tag,
         path: None,
+        recursive: Some(true),
+        max_depth: None,
     };
     let result = resolver
         .resolve(uri_str, &options)
@@ -1444,10 +1446,41 @@ fn cmd_add_repr(
     let hash = nap_core::ContentHash::from_file(file)
         .context(format!("failed to hash file '{}'", file.display()))?;
 
+    // Copy file to repository and stage it for commit
+    // Lore stores files in the immutable store when they're committed
+    let entity_dir = repo
+        .root
+        .join(uri.entity_type.to_string())
+        .join(&uri.entity_id);
+    std::fs::create_dir_all(&entity_dir).context(format!(
+        "failed to create entity directory '{}'",
+        entity_dir.display()
+    ))?;
+
+    let asset_filename = format!("{}.{}", key, format);
+    let asset_path = entity_dir.join(&asset_filename);
+    std::fs::copy(file, &asset_path).context(format!(
+        "failed to copy asset file to '{}'",
+        asset_path.display()
+    ))?;
+
+    // Stage the asset file in the repository
+    let asset_path_str = asset_path.display().to_string();
+    let args = vec![
+        "file",
+        "stage",
+        "--scan",
+        &asset_path_str,
+        "--non-interactive",
+    ];
+    nap_core::vcs_lore::LoreProcessRunner::run(&args, Some(&repo.root))
+        .context("failed to stage asset file in repository")?;
+
+    // Store content hash directly (Lore's immutable store is content-addressed)
     let repr = Representation {
         hash: hash.as_str().to_string(),
         format: format.to_string(),
-        uri: Some(file.display().to_string()),
+        uri: Some(asset_filename), // Store relative path to the asset file
         tier: None,
     };
 
@@ -1465,6 +1498,10 @@ fn cmd_add_repr(
         "✓ Added representation '{key}' ({format}) to {uri_str}"
     ));
     emit(format!("  Hash: {hash}"));
+    emit(format!(
+        "  Stored in Lore immutable store: {}",
+        hash.as_str()
+    ));
     Ok(())
 }
 

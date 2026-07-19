@@ -61,6 +61,16 @@ pub struct ResolveOptions {
     /// Subtree query path (overrides URI fragment). e.g., `"appearances.audienceVotes"`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
+
+    /// Recursively resolve nested URIs. When true, the resolver will follow
+    /// all nap:// URIs found in the resolved manifest and resolve them as well.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recursive: Option<bool>,
+
+    /// Maximum recursion depth for recursive resolution. Defaults to 10 to prevent
+    /// infinite loops. Set to None for unlimited depth (not recommended).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_depth: Option<usize>,
 }
 
 impl ResolveOptions {
@@ -128,10 +138,12 @@ impl Resolver {
         }
     }
 
-    /// Open the repository for a given universe.
-    fn open_repo(&self, universe: &str) -> Result<Repository, NapError> {
+    /// Open the repository for a given universe and read its resolve config.
+    fn open_repo(&self, universe: &str) -> Result<(Repository, ResolveConfig), NapError> {
         let repo_path = self.base_path.join(universe);
-        Repository::open(&repo_path, (self.vcs_factory)())
+        let repo = Repository::open(&repo_path, (self.vcs_factory)())?;
+        let repo_config = repo.read_resolve_config();
+        Ok((repo, repo_config))
     }
 
     /// Resolve a NAP URI string with options.
@@ -187,13 +199,32 @@ impl Resolver {
             "resolving NAP URI"
         );
 
-        let repo = self.open_repo(&uri.universe)?;
+        // Handle recursive resolution
+        if options.recursive.unwrap_or(false) {
+            return self.resolve_uri_recursive(
+                uri,
+                options,
+                0,
+                &mut std::collections::HashSet::new(),
+            );
+        }
+
+        self.resolve_uri_single(uri, options)
+    }
+
+    /// Resolve a single URI without recursion.
+    fn resolve_uri_single(
+        &self,
+        uri: &NapUri,
+        options: &ResolveOptions,
+    ) -> Result<ResolveResult, NapError> {
+        let (repo, repo_config) = self.open_repo(&uri.universe)?;
         let query_path = options.query_path(uri);
 
         // ── 4-Rule Resolution ────────────────────────────────────────
         // Rule 1: commit provided → use directly (bypass branch logic)
         // Rule 2: branch provided, no commit → resolve branch head
-        // Rule 3: both null → use default_branch from config
+        // Rule 3: both null → use default_branch from repo config (fallback to global)
         // Rule 4: both null and no default_branch → hard error
         // ──────────────────────────────────────────────────────────────
 
@@ -206,15 +237,21 @@ impl Resolver {
                 debug!(%branch, "resolve: rule 2 — branch provided");
                 repo.resolve_branch_head(branch)?
             }
-            (None, None) => match &self.config.default_branch {
+            (None, None) => match &repo_config.default_branch {
                 Some(default_branch) => {
-                    debug!(%default_branch, "resolve: rule 3 — using default_branch");
+                    debug!(%default_branch, "resolve: rule 3 — using repo default_branch");
                     repo.resolve_branch_head(default_branch)?
                 }
-                None => {
-                    debug!("resolve: rule 4 — no branch, no commit, no default_branch");
-                    return Err(NapError::NoDefaultBranch);
-                }
+                None => match &self.config.default_branch {
+                    Some(global_default_branch) => {
+                        debug!(%global_default_branch, "resolve: rule 3 — using global default_branch");
+                        repo.resolve_branch_head(global_default_branch)?
+                    }
+                    None => {
+                        debug!("resolve: rule 4 — no branch, no commit, no default_branch");
+                        return Err(NapError::NoDefaultBranch);
+                    }
+                },
             },
         };
 
@@ -248,6 +285,118 @@ impl Resolver {
         }
     }
 
+    /// Resolve a URI recursively, following nested nap:// URIs.
+    fn resolve_uri_recursive(
+        &self,
+        uri: &NapUri,
+        options: &ResolveOptions,
+        depth: usize,
+        visited: &mut std::collections::HashSet<String>,
+    ) -> Result<ResolveResult, NapError> {
+        // Check depth limit
+        let max_depth = options.max_depth.unwrap_or(10);
+        if depth >= max_depth {
+            debug!(depth, max_depth, "reached maximum recursion depth");
+            return self.resolve_uri_single(uri, options);
+        }
+
+        // Check for circular references
+        let uri_str = uri.to_string();
+        if visited.contains(&uri_str) {
+            debug!(uri = %uri_str, "detected circular reference, stopping recursion");
+            return self.resolve_uri_single(uri, options);
+        }
+        visited.insert(uri_str.clone());
+
+        debug!(uri = %uri_str, depth, "recursively resolving URI");
+
+        // Resolve the current URI
+        let result = self.resolve_uri_single(uri, options)?;
+
+        // Extract nested URIs from the result and resolve them
+        match result {
+            ResolveResult::Full(manifest) => {
+                let nested_uris = self.extract_nested_uris(&manifest);
+                if nested_uris.is_empty() {
+                    debug!(uri = %uri_str, "no nested URIs found, returning manifest");
+                    return Ok(ResolveResult::Full(manifest));
+                }
+
+                debug!(uri = %uri_str, count = nested_uris.len(), "found nested URIs, resolving recursively");
+
+                // Resolve nested URIs and merge them into the result
+                let mut resolved_manifest = (*manifest).clone();
+                for nested_uri in nested_uris {
+                    let nested_uri_parsed: NapUri = nested_uri.parse()?;
+
+                    let nested_result = self
+                        .resolve_uri_recursive(&nested_uri_parsed, options, depth + 1, visited)
+                        .map_err(|e| {
+                            NapError::Other(format!(
+                                "failed to resolve nested URI '{}' while resolving '{}': {}",
+                                nested_uri, uri_str, e
+                            ))
+                        })?;
+
+                    if let ResolveResult::Full(nested_manifest) = nested_result {
+                        // Merge nested manifest into parent (simple merge for now)
+                        // In the future, this could be more sophisticated based on schema
+                        for (key, value) in nested_manifest.properties {
+                            resolved_manifest.properties.insert(key, value);
+                        }
+                    }
+                }
+
+                Ok(ResolveResult::Full(Box::new(resolved_manifest)))
+            }
+            ResolveResult::Subtree(value) => {
+                // For subtree queries, we don't recurse (would be complex to merge)
+                debug!("subtree query, skipping recursive resolution");
+                Ok(ResolveResult::Subtree(value))
+            }
+        }
+    }
+
+    /// Extract all nap:// URIs from a manifest.
+    fn extract_nested_uris(&self, manifest: &Manifest) -> Vec<String> {
+        let mut uris = Vec::new();
+
+        // Search in properties
+        for value in manifest.properties.values() {
+            self.extract_uris_from_yaml_value(value, &mut uris);
+        }
+
+        // Search in references
+        for value in manifest.references.values() {
+            self.extract_uris_from_yaml_value(value, &mut uris);
+        }
+
+        // Deduplicate URIs to avoid resolving the same URI multiple times
+        uris.sort();
+        uris.dedup();
+        uris
+    }
+
+    /// Recursively extract nap:// URIs from YAML values.
+    fn extract_uris_from_yaml_value(&self, value: &serde_yaml::Value, uris: &mut Vec<String>) {
+        match value {
+            serde_yaml::Value::String(s) if s.starts_with("nap://") => {
+                uris.push(s.clone());
+            }
+            serde_yaml::Value::Sequence(seq) => {
+                for item in seq {
+                    self.extract_uris_from_yaml_value(item, uris);
+                }
+            }
+            serde_yaml::Value::Mapping(map) => {
+                for (_, v) in map {
+                    self.extract_uris_from_yaml_value(v, uris);
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Convenience: query a specific path on a URI.
     pub fn query(&self, uri_str: &str, path: &str) -> Result<serde_json::Value, NapError> {
         let options = ResolveOptions {
@@ -266,8 +415,9 @@ impl Resolver {
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
+            // Check for universe.yaml to identify valid repositories
             if path.is_dir()
-                && path.join(".nap").exists()
+                && path.join("universe.yaml").exists()
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
                 universes.push(name.to_string());

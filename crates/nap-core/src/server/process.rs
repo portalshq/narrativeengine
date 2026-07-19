@@ -66,7 +66,7 @@ impl LoreProcessManager {
             // We rely on health checks rather than PID tracking for server status.
             let child = Command::new("loreserver")
                 .arg("--config")
-                .arg(&self.config_path)
+                .arg(self.config_path.parent().unwrap_or(&self.config_path))
                 .stdout(Stdio::from(log_file.try_clone()?))
                 .stderr(Stdio::from(log_file))
                 .spawn()
@@ -84,7 +84,7 @@ impl LoreProcessManager {
 
             let child = Command::new("loreserver")
                 .arg("--config")
-                .arg(&self.config_path)
+                .arg(self.config_path.parent().unwrap_or(&self.config_path))
                 .stdout(Stdio::from(log_file.try_clone()?))
                 .stderr(Stdio::from(log_file))
                 .creation_flags(DETACHED_PROCESS)
@@ -100,7 +100,7 @@ impl LoreProcessManager {
         {
             let child = Command::new("loreserver")
                 .arg("--config")
-                .arg(&self.config_path)
+                .arg(self.config_path.parent().unwrap_or(&self.config_path))
                 .stdout(Stdio::from(log_file.try_clone()?))
                 .stderr(Stdio::from(log_file))
                 .spawn()

@@ -14,9 +14,6 @@ members = [
     "typescript/narrativeengine",
 ]
 
-[alias]
-docgen = "run -p nap-docgen"
-
 [workspace.package]
 version = "0.4.5"
 edition = "2024"
@@ -37,7 +34,7 @@ ed25519-dalek = { version = "2", features = ["serde", "rand_core"] }
 hex = "0.4"
 
 # CLI
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 
 # HTTP server
 axum = "0.8"
