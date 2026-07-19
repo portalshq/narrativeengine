@@ -4,7 +4,7 @@
  *
  * Exposes NAP operations as MCP tools so that any MCP-compatible agent (Claude,
  * Cursor, LangChain, etc.) can resolve, query, create, and manage narrative
- * universes.
+ * repositories.
  *
  * # Usage
  *
@@ -63,7 +63,7 @@ import { parseNapUri, resolveManifest } from "./services/api.js";
 // nap:// URI resources — agents can read any NAP resource by URI
 server.registerResource(
   {
-    uri: "nap://{universe}/{entity_type}/{entity_id}",
+    uri: "nap://{repository}/{entity_type}/{entity_id}",
     name: "NAP Resource",
     description:
       "Access any NAP narrative resource by its nap:// URI. " +
@@ -100,22 +100,22 @@ server.registerResource(
   },
 );
 
-// List all NAP resources (universes)
+// List all NAP resources (repositories)
 server.registerResourceList(async () => {
-  const { listUniverses } = await import("./services/api.js");
-  const universes = await listUniverses();
+  const { listRepositories } = await import("./services/api.js");
+  const repositories = await listRepositories();
   return {
     resources: [
       {
-        uri: "nap://universes",
-        name: "All Universes",
-        description: "List of all NAP universes",
+        uri: "nap://repositories",
+        name: "All Repositories",
+        description: "List of all NAP repositories",
         mimeType: "application/json",
       },
-      ...universes.map((u: string) => ({
+      ...repositories.map((u: string) => ({
         uri: `nap://${u}/` as const,
-        name: `${u} Universe`,
-        description: `Entities in the ${u} universe`,
+        name: `${u} Repository`,
+        description: `Entities in the ${u} repository`,
         mimeType: "application/json",
       })),
     ],

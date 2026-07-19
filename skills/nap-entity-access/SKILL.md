@@ -19,7 +19,7 @@ Reference these guidelines when:
 
 ## Core Commands
 
-* **Create an Entity:** Use `nap create <entity_type> <entity_id> -u <universe> -n "<Name>"`.
+* **Create an Entity:** Use `nap create <entity_type> <entity_id> -u <repository> -n "<Name>"`.
   * *Example:* `nap create character woody -u toystory -n "Sheriff Woody"`.
 
 * **Resolve a Full Manifest:** To fetch the complete YAML manifest of a resource, use `nap resolve <URI>`.
@@ -50,22 +50,22 @@ The `nap` command-line interface (v0.4.5) provides tools for creating, resolving
 | [\`nap add-repr\`](docs/generated/commands/add-repr.md) | Add a representation to an entity manifest |
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
-| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a universe repository |
+| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
 | [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the SHA-256 content hash of a file |
 | [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
 | [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
 | [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
 | [\`nap head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
 | [\`nap history\`](docs/generated/commands/history.md) | View commit history for an entity |
-| [\`nap init\`](docs/generated/commands/init.md) | Initialize a universe repository and/or configure the backend provider |
+| [\`nap init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
 | [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
-| [\`nap list\`](docs/generated/commands/list.md) | List universes or entities within a universe |
+| [\`nap list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
 | [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
 | [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
-| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a universe from a remote |
+| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
 | [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
 | [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
-| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a universe |
+| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a repository |
 | [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
 | [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
 | [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
@@ -83,7 +83,7 @@ The `nap` command-line interface (v0.4.5) provides tools for creating, resolving
 
 | Flag | Description | Default |
 |---|---|---|
-| -d, --base-dir <BASE\_DIR> | Base directory for universe repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -d, --base-dir <BASE\_DIR> | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
 | -v, --verbose <VERBOSE> | Enable verbose debug logging |  |
 
 
@@ -95,7 +95,7 @@ When stdout is not a terminal, JSON is used automatically. Override with `$NAP_O
 
 ## Common Examples
 ```bash
-# Initialize a universe
+# Initialize a repository
 nap init starwars
 
 # Create an entity
@@ -122,7 +122,7 @@ These options are available on all `nap` commands.
 
 | Flag | Description | Default |
 |---|---|---|
-| -d, --base-dir <BASE\_DIR> | Base directory for universe repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -d, --base-dir <BASE\_DIR> | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
 | -v, --verbose <VERBOSE> | Enable verbose debug logging |  |
 
 

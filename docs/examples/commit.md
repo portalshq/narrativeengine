@@ -1,5 +1,5 @@
 ```bash
-# Commit all changes in a universe
+# Commit all changes in a repository
 nap commit starwars -m "Add Luke Skywalker character"
 
 # Commit with a specific author

@@ -22,11 +22,11 @@ mod e2e {
     #[test]
     fn test_e2e_init_and_resolve() {
         let tmp = TempDir::new().unwrap();
-        let universe = "e2e-test-universe";
+        let repository = "e2e-test-repository";
 
         nap_cmd()
             .arg("init")
-            .arg(universe)
+            .arg(repository)
             .arg("--base-dir")
             .arg(tmp.path())
             .assert()
@@ -34,7 +34,7 @@ mod e2e {
 
         nap_cmd()
             .arg("resolve")
-            .arg(format!("{universe}/character/nonexistent"))
+            .arg(format!("{repository}/character/nonexistent"))
             .arg("--base-dir")
             .arg(tmp.path())
             .assert()
@@ -44,11 +44,11 @@ mod e2e {
     #[test]
     fn test_e2e_create_entity_and_resolve() {
         let tmp = TempDir::new().unwrap();
-        let universe = "e2e-create-resolve";
+        let repository = "e2e-create-resolve";
 
         nap_cmd()
             .arg("init")
-            .arg(universe)
+            .arg(repository)
             .arg("--base-dir")
             .arg(tmp.path())
             .assert()
@@ -58,8 +58,8 @@ mod e2e {
             .arg("create")
             .arg("--base-dir")
             .arg(tmp.path())
-            .arg("--universe")
-            .arg(universe)
+            .arg("--repository")
+            .arg(repository)
             .arg("--type")
             .arg("character")
             .arg("--id")
@@ -71,7 +71,7 @@ mod e2e {
 
         nap_cmd()
             .arg("resolve")
-            .arg(format!("{universe}/character/hero"))
+            .arg(format!("{repository}/character/hero"))
             .arg("--base-dir")
             .arg(tmp.path())
             .assert()

@@ -5,7 +5,7 @@
 //! ```text
 //! nap://starwars/character/lukeskywalker#appearances.audienceVotes
 //! ───┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
-//!  scheme universe  entity_type entity_id          fragment (query)
+//!  scheme repository  entity_type entity_id          fragment (query)
 //! ```
 //!
 //! **Key design decisions:**
@@ -36,7 +36,7 @@ pub const NAP_SCHEME: &str = "nap://";
 ///     .parse()
 ///     .unwrap();
 ///
-/// assert_eq!(uri.universe, "starwars");
+/// assert_eq!(uri.repository, "starwars");
 /// assert_eq!(uri.entity_type.as_str(), "character");
 /// assert_eq!(uri.entity_id, "lukeskywalker");
 /// assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
@@ -44,7 +44,7 @@ pub const NAP_SCHEME: &str = "nap://";
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NapUri {
     /// The repository name (directory under base_dir). e.g., `"starwars"`, `"pokemon"`.
-    pub universe: String,
+    pub repository: String,
 
     /// The kind of entity being addressed. Any non-empty string is valid.
     pub entity_type: EntityType,
@@ -60,12 +60,12 @@ pub struct NapUri {
 impl NapUri {
     /// Construct a new NAP URI without a fragment.
     pub fn new(
-        universe: impl Into<String>,
+        repository: impl Into<String>,
         entity_type: impl Into<EntityType>,
         entity_id: impl Into<String>,
     ) -> Self {
         Self {
-            universe: universe.into(),
+            repository: repository.into(),
             entity_type: entity_type.into(),
             entity_id: entity_id.into(),
             fragment: None,
@@ -74,13 +74,13 @@ impl NapUri {
 
     /// Construct a NAP URI with a fragment query path.
     pub fn with_fragment(
-        universe: impl Into<String>,
+        repository: impl Into<String>,
         entity_type: impl Into<EntityType>,
         entity_id: impl Into<String>,
         fragment: impl Into<String>,
     ) -> Self {
         Self {
-            universe: universe.into(),
+            repository: repository.into(),
             entity_type: entity_type.into(),
             entity_id: entity_id.into(),
             fragment: Some(fragment.into()),
@@ -92,7 +92,7 @@ impl NapUri {
     pub fn identity(&self) -> String {
         format!(
             "nap://{}/{}/{}",
-            self.universe, self.entity_type, self.entity_id
+            self.repository, self.entity_type, self.entity_id
         )
     }
 
@@ -118,7 +118,7 @@ impl fmt::Display for NapUri {
         write!(
             f,
             "nap://{}/{}/{}",
-            self.universe, self.entity_type, self.entity_id
+            self.repository, self.entity_type, self.entity_id
         )?;
         if let Some(ref fragment) = self.fragment {
             write!(f, "#{fragment}")?;
@@ -150,28 +150,28 @@ impl FromStr for NapUri {
             None => (without_scheme, None),
         };
 
-        // ── Parse path segments: universe / entity_type / entity_id ─────
+        // ── Parse path segments: repository / entity_type / entity_id ─────
         let segments: Vec<&str> = path_part.split('/').filter(|s| !s.is_empty()).collect();
 
         if segments.len() < 3 {
             return Err(NapError::InvalidUri {
                 uri: input.to_string(),
                 reason: format!(
-                    "expected at least 3 path segments (universe/entity_type/entity_id), got {}",
+                    "expected at least 3 path segments (repository/entity_type/entity_id), got {}",
                     segments.len()
                 ),
             });
         }
 
-        let universe = segments[0].to_string();
+        let repository = segments[0].to_string();
         let entity_type = EntityType::new(segments[1]);
         // Join remaining segments to support entity IDs with slashes (defensive)
         let entity_id = segments[2..].join("/");
 
-        if universe.is_empty() {
+        if repository.is_empty() {
             return Err(NapError::InvalidUri {
                 uri: input.to_string(),
-                reason: "universe name cannot be empty".to_string(),
+                reason: "repository name cannot be empty".to_string(),
             });
         }
         if entity_id.is_empty() {
@@ -182,7 +182,7 @@ impl FromStr for NapUri {
         }
 
         Ok(NapUri {
-            universe,
+            repository,
             entity_type,
             entity_id,
             fragment,
@@ -199,7 +199,7 @@ mod tests {
         let uri: NapUri = "nap://starwars/character/lukeskywalker#appearances.audienceVotes"
             .parse()
             .unwrap();
-        assert_eq!(uri.universe, "starwars");
+        assert_eq!(uri.repository, "starwars");
         assert_eq!(uri.entity_type.as_str(), "character");
         assert_eq!(uri.entity_id, "lukeskywalker");
         assert_eq!(uri.fragment.as_deref(), Some("appearances.audienceVotes"));
@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn test_parse_uri_without_fragment() {
         let uri: NapUri = "nap://toystory/location/pizzapalace".parse().unwrap();
-        assert_eq!(uri.universe, "toystory");
+        assert_eq!(uri.repository, "toystory");
         assert_eq!(uri.entity_type.as_str(), "location");
         assert_eq!(uri.entity_id, "pizzapalace");
         assert!(uri.fragment.is_none());
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_parse_custom_entity_type() {
         let uri: NapUri = "nap://lab/paper/cold-fusion-v2".parse().unwrap();
-        assert_eq!(uri.universe, "lab");
+        assert_eq!(uri.repository, "lab");
         assert_eq!(uri.entity_type.as_str(), "paper");
         assert_eq!(uri.entity_id, "cold-fusion-v2");
     }
@@ -288,7 +288,7 @@ mod tests {
         let uri: NapUri = "starwars/character/lukeskywalker#references.appears_in"
             .parse()
             .unwrap();
-        assert_eq!(uri.universe, "starwars");
+        assert_eq!(uri.repository, "starwars");
         assert_eq!(uri.entity_type.as_str(), "character");
         assert_eq!(uri.entity_id, "lukeskywalker");
         assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn test_bare_path_no_fragment() {
         let uri: NapUri = "toystory/location/pizzapalace".parse().unwrap();
-        assert_eq!(uri.universe, "toystory");
+        assert_eq!(uri.repository, "toystory");
         assert_eq!(uri.entity_type.as_str(), "location");
         assert_eq!(uri.entity_id, "pizzapalace");
         assert!(uri.fragment.is_none());

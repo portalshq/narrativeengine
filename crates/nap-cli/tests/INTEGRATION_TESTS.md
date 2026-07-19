@@ -131,14 +131,14 @@ Both test suites share common testing patterns:
 
 - `nap_cmd()`: Returns a configured Command instance for the nap binary
 - `create_test_image()`: Creates a minimal PNG test image (1x1 transparent pixel)
-- `unique_universe_name()`: Generates unique universe names using timestamps
+- `unique_universe_name()`: Generates unique repository names using timestamps
 
 ### Test Structure
 
 Each test follows this pattern:
 1. Create a temporary directory
 2. Initialize nap with appropriate provider
-3. Create a universe repository
+3. Create a repository repository
 4. Perform the operation being tested
 5. Verify the result using assertions
 6. Clean up (tempdir auto-cleanup)
@@ -235,5 +235,5 @@ jobs:
 
 - Tests use `--test-threads=1` to prevent race conditions between tests
 - Temporary directories are automatically cleaned up after each test
-- Each test uses unique universe names to avoid conflicts
+- Each test uses unique repository names to avoid conflicts
 - Tests are designed to be independent and can run in any order (within a suite)

@@ -19,7 +19,7 @@ Reference these guidelines when:
 
 ## Core Commands
 
-* **Create an Entity:** Use `nap create <entity_type> <entity_id> -u <universe> -n "<Name>"`.
+* **Create an Entity:** Use `nap create <entity_type> <entity_id> -u <repository> -n "<Name>"`.
   * *Example:* `nap create character woody -u toystory -n "Sheriff Woody"`.
 
 * **Resolve a Full Manifest:** To fetch the complete YAML manifest of a resource, use `nap resolve <URI>`.

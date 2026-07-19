@@ -1,5 +1,5 @@
 ```bash
-# Initialize a new universe
+# Initialize a new repository
 nap init starwars
 
 # Initialize with local provider
@@ -8,7 +8,7 @@ nap init starwars --provider local
 # Initialize with remote provider
 nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
 
-# Configure provider only (no universe creation)
+# Configure provider only (no repository creation)
 nap init --provider local
 
 # Initialize with a remote origin

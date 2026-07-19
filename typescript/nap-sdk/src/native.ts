@@ -3,10 +3,10 @@ import { createRequire } from "node:module";
 interface NativeBindings {
   // URI
   parseUri(uri: string): string;
-  uriNew(universe: string, entityType: string, entityId: string, fragment?: string): string;
+  uriNew(repository: string, entityType: string, entityId: string, fragment?: string): string;
   uriIdentity(uri: string): string;
   uriManifestPath(uri: string): string;
-  uriFormat(universe: string, entityType: string, entityId: string, fragment?: string): string;
+  uriFormat(repository: string, entityType: string, entityId: string, fragment?: string): string;
 
   // EntityType
   entityTypeParse(s: string): string;
@@ -15,7 +15,7 @@ interface NativeBindings {
 
   // Manifest
   parseManifest(yamlStr: string): string;
-  manifestNew(universe: string, entityType: string, entityId: string, name: string): string;
+  manifestNew(repository: string, entityType: string, entityId: string, name: string): string;
   manifestToYaml(jsonStr: string): string;
   manifestFromYaml(yamlStr: string): string;
   manifestContentHash(jsonStr: string): string;
@@ -39,34 +39,34 @@ interface NativeBindings {
   commitVerifyId(jsonStr: string): boolean;
 
   // Repository
-  repoInit(basePath: string, universe: string): string;
-  repoOpen(basePath: string, universe: string): string;
-  repoCreateEntity(basePath: string, universe: string, entityType: string, entityId: string, name: string, author: string): string;
-  repoReadManifest(basePath: string, universe: string, entityType: string, entityId: string): string;
-  repoReadManifestAtRef(basePath: string, universe: string, entityType: string, entityId: string, reference: string): string;
-  repoWriteManifest(basePath: string, universe: string, manifestJson: string): string;
-  repoCommitManifest(basePath: string, universe: string, entityType: string, entityId: string, message: string, author: string, changesJson: string): string;
-  repoDeleteEntity(basePath: string, universe: string, entityType: string, entityId: string, author: string): string;
-  repoHistory(basePath: string, universe: string, entityType: string, entityId: string, limit: number): string;
-  repoListEntities(basePath: string, universe: string, entityType: string): string;
-  repoCreateBranch(basePath: string, universe: string, name: string): string;
-  repoSwitchBranch(basePath: string, universe: string, name: string): string;
-  repoListBranches(basePath: string, universe: string): string;
-  repoCreateTag(basePath: string, universe: string, name: string): string;
-  repoListTags(basePath: string, universe: string): string;
-  repoHeadHash(basePath: string, universe: string): string;
-  repoRevertCommit(basePath: string, universe: string, commitHash: string, author: string): string;
-  repoAddRemote(basePath: string, universe: string, name: string, url: string): string;
-  repoRemoveRemote(basePath: string, universe: string, name: string): string;
-  repoListRemotes(basePath: string, universe: string): string;
-  repoPush(basePath: string, universe: string, remote?: string, branch?: string): string;
-  repoPull(basePath: string, universe: string, remote?: string, branch?: string): string;
+  repoInit(basePath: string, repository: string): string;
+  repoOpen(basePath: string, repository: string): string;
+  repoCreateEntity(basePath: string, repository: string, entityType: string, entityId: string, name: string, author: string): string;
+  repoReadManifest(basePath: string, repository: string, entityType: string, entityId: string): string;
+  repoReadManifestAtRef(basePath: string, repository: string, entityType: string, entityId: string, reference: string): string;
+  repoWriteManifest(basePath: string, repository: string, manifestJson: string): string;
+  repoCommitManifest(basePath: string, repository: string, entityType: string, entityId: string, message: string, author: string, changesJson: string): string;
+  repoDeleteEntity(basePath: string, repository: string, entityType: string, entityId: string, author: string): string;
+  repoHistory(basePath: string, repository: string, entityType: string, entityId: string, limit: number): string;
+  repoListEntities(basePath: string, repository: string, entityType: string): string;
+  repoCreateBranch(basePath: string, repository: string, name: string): string;
+  repoSwitchBranch(basePath: string, repository: string, name: string): string;
+  repoListBranches(basePath: string, repository: string): string;
+  repoCreateTag(basePath: string, repository: string, name: string): string;
+  repoListTags(basePath: string, repository: string): string;
+  repoHeadHash(basePath: string, repository: string): string;
+  repoRevertCommit(basePath: string, repository: string, commitHash: string, author: string): string;
+  repoAddRemote(basePath: string, repository: string, name: string, url: string): string;
+  repoRemoveRemote(basePath: string, repository: string, name: string): string;
+  repoListRemotes(basePath: string, repository: string): string;
+  repoPush(basePath: string, repository: string, remote?: string, branch?: string): string;
+  repoPull(basePath: string, repository: string, remote?: string, branch?: string): string;
 
   // Resolver
   resolve(uri: string, repoPath: string): string;
   resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, tag?: string, path?: string): string;
   resolveQuery(uri: string, repoPath: string, path: string): string;
-  listUniverses(repoPath: string): string;
+  listRepositories(repoPath: string): string;
 
   // Schema
   manifestSchema(): string;

@@ -313,7 +313,7 @@ function formatError(err: unknown): {
           type: "text",
           text: `Error: Resource not found. The URI may be incorrect, or the entity doesn't exist yet.` +
             `\n  Suggestion: Use nap_list_entities to see available entities.` +
-            `\n  Suggestion: Use nap_list_universes to see available universes.`,
+            `\n  Suggestion: Use nap_list_repositories to see available repositories.`,
         },
       ],
     };

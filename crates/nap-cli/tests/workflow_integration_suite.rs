@@ -39,11 +39,11 @@ fn nap_cmd(nap_home: &Path) -> Command {
     cmd
 }
 
-/// Initialize a provider and universe using `--provider remote`.
+/// Initialize a provider and repository using `--provider remote`.
 ///
 /// This avoids the port-conflict problem where multiple tests each try to
 /// spawn a lore daemon on the same port.
-fn init_provider_and_universe(nap_home: &Path, universe: &str) {
+fn init_provider_and_universe(nap_home: &Path, repository: &str) {
     // Configure provider (no daemon startup)
     nap_cmd(nap_home)
         .arg("init")
@@ -56,10 +56,10 @@ fn init_provider_and_universe(nap_home: &Path, universe: &str) {
         .assert()
         .success();
 
-    // Create the universe repository
+    // Create the repository repository
     nap_cmd(nap_home)
         .arg("init")
-        .arg(universe)
+        .arg(repository)
         .assert()
         .success();
 }
@@ -70,7 +70,7 @@ fn test_readme_quick_start_workflow() {
     let nap_home = tmp.path().join(".nap");
     std::fs::create_dir_all(&nap_home).unwrap();
 
-    // 1. Initialize a universe
+    // 1. Initialize a repository
     init_provider_and_universe(&nap_home, "starwars");
 
     // 2. Create entities
@@ -118,7 +118,7 @@ fn test_usage_guide_world_building_workflow() {
     let nap_home = tmp.path().join(".nap");
     std::fs::create_dir_all(&nap_home).unwrap();
 
-    // Initialize universe
+    // Initialize repository
     init_provider_and_universe(&nap_home, "myworld");
 
     // Define world metadata

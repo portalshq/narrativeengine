@@ -9,7 +9,7 @@
 
 /** Parsed components of a `nap://` URI. */
 export interface NapUriComponents {
-  universe: string;
+  repository: string;
   entity_type: string;
   entity_id: string;
   fragment?: string;

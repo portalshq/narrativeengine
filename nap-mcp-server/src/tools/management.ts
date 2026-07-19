@@ -1,5 +1,5 @@
 /**
- * Management tools — universe init, entity CRUD, VCS operations, remotes, etc.
+ * Management tools — repository init, entity CRUD, VCS operations, remotes, etc.
  *
  * These tools MODIFY state. All have destructiveHint: false because they
  * are versioned (every change is a Git commit) and can be rolled back.
@@ -32,27 +32,27 @@ export function registerManagementTools(server: McpServer): void {
   server.registerTool(
     "nap_init",
     {
-      title: "Initialize Universe",
-      description: `Initialize a new NAP universe repository.
+      title: "Initialize Repository",
+      description: `Initialize a new NAP repository repository.
 
-Creates a new Git-backed universe with the standard directory structure
+Creates a new Git-backed repository with the standard directory structure
 (characters/, locations/, scenes/, props/) and an initial world manifest.
 
 Args:
-  universe (string): Universe name (e.g., 'starwars', 'toystory').
+  repository (string): Repository name (e.g., 'starwars', 'toystory').
 
-Returns: { success: boolean, universe: string, path: string }
+Returns: { success: boolean, repository: string, path: string }
 
 Examples:
-  - "Create a Star Wars universe" → universe="starwars"
-  - "Start a new Toy Story universe" → universe="toystory"`,
+  - "Create a Star Wars repository" → repository="starwars"
+  - "Start a new Toy Story repository" → repository="toystory"`,
       inputSchema: z
         .object({
-          universe: z
+          repository: z
             .string()
             .min(1)
             .describe(
-              "Universe name (e.g., 'starwars', 'toystory', 'middleearth'). Use lowercase and dashes/underscores.",
+              "Repository name (e.g., 'starwars', 'toystory', 'middleearth'). Use lowercase and dashes/underscores.",
             ),
         })
         .strict(),
@@ -63,9 +63,9 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string }) => {
+    async (params: { repository: string }) => {
       try {
-        const result = await initUniverse(params.universe);
+        const result = await initUniverse(params.repository);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -78,10 +78,10 @@ Examples:
   // ── nap_create_entity ──────────────────────────────────────────────────
   const CreateEntityInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       entity_type: z
         .enum(ENTITY_TYPES as unknown as [string, ...string[]])
         .describe("Entity type: 'character', 'location', 'scene', 'prop', 'world'."),
@@ -108,14 +108,14 @@ Examples:
     "nap_create_entity",
     {
       title: "Create Entity",
-      description: `Create a new narrative entity in a universe.
+      description: `Create a new narrative entity in a repository.
 
-This creates a new manifest file, commits it to the universe's Git history,
+This creates a new manifest file, commits it to the repository's Git history,
 and returns the NAP URI and commit ID. The entity starts with no properties
 — use nap_set_property to add data.
 
 Args:
-  universe (string): Universe name (e.g., 'starwars')
+  repository (string): Repository name (e.g., 'starwars')
   entity_type (string): Entity type ('character', 'location', 'scene', 'prop', 'world')
   entity_id (string): Slug identifier (e.g., 'lukeskywalker')
   name (string): Display name (e.g., 'Luke Skywalker')
@@ -138,7 +138,7 @@ Examples:
     async (params: CreateEntityInput) => {
       try {
         const result = await createEntity(
-          params.universe,
+          params.repository,
           params.entity_type,
           params.entity_id,
           { name: params.name, author: params.author },
@@ -155,10 +155,10 @@ Examples:
   // ── nap_delete_entity ──────────────────────────────────────────────────
   const DeleteEntityInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       entity_type: z
         .enum(ENTITY_TYPES as unknown as [string, ...string[]])
         .describe("Entity type to delete."),
@@ -179,13 +179,13 @@ Examples:
     "nap_delete_entity",
     {
       title: "Delete Entity",
-      description: `Delete a narrative entity from a universe.
+      description: `Delete a narrative entity from a repository.
 
 Permanently removes the entity manifest and commits the deletion to history.
 The deletion can be reverted using nap_revert_commit with the resulting commit hash.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   entity_type (string): Entity type
   entity_id (string): Entity ID to delete
   author (string, optional): Author identifier (default: 'nap-agent')
@@ -206,7 +206,7 @@ Examples:
     async (params: DeleteEntityInput) => {
       try {
         const result = await deleteEntity(
-          params.universe,
+          params.repository,
           params.entity_type,
           params.entity_id,
           params.author,
@@ -223,10 +223,10 @@ Examples:
   // ── nap_list_branches ──────────────────────────────────────────────────
   const ListBranchesInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
     })
     .strict();
 
@@ -234,18 +234,18 @@ Examples:
     "nap_list_branches",
     {
       title: "List Branches",
-      description: `List all Git branches in a universe repository.
+      description: `List all Git branches in a repository repository.
 
 Returns the list of branch names including the current active branch.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
 
 Returns: { branches: string[] }
 
 Examples:
-  - "What branches exist in Star Wars?" → universe="starwars"
-  - "Show me all branches in Toy Story" → universe="toystory"`,
+  - "What branches exist in Star Wars?" → repository="starwars"
+  - "Show me all branches in Toy Story" → repository="toystory"`,
       inputSchema: ListBranchesInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -254,9 +254,9 @@ Examples:
         openWorldHint: false,
       },
     },
-    async (params: { universe: string }) => {
+    async (params: { repository: string }) => {
       try {
-        const result = await listBranches(params.universe);
+        const result = await listBranches(params.repository);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -269,10 +269,10 @@ Examples:
   // ── nap_create_branch ──────────────────────────────────────────────────
   const CreateBranchInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       name: z
         .string()
         .min(1)
@@ -286,21 +286,21 @@ Examples:
     "nap_create_branch",
     {
       title: "Create Branch",
-      description: `Create a new Git branch in a universe repository.
+      description: `Create a new Git branch in a repository repository.
 
-Branches let you maintain parallel versions of a universe. Each branch has
+Branches let you maintain parallel versions of a repository. Each branch has
 its own independent commit history. Switch between them with nap_switch_branch.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   name (string): Branch name (e.g., 'canon', 'legends', 'what-if')
 
 Returns: { branch: string }
 
 Examples:
-  - "Create a canon branch" → universe="starwars", name="canon"
-  - "Create a legends/what-if branch" → universe="starwars", name="legends"
-  - "Create an experimental Toy Story branch" → universe="toystory", name="experimental"`,
+  - "Create a canon branch" → repository="starwars", name="canon"
+  - "Create a legends/what-if branch" → repository="starwars", name="legends"
+  - "Create an experimental Toy Story branch" → repository="toystory", name="experimental"`,
       inputSchema: CreateBranchInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -309,9 +309,9 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; name: string }) => {
+    async (params: { repository: string; name: string }) => {
       try {
-        const result = await createBranch(params.universe, params.name);
+        const result = await createBranch(params.repository, params.name);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -324,10 +324,10 @@ Examples:
   // ── nap_switch_branch ──────────────────────────────────────────────────
   const SwitchBranchInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       name: z
         .string()
         .min(1)
@@ -341,21 +341,21 @@ Examples:
     "nap_switch_branch",
     {
       title: "Switch Branch",
-      description: `Switch the active Git branch in a universe repository.
+      description: `Switch the active Git branch in a repository repository.
 
 After switching, all subsequent read and write operations use the new branch.
 Use nap_list_branches to discover available branches.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   name (string): Branch name to switch to
 
 Returns: { branch: string }
 
 Examples:
-  - "Switch to the canon branch" → universe="starwars", name="canon"
-  - "Switch to the legends branch" → universe="starwars", name="legends"
-  - "Go back to main" → universe="toystory", name="main"`,
+  - "Switch to the canon branch" → repository="starwars", name="canon"
+  - "Switch to the legends branch" → repository="starwars", name="legends"
+  - "Go back to main" → repository="toystory", name="main"`,
       inputSchema: SwitchBranchInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -364,9 +364,9 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; name: string }) => {
+    async (params: { repository: string; name: string }) => {
       try {
-        const result = await switchBranch(params.universe, params.name);
+        const result = await switchBranch(params.repository, params.name);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -379,10 +379,10 @@ Examples:
   // ── nap_list_tags ──────────────────────────────────────────────────────
   const ListTagsInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
     })
     .strict();
 
@@ -390,19 +390,19 @@ Examples:
     "nap_list_tags",
     {
       title: "List Tags",
-      description: `List all Git tags in a universe repository.
+      description: `List all Git tags in a repository repository.
 
 Tags are read-only snapshots of a branch at a specific point in time.
 They are useful for marking releases or important milestones.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
 
 Returns: { tags: string[] }
 
 Examples:
-  - "What tags exist in Star Wars?" → universe="starwars"
-  - "List all tags in Toy Story" → universe="toystory"`,
+  - "What tags exist in Star Wars?" → repository="starwars"
+  - "List all tags in Toy Story" → repository="toystory"`,
       inputSchema: ListTagsInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -411,9 +411,9 @@ Examples:
         openWorldHint: false,
       },
     },
-    async (params: { universe: string }) => {
+    async (params: { repository: string }) => {
       try {
-        const result = await listTags(params.universe);
+        const result = await listTags(params.repository);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -426,10 +426,10 @@ Examples:
   // ── nap_create_tag ─────────────────────────────────────────────────────
   const CreateTagInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       name: z
         .string()
         .min(1)
@@ -443,20 +443,20 @@ Examples:
     "nap_create_tag",
     {
       title: "Create Tag",
-      description: `Create a Git tag at the current HEAD in a universe repository.
+      description: `Create a Git tag at the current HEAD in a repository repository.
 
 Tags are immutable references to a specific commit. Use them to mark releases,
 important milestones, or any version you want to reference later.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   name (string): Tag name (e.g., 'v1.0', 'episode-4')
 
 Returns: { tag: string }
 
 Examples:
-  - "Tag the current state as v1.0" → universe="starwars", name="v1.0"
-  - "Mark this as the pilot episode" → universe="toystory", name="pilot"`,
+  - "Tag the current state as v1.0" → repository="starwars", name="v1.0"
+  - "Mark this as the pilot episode" → repository="toystory", name="pilot"`,
       inputSchema: CreateTagInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -465,9 +465,9 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; name: string }) => {
+    async (params: { repository: string; name: string }) => {
       try {
-        const result = await createTag(params.universe, params.name);
+        const result = await createTag(params.repository, params.name);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -480,10 +480,10 @@ Examples:
   // ── nap_remote_list ────────────────────────────────────────────────────
   const RemoteListInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
     })
     .strict();
 
@@ -491,18 +491,18 @@ Examples:
     "nap_remote_list",
     {
       title: "List Remotes",
-      description: `List all Git remotes configured for a universe repository.
+      description: `List all Git remotes configured for a repository repository.
 
 Returns remote names and their URLs. Use this to discover where data is synced.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
 
 Returns: { remotes: Array<{ name: string, url: string }> }
 
 Examples:
-  - "What remotes does Star Wars have?" → universe="starwars"
-  - "Show remote configuration for Toy Story" → universe="toystory"`,
+  - "What remotes does Star Wars have?" → repository="starwars"
+  - "Show remote configuration for Toy Story" → repository="toystory"`,
       inputSchema: RemoteListInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -511,9 +511,9 @@ Examples:
         openWorldHint: false,
       },
     },
-    async (params: { universe: string }) => {
+    async (params: { repository: string }) => {
       try {
-        const result = await listRemotes(params.universe);
+        const result = await listRemotes(params.repository);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -526,10 +526,10 @@ Examples:
   // ── nap_remote_add ─────────────────────────────────────────────────────
   const RemoteAddInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       name: z
         .string()
         .min(1)
@@ -549,13 +549,13 @@ Examples:
     "nap_remote_add",
     {
       title: "Add Remote",
-      description: `Add a Git remote to a universe repository.
+      description: `Add a Git remote to a repository repository.
 
-Remotes enable pushing and pulling universe data between repositories.
+Remotes enable pushing and pulling repository data between repositories.
 Use nap_push and nap_pull to synchronize after configuring a remote.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   name (string): Remote name (e.g., 'origin')
   url (string): Remote URL (e.g., 'git@github.com:user/repo.git')
 
@@ -572,10 +572,10 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; name: string; url: string }) => {
+    async (params: { repository: string; name: string; url: string }) => {
       try {
         const result = await addRemote(
-          params.universe,
+          params.repository,
           params.name,
           params.url,
         );
@@ -591,10 +591,10 @@ Examples:
   // ── nap_remote_remove ──────────────────────────────────────────────────
   const RemoteRemoveInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       name: z
         .string()
         .min(1)
@@ -606,16 +606,16 @@ Examples:
     "nap_remote_remove",
     {
       title: "Remove Remote",
-      description: `Remove a Git remote from a universe repository.
+      description: `Remove a Git remote from a repository repository.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   name (string): Remote name to remove
 
 Returns: { removed: string }
 
 Examples:
-  - "Remove the backup remote" → universe="starwars", name="backup"`,
+  - "Remove the backup remote" → repository="starwars", name="backup"`,
       inputSchema: RemoteRemoveInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -624,9 +624,9 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; name: string }) => {
+    async (params: { repository: string; name: string }) => {
       try {
-        const result = await removeRemote(params.universe, params.name);
+        const result = await removeRemote(params.repository, params.name);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -639,10 +639,10 @@ Examples:
   // ── nap_push ───────────────────────────────────────────────────────────
   const PushInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       remote: z
         .string()
         .optional()
@@ -657,23 +657,23 @@ Examples:
   server.registerTool(
     "nap_push",
     {
-      title: "Push Universe",
+      title: "Push Repository",
       description: `Push the current branch to a remote repository.
 
 Synchronizes local commits to the remote. Use nap_remote_add first to
 configure a remote, or nap_remote_list to see existing remotes.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   remote (string, optional): Remote name (default: 'origin')
   branch (string, optional): Branch to push (default: current branch)
 
-Returns: { universe: string }
+Returns: { repository: string }
 
 Examples:
-  - "Push Star Wars to origin" → universe="starwars"
-  - "Push the canon branch to origin" → universe="starwars", branch="canon"
-  - "Push to a specific remote" → universe="starwars", remote="backup"`,
+  - "Push Star Wars to origin" → repository="starwars"
+  - "Push the canon branch to origin" → repository="starwars", branch="canon"
+  - "Push to a specific remote" → repository="starwars", remote="backup"`,
       inputSchema: PushInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -682,10 +682,10 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; remote?: string; branch?: string }) => {
+    async (params: { repository: string; remote?: string; branch?: string }) => {
       try {
         const result = await pushUniverse(
-          params.universe,
+          params.repository,
           params.remote,
           params.branch,
         );
@@ -701,10 +701,10 @@ Examples:
   // ── nap_pull ───────────────────────────────────────────────────────────
   const PullInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       remote: z
         .string()
         .optional()
@@ -719,23 +719,23 @@ Examples:
   server.registerTool(
     "nap_pull",
     {
-      title: "Pull Universe",
+      title: "Pull Repository",
       description: `Pull the latest changes from a remote repository.
 
 Fetches and merges remote changes into the current branch. Use this to
 synchronize with other agents or team members.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   remote (string, optional): Remote name (default: 'origin')
   branch (string, optional): Branch to pull (default: current branch)
 
-Returns: { universe: string }
+Returns: { repository: string }
 
 Examples:
-  - "Pull latest Star Wars from origin" → universe="starwars"
-  - "Pull canon branch" → universe="starwars", branch="canon"
-  - "Pull from specific remote" → universe="starwars", remote="upstream"`,
+  - "Pull latest Star Wars from origin" → repository="starwars"
+  - "Pull canon branch" → repository="starwars", branch="canon"
+  - "Pull from specific remote" → repository="starwars", remote="upstream"`,
       inputSchema: PullInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -744,10 +744,10 @@ Examples:
         openWorldHint: true,
       },
     },
-    async (params: { universe: string; remote?: string; branch?: string }) => {
+    async (params: { repository: string; remote?: string; branch?: string }) => {
       try {
         const result = await pullUniverse(
-          params.universe,
+          params.repository,
           params.remote,
           params.branch,
         );
@@ -813,10 +813,10 @@ Examples:
   // ── nap_validate ───────────────────────────────────────────────────────
   const ValidateInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       entity_type: z
         .enum(ENTITY_TYPES as unknown as [string, ...string[]])
         .describe("Entity type to validate."),
@@ -837,15 +837,15 @@ Checks that the manifest has all required fields and that values match
 their expected types. Returns a list of validation errors, if any.
 
 Args:
-  universe (string): Universe name
+  repository (string): Repository name
   entity_type (string): Entity type
   entity_id (string): Entity ID to validate
 
 Returns: { valid: boolean, errors: string[] }
 
 Examples:
-  - "Validate Luke Skywalker's manifest" → universe="starwars", entity_type="character", entity_id="lukeskywalker"
-  - "Check Tatooine for schema violations" → universe="starwars", entity_type="location", entity_id="tatooine"`,
+  - "Validate Luke Skywalker's manifest" → repository="starwars", entity_type="character", entity_id="lukeskywalker"
+  - "Check Tatooine for schema violations" → repository="starwars", entity_type="location", entity_id="tatooine"`,
       inputSchema: ValidateInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -854,10 +854,10 @@ Examples:
         openWorldHint: false,
       },
     },
-    async (params: { universe: string; entity_type: string; entity_id: string }) => {
+    async (params: { repository: string; entity_type: string; entity_id: string }) => {
       try {
         const result = await validateManifest(
-          params.universe,
+          params.repository,
           params.entity_type,
           params.entity_id,
         );
@@ -885,8 +885,8 @@ function handleManagementError(err: unknown): {
           {
             type: "text",
             text:
-              `Error: Universe not found. ` +
-              `💡 Use nap_list_universes to see available universes.`,
+              `Error: Repository not found. ` +
+              `💡 Use nap_list_repositories to see available repositories.`,
           },
         ],
       };
@@ -898,8 +898,8 @@ function handleManagementError(err: unknown): {
           {
             type: "text",
             text:
-              `Error: Already exists. A universe with this name may already exist.` +
-              `\n  💡 Use a different universe name.`,
+              `Error: Already exists. A repository with this name may already exist.` +
+              `\n  💡 Use a different repository name.`,
           },
         ],
       };

@@ -48,13 +48,13 @@ const block = createBlock("char-1", "A brave adventurer");
 ## Quick Start
 
 ```bash
-# Initialize a universe (prompts for provider on first run)
+# Initialize a repository (prompts for provider on first run)
 nap init starwars
 
 # Initialize with local provider
 nap init starwars --provider local
 
-# Configure provider only (no universe)
+# Configure provider only (no repository)
 nap init --provider local
 
 # Initialize with remote provider
@@ -73,15 +73,15 @@ nap doctor
 nap doctor --repair
 ```
 
-### Create a Universe
+### Create a Repository
 
 ```bash
-# Initialize a new universe
+# Initialize a new repository
 nap init starwars
 
 # See what you created
 ls starwars/
-# → .nap/  universe.yaml  characters/  locations/  scenes/  props/
+# → .nap/  repository.yaml  characters/  locations/  scenes/  props/
 ```
 
 ### Create & Inspect Entities

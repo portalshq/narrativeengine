@@ -1,30 +1,30 @@
 //! NAP HTTP Resolver Server — Axum-based REST API.
 //!
 //! Endpoints:
-//!   GET   /resolve/:universe/:entity_type/:entity_id   — Resolve a manifest
-//!   POST  /commit/:universe/:entity_type/:entity_id    — Commit changes
-//!   POST  /create/:universe/:entity_type/:entity_id    — Create entity
-//!   DELETE /:universe/:entity_type/:entity_id          — Delete entity
-//!   POST  /revert/:universe                            — Revert a commit
-//!   GET   /history/:universe/:entity_type/:entity_id   — Get commit history
+//!   GET   /resolve/:repository/:entity_type/:entity_id   — Resolve a manifest
+//!   POST  /commit/:repository/:entity_type/:entity_id    — Commit changes
+//!   POST  /create/:repository/:entity_type/:entity_id    — Create entity
+//!   DELETE /:repository/:entity_type/:entity_id          — Delete entity
+//!   POST  /revert/:repository                            — Revert a commit
+//!   GET   /history/:repository/:entity_type/:entity_id   — Get commit history
 //!   GET   /schema/{name}                               — Get JSON Schema for a type
-//!   GET   /universes                                   — List all universes
-//!   GET   /universes/:universe/entities                 — List entities in a universe
-//!   POST  /init/:universe                              — Initialize a universe
-//!   POST  /switch/:universe                            — Switch to a branch
-//!   GET   /head/:universe                              — Get HEAD commit hash
-//!   GET   /branches/:universe                          — List branches
-//!   POST  /branches/:universe                          — Create a branch
-//!   GET   /tags/:universe                              — List tags
-//!   POST  /tags/:universe                              — Create a tag
-//!   GET   /remotes/:universe                           — List remotes
-//!   POST  /remotes/:universe                           — Add a remote
-//!   DELETE /remotes/:universe/:name                    — Remove a remote
-//!   POST  /pull/:universe                              — Pull from remote
-//!   POST  /push/:universe                              — Push to remote
-//!   POST  /sync/:universe                              — Push configured remote
+//!   GET   /repositories                                   — List all repositories
+//!   GET   /repositories/:repository/entities                 — List entities in a repository
+//!   POST  /init/:repository                              — Initialize a repository
+//!   POST  /switch/:repository                            — Switch to a branch
+//!   GET   /head/:repository                              — Get HEAD commit hash
+//!   GET   /branches/:repository                          — List branches
+//!   POST  /branches/:repository                          — Create a branch
+//!   GET   /tags/:repository                              — List tags
+//!   POST  /tags/:repository                              — Create a tag
+//!   GET   /remotes/:repository                           — List remotes
+//!   POST  /remotes/:repository                           — Add a remote
+//!   DELETE /remotes/:repository/:name                    — Remove a remote
+//!   POST  /pull/:repository                              — Pull from remote
+//!   POST  /push/:repository                              — Push to remote
+//!   POST  /sync/:repository                              — Push configured remote
 //!   POST  /content-hash                                — Compute content hash
-//!   GET   /validate/:universe/:entity_type/:entity_id  — Validate a manifest
+//!   GET   /validate/:repository/:entity_type/:entity_id  — Validate a manifest
 //!   GET   /health                                      — Health check
 //!
 //! Query parameters:
@@ -162,70 +162,70 @@ async fn main() {
     let app = Router::new()
         // Resolution
         .route(
-            "/resolve/{universe}/{entity_type}/{entity_id}",
+            "/resolve/{repository}/{entity_type}/{entity_id}",
             get(handle_resolve),
         )
         // Commit
         .route(
-            "/commit/{universe}/{entity_type}/{entity_id}",
+            "/commit/{repository}/{entity_type}/{entity_id}",
             post(handle_commit),
         )
         // Create entity
         .route(
-            "/create/{universe}/{entity_type}/{entity_id}",
+            "/create/{repository}/{entity_type}/{entity_id}",
             post(handle_create),
         )
         // Delete entity
         .route(
-            "/{universe}/{entity_type}/{entity_id}",
+            "/{repository}/{entity_type}/{entity_id}",
             delete(handle_delete),
         )
         // Revert
-        .route("/revert/{universe}", post(handle_revert))
+        .route("/revert/{repository}", post(handle_revert))
         // History
         .route(
-            "/history/{universe}/{entity_type}/{entity_id}",
+            "/history/{repository}/{entity_type}/{entity_id}",
             get(handle_history),
         )
         // JSON Schema
         .route("/schema/{name}", get(handle_schema))
-        // List universes
-        .route("/universes", get(handle_list_universes))
+        // List repositories
+        .route("/repositories", get(handle_list_repositories))
         // List entities
-        .route("/universes/{universe}/entities", get(handle_list_entities))
-        // Init universe
-        .route("/init/{universe}", post(handle_init))
+        .route("/repositories/{repository}/entities", get(handle_list_entities))
+        // Init repository
+        .route("/init/{repository}", post(handle_init))
         // Switch branch
-        .route("/switch/{universe}", post(handle_switch_branch))
+        .route("/switch/{repository}", post(handle_switch_branch))
         // Get HEAD hash
-        .route("/head/{universe}", get(handle_head_hash))
+        .route("/head/{repository}", get(handle_head_hash))
         // Branches
         .route(
-            "/branches/{universe}",
+            "/branches/{repository}",
             get(handle_list_branches).post(handle_create_branch),
         )
         // Tags
         .route(
-            "/tags/{universe}",
+            "/tags/{repository}",
             get(handle_list_tags).post(handle_create_tag),
         )
         // Remotes
         .route(
-            "/remotes/{universe}",
+            "/remotes/{repository}",
             get(handle_list_remotes).post(handle_add_remote),
         )
-        .route("/remotes/{universe}/{name}", delete(handle_remove_remote))
+        .route("/remotes/{repository}/{name}", delete(handle_remove_remote))
         // Pull
-        .route("/pull/{universe}", post(handle_pull))
+        .route("/pull/{repository}", post(handle_pull))
         // Push
-        .route("/push/{universe}", post(handle_push))
+        .route("/push/{repository}", post(handle_push))
         // Sync (push to configured remote)
-        .route("/sync/{universe}", post(handle_sync))
+        .route("/sync/{repository}", post(handle_sync))
         // Content hash
         .route("/content-hash", post(handle_content_hash))
         // Validate
         .route(
-            "/validate/{universe}/{entity_type}/{entity_id}",
+            "/validate/{repository}/{entity_type}/{entity_id}",
             get(handle_validate),
         )
         // Health
@@ -246,13 +246,13 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-/// POST /init/:universe
+/// POST /init/:repository
 async fn handle_init(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
-    let repo = Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env())).map_err(
+    let repo_path = state.base_path.join(&repository);
+    let repo = Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env())).map_err(
         |e| {
             let (status, code) = match &e {
                 nap_core::NapError::RepositoryAlreadyExists(_) => {
@@ -260,7 +260,7 @@ async fn handle_init(
                 }
                 _ => (StatusCode::INTERNAL_SERVER_ERROR, "INIT_FAILED"),
             };
-            error!(error = %e, universe = %universe, "init failed");
+            error!(error = %e, repository = %repository, "init failed");
             (
                 status,
                 Json(ApiError {
@@ -273,20 +273,20 @@ async fn handle_init(
 
     Ok(Json(serde_json::json!({
         "success": true,
-        "universe": universe,
+        "repository": repository,
         "path": repo.root.to_string_lossy(),
     })))
 }
 
-/// POST /create/:universe/:entity_type/:entity_id
+/// POST /create/:repository/:entity_type/:entity_id
 async fn handle_create(
     State(state): State<Arc<AppState>>,
-    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Path((repository, entity_type_str, entity_id)): Path<(String, String, String)>,
     Json(body): Json<CreateRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -318,15 +318,15 @@ async fn handle_create(
     })))
 }
 
-/// DELETE /:universe/:entity_type/:entity_id
+/// DELETE /:repository/:entity_type/:entity_id
 async fn handle_delete(
     State(state): State<Arc<AppState>>,
-    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Path((repository, entity_type_str, entity_id)): Path<(String, String, String)>,
     Json(body): Json<DeleteRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -356,13 +356,13 @@ async fn handle_delete(
     })))
 }
 
-/// POST /switch/:universe
+/// POST /switch/:repository
 async fn handle_switch_branch(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<SwitchRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -390,12 +390,12 @@ async fn handle_switch_branch(
     })))
 }
 
-/// GET /head/:universe
+/// GET /head/:repository
 async fn handle_head_hash(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -418,17 +418,17 @@ async fn handle_head_hash(
     })?;
 
     Ok(Json(serde_json::json!({
-        "universe": universe,
+        "repository": repository,
         "head": hash,
     })))
 }
 
-/// GET /branches/:universe
+/// GET /branches/:repository
 async fn handle_list_branches(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -451,18 +451,18 @@ async fn handle_list_branches(
     })?;
 
     Ok(Json(serde_json::json!({
-        "universe": universe,
+        "repository": repository,
         "branches": branches,
     })))
 }
 
-/// POST /branches/:universe
+/// POST /branches/:repository
 async fn handle_create_branch(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<BranchTagRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -490,14 +490,14 @@ async fn handle_create_branch(
     })))
 }
 
-/// GET /tags/:universe
+/// GET /tags/:repository
 async fn handle_list_tags(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    // To avoid conflicting with POST /tags/:universe body parsing,
+    // To avoid conflicting with POST /tags/:repository body parsing,
     // we use a function-level approach
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = match Repository::open(&repo_path, Box::new(LoreBackend::from_env())) {
         Ok(r) => r,
         Err(e) => {
@@ -526,18 +526,18 @@ async fn handle_list_tags(
     };
 
     Ok(Json(serde_json::json!({
-        "universe": universe,
+        "repository": repository,
         "tags": tags,
     })))
 }
 
-/// POST /tags/:universe
+/// POST /tags/:repository
 async fn handle_create_tag(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<BranchTagRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -565,12 +565,12 @@ async fn handle_create_tag(
     })))
 }
 
-/// GET /remotes/:universe
+/// GET /remotes/:repository
 async fn handle_list_remotes(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -598,18 +598,18 @@ async fn handle_list_remotes(
         .collect();
 
     Ok(Json(serde_json::json!({
-        "universe": universe,
+        "repository": repository,
         "remotes": pairs,
     })))
 }
 
-/// POST /remotes/:universe
+/// POST /remotes/:repository
 async fn handle_add_remote(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<RemoteAddRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -638,12 +638,12 @@ async fn handle_add_remote(
     })))
 }
 
-/// DELETE /remotes/:universe/:name
+/// DELETE /remotes/:repository/:name
 async fn handle_remove_remote(
     State(state): State<Arc<AppState>>,
-    Path((universe, name)): Path<(String, String)>,
+    Path((repository, name)): Path<(String, String)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -671,13 +671,13 @@ async fn handle_remove_remote(
     })))
 }
 
-/// POST /pull/:universe
+/// POST /pull/:repository
 async fn handle_pull(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<PushPullRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -702,17 +702,17 @@ async fn handle_pull(
 
     Ok(Json(serde_json::json!({
         "success": true,
-        "universe": universe,
+        "repository": repository,
     })))
 }
 
-/// POST /push/:universe
+/// POST /push/:repository
 async fn handle_push(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<PushPullRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -737,7 +737,7 @@ async fn handle_push(
 
     Ok(Json(serde_json::json!({
         "success": true,
-        "universe": universe,
+        "repository": repository,
     })))
 }
 
@@ -766,14 +766,14 @@ async fn handle_content_hash(
     })))
 }
 
-/// GET /validate/:universe/:entity_type/:entity_id
+/// GET /validate/:repository/:entity_type/:entity_id
 async fn handle_validate(
     State(state): State<Arc<AppState>>,
-    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Path((repository, entity_type_str, entity_id)): Path<(String, String, String)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -808,13 +808,13 @@ async fn handle_validate(
     }
 }
 
-/// GET /resolve/:universe/:entity_type/:entity_id
+/// GET /resolve/:repository/:entity_type/:entity_id
 async fn handle_resolve(
     State(state): State<Arc<AppState>>,
-    Path((universe, entity_type, entity_id)): Path<(String, String, String)>,
+    Path((repository, entity_type, entity_id)): Path<(String, String, String)>,
     Query(query): Query<ResolveQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let uri_str = format!("nap://{universe}/{entity_type}/{entity_id}");
+    let uri_str = format!("nap://{repository}/{entity_type}/{entity_id}");
     let options = ResolveOptions {
         branch: query.branch,
         commit: query.commit,
@@ -864,15 +864,15 @@ async fn handle_resolve(
     }
 }
 
-/// POST /commit/:universe/:entity_type/:entity_id
+/// POST /commit/:repository/:entity_type/:entity_id
 async fn handle_commit(
     State(state): State<Arc<AppState>>,
-    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Path((repository, entity_type_str, entity_id)): Path<(String, String, String)>,
     Json(body): Json<CommitRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -930,13 +930,13 @@ async fn handle_commit(
     Ok(Json(response))
 }
 
-/// POST /revert/{universe}
+/// POST /revert/{repository}
 async fn handle_revert(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Json(body): Json<RevertRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -968,12 +968,12 @@ async fn handle_revert(
     Ok(Json(response))
 }
 
-/// POST /sync/:universe
+/// POST /sync/:repository
 async fn handle_sync(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -990,7 +990,7 @@ async fn handle_sync(
     let branch_str = branch.as_deref().unwrap_or("main");
 
     repo.push(Some("origin"), Some(branch_str)).map_err(|e| {
-        error!(error = %e, universe = %universe, "sync (push) failed");
+        error!(error = %e, repository = %repository, "sync (push) failed");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiError {
@@ -1002,20 +1002,20 @@ async fn handle_sync(
 
     Ok(Json(serde_json::json!({
         "success": true,
-        "universe": universe,
+        "repository": repository,
         "remote": "origin",
         "branch": branch_str,
     })))
 }
 
-/// GET /history/:universe/:entity_type/:entity_id
+/// GET /history/:repository/:entity_type/:entity_id
 async fn handle_history(
     State(state): State<Arc<AppState>>,
-    Path((universe, entity_type_str, entity_id)): Path<(String, String, String)>,
+    Path((repository, entity_type_str, entity_id)): Path<(String, String, String)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -1039,12 +1039,12 @@ async fn handle_history(
     Ok(Json(serde_json::to_value(&history).unwrap()))
 }
 
-/// GET /universes
-async fn handle_list_universes(
+/// GET /repositories
+async fn handle_list_repositories(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let resolver = Resolver::new(&state.base_path);
-    let universes = resolver.list_universes().map_err(|e| {
+    let repositories = resolver.list_repositories().map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiError {
@@ -1053,16 +1053,16 @@ async fn handle_list_universes(
             }),
         )
     })?;
-    Ok(Json(serde_json::json!({ "universes": universes })))
+    Ok(Json(serde_json::json!({ "repositories": repositories })))
 }
 
-/// GET /universes/:universe/entities
+/// GET /repositories/:repository/entities
 async fn handle_list_entities(
     State(state): State<Arc<AppState>>,
-    Path(universe): Path<String>,
+    Path(repository): Path<String>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&universe);
+    let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
@@ -1098,7 +1098,7 @@ async fn handle_list_entities(
         let entities = repo.list_entities(&et).unwrap_or_default();
         let uris: Vec<String> = entities
             .iter()
-            .map(|e| format!("nap://{universe}/{et}/{e}"))
+            .map(|e| format!("nap://{repository}/{et}/{e}"))
             .collect();
         result.insert(et.to_string(), serde_json::json!(uris));
     }

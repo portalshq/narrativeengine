@@ -29,14 +29,14 @@ def parse_uri(uri: str) -> dict[str, Any]:
         uri: A NAP URI, e.g. ``"nap://starwars/character/lukeskywalker"``.
 
     Returns:
-        A dict with keys: ``universe``, ``entity_type``, ``entity_id``,
+        A dict with keys: ``repository``, ``entity_type``, ``entity_id``,
         and optionally ``fragment``.
     """
     return cast(dict[str, Any], json.loads(_native.parse_uri(uri)))
 
 
 def uri_new(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     fragment: str | None = None,
@@ -44,7 +44,7 @@ def uri_new(
     """Construct a new NAP URI from components.
 
     Args:
-        universe: Universe name (e.g. ``"starwars"``).
+        repository: Repository name (e.g. ``"starwars"``).
         entity_type: Entity type (e.g. ``"character"``, ``"location"``).
         entity_id: Entity ID slug (e.g. ``"lukeskywalker"``).
         fragment: Optional query fragment (e.g. ``"properties.species"``).
@@ -52,7 +52,7 @@ def uri_new(
     Returns:
         A dict with the parsed URI components.
     """
-    return cast(dict[str, Any], json.loads(_native.uri_new(universe, entity_type, entity_id, fragment)))
+    return cast(dict[str, Any], json.loads(_native.uri_new(repository, entity_type, entity_id, fragment)))
 
 
 def uri_identity(uri: str) -> str:
@@ -80,7 +80,7 @@ def uri_manifest_path(uri: str) -> str:
 
 
 def uri_format(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     fragment: str | None = None,
@@ -88,7 +88,7 @@ def uri_format(
     """Format URI components into a ``nap://`` URI string.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type.
         entity_id: Entity ID.
         fragment: Optional query fragment.
@@ -96,7 +96,7 @@ def uri_format(
     Returns:
         A full NAP URI string.
     """
-    return _native.uri_format(universe, entity_type, entity_id, fragment)
+    return _native.uri_format(repository, entity_type, entity_id, fragment)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -156,7 +156,7 @@ def parse_manifest(yaml_str: str) -> dict[str, Any]:
 
 
 def manifest_new(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     name: str,
@@ -164,7 +164,7 @@ def manifest_new(
     """Create a new manifest with minimal required fields.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID slug.
         name: Human-readable name.
@@ -172,7 +172,7 @@ def manifest_new(
     Returns:
         The new manifest as a dict.
     """
-    return cast(dict[str, Any], json.loads(_native.manifest_new(universe, entity_type, entity_id, name)))
+    return cast(dict[str, Any], json.loads(_native.manifest_new(repository, entity_type, entity_id, name)))
 
 
 def manifest_to_yaml(manifest: dict[str, Any]) -> str:
@@ -436,34 +436,34 @@ def commit_verify_id(commit: dict[str, Any]) -> bool:
 # ═══════════════════════════════════════════════════════════════════════
 
 
-def repo_init(universe: str, base_path: str | None = None) -> dict[str, Any]:
-    """Initialize a new NAP universe repository.
+def repo_init(repository: str, base_path: str | None = None) -> dict[str, Any]:
+    """Initialize a new NAP repository repository.
 
     Args:
-        universe: Universe name.
-        base_path: Base directory for universe repos (defaults to ``$NAP_DIR`` / ``~/.nap``).
+        repository: Repository name.
+        base_path: Base directory for repository repos (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
-        Dict with ``root`` (filesystem path) and ``universe``.
+        Dict with ``root`` (filesystem path) and ``repository``.
     """
-    return cast(dict[str, Any], json.loads(_native.repo_init(_resolve_repo_path(base_path), universe)))
+    return cast(dict[str, Any], json.loads(_native.repo_init(_resolve_repo_path(base_path), repository)))
 
 
-def repo_open(universe: str, base_path: str | None = None) -> dict[str, Any]:
-    """Open an existing NAP universe repository.
+def repo_open(repository: str, base_path: str | None = None) -> dict[str, Any]:
+    """Open an existing NAP repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
-        Dict with ``root`` and ``universe``.
+        Dict with ``root`` and ``repository``.
     """
-    return cast(dict[str, Any], json.loads(_native.repo_open(_resolve_repo_path(base_path), universe)))
+    return cast(dict[str, Any], json.loads(_native.repo_open(_resolve_repo_path(base_path), repository)))
 
 
 def repo_create_entity(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     name: str,
@@ -473,7 +473,7 @@ def repo_create_entity(
     """Create a new entity manifest and commit it.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID slug.
         name: Human-readable name.
@@ -486,13 +486,13 @@ def repo_create_entity(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_create_entity(_resolve_repo_path(base_path), universe, entity_type, entity_id, name, author)
+            _native.repo_create_entity(_resolve_repo_path(base_path), repository, entity_type, entity_id, name, author)
         ),
     )
 
 
 def repo_read_manifest(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     base_path: str | None = None,
@@ -500,7 +500,7 @@ def repo_read_manifest(
     """Read a manifest from the repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
@@ -511,13 +511,13 @@ def repo_read_manifest(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_read_manifest(_resolve_repo_path(base_path), universe, entity_type, entity_id)
+            _native.repo_read_manifest(_resolve_repo_path(base_path), repository, entity_type, entity_id)
         ),
     )
 
 
 def repo_read_manifest_at_ref(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     reference: str,
@@ -526,7 +526,7 @@ def repo_read_manifest_at_ref(
     """Read a manifest at a specific VCS reference (commit, branch, tag).
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID.
         reference: VCS ref (commit hash, branch name, or tag).
@@ -539,32 +539,32 @@ def repo_read_manifest_at_ref(
         dict[str, Any],
         json.loads(
             _native.repo_read_manifest_at_ref(
-                _resolve_repo_path(base_path), universe, entity_type, entity_id, reference
+                _resolve_repo_path(base_path), repository, entity_type, entity_id, reference
             )
         ),
     )
 
 
 def repo_write_manifest(
-    universe: str,
+    repository: str,
     manifest: dict[str, Any],
     base_path: str | None = None,
 ) -> str:
     """Write a manifest to the repository (does NOT commit).
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         manifest: Manifest dict.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
         The filesystem path where the manifest was written.
     """
-    return _native.repo_write_manifest(_resolve_repo_path(base_path), universe, json.dumps(manifest))
+    return _native.repo_write_manifest(_resolve_repo_path(base_path), repository, json.dumps(manifest))
 
 
 def repo_commit_manifest(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     message: str,
@@ -575,7 +575,7 @@ def repo_commit_manifest(
     """Update an existing manifest and commit the changes.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID.
         message: Commit message.
@@ -591,7 +591,7 @@ def repo_commit_manifest(
         dict[str, Any],
         json.loads(
             _native.repo_commit_manifest(
-                _resolve_repo_path(base_path), universe, entity_type, entity_id,
+                _resolve_repo_path(base_path), repository, entity_type, entity_id,
                 message, author, changes_json
             )
         ),
@@ -599,7 +599,7 @@ def repo_commit_manifest(
 
 
 def repo_delete_entity(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     author: str = "nap-sdk",
@@ -608,7 +608,7 @@ def repo_delete_entity(
     """Delete an entity manifest and commit the deletion.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID.
         author: Author identifier.
@@ -618,12 +618,12 @@ def repo_delete_entity(
         The VCS commit hash of the deletion.
     """
     return _native.repo_delete_entity(
-        _resolve_repo_path(base_path), universe, entity_type, entity_id, author
+        _resolve_repo_path(base_path), repository, entity_type, entity_id, author
     )
 
 
 def repo_history(
-    universe: str,
+    repository: str,
     entity_type: str,
     entity_id: str,
     limit: int = 20,
@@ -632,7 +632,7 @@ def repo_history(
     """Get commit history for an entity.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID.
         limit: Maximum number of commits to return (default 20).
@@ -645,21 +645,21 @@ def repo_history(
         list[dict[str, Any]],
         json.loads(
             _native.repo_history(
-                _resolve_repo_path(base_path), universe, entity_type, entity_id, limit
+                _resolve_repo_path(base_path), repository, entity_type, entity_id, limit
             )
         ),
     )
 
 
 def repo_list_entities(
-    universe: str,
+    repository: str,
     entity_type: str,
     base_path: str | None = None,
 ) -> list[str]:
-    """List all entity IDs of a given type in a universe.
+    """List all entity IDs of a given type in a repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         entity_type: Entity type string.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
@@ -669,20 +669,20 @@ def repo_list_entities(
     return cast(
         list[str],
         json.loads(
-            _native.repo_list_entities(_resolve_repo_path(base_path), universe, entity_type)
+            _native.repo_list_entities(_resolve_repo_path(base_path), repository, entity_type)
         ),
     )
 
 
 def repo_create_branch(
-    universe: str,
+    repository: str,
     name: str,
     base_path: str | None = None,
 ) -> dict[str, Any]:
-    """Create a branch in a universe repository.
+    """Create a branch in a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         name: Branch name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
@@ -692,20 +692,20 @@ def repo_create_branch(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_create_branch(_resolve_repo_path(base_path), universe, name)
+            _native.repo_create_branch(_resolve_repo_path(base_path), repository, name)
         ),
     )
 
 
 def repo_switch_branch(
-    universe: str,
+    repository: str,
     name: str,
     base_path: str | None = None,
 ) -> dict[str, Any]:
-    """Switch to a branch in a universe repository.
+    """Switch to a branch in a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         name: Branch name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
@@ -715,19 +715,19 @@ def repo_switch_branch(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_switch_branch(_resolve_repo_path(base_path), universe, name)
+            _native.repo_switch_branch(_resolve_repo_path(base_path), repository, name)
         ),
     )
 
 
 def repo_list_branches(
-    universe: str,
+    repository: str,
     base_path: str | None = None,
 ) -> list[str]:
-    """List all branches in a universe repository.
+    """List all branches in a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
@@ -736,20 +736,20 @@ def repo_list_branches(
     return cast(
         list[str],
         json.loads(
-            _native.repo_list_branches(_resolve_repo_path(base_path), universe)
+            _native.repo_list_branches(_resolve_repo_path(base_path), repository)
         ),
     )
 
 
 def repo_create_tag(
-    universe: str,
+    repository: str,
     name: str,
     base_path: str | None = None,
 ) -> dict[str, Any]:
-    """Create a tag in a universe repository.
+    """Create a tag in a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         name: Tag name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
@@ -759,19 +759,19 @@ def repo_create_tag(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_create_tag(_resolve_repo_path(base_path), universe, name)
+            _native.repo_create_tag(_resolve_repo_path(base_path), repository, name)
         ),
     )
 
 
 def repo_list_tags(
-    universe: str,
+    repository: str,
     base_path: str | None = None,
 ) -> list[str]:
-    """List all tags in a universe repository.
+    """List all tags in a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
@@ -780,37 +780,37 @@ def repo_list_tags(
     return cast(
         list[str],
         json.loads(
-            _native.repo_list_tags(_resolve_repo_path(base_path), universe)
+            _native.repo_list_tags(_resolve_repo_path(base_path), repository)
         ),
     )
 
 
 def repo_head_hash(
-    universe: str,
+    repository: str,
     base_path: str | None = None,
 ) -> str:
-    """Get the current HEAD hash of a universe repository.
+    """Get the current HEAD hash of a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
         The HEAD commit hash string.
     """
-    return _native.repo_head_hash(_resolve_repo_path(base_path), universe)
+    return _native.repo_head_hash(_resolve_repo_path(base_path), repository)
 
 
 def repo_revert_commit(
-    universe: str,
+    repository: str,
     commit_hash: str,
     author: str = "nap-sdk",
     base_path: str | None = None,
 ) -> str:
-    """Revert a commit across an entire universe.
+    """Revert a commit across an entire repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         commit_hash: Hash of the commit to revert.
         author: Author identifier.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
@@ -818,19 +818,19 @@ def repo_revert_commit(
     Returns:
         The new revert commit hash.
     """
-    return _native.repo_revert_commit(_resolve_repo_path(base_path), universe, commit_hash, author)
+    return _native.repo_revert_commit(_resolve_repo_path(base_path), repository, commit_hash, author)
 
 
 def repo_add_remote(
-    universe: str,
+    repository: str,
     name: str,
     url: str,
     base_path: str | None = None,
 ) -> dict[str, Any]:
-    """Add a remote to a universe repository.
+    """Add a remote to a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         name: Remote name (e.g. ``"origin"``).
         url: Remote URL.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
@@ -841,20 +841,20 @@ def repo_add_remote(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_add_remote(_resolve_repo_path(base_path), universe, name, url)
+            _native.repo_add_remote(_resolve_repo_path(base_path), repository, name, url)
         ),
     )
 
 
 def repo_remove_remote(
-    universe: str,
+    repository: str,
     name: str,
     base_path: str | None = None,
 ) -> dict[str, Any]:
-    """Remove a remote from a universe repository.
+    """Remove a remote from a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         name: Remote name to remove.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
@@ -864,30 +864,30 @@ def repo_remove_remote(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_remove_remote(_resolve_repo_path(base_path), universe, name)
+            _native.repo_remove_remote(_resolve_repo_path(base_path), repository, name)
         ),
     )
 
 
 def repo_list_remotes(
-    universe: str,
+    repository: str,
     base_path: str | None = None,
 ) -> list[tuple[str, str]]:
-    """List remotes on a universe repository.
+    """List remotes on a repository repository.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
         List of ``(name, url)`` tuples.
     """
-    raw = json.loads(_native.repo_list_remotes(_resolve_repo_path(base_path), universe))
+    raw = json.loads(_native.repo_list_remotes(_resolve_repo_path(base_path), repository))
     return [(item[0], item[1]) for item in raw]
 
 
 def repo_push(
-    universe: str,
+    repository: str,
     remote: str | None = None,
     branch: str | None = None,
     base_path: str | None = None,
@@ -895,7 +895,7 @@ def repo_push(
     """Push the current branch to a remote.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         remote: Remote name (defaults to tracking branch's remote).
         branch: Branch to push (defaults to current branch).
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
@@ -906,13 +906,13 @@ def repo_push(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_push(_resolve_repo_path(base_path), universe, remote, branch)
+            _native.repo_push(_resolve_repo_path(base_path), repository, remote, branch)
         ),
     )
 
 
 def repo_pull(
-    universe: str,
+    repository: str,
     remote: str | None = None,
     branch: str | None = None,
     base_path: str | None = None,
@@ -920,7 +920,7 @@ def repo_pull(
     """Pull the current branch from a remote.
 
     Args:
-        universe: Universe name.
+        repository: Repository name.
         remote: Remote name (defaults to tracking branch's remote).
         branch: Branch to pull (defaults to current branch).
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
@@ -931,7 +931,7 @@ def repo_pull(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_pull(_resolve_repo_path(base_path), universe, remote, branch)
+            _native.repo_pull(_resolve_repo_path(base_path), repository, remote, branch)
         ),
     )
 
@@ -952,7 +952,7 @@ def resolve(
 
     Args:
         uri: NAP URI (e.g. ``"nap://starwars/character/lukeskywalker"``).
-        repo_path: Base directory for universes (defaults to ``$NAP_DIR`` / ``~/.nap``).
+        repo_path: Base directory for repositories (defaults to ``$NAP_DIR`` / ``~/.nap``).
         branch: Optional branch selector.
         commit: Optional commit hash selector (BLAKE3).
         path: Optional subtree query path.
@@ -986,18 +986,18 @@ def resolve_query(uri: str, path: str, repo_path: str | None = None) -> Any:
     )
 
 
-def list_universes(repo_path: str | None = None) -> list[str]:
-    """List all universe repositories available.
+def list_repositories(repo_path: str | None = None) -> list[str]:
+    """List all repository repositories available.
 
     Args:
         repo_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
-        List of universe names.
+        List of repository names.
     """
     return cast(
         list[str],
-        json.loads(_native.list_universes(_resolve_repo_path(repo_path))),
+        json.loads(_native.list_repositories(_resolve_repo_path(repo_path))),
     )
 
 
@@ -1232,7 +1232,7 @@ __all__ = [
     # Resolver
     "resolve",
     "resolve_query",
-    "list_universes",
+    "list_repositories",
     # Schema
     "manifest_schema",
     "commit_schema",

@@ -38,7 +38,7 @@ pub struct Repository {
     /// Filesystem path to the repository root.
     pub root: PathBuf,
     /// The repository name (derived from directory name).
-    pub universe: String,
+    pub repository: String,
     /// The VCS backend (Lore).
     vcs: Box<dyn VcsBackend>,
 }
@@ -46,12 +46,12 @@ pub struct Repository {
 impl Repository {
     /// Open an existing NAP repository at the given path.
     pub fn open(path: &Path, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
-        // Check for repository.yaml or universe.yaml to identify valid repository
-        if !path.join("repository.yaml").exists() && !path.join("universe.yaml").exists() {
+        // Check for repository.yaml or repository.yaml to identify valid repository
+        if !path.join("repository.yaml").exists() && !path.join("repository.yaml").exists() {
             return Err(NapError::RepositoryNotFound(path.display().to_string()));
         }
 
-        let universe = path
+        let repository = path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown")
@@ -59,28 +59,28 @@ impl Repository {
 
         debug!(
             path = %path.display(),
-            universe = %universe,
+            repository = %repository,
             "opened NAP repository"
         );
 
         Ok(Self {
             root: path.to_path_buf(),
-            universe,
+            repository,
             vcs,
         })
     }
 
-    /// Read the resolve configuration from repository.yaml (or universe.yaml) metadata.
+    /// Read the resolve configuration from repository.yaml (or repository.yaml) metadata.
     pub fn read_resolve_config(&self) -> ResolveConfig {
-        // Prefer repository.yaml, fall back to universe.yaml
+        // Prefer repository.yaml, fall back to repository.yaml
         let repo_yaml_path = self.root.join("repository.yaml");
-        let universe_yaml_path = self.root.join("universe.yaml");
+        let universe_yaml_path = self.root.join("repository.yaml");
         let config_path = if repo_yaml_path.exists() {
             repo_yaml_path
         } else if universe_yaml_path.exists() {
             universe_yaml_path
         } else {
-            debug!("no repository.yaml or universe.yaml found, using default ResolveConfig");
+            debug!("no repository.yaml or repository.yaml found, using default ResolveConfig");
             return ResolveConfig::default();
         };
 
@@ -165,9 +165,9 @@ impl Repository {
     }
 
     /// Initialize a new NAP repository.
-    pub fn init(path: &Path, universe: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
+    pub fn init(path: &Path, repository: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
         let repo_root = path.to_path_buf();
-        if repo_root.join("repository.yaml").exists() || repo_root.join("universe.yaml").exists() {
+        if repo_root.join("repository.yaml").exists() || repo_root.join("repository.yaml").exists() {
             return Err(NapError::RepositoryAlreadyExists(
                 repo_root.display().to_string(),
             ));
@@ -175,7 +175,7 @@ impl Repository {
 
         info!(
             path = %repo_root.display(),
-            universe = %universe,
+            repository = %repository,
             "initializing NAP repository"
         );
 
@@ -184,10 +184,10 @@ impl Repository {
 
         // Create repository.yaml with [nap] metadata
         let mut repo_manifest = Manifest::new(
-            universe,
+            repository,
             EntityType::new("world"),
-            universe,
-            &format!("{universe} Repository"),
+            repository,
+            &format!("{repository} Repository"),
         );
 
         // Add nap configuration to metadata
@@ -207,26 +207,26 @@ impl Repository {
         // Initial commit
         vcs.commit(
             &repo_root,
-            &format!("Initialize {universe} repository"),
+            &format!("Initialize {repository} repository"),
             "nap-init",
         )?;
 
         info!(
             path = %repo_root.display(),
-            universe = %universe,
+            repository = %repository,
             "NAP repository initialized successfully"
         );
 
         Ok(Self {
             root: repo_root,
-            universe: universe.to_string(),
+            repository: repository.to_string(),
             vcs,
         })
     }
 
     /// Get the full filesystem path to an entity's manifest file.
     pub fn manifest_path(&self, entity_type: &EntityType, entity_id: &str) -> PathBuf {
-        let uri = NapUri::new(&self.universe, entity_type.clone(), entity_id);
+        let uri = NapUri::new(&self.repository, entity_type.clone(), entity_id);
         self.root.join(uri.manifest_path())
     }
 
@@ -253,7 +253,7 @@ impl Repository {
         entity_id: &str,
         reference: &str,
     ) -> Result<Manifest, NapError> {
-        let uri = NapUri::new(&self.universe, entity_type.clone(), entity_id);
+        let uri = NapUri::new(&self.repository, entity_type.clone(), entity_id);
         let file_path = uri.manifest_path();
 
         debug!(
@@ -316,7 +316,7 @@ impl Repository {
         // Ensure entity type directory exists
         self.ensure_entity_type_dir(entity_type)?;
 
-        let mut manifest = Manifest::new(&self.universe, entity_type.clone(), entity_id, name);
+        let mut manifest = Manifest::new(&self.repository, entity_type.clone(), entity_id, name);
 
         // Check if entity already exists (idempotency guard)
         let path = self.manifest_path(entity_type, entity_id);
@@ -407,7 +407,7 @@ impl Repository {
         entity_id: &str,
         limit: usize,
     ) -> Result<Vec<crate::vcs::CommitInfo>, NapError> {
-        let uri = NapUri::new(&self.universe, entity_type.clone(), entity_id);
+        let uri = NapUri::new(&self.repository, entity_type.clone(), entity_id);
         let file_path = uri.manifest_path();
         self.vcs.log(&self.root, Some(&file_path), limit)
     }
@@ -824,11 +824,11 @@ mod lore_integration_tests {
     }
 
     fn setup_lore_repo() -> (TempDir, Repository) {
-        let universe = format!("ri-{}", unique_suffix());
+        let repository = format!("ri-{}", unique_suffix());
         let tmp = TempDir::new().unwrap();
-        let repo_path = tmp.path().join(&universe);
+        let repo_path = tmp.path().join(&repository);
         let repo =
-            Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env())).unwrap();
+            Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env())).unwrap();
         (tmp, repo)
     }
 

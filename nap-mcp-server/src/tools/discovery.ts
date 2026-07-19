@@ -1,5 +1,5 @@
 /**
- * Discovery tools — list universes, entities, and search across them.
+ * Discovery tools — list repositories, entities, and search across them.
  *
  * These are READ-ONLY tools. They never mutate state.
  */
@@ -7,7 +7,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  listUniverses,
+  listRepositories,
   listEntities,
   searchEntities,
   healthCheck,
@@ -16,23 +16,23 @@ import {
 import { CONFIG, ENTITY_TYPES } from "../constants.js";
 
 export function registerDiscoveryTools(server: McpServer): void {
-  // ── nap_list_universes ──────────────────────────────────────────────
+  // ── nap_list_repositories ──────────────────────────────────────────────
   server.registerTool(
-    "nap_list_universes",
+    "nap_list_repositories",
     {
-      title: "List Universes",
-      description: `List all fictional universes available in the NAP resolver.
+      title: "List Repositories",
+      description: `List all fictional repositories available in the NAP resolver.
 
-Returns an array of universe names (e.g., ['starwars', 'toystory', 'middleearth']).
-Each universe is an independent Git repository containing characters, locations,
+Returns an array of repository names (e.g., ['starwars', 'toystory', 'middleearth']).
+Each repository is an independent Git repository containing characters, locations,
 scenes, and props.
 
 Args: None
 
-Returns: { universes: string[] }
+Returns: { repositories: string[] }
 
 Examples:
-  - "What universes do we have?" → call with no args
+  - "What repositories do we have?" → call with no args
   - "Show me all available worlds" → call with no args`,
       inputSchema: z.object({}).strict(),
       annotations: {
@@ -44,20 +44,20 @@ Examples:
     },
     async () => {
       try {
-        const universes = await listUniverses();
-        if (universes.length === 0) {
+        const repositories = await listRepositories();
+        if (repositories.length === 0) {
           return {
             content: [
               {
                 type: "text",
                 text:
-                  "No universes found. Make sure nap-server is pointing at a directory " +
-                  "that contains universe repositories (directories with .nap/ subdirectories).",
+                  "No repositories found. Make sure nap-server is pointing at a directory " +
+                  "that contains repository repositories (directories with .nap/ subdirectories).",
               },
             ],
           };
         }
-        const output = { universes };
+        const output = { repositories };
         return {
           content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
         };
@@ -70,10 +70,10 @@ Examples:
   // ── nap_list_entities ───────────────────────────────────────────────
   const ListEntitiesInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars', 'toystory')."),
+        .describe("Repository name (e.g., 'starwars', 'toystory')."),
       entity_type: z
         .enum(ENTITY_TYPES as unknown as [string, ...string[]])
         .optional()
@@ -90,21 +90,21 @@ Examples:
     "nap_list_entities",
     {
       title: "List Entities",
-      description: `List entities within a universe, optionally filtered by type.
+      description: `List entities within a repository, optionally filtered by type.
 
 Returns a map of entity type → array of NAP URIs.  Use this to discover what
-exists in a universe before resolving specific manifests.
+exists in a repository before resolving specific manifests.
 
 Args:
-  universe (string): Universe name (e.g., 'starwars')
+  repository (string): Repository name (e.g., 'starwars')
   entity_type (string, optional): Filter by type ('character', 'location', 'scene', 'prop', 'world')
 
 Returns: { character: string[], location: string[], scene: string[], prop: string[] }
 
 Examples:
-  - "List everything in Star Wars" → universe="starwars"
-  - "List all characters in Star Wars" → universe="starwars", entity_type="character"
-  - "What locations exist in Toy Story?" → universe="toystory", entity_type="location"`,
+  - "List everything in Star Wars" → repository="starwars"
+  - "List all characters in Star Wars" → repository="starwars", entity_type="character"
+  - "What locations exist in Toy Story?" → repository="toystory", entity_type="location"`,
       inputSchema: ListEntitiesInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -115,7 +115,7 @@ Examples:
     },
     async (params: ListEntitiesInput) => {
       try {
-        const result = await listEntities(params.universe, params.entity_type);
+        const result = await listEntities(params.repository, params.entity_type);
 
         // Check if empty
         const allEmpty = Object.values(result).every(
@@ -127,17 +127,17 @@ Examples:
               {
                 type: "text",
                 text:
-                  `No entities found in universe '${params.universe}'. ` +
+                  `No entities found in repository '${params.repository}'. ` +
                   (params.entity_type
                     ? `No ${params.entity_type} entities exist yet.`
-                    : "The universe exists but has no entities yet."),
+                    : "The repository exists but has no entities yet."),
               },
             ],
           };
         }
 
         // Add summary counts
-        const output: Record<string, unknown> = { universe: params.universe };
+        const output: Record<string, unknown> = { repository: params.repository };
         for (const [type, uris] of Object.entries(result)) {
           if (uris.length > 0) {
             output[type] = {
@@ -159,10 +159,10 @@ Examples:
   // ── nap_search_entities ─────────────────────────────────────────────
   const SearchEntitiesInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
-        .describe("Universe name (e.g., 'starwars')."),
+        .describe("Repository name (e.g., 'starwars')."),
       query: z
         .string()
         .min(1)
@@ -183,22 +183,22 @@ Examples:
     "nap_search_entities",
     {
       title: "Search Entities",
-      description: `Search for entities in a universe by name or ID.
+      description: `Search for entities in a repository by name or ID.
 
 Performs a case-insensitive substring match against entity names and IDs.
 Useful when you don't know the exact entity ID but know part of the name.
 
 Args:
-  universe (string): Universe name (e.g., 'starwars')
+  repository (string): Repository name (e.g., 'starwars')
   query (string): Search term (e.g., 'luke', 'tatooine', 'vader')
   entity_type (string, optional): Filter by type
 
 Returns: Array of matching entities with uri, name, and entity_type.
 
 Examples:
-  - "Find characters named Luke" → universe="starwars", query="luke", entity_type="character"
-  - "Find anything related to Tatooine" → universe="starwars", query="tatooine"
-  - "Find Vader across all types" → universe="starwars", query="vader"`,
+  - "Find characters named Luke" → repository="starwars", query="luke", entity_type="character"
+  - "Find anything related to Tatooine" → repository="starwars", query="tatooine"
+  - "Find Vader across all types" → repository="starwars", query="vader"`,
       inputSchema: SearchEntitiesInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -210,7 +210,7 @@ Examples:
     async (params: SearchEntitiesInput) => {
       try {
         const results = await searchEntities(
-          params.universe,
+          params.repository,
           params.query,
           params.entity_type,
         );
@@ -221,7 +221,7 @@ Examples:
               {
                 type: "text",
                 text:
-                  `No entities matching '${params.query}' found in '${params.universe}'. ` +
+                  `No entities matching '${params.query}' found in '${params.repository}'. ` +
                   `Try a different search term, or use nap_list_entities to see all available entities.`,
               },
             ],
@@ -229,7 +229,7 @@ Examples:
         }
 
         const output = {
-          universe: params.universe,
+          repository: params.repository,
           query: params.query,
           count: results.length,
           results,

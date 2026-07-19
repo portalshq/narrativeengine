@@ -157,11 +157,11 @@ pub struct Provenance {
 
 impl Manifest {
     /// Create a new manifest with minimal required fields.
-    pub fn new(universe: &str, entity_type: EntityType, entity_id: &str, name: &str) -> Self {
+    pub fn new(repository: &str, entity_type: EntityType, entity_id: &str, name: &str) -> Self {
         let id = if entity_type.as_str() == "world" {
-            format!("nap://{universe}/world/{universe}")
+            format!("nap://{repository}/world/{repository}")
         } else {
-            format!("nap://{universe}/{entity_type}/{entity_id}")
+            format!("nap://{repository}/{entity_type}/{entity_id}")
         };
 
         Self {
@@ -303,7 +303,7 @@ mod tests {
             "starwars",
             EntityType::new("world"),
             "starwars",
-            "Star Wars Universe",
+            "Star Wars Repository",
         );
         assert_eq!(manifest.id, "nap://starwars/world/starwars");
     }

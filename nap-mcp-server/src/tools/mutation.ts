@@ -3,7 +3,7 @@
  *
  * These tools MODIFY state.  All have destructiveHint: false because they
  * are versioned (every change is a Git commit) and can be rolled back,
- * but they DO change the universe state.
+ * but they DO change the repository state.
  */
 
 import { z } from "zod";
@@ -274,19 +274,19 @@ Examples:
 
   const RevertInputSchema = z
     .object({
-      universe: z
+      repository: z
         .string()
         .min(1)
         .describe(
-          "Universe name (e.g., 'starwars', 'toystory'). " +
-            "Use nap_list_universes to discover available universes.",
+          "Repository name (e.g., 'starwars', 'toystory'). " +
+            "Use nap_list_repositories to discover available repositories.",
         ),
       commit: z
         .string()
         .min(1)
         .describe(
           "Commit hash to revert.  Must be a full SHA-1 hash (40 chars) " +
-            "resolvable in the universe's Git history. " +
+            "resolvable in the repository's Git history. " +
             "Use nap_get_history to find commit hashes.",
         ),
       author: z
@@ -305,9 +305,9 @@ Examples:
     "nap_revert_commit",
     {
       title: "Revert Commit",
-      description: `Revert a specific commit across an entire universe.
+      description: `Revert a specific commit across an entire repository.
 
-This is a universe-level operation — it undoes all changes made by the
+This is a repository-level operation — it undoes all changes made by the
 specified commit, restoring every file to its previous state.  A new
 revert commit is created in the Git history, so the revert itself is
 also versioned and can be reverted if needed.
@@ -316,7 +316,7 @@ Use this to undo mistakes: if an agent wrote bad data to an entity,
 find the commit hash with nap_get_history and revert it.
 
 Args:
-  universe (string): Universe name (e.g., 'starwars')
+  repository (string): Repository name (e.g., 'starwars')
   commit (string): Full commit hash to revert
   author (string, optional): Author identifier (default: 'nap-agent')
 
@@ -324,9 +324,9 @@ Returns: { reverted_commit: string, new_commit: string }
 
 Examples:
   - Undo a bad agent commit:
-    nap_revert_commit(universe="starwars", commit="a58a3c73a332ca62e21da4543dba87621ef18ee0")
+    nap_revert_commit(repository="starwars", commit="a58a3c73a332ca62e21da4543dba87621ef18ee0")
   - Revert with specific author tracking:
-    nap_revert_commit(universe="toystory", commit="abc123...", author="admin@studio.com")`,
+    nap_revert_commit(repository="toystory", commit="abc123...", author="admin@studio.com")`,
       inputSchema: RevertInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -337,13 +337,13 @@ Examples:
     },
     async (params: RevertInput) => {
       try {
-        const result = await revertCommit(params.universe, {
+        const result = await revertCommit(params.repository, {
           commit: params.commit,
           author: params.author,
         });
 
         const output = {
-          universe: params.universe,
+          repository: params.repository,
           reverted_commit: result.reverted_commit,
           new_commit: result.new_commit,
           author: params.author,
@@ -374,9 +374,9 @@ function handleMutationError(err: unknown): {
           {
             type: "text",
             text:
-              `Error: Resource not found. The URI may be incorrect, or the universe/entity doesn't exist.\n` +
-              `💡 Use nap_list_universes to see available universes.\n` +
-              `💡 Use nap_list_entities to see entities in a universe.`,
+              `Error: Resource not found. The URI may be incorrect, or the repository/entity doesn't exist.\n` +
+              `💡 Use nap_list_repositories to see available repositories.\n` +
+              `💡 Use nap_list_entities to see entities in a repository.`,
           },
         ],
       };

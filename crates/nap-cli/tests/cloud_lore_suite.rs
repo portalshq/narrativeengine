@@ -65,7 +65,7 @@ fn create_test_image(dir: &Path, name: &str) -> PathBuf {
     image_path
 }
 
-/// Generate a unique universe name for testing
+/// Generate a unique repository name for testing
 fn unique_universe_name(prefix: &str) -> String {
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -120,7 +120,7 @@ fn test_cloud_lore_choose_backend() {
 #[test]
 fn test_cloud_lore_create_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-create-repo");
+    let repository = unique_universe_name("test-create-repo");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -132,33 +132,33 @@ fn test_cloud_lore_create_repository() {
         .assert()
         .success();
 
-    // Create a universe repository
+    // Create a repository repository
     nap_cmd()
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success()
-        .stdout(predicate::str::contains(&universe));
+        .stdout(predicate::str::contains(&repository));
 
     // Verify repository structure exists
-    let repo_path = tmp.path().join(&universe);
+    let repo_path = tmp.path().join(&repository);
     assert!(repo_path.exists(), "Repository directory should exist");
     assert!(
         repo_path.join(".nap").exists(),
         ".nap directory should exist"
     );
     assert!(
-        repo_path.join("universe.yaml").exists(),
-        "universe.yaml should exist"
+        repo_path.join("repository.yaml").exists(),
+        "repository.yaml should exist"
     );
 }
 
 #[test]
 fn test_cloud_lore_clone_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-clone-repo");
+    let repository = unique_universe_name("test-clone-repo");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
         .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
 
@@ -172,12 +172,12 @@ fn test_cloud_lore_clone_repository() {
         .assert()
         .success();
 
-    // Create a universe repository
+    // Create a repository repository
     nap_cmd()
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -187,9 +187,9 @@ fn test_cloud_lore_clone_repository() {
         .arg("add")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("origin")
-        .arg(format!("{}/{}", cloud_url, universe))
+        .arg(format!("{}/{}", cloud_url, repository))
         .assert()
         .success();
 
@@ -198,7 +198,7 @@ fn test_cloud_lore_clone_repository() {
         .arg("push")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -208,19 +208,19 @@ fn test_cloud_lore_clone_repository() {
         .arg("pull")
         .arg("--base-dir")
         .arg(clone_tmp.path())
-        .arg(format!("{}/{}", cloud_url, universe))
+        .arg(format!("{}/{}", cloud_url, repository))
         .assert()
         .success();
 
     // Verify clone exists
-    let clone_path = clone_tmp.path().join(&universe);
+    let clone_path = clone_tmp.path().join(&repository);
     assert!(clone_path.exists(), "Cloned repository should exist");
 }
 
 #[test]
 fn test_cloud_lore_create_entity() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-create-entity");
+    let repository = unique_universe_name("test-create-entity");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -236,7 +236,7 @@ fn test_cloud_lore_create_entity() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -245,8 +245,8 @@ fn test_cloud_lore_create_entity() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudhero")
         .arg("--name")
@@ -261,7 +261,7 @@ fn test_cloud_lore_create_entity() {
     // Verify entity file exists
     let entity_path = tmp
         .path()
-        .join(&universe)
+        .join(&repository)
         .join("characters")
         .join("cloudhero.yaml");
     assert!(entity_path.exists(), "Entity manifest should exist");
@@ -270,7 +270,7 @@ fn test_cloud_lore_create_entity() {
 #[test]
 fn test_cloud_lore_update_repository_file() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-update-file");
+    let repository = unique_universe_name("test-update-file");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -286,7 +286,7 @@ fn test_cloud_lore_update_repository_file() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -295,8 +295,8 @@ fn test_cloud_lore_update_repository_file() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudupdatable")
         .arg("--name")
@@ -309,7 +309,7 @@ fn test_cloud_lore_update_repository_file() {
         .arg("set")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudupdatable", universe))
+        .arg(format!("nap://{}/character/cloudupdatable", repository))
         .arg("properties.species")
         .arg("human")
         .arg("--message")
@@ -323,7 +323,7 @@ fn test_cloud_lore_update_repository_file() {
     // Verify the update by reading the manifest
     let entity_path = tmp
         .path()
-        .join(&universe)
+        .join(&repository)
         .join("characters")
         .join("cloudupdatable.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
@@ -337,7 +337,7 @@ fn test_cloud_lore_update_repository_file() {
 #[test]
 fn test_cloud_lore_add_image_to_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-add-image");
+    let repository = unique_universe_name("test-add-image");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -353,7 +353,7 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -362,8 +362,8 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudimagehero")
         .arg("--name")
@@ -379,7 +379,7 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg("add-repr")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudimagehero", universe))
+        .arg(format!("nap://{}/character/cloudimagehero", repository))
         .arg("reference_image")
         .arg("--file")
         .arg(&image_path)
@@ -397,7 +397,7 @@ fn test_cloud_lore_add_image_to_repository() {
     // Verify the representation was added
     let entity_path = tmp
         .path()
-        .join(&universe)
+        .join(&repository)
         .join("characters")
         .join("cloudimagehero.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
@@ -414,7 +414,7 @@ fn test_cloud_lore_add_image_to_repository() {
 #[test]
 fn test_cloud_lore_resolve_manifest_uri() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-resolve-uri");
+    let repository = unique_universe_name("test-resolve-uri");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -430,7 +430,7 @@ fn test_cloud_lore_resolve_manifest_uri() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -439,8 +439,8 @@ fn test_cloud_lore_resolve_manifest_uri() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudresolvable")
         .arg("--name")
@@ -453,7 +453,7 @@ fn test_cloud_lore_resolve_manifest_uri() {
         .arg("resolve")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudresolvable", universe))
+        .arg(format!("nap://{}/character/cloudresolvable", repository))
         .arg("--format")
         .arg("json")
         .assert()
@@ -465,7 +465,7 @@ fn test_cloud_lore_resolve_manifest_uri() {
 #[test]
 fn test_cloud_lore_resolve_image_from_manifest() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-resolve-image");
+    let repository = unique_universe_name("test-resolve-image");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -481,7 +481,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -490,8 +490,8 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudimageresolver")
         .arg("--name")
@@ -506,7 +506,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg("add-repr")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudimageresolver", universe))
+        .arg(format!("nap://{}/character/cloudimageresolver", repository))
         .arg("reference_image")
         .arg("--file")
         .arg(&image_path)
@@ -522,7 +522,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg("query")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudimageresolver", universe))
+        .arg(format!("nap://{}/character/cloudimageresolver", repository))
         .arg("representations.reference_image.hash")
         .arg("--format")
         .arg("json")
@@ -534,7 +534,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
 #[test]
 fn test_cloud_lore_list_entities() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-list");
+    let repository = unique_universe_name("test-list");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -550,7 +550,7 @@ fn test_cloud_lore_list_entities() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -559,8 +559,8 @@ fn test_cloud_lore_list_entities() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudhero1")
         .arg("--name")
@@ -572,8 +572,8 @@ fn test_cloud_lore_list_entities() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudhero2")
         .arg("--name")
@@ -581,13 +581,13 @@ fn test_cloud_lore_list_entities() {
         .assert()
         .success();
 
-    // List entities in the universe
+    // List entities in the repository
     nap_cmd()
         .arg("list")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("--entity-type")
         .arg("character")
         .assert()
@@ -599,7 +599,7 @@ fn test_cloud_lore_list_entities() {
 #[test]
 fn test_cloud_lore_commit_history() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-history");
+    let repository = unique_universe_name("test-history");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -615,7 +615,7 @@ fn test_cloud_lore_commit_history() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -624,8 +624,8 @@ fn test_cloud_lore_commit_history() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("cloudhistoryhero")
         .arg("--name")
@@ -638,7 +638,7 @@ fn test_cloud_lore_commit_history() {
         .arg("set")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudhistoryhero", universe))
+        .arg(format!("nap://{}/character/cloudhistoryhero", repository))
         .arg("properties.species")
         .arg("human")
         .arg("--message")
@@ -651,7 +651,7 @@ fn test_cloud_lore_commit_history() {
         .arg("history")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/cloudhistoryhero", universe))
+        .arg(format!("nap://{}/character/cloudhistoryhero", repository))
         .arg("--limit")
         .arg("10")
         .assert()
@@ -661,7 +661,7 @@ fn test_cloud_lore_commit_history() {
 #[test]
 fn test_cloud_lore_branch_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-branch");
+    let repository = unique_universe_name("test-branch");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -677,7 +677,7 @@ fn test_cloud_lore_branch_operations() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -686,7 +686,7 @@ fn test_cloud_lore_branch_operations() {
         .arg("branch")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("cloud-feature-branch")
         .assert()
         .success();
@@ -696,7 +696,7 @@ fn test_cloud_lore_branch_operations() {
         .arg("branch")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success()
         .stdout(predicate::str::contains("cloud-feature-branch"));
@@ -706,7 +706,7 @@ fn test_cloud_lore_branch_operations() {
         .arg("switch")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("cloud-feature-branch")
         .assert()
         .success();
@@ -715,7 +715,7 @@ fn test_cloud_lore_branch_operations() {
 #[test]
 fn test_cloud_lore_tag_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-tag");
+    let repository = unique_universe_name("test-tag");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -731,7 +731,7 @@ fn test_cloud_lore_tag_operations() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -740,7 +740,7 @@ fn test_cloud_lore_tag_operations() {
         .arg("tag")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("cloud-v1.0.0")
         .assert()
         .success();
@@ -750,7 +750,7 @@ fn test_cloud_lore_tag_operations() {
         .arg("tag")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success()
         .stdout(predicate::str::contains("cloud-v1.0.0"));
@@ -791,7 +791,7 @@ fn test_cloud_lore_status_and_doctor() {
 #[test]
 fn test_cloud_lore_remote_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-remote");
+    let repository = unique_universe_name("test-remote");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
         .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
 
@@ -809,7 +809,7 @@ fn test_cloud_lore_remote_operations() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -819,9 +819,9 @@ fn test_cloud_lore_remote_operations() {
         .arg("add")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("origin")
-        .arg(format!("{}/{}", cloud_url, universe))
+        .arg(format!("{}/{}", cloud_url, repository))
         .assert()
         .success();
 
@@ -831,7 +831,7 @@ fn test_cloud_lore_remote_operations() {
         .arg("ls")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success()
         .stdout(predicate::str::contains("origin"));
@@ -840,7 +840,7 @@ fn test_cloud_lore_remote_operations() {
 #[test]
 fn test_cloud_lore_sync_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-sync");
+    let repository = unique_universe_name("test-sync");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
         .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
 
@@ -858,7 +858,7 @@ fn test_cloud_lore_sync_operations() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -868,9 +868,9 @@ fn test_cloud_lore_sync_operations() {
         .arg("add")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("origin")
-        .arg(format!("{}/{}", cloud_url, universe))
+        .arg(format!("{}/{}", cloud_url, repository))
         .assert()
         .success();
 
@@ -879,7 +879,7 @@ fn test_cloud_lore_sync_operations() {
         .arg("push")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -888,7 +888,7 @@ fn test_cloud_lore_sync_operations() {
         .arg("sync")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 }
@@ -914,7 +914,7 @@ fn test_cloud_lore_content_hash() {
 #[test]
 fn test_cloud_lore_query_subtree() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-query");
+    let repository = unique_universe_name("test-query");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -930,7 +930,7 @@ fn test_cloud_lore_query_subtree() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -939,8 +939,8 @@ fn test_cloud_lore_query_subtree() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("queryhero")
         .arg("--name")
@@ -953,7 +953,7 @@ fn test_cloud_lore_query_subtree() {
         .arg("set")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/queryhero", universe))
+        .arg(format!("nap://{}/character/queryhero", repository))
         .arg("properties.species")
         .arg("human")
         .arg("--message")
@@ -966,7 +966,7 @@ fn test_cloud_lore_query_subtree() {
         .arg("query")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/queryhero", universe))
+        .arg(format!("nap://{}/character/queryhero", repository))
         .arg("properties.species")
         .arg("--format")
         .arg("json")
@@ -978,7 +978,7 @@ fn test_cloud_lore_query_subtree() {
 #[test]
 fn test_cloud_lore_resolve_with_branch() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-resolve-branch");
+    let repository = unique_universe_name("test-resolve-branch");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -994,7 +994,7 @@ fn test_cloud_lore_resolve_with_branch() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -1003,8 +1003,8 @@ fn test_cloud_lore_resolve_with_branch() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("branchhero")
         .arg("--name")
@@ -1017,7 +1017,7 @@ fn test_cloud_lore_resolve_with_branch() {
         .arg("branch")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .arg("test-branch")
         .assert()
         .success();
@@ -1027,7 +1027,7 @@ fn test_cloud_lore_resolve_with_branch() {
         .arg("resolve")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(format!("nap://{}/character/branchhero", universe))
+        .arg(format!("nap://{}/character/branchhero", repository))
         .arg("--branch")
         .arg("test-branch")
         .arg("--format")
@@ -1040,7 +1040,7 @@ fn test_cloud_lore_resolve_with_branch() {
 #[test]
 fn test_cloud_lore_validate_manifest() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
-    let universe = unique_universe_name("test-validate");
+    let repository = unique_universe_name("test-validate");
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -1056,7 +1056,7 @@ fn test_cloud_lore_validate_manifest() {
         .arg("init")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg(&universe)
+        .arg(&repository)
         .assert()
         .success();
 
@@ -1065,8 +1065,8 @@ fn test_cloud_lore_validate_manifest() {
         .arg("create")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--universe")
-        .arg(&universe)
+        .arg("--repository")
+        .arg(&repository)
         .arg("character")
         .arg("validatehero")
         .arg("--name")
@@ -1080,7 +1080,7 @@ fn test_cloud_lore_validate_manifest() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--uri")
-        .arg(format!("nap://{}/character/validatehero", universe))
+        .arg(format!("nap://{}/character/validatehero", repository))
         .assert()
         .success();
 }

@@ -440,7 +440,7 @@ pub fn render_cli_summary(
     doc.heading(2, "Common Examples");
     doc.code_block(
         "bash",
-        "# Initialize a universe\nnap init starwars\n\n# Create an entity\nnap create character lukeskywalker -u starwars -n \"Luke Skywalker\"\n\n# Resolve a manifest\nnap resolve nap://starwars/character/lukeskywalker\n\n# Query a subtree\nnap query nap://starwars/character/lukeskywalker properties\n\n# View commit history\nnap history nap://starwars/character/lukeskywalker",
+        "# Initialize a repository\nnap init starwars\n\n# Create an entity\nnap create character lukeskywalker -u starwars -n \"Luke Skywalker\"\n\n# Resolve a manifest\nnap resolve nap://starwars/character/lukeskywalker\n\n# Query a subtree\nnap query nap://starwars/character/lukeskywalker properties\n\n# View commit history\nnap history nap://starwars/character/lukeskywalker",
     );
 
     doc.render()

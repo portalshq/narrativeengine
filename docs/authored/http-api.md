@@ -7,7 +7,7 @@ The NAP resolver server provides a REST API for resolution and commits.
 nap-server
 
 # Custom port and base path
-NAP_PORT=8080 NAP_BASE_PATH=/path/to/universes nap-server
+NAP_PORT=8080 NAP_BASE_PATH=/path/to/repositories nap-server
 ```
 
 ---
@@ -53,12 +53,12 @@ NAP core uses environment variables for configuration. All variables serve speci
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/resolve/{universe}/{entity_type}/{entity_id}` | Resolve a manifest |
-| `GET` | `/resolve/{universe}/{entity_type}/{entity_id}?branch=canon` | Resolve at a branch |
-| `POST` | `/commit/{universe}/{entity_type}/{entity_id}` | Commit changes |
-| `GET` | `/history/{universe}/{entity_type}/{entity_id}` | Get commit history |
-| `GET` | `/universes` | List all universes |
-| `GET` | `/universes/{universe}/entities` | List entities in a universe |
+| `GET` | `/resolve/{repository}/{entity_type}/{entity_id}` | Resolve a manifest |
+| `GET` | `/resolve/{repository}/{entity_type}/{entity_id}?branch=canon` | Resolve at a branch |
+| `POST` | `/commit/{repository}/{entity_type}/{entity_id}` | Commit changes |
+| `GET` | `/history/{repository}/{entity_type}/{entity_id}` | Get commit history |
+| `GET` | `/repositories` | List all repositories |
+| `GET` | `/repositories/{repository}/entities` | List entities in a repository |
 | `GET` | `/health` | Health check |
 
 Query parameters for resolution: `branch`, `commit`, `tag`, `path` (subtree query).

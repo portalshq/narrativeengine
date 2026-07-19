@@ -7,7 +7,7 @@ This guide covers practical workflows for four core capabilities of the `nap` CL
 | Domain | What it does |
 |---|---|
 | **Addressing** | Give every story element a stable, canonical `nap://` URI |
-| **Portability** | Move universes between tools, teams, and storage systems |
+| **Portability** | Move repositorys between tools, teams, and storage systems |
 | **Resolution** | Look up manifests, query subtrees, trace history via CLI or HTTP API |
 | **World-Building** | Model characters, locations, scenes, props, and their relationships |
 
@@ -28,7 +28,7 @@ Nap addresses are stable -- entity references are immutable.
   - [1.3 Fragment Queries for Precision Addressing](#13-fragment-queries-for-precision-addressing)
   - [1.4 Versioned Addressing for Canon Management](#14-versioned-addressing-for-canon-management)
 - [2. Portability](#2-portability)
-  - [2.1 Universe-as-Repo: Move Your World Anywhere](#21-universe-as-repo-move-your-world-anywhere)
+  - [2.1 Repository-as-Repo: Move Your World Anywhere](#21-repository-as-repo-move-your-world-anywhere)
   - [2.2 Content-Addressed Assets](#22-content-addressed-assets)
   - [2.3 AI Provenance Tracking](#23-ai-provenance-tracking)
   - [2.4 Manifest as Durable Artifact](#24-manifest-as-durable-artifact)
@@ -36,12 +36,12 @@ Nap addresses are stable -- entity references are immutable.
   - [3.1 Subtree Query Engine](#31-subtree-query-engine)
   - [3.2 REST API for Integration](#32-rest-api-for-integration)
   - [3.3 Commit History as Audit Trail](#33-commit-history-as-audit-trail)
-  - [3.4 Cross-Universe Discovery](#34-cross-universe-discovery)
+  - [3.4 Cross-Repository Discovery](#34-cross-repository-discovery)
 - [4. World-Building](#4-world-building)
   - [4.1 Full World-Building Workflow](#41-full-world-building-workflow)
   - [4.2 Entity Types Reference](#42-entity-types-reference)
   - [4.3 Cross-Reference Graph](#43-cross-reference-graph)
-  - [4.4 Multi-Universe Portfolio](#44-multi-universe-portfolio)
+  - [4.4 Multi-Repository Portfolio](#44-multi-repository-portfolio)
   - [4.5 Generative AI Provenance](#45-generative-ai-provenance)
 - [Pro Tips](#pro-tips)
 
@@ -50,7 +50,7 @@ Nap addresses are stable -- entity references are immutable.
 ## Reference
 
 ```bash
-# Initialize a universe in ~/.nap/
+# Initialize a repository in ~/.nap/
 nap init starwars
 
 # Create entities
@@ -92,7 +92,7 @@ Every narrative resource gets a stable, canonical `nap://` URI:
 ```
 nap://starwars/character/lukeskywalker#properties.homeworld
 ────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
- scheme universe  entity_type entity_id          fragment (query)
+ scheme repository  entity_type entity_id          fragment (query)
 ```
 
 **Key rules:**
@@ -215,16 +215,16 @@ nap resolve nap://starwars/character/lukeskywalker#properties.affiliation \
 
 ## 2. Portability
 
-### 2.1 Universe-as-Repo: Move Your World Anywhere
+### 2.1 Repository-as-Repo: Move Your World Anywhere
 
-Every NAP universe is **files + Git** — zero runtime dependencies. This means it works with every transport and storage system:
+Every NAP repository is **files + Git** — zero runtime dependencies. This means it works with every transport and storage system:
 
 ```bash
-# Archive an entire universe as a tarball
+# Archive an entire repository as a tarball
 tar czf starwars.nap starwars/
 
 # Ship it via any medium — S3, Dropbox, scp, USB drive
-scp -r starwars/ user@server:/universes/
+scp -r starwars/ user@server:/repositorys/
 
 # Clone across teams
 git clone git@github.com:studio/starwars-nap.git
@@ -233,7 +233,7 @@ git clone git@github.com:studio/starwars-nap.git
 rsync -avz starwars/ /shared/drive/projects/
 
 # Mount in cloud storage
-aws s3 sync starwars/ s3://studio-assets/universes/starwars/
+aws s3 sync starwars/ s3://studio-assets/repositorys/starwars/
 ```
 
 **Use case — multi-studio collaboration:** Studio A builds characters, Studio B builds locations, Studio C builds scenes. Each works in their own Git branch, and NAP URIs are the contract between them. When they merge, the references resolve across all three.
@@ -251,7 +251,7 @@ nap create location deathstar -u starwars -n "Death Star"
 nap set nap://starwars/character/darthvader base "nap://starwars/location/deathstar"
 ```
 
-**Use case — offline fieldwork:** A writer on a plane builds an entire universe with no internet, just the `nap` binary and a text editor. When they reconnect, `git push` syncs everything.
+**Use case — offline fieldwork:** A writer on a plane builds an entire repository with no internet, just the `nap` binary and a text editor. When they reconnect, `git push` syncs everything.
 
 ### 2.2 Content-Addressed Assets
 
@@ -416,19 +416,19 @@ The `nap-server` exposes the full resolver as an HTTP API — ideal for web UIs,
 cargo run -p nap-server
 
 # Custom port and base path
-NAP_PORT=8080 NAP_BASE_PATH=/path/to/universes nap-server
+NAP_PORT=8080 NAP_BASE_PATH=/path/to/repositorys nap-server
 ```
 
 #### API Endpoints
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/resolve/{universe}/{entity_type}/{entity_id}` | Resolve a manifest |
-| `GET` | `/resolve/{universe}/{entity_type}/{entity_id}?branch=canon` | Resolve at a branch |
-| `POST` | `/commit/{universe}/{entity_type}/{entity_id}` | Commit changes |
-| `GET` | `/history/{universe}/{entity_type}/{entity_id}` | Get commit history |
-| `GET` | `/universes` | List all universes |
-| `GET` | `/universes/{universe}/entities` | List entities in a universe |
+| `GET` | `/resolve/{repository}/{entity_type}/{entity_id}` | Resolve a manifest |
+| `GET` | `/resolve/{repository}/{entity_type}/{entity_id}?branch=canon` | Resolve at a branch |
+| `POST` | `/commit/{repository}/{entity_type}/{entity_id}` | Commit changes |
+| `GET` | `/history/{repository}/{entity_type}/{entity_id}` | Get commit history |
+| `GET` | `/repositorys` | List all repositorys |
+| `GET` | `/repositorys/{repository}/entities` | List entities in a repository |
 | `GET` | `/health` | Health check |
 
 Resolution query parameters: `branch`, `commit`, `tag`, `path` (subtree query).
@@ -446,8 +446,8 @@ curl "http://localhost:3100/resolve/starwars/character/lukeskywalker?branch=cano
 curl "http://localhost:3100/resolve/starwars/character/lukeskywalker?path=properties.species"
 
 # List everything
-curl http://localhost:3100/universes
-curl http://localhost:3100/universes/starwars/entities?type=character
+curl http://localhost:3100/repositorys
+curl http://localhost:3100/repositorys/starwars/entities?type=character
 
 # Commit changes via API
 curl -X POST http://localhost:3100/commit/starwars/character/lukeskywalker \
@@ -476,7 +476,7 @@ CharacterData data = JsonUtility.FromJson<CharacterData>(json);
 ```javascript
 // React example — resolve character for profile page
 const { data } = await fetch(
-  `/api/resolve/${universe}/character/${characterId}`
+  `/api/resolve/${repository}/character/${characterId}`
 );
 ```
 
@@ -513,18 +513,18 @@ nap history nap://starwars/character/lukeskywalker | grep "hair"
 git -C starwars revert b83d1a2
 ```
 
-### 3.4 Cross-Universe Discovery
+### 3.4 Cross-Repository Discovery
 
-Discover what universes and entities are available:
+Discover what repositorys and entities are available:
 
 ```bash
-# List all universes in the base directory
+# List all repositorys in the base directory
 nap list
 # nap://starwars/
 # nap://toystory/
 # nap://middleearth/
 
-# List all entities in a universe
+# List all entities in a repository
 nap list starwars
 # character:
 #   nap://starwars/character/lukeskywalker
@@ -548,10 +548,10 @@ nap list starwars -t character
 
 ### 4.1 Full World-Building Workflow
 
-Build out a universe from scratch with a structured workflow:
+Build out a repository from scratch with a structured workflow:
 
 ```bash
-# Step 1: Initialize the universe
+# Step 1: Initialize the repository
 nap init myworld
 
 # Step 2: Define the world metadata
@@ -601,17 +601,17 @@ nap commit myworld -m "Complete first act world-building" -a "writer@studio.com"
 
 | Type | URI Pattern | What it models | Example properties |
 |---|---|---|---|
-| `world` | `nap://<name>/world/<name>` | The universe itself — rules, canon level, metadata | `canon_level`, `timeline`, `theme`, `factions` |
+| `world` | `nap://<name>/world/<name>` | The repository itself — rules, canon level, metadata | `canon_level`, `timeline`, `theme`, `factions` |
 | `character` | `nap://<name>/character/<id>` | Persistent character with identity across scenes | `homeworld`, `species`, `affiliation`, `master`, `apprentice` |
 | `location` | `nap://<name>/location/<id>` | Spatial setting | `climate`, `type`, `controlled_by`, `population` |
 | `scene` | `nap://<name>/scene/<id>` | Narrative moment — participants, timeline, events | `setting`, `participants`, `mood`, `outcome`, `time_of_day` |
 | `prop` | `nap://<name>/prop/<id>` | Physical object with materials, variants, ownership | `owner`, `material`, `weight`, `color` |
 
-**World manifest** (`universe.yaml` — created automatically):
+**World manifest** (`repository.yaml` — created automatically):
 
 ```yaml
 id: nap://myworld/world/myworld
-name: myworld Universe
+name: myworld Repository
 entity_type: world
 version: 3
 properties:
@@ -628,7 +628,7 @@ head: a72c9f3b...
 
 ### 4.3 Cross-Reference Graph
 
-The `references` field builds a directed graph between entities. This enables rich queries across your universe:
+The `references` field builds a directed graph between entities. This enables rich queries across your repository:
 
 ```bash
 # Character → scenes they appear in
@@ -665,54 +665,54 @@ nap resolve nap://starwars/scene/cantina#properties.participants
 nap query nap://starwars/character/lukeskywalker references.relationships -f json
 ```
 
-### 4.4 Multi-Universe Portfolio
+### 4.4 Multi-Repository Portfolio
 
 Manage multiple fictional worlds under one resolver:
 
 ```bash
-# Create universes side by side
+# Create repositorys side by side
 nap init starwars
 nap init toystory
 nap init middleearth
 
-# Every universe is independently addressable
+# Every repository is independently addressable
 nap create character buzzlightyear -u toystory -n "Buzz Lightyear"
 nap create location andysroom -u toystory -n "Andy's Room"
 nap create character frodo -u middleearth -n "Frodo Baggins"
 nap create location theshire -u middleearth -n "The Shire"
 
-# List all universes
+# List all repositorys
 nap list
 # nap://starwars/
 # nap://toystory/
 # nap://middleearth/
 
-# Each universe has its own Git history, branches, tags
+# Each repository has its own Git history, branches, tags
 nap branch middleearth canon
 nap tag middleearth fellowship-of-the-ring
 ```
 
-**Universe directory layout (default: `~/.nap/`):**
+**Repository directory layout (default: `~/.nap/`):**
 
 ```
 ~/.nap/
 ├── starwars/              ← independent Git repo
 │   ├── .nap/config.yaml
-│   ├── universe.yaml
+│   ├── repository.yaml
 │   ├── characters/
 │   ├── locations/
 │   ├── scenes/
 │   └── props/
 ├── toystory/              ← independent Git repo
 │   ├── .nap/config.yaml
-│   ├── universe.yaml
+│   ├── repository.yaml
 │   ├── characters/
 │   ├── locations/
 │   ├── scenes/
 │   └── props/
 └── middleearth/           ← independent Git repo
     ├── .nap/config.yaml
-    ├── universe.yaml
+    ├── repository.yaml
     ├── characters/
     ├── locations/
     ├── scenes/
@@ -769,16 +769,16 @@ nap query nap://starwars/character/lukeskywalker provenance.model
 ### Composition
 
 ```bash
-# Initialize a universe (defaults to ~/.nap/)
-nap init myuniverse
+# Initialize a repository (defaults to ~/.nap/)
+nap init myrepository
 
 # Override with any directory
-nap init myuniverse -d /path/to/shared/universes
-nap init myuniverse -d ~/Dropbox/TeamWorldbuilding
+nap init myrepository -d /path/to/shared/repositorys
+nap init myrepository -d ~/Dropbox/TeamWorldbuilding
 
 # Point the resolver at a specific path
-nap -d /mnt/nas/universes list
-nap -d /mnt/nas/universes resolve nap://starwars/character/lukeskywalker
+nap -d /mnt/nas/repositorys list
+nap -d /mnt/nas/repositorys resolve nap://starwars/character/lukeskywalker
 ```
 
 ### Output Formats
@@ -802,10 +802,10 @@ curl http://localhost:3100/health
 # {"status":"ok","protocol":"NAP","version":"0.1.0"}
 ```
 
-### Quick Bootstrap a New Universe
+### Quick Bootstrap a New Repository
 
 ```bash
-# One-liner to seed a new universe
+# One-liner to seed a new repository
 nap init mynovel \
   && nap create character hero -u mynovel -n "The Hero" \
   && nap create location village -u mynovel -n "Home Village" \
@@ -827,10 +827,10 @@ While NAP uses Git for version control, all of your data is plain YAML files. Yo
 ## Repository Layout Reference
 
 ```
-starwars/                    ← universe root (Git repo)
+starwars/                    ← repository root (Git repo)
 ├── .nap/
 │   └── config.yaml          ← NAP repository configuration
-├── universe.yaml            ← world manifest
+├── repository.yaml            ← world manifest
 ├── characters/
 │   ├── lukeskywalker.yaml
 │   └── darthvader.yaml
@@ -848,29 +848,29 @@ starwars/                    ← universe root (Git repo)
 
 | Command | Description |
 |---|---|
-| `nap init <universe>` | Initialize a new universe repository (prompts for provider on first run) |
-| `nap init <universe> --provider <type>` | Initialize universe + configure provider |
-| `nap init --provider <type>` | Configure provider only (no universe) |
-| `nap create <type> <id> -u <universe> -n <name>` | Create a new entity manifest |
+| `nap init <repository>` | Initialize a new repository repository (prompts for provider on first run) |
+| `nap init <repository> --provider <type>` | Initialize repository + configure provider |
+| `nap init --provider <type>` | Configure provider only (no repository) |
+| `nap create <type> <id> -u <repository> -n <name>` | Create a new entity manifest |
 | `nap resolve <uri>` | Resolve a NAP URI to a manifest or subtree |
 | `nap query <uri> <path>` | Query a subtree from a manifest |
 | `nap set <uri> <key> <value>` | Set a property on an entity |
 | `nap add-repr <uri> <key> <file> --format <fmt>` | Add a content-addressed representation |
-| `nap commit <universe> -m <message>` | Commit changes to the VCS |
+| `nap commit <repository> -m <message>` | Commit changes to the VCS |
 | `nap history <uri>` | View commit history for an entity |
-| `nap list [universe]` | List universes or entities |
-| `nap branch <universe> [name]` | Create or list branches |
-| `nap switch <universe> <branch>` | Switch to a branch |
-| `nap tag <universe> [name]` | Create or list tags |
+| `nap list [repository]` | List repositorys or entities |
+| `nap branch <repository> [name]` | Create or list branches |
+| `nap switch <repository> <branch>` | Switch to a branch |
+| `nap tag <repository> [name]` | Create or list tags |
 | `nap validate <uri>` | Validate a manifest against the NAP schema |
-| `nap publish <universe>` | Push current branch to origin (convenience shortcut) |
-| `nap push <universe>` | Push to a configurable remote (use `--remote` and `--branch`) |
-| `nap pull <url-or-name>` | Clone from URL or pull an existing universe |
-| `nap sync <universe>` | Pull current branch from default remote |
-| `nap remote add <universe> <name> <url>` | Add a remote |
-| `nap remote ls <universe>` | List remotes |
-| `nap remote rm <universe> <name>` | Remove a remote |
-| `nap revert <universe> -c <hash>` | Revert a commit |
+| `nap publish <repository>` | Push current branch to origin (convenience shortcut) |
+| `nap push <repository>` | Push to a configurable remote (use `--remote` and `--branch`) |
+| `nap pull <url-or-name>` | Clone from URL or pull an existing repository |
+| `nap sync <repository>` | Pull current branch from default remote |
+| `nap remote add <repository> <name> <url>` | Add a remote |
+| `nap remote ls <repository>` | List remotes |
+| `nap remote rm <repository> <name>` | Remove a remote |
+| `nap revert <repository> -c <hash>` | Revert a commit |
 | `nap diff <base> <candidate>` | Diff two manifest files |
 | `nap merge <base> <current> <proposed>` | Three-way merge |
 | `nap content-hash <file>` | Compute SHA-256 content hash |
@@ -885,13 +885,13 @@ starwars/                    ← universe root (Git repo)
 
 **`publish` vs `push`:** `publish` is a convenience alias that always pushes the current branch to the `origin` remote. `push` is the full form — use `--remote` and `--branch` to control the target.
 
-**`sync` vs `pull`:** `sync` pulls the current branch from the default remote. `pull` accepts either a universe name (same as `sync`) or a URL (which clones the repository).
+**`sync` vs `pull`:** `sync` pulls the current branch from the default remote. `pull` accepts either a repository name (same as `sync`) or a URL (which clones the repository).
 
-**`init` vs `choose`:** `init` can both create a universe and configure a provider. `choose` only switches providers — use it when you want to change providers without creating a universe.
+**`init` vs `choose`:** `init` can both create a repository and configure a provider. `choose` only switches providers — use it when you want to change providers without creating a repository.
 
 Global options: `-d/--base-dir <path>` (default `~/.nap`), `-v/--verbose`, `-f/--format <yaml|json>`
 
-Universe repositories are stored in `~/.nap/<universe>/` by default. Use `-d` (or `--base-dir`) to point to a different directory.
+Repository repositories are stored in `~/.nap/<repository>/` by default. Use `-d` (or `--base-dir`) to point to a different directory.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **NAP is a protocol that makes narrative resources addressable, resolvable, and interoperable across tools, storage systems, formats, and AI workflows.**
 
-Characters, locations, scenes, props, and entire fictional universes — NAP gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
+Characters, locations, scenes, props, and entire fictional repositories — NAP gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
 
 In the same way that IPFS content-addressed files and OCI container-addressed images, NAP is **narrative-addressed** — a universal namespace for the building blocks of stories.
 
@@ -40,7 +40,7 @@ A `nap://` URI identifies any narrative resource. Version, branch, and tag are *
 ```text
 nap://starwars/character/lukeskywalker#references.appears_in
 ────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
- scheme universe  entity_type entity_id          fragment (query)
+ scheme repository  entity_type entity_id          fragment (query)
 ```
 
 ### 2. Manifest — Current State
@@ -87,23 +87,23 @@ The resolver turns a `nap://` URI into a manifest (or a subtree of one). With op
 | Type | Example URI | Description |
 |---|---|---|
 | `character` | `nap://starwars/character/lukeskywalker` | Persistent character with identity across scenes/episodes |
-| `location` | `nap://starwars/location/tatooine` | Spatial location within a fictional universe |
+| `location` | `nap://starwars/location/tatooine` | Spatial location within a fictional repository |
 | `scene` | `nap://starwars/scene/cantina` | Narrative scene — participants, timeline, events |
 | `prop` | `nap://toystory/prop/andy-hat` | Physical object with materials, variants, ownership |
 | `group` | `nap://toystory/group/buzz-and-woody-flying` | Mixed-media groups |
-| `world` | `nap://starwars/world/starwars` | The universe itself — rules, canon, top-level metadata |
+| `world` | `nap://starwars/world/starwars` | The repository itself — rules, canon, top-level metadata |
 
 ---
 
 ## Repository Layout
 
-Each universe is a Git repository on disk:
+Each repository is a Git repository on disk:
 
 ```text
-starwars/                    ← universe root (Git repo)
+starwars/                    ← repository root (Git repo)
 ├── .nap/
 │   └── config.yaml          ← repository configuration
-├── universe.yaml            ← world manifest
+├── repository.yaml            ← world manifest
 ├── characters/
 │   ├── lukeskywalker.yaml
 │   └── darthvader.yaml
@@ -167,13 +167,13 @@ const block = createBlock("char-1", "A brave adventurer");
 ## Quick Start
 
 ```bash
-# Initialize a universe (prompts for provider on first run)
+# Initialize a repository (prompts for provider on first run)
 nap init starwars
 
 # Initialize with local provider
 nap init starwars --provider local
 
-# Configure provider only (no universe)
+# Configure provider only (no repository)
 nap init --provider local
 
 # Initialize with remote provider
@@ -192,15 +192,15 @@ nap doctor
 nap doctor --repair
 ```
 
-### Create a Universe
+### Create a Repository
 
 ```bash
-# Initialize a new universe
+# Initialize a new repository
 nap init starwars
 
 # See what you created
 ls starwars/
-# → .nap/  universe.yaml  characters/  locations/  scenes/  props/
+# → .nap/  repository.yaml  characters/  locations/  scenes/  props/
 ```
 
 ### Create & Inspect Entities
@@ -265,22 +265,22 @@ The `nap` command-line interface (v0.4.5) provides tools for creating, resolving
 | [\`nap add-repr\`](docs/generated/commands/add-repr.md) | Add a representation to an entity manifest |
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
-| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a universe repository |
+| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
 | [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the SHA-256 content hash of a file |
 | [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
 | [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
 | [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
 | [\`nap head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
 | [\`nap history\`](docs/generated/commands/history.md) | View commit history for an entity |
-| [\`nap init\`](docs/generated/commands/init.md) | Initialize a universe repository and/or configure the backend provider |
+| [\`nap init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
 | [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
-| [\`nap list\`](docs/generated/commands/list.md) | List universes or entities within a universe |
+| [\`nap list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
 | [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
 | [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
-| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a universe from a remote |
+| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
 | [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
 | [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
-| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a universe |
+| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a repository |
 | [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
 | [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
 | [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
@@ -298,7 +298,7 @@ The `nap` command-line interface (v0.4.5) provides tools for creating, resolving
 
 | Flag | Description | Default |
 |---|---|---|
-| -d, --base-dir <BASE\_DIR> | Base directory for universe repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -d, --base-dir <BASE\_DIR> | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
 | -v, --verbose <VERBOSE> | Enable verbose debug logging |  |
 
 
@@ -310,7 +310,7 @@ When stdout is not a terminal, JSON is used automatically. Override with `$NAP_O
 
 ## Common Examples
 ```bash
-# Initialize a universe
+# Initialize a repository
 nap init starwars
 
 # Create an entity
@@ -339,7 +339,7 @@ The NAP resolver server provides a REST API for resolution and commits.
 nap-server
 
 # Custom port and base path
-NAP_PORT=8080 NAP_BASE_PATH=/path/to/universes nap-server
+NAP_PORT=8080 NAP_BASE_PATH=/path/to/repositories nap-server
 ```
 
 ---
@@ -385,12 +385,12 @@ NAP core uses environment variables for configuration. All variables serve speci
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/resolve/{universe}/{entity_type}/{entity_id}` | Resolve a manifest |
-| `GET` | `/resolve/{universe}/{entity_type}/{entity_id}?branch=canon` | Resolve at a branch |
-| `POST` | `/commit/{universe}/{entity_type}/{entity_id}` | Commit changes |
-| `GET` | `/history/{universe}/{entity_type}/{entity_id}` | Get commit history |
-| `GET` | `/universes` | List all universes |
-| `GET` | `/universes/{universe}/entities` | List entities in a universe |
+| `GET` | `/resolve/{repository}/{entity_type}/{entity_id}` | Resolve a manifest |
+| `GET` | `/resolve/{repository}/{entity_type}/{entity_id}?branch=canon` | Resolve at a branch |
+| `POST` | `/commit/{repository}/{entity_type}/{entity_id}` | Commit changes |
+| `GET` | `/history/{repository}/{entity_type}/{entity_id}` | Get commit history |
+| `GET` | `/repositories` | List all repositories |
+| `GET` | `/repositories/{repository}/entities` | List entities in a repository |
 | `GET` | `/health` | Health check |
 
 Query parameters for resolution: `branch`, `commit`, `tag`, `path` (subtree query).
@@ -408,22 +408,22 @@ Complete reference for all `nap` CLI commands.
 | [\`nap add-repr\`](docs/generated/commands/add-repr.md) | Add a representation to an entity manifest |
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
-| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a universe repository |
+| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
 | [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the SHA-256 content hash of a file |
 | [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
 | [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
 | [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
 | [\`nap head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
 | [\`nap history\`](docs/generated/commands/history.md) | View commit history for an entity |
-| [\`nap init\`](docs/generated/commands/init.md) | Initialize a universe repository and/or configure the backend provider |
+| [\`nap init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
 | [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
-| [\`nap list\`](docs/generated/commands/list.md) | List universes or entities within a universe |
+| [\`nap list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
 | [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
 | [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
-| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a universe from a remote |
+| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
 | [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
 | [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
-| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a universe |
+| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a repository |
 | [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
 | [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
 | [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
@@ -448,13 +448,13 @@ Complete reference for all `nap` CLI commands.
 
 3. **Human-readable** — YAML manifests are readable by worldbuilders and AI agents alike.
 
-4. **Portable** — No runtime dependencies. A manifest is just a YAML file. A universe is just a Git repo.
+4. **Portable** — No runtime dependencies. A manifest is just a YAML file. A repository is just a Git repo.
 
 5. **AI-native** — Subtree queries let AI agents fetch exactly the data they need. Provenance tracking records generation metadata.
 
 6. **Schema-validated** — All manifests conform to a JSON Schema. Invalid manifests are rejected at commit time.
 
-7. **Decentralized** — Universes are Git repositories. They can be cloned, forked, merged, and published independently.
+7. **Decentralized** — Repositories are Git repositories. They can be cloned, forked, merged, and published independently.
 
 8. **Extensible** — New entity types, representation formats, and merge strategies can be added without breaking existing data.
 

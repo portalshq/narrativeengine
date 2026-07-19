@@ -137,10 +137,10 @@ init-local:
 init-cloud:
     cargo run -p nap-cli -- init --provider portals-cloud
 
-# Example: Create a test universe
-create-universe universe:
-    cargo run -p nap-cli -- init {{universe}}
+# Example: Create a test repository
+create-repository repository:
+    cargo run -p nap-cli -- init {{repository}}
 
 # Example: Create a character entity
-create-character universe id name:
-    cargo run -p nap-cli -- create --universe {{universe}} character {{id}} --name {{name}}
+create-character repository id name:
+    cargo run -p nap-cli -- create --repository {{repository}} character {{id}} --name {{name}}

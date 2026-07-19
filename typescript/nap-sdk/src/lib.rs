@@ -25,8 +25,8 @@ fn parse_et(s: &str) -> Result<EntityType, Error> {
     EntityType::try_new(s).map_err(|e| Error::from_reason(e.to_string()))
 }
 
-fn open_repo(base_path: &str, universe: &str) -> Result<Repository, Error> {
-    let repo_path = Path::new(base_path).join(universe);
+fn open_repo(base_path: &str, repository: &str) -> Result<Repository, Error> {
+    let repo_path = Path::new(base_path).join(repository);
     Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(map_error)
 }
 
@@ -44,15 +44,15 @@ pub fn parse_uri(uri_str: String) -> napi::Result<String> {
 
 #[napi(js_name = "uriNew")]
 pub fn uri_new(
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     fragment: Option<String>,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
     let uri = match fragment {
-        Some(f) => NapUri::with_fragment(universe, et, entity_id, f),
-        None => NapUri::new(universe, et, entity_id),
+        Some(f) => NapUri::with_fragment(repository, et, entity_id, f),
+        None => NapUri::new(repository, et, entity_id),
     };
     serde_json::to_string(&uri).map_err(|e| Error::from_reason(e.to_string()))
 }
@@ -71,15 +71,15 @@ pub fn uri_manifest_path(uri_str: String) -> napi::Result<String> {
 
 #[napi(js_name = "uriFormat")]
 pub fn uri_format(
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     fragment: Option<String>,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
     let uri = match fragment {
-        Some(f) => NapUri::with_fragment(universe, et, entity_id, f),
-        None => NapUri::new(universe, et, entity_id),
+        Some(f) => NapUri::with_fragment(repository, et, entity_id, f),
+        None => NapUri::new(repository, et, entity_id),
     };
     Ok(uri.to_string())
 }
@@ -101,8 +101,8 @@ pub fn entity_type_directory_name(entity_type: String) -> napi::Result<String> {
 }
 
 #[napi(js_name = "entityTypeList")]
-pub fn entity_type_list(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn entity_type_list(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     let types = repo.list_entity_types().map_err(map_error)?;
     let names: Vec<String> = types.iter().map(|t| t.to_string()).collect();
     serde_json::to_string(&names).map_err(|e| Error::from_reason(e.to_string()))
@@ -121,13 +121,13 @@ pub fn parse_manifest(yaml_str: String) -> napi::Result<String> {
 
 #[napi(js_name = "manifestNew")]
 pub fn manifest_new(
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     name: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let manifest = Manifest::new(&universe, et, &entity_id, &name);
+    let manifest = Manifest::new(&repository, et, &entity_id, &name);
     serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
 }
 
@@ -292,23 +292,23 @@ pub fn commit_verify_id(json_str: String) -> napi::Result<bool> {
 // ═══════════════════════════════════════════════════════════════════════
 
 #[napi(js_name = "repoInit")]
-pub fn repo_init(base_path: String, universe: String) -> napi::Result<String> {
-    let repo_path = Path::new(&base_path).join(&universe);
-    let repo = Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env()))
+pub fn repo_init(base_path: String, repository: String) -> napi::Result<String> {
+    let repo_path = Path::new(&base_path).join(&repository);
+    let repo = Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env()))
         .map_err(map_error)?;
     let result = serde_json::json!({
         "root": repo.root.to_string_lossy(),
-        "universe": repo.universe,
+        "repository": repo.repository,
     });
     Ok(result.to_string())
 }
 
 #[napi(js_name = "repoOpen")]
-pub fn repo_open(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn repo_open(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     let result = serde_json::json!({
         "root": repo.root.to_string_lossy(),
-        "universe": repo.universe,
+        "repository": repo.repository,
     });
     Ok(result.to_string())
 }
@@ -316,14 +316,14 @@ pub fn repo_open(base_path: String, universe: String) -> napi::Result<String> {
 #[napi(js_name = "repoCreateEntity")]
 pub fn repo_create_entity(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     name: String,
     author: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let (manifest, commit_hash) = repo
         .create_entity(&et, &entity_id, &name, &author)
         .map_err(map_error)?;
@@ -337,12 +337,12 @@ pub fn repo_create_entity(
 #[napi(js_name = "repoReadManifest")]
 pub fn repo_read_manifest(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let manifest = repo.read_manifest(&et, &entity_id).map_err(map_error)?;
     serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
 }
@@ -350,13 +350,13 @@ pub fn repo_read_manifest(
 #[napi(js_name = "repoReadManifestAtRef")]
 pub fn repo_read_manifest_at_ref(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     reference: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let manifest = repo
         .read_manifest_at_ref(&et, &entity_id, &reference)
         .map_err(map_error)?;
@@ -366,12 +366,12 @@ pub fn repo_read_manifest_at_ref(
 #[napi(js_name = "repoWriteManifest")]
 pub fn repo_write_manifest(
     base_path: String,
-    universe: String,
+    repository: String,
     manifest_json: String,
 ) -> napi::Result<String> {
     let manifest: Manifest =
         serde_json::from_str(&manifest_json).map_err(|e| Error::from_reason(e.to_string()))?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let path = repo.write_manifest(&manifest).map_err(map_error)?;
     Ok(path.to_string_lossy().to_string())
 }
@@ -379,7 +379,7 @@ pub fn repo_write_manifest(
 #[napi(js_name = "repoCommitManifest")]
 pub fn repo_commit_manifest(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     message: String,
@@ -387,7 +387,7 @@ pub fn repo_commit_manifest(
     changes_json: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let mut manifest = repo.read_manifest(&et, &entity_id).map_err(map_error)?;
     let changes: Vec<Change> =
         serde_json::from_str(&changes_json).map_err(|e| Error::from_reason(e.to_string()))?;
@@ -404,13 +404,13 @@ pub fn repo_commit_manifest(
 #[napi(js_name = "repoDeleteEntity")]
 pub fn repo_delete_entity(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     author: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let hash = repo
         .delete_entity(&et, &entity_id, &author)
         .map_err(map_error)?;
@@ -420,13 +420,13 @@ pub fn repo_delete_entity(
 #[napi(js_name = "repoHistory")]
 pub fn repo_history(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
     entity_id: String,
     limit: i64,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let history = repo
         .history(&et, &entity_id, limit as usize)
         .map_err(map_error)?;
@@ -436,11 +436,11 @@ pub fn repo_history(
 #[napi(js_name = "repoListEntities")]
 pub fn repo_list_entities(
     base_path: String,
-    universe: String,
+    repository: String,
     entity_type: String,
 ) -> napi::Result<String> {
     let et = parse_et(&entity_type)?;
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let entities = repo.list_entities(&et).map_err(map_error)?;
     serde_json::to_string(&entities).map_err(|e| Error::from_reason(e.to_string()))
 }
@@ -448,10 +448,10 @@ pub fn repo_list_entities(
 #[napi(js_name = "repoCreateBranch")]
 pub fn repo_create_branch(
     base_path: String,
-    universe: String,
+    repository: String,
     name: String,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     repo.create_branch(&name).map_err(map_error)?;
     Ok(serde_json::json!({"success": true, "branch": name}).to_string())
 }
@@ -459,38 +459,38 @@ pub fn repo_create_branch(
 #[napi(js_name = "repoSwitchBranch")]
 pub fn repo_switch_branch(
     base_path: String,
-    universe: String,
+    repository: String,
     name: String,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     repo.switch_branch(&name).map_err(map_error)?;
     Ok(serde_json::json!({"success": true, "branch": name}).to_string())
 }
 
 #[napi(js_name = "repoListBranches")]
-pub fn repo_list_branches(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn repo_list_branches(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     let branches = repo.list_branches().map_err(map_error)?;
     serde_json::to_string(&branches).map_err(|e| Error::from_reason(e.to_string()))
 }
 
 #[napi(js_name = "repoCreateTag")]
-pub fn repo_create_tag(base_path: String, universe: String, name: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn repo_create_tag(base_path: String, repository: String, name: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     repo.create_tag(&name).map_err(map_error)?;
     Ok(serde_json::json!({"success": true, "tag": name}).to_string())
 }
 
 #[napi(js_name = "repoListTags")]
-pub fn repo_list_tags(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn repo_list_tags(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     let tags = repo.list_tags().map_err(map_error)?;
     serde_json::to_string(&tags).map_err(|e| Error::from_reason(e.to_string()))
 }
 
 #[napi(js_name = "repoHeadHash")]
-pub fn repo_head_hash(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn repo_head_hash(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     let hash = repo.head_hash().map_err(map_error)?;
     Ok(hash)
 }
@@ -498,11 +498,11 @@ pub fn repo_head_hash(base_path: String, universe: String) -> napi::Result<Strin
 #[napi(js_name = "repoRevertCommit")]
 pub fn repo_revert_commit(
     base_path: String,
-    universe: String,
+    repository: String,
     commit_hash: String,
     author: String,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     let new_hash = repo
         .revert_commit(&commit_hash, &author)
         .map_err(map_error)?;
@@ -512,11 +512,11 @@ pub fn repo_revert_commit(
 #[napi(js_name = "repoAddRemote")]
 pub fn repo_add_remote(
     base_path: String,
-    universe: String,
+    repository: String,
     name: String,
     url: String,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     repo.add_remote(&name, &url).map_err(map_error)?;
     Ok(serde_json::json!({"success": true, "remote": name, "url": url}).to_string())
 }
@@ -524,17 +524,17 @@ pub fn repo_add_remote(
 #[napi(js_name = "repoRemoveRemote")]
 pub fn repo_remove_remote(
     base_path: String,
-    universe: String,
+    repository: String,
     name: String,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     repo.remove_remote(&name).map_err(map_error)?;
     Ok(serde_json::json!({"success": true, "remote": name}).to_string())
 }
 
 #[napi(js_name = "repoListRemotes")]
-pub fn repo_list_remotes(base_path: String, universe: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+pub fn repo_list_remotes(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
     let remotes = repo.list_remotes().map_err(map_error)?;
     serde_json::to_string(&remotes).map_err(|e| Error::from_reason(e.to_string()))
 }
@@ -542,11 +542,11 @@ pub fn repo_list_remotes(base_path: String, universe: String) -> napi::Result<St
 #[napi(js_name = "repoPush")]
 pub fn repo_push(
     base_path: String,
-    universe: String,
+    repository: String,
     remote: Option<String>,
     branch: Option<String>,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     repo.push(remote.as_deref(), branch.as_deref())
         .map_err(map_error)?;
     Ok(serde_json::json!({"success": true}).to_string())
@@ -555,11 +555,11 @@ pub fn repo_push(
 #[napi(js_name = "repoPull")]
 pub fn repo_pull(
     base_path: String,
-    universe: String,
+    repository: String,
     remote: Option<String>,
     branch: Option<String>,
 ) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &universe)?;
+    let repo = open_repo(&base_path, &repository)?;
     repo.pull(remote.as_deref(), branch.as_deref())
         .map_err(map_error)?;
     Ok(serde_json::json!({"success": true}).to_string())
@@ -620,11 +620,11 @@ pub fn resolve_query(
     Ok(result.to_string())
 }
 
-#[napi(js_name = "listUniverses")]
-pub fn list_universes(repo_base_path: String) -> napi::Result<String> {
+#[napi(js_name = "listRepositories")]
+pub fn list_repositories(repo_base_path: String) -> napi::Result<String> {
     let resolver = Resolver::new(Path::new(&repo_base_path));
-    let universes = resolver.list_universes().map_err(map_error)?;
-    serde_json::to_string(&universes).map_err(|e| Error::from_reason(e.to_string()))
+    let repositories = resolver.list_repositories().map_err(map_error)?;
+    serde_json::to_string(&repositories).map_err(|e| Error::from_reason(e.to_string()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════

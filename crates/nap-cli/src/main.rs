@@ -2,7 +2,7 @@
 //! NAP CLI — command-line interface for the Narrative Addressing Protocol.
 //!
 //! Commands:
-//!   init         — Initialize a universe repository and/or configure provider
+//!   init         — Initialize a repository repository and/or configure provider
 //!   choose       — Choose backend provider
 //!   doctor       — Run diagnostics and repair
 //!   publish      — Publish changes to remote
@@ -13,12 +13,12 @@
 //!   query        — Query a subtree from a manifest
 //!   commit       — Commit changes to a manifest
 //!   history      — View commit history for an entity
-//!   list         — List entities or universes
+//!   list         — List entities or repositories
 //!   branch       — Create or list branches
 //!   tag          — Create or list tags
-//!   pull         — Clone or pull a universe from a remote
-//!   push         — Push a universe to a remote
-//!   remote       — Manage git remotes on a universe
+//!   pull         — Clone or pull a repository from a remote
+//!   push         — Push a repository to a remote
+//!   remote       — Manage git remotes on a repository
 //!   sign         — Sign a manifest (stub for v0)
 //!   verify       — Verify a manifest signature (stub for v0)
 
@@ -66,7 +66,7 @@ fn expand_path(path: &Path) -> PathBuf {
 #[derive(Parser, Debug)]
 #[command(name = "nap", version, about, long_about = None)]
 pub struct Cli {
-    /// Base directory for universe repositories.
+    /// Base directory for repository repositories.
     /// Defaults to $NAP_DIR, or ~/.nap if unset.
     #[arg(long, short = 'd', global = true, env = "NAP_DIR")]
     pub base_dir: Option<PathBuf>,
@@ -79,9 +79,9 @@ pub struct Cli {
     pub command: Commands,
 }
 
-/// Return `true` if `s` looks like a URL rather than a universe name.
+/// Return `true` if `s` looks like a URL rather than a repository name.
 ///
-/// Universe names are simple identifiers (`[a-zA-Z0-9_-]+`).
+/// Repository names are simple identifiers (`[a-zA-Z0-9_-]+`).
 /// Everything else (contains `@`, `://`, `/`, `.git`, etc.) is a URL.
 fn looks_like_url(s: &str) -> bool {
     !s.chars()
@@ -91,24 +91,24 @@ fn looks_like_url(s: &str) -> bool {
 /// Subcommands for `nap remote`.
 #[derive(Subcommand, Debug)]
 pub enum RemoteCmd {
-    /// Add a remote to a universe repository.
+    /// Add a remote to a repository repository.
     Add {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
         /// Remote name (e.g., "origin").
         name: String,
         /// Remote URL.
         url: String,
     },
-    /// List remotes on a universe repository.
+    /// List remotes on a repository repository.
     Ls {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
     },
-    /// Remove a remote from a universe repository.
+    /// Remove a remote from a repository repository.
     Rm {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
         /// Remote name to remove.
         name: String,
     },
@@ -140,19 +140,19 @@ pub enum Commands {
         target: String,
     },
 
-    /// Initialize a universe repository and/or configure the backend provider.
+    /// Initialize a repository repository and/or configure the backend provider.
     ///
-    /// When a universe name is provided, creates the repository structure
-    /// (directories, config, universe manifest, initial Git commit).
+    /// When a repository name is provided, creates the repository structure
+    /// (directories, config, repository manifest, initial Git commit).
     /// When --provider is given (or no provider is configured), sets up the
     /// backend provider. Both can be combined:
     ///
-    ///   nap init starwars                     # create universe
-    ///   nap init starwars --provider local    # create universe + configure provider
+    ///   nap init starwars                     # create repository
+    ///   nap init starwars --provider local    # create repository + configure provider
     ///   nap init --provider local             # configure provider only
     Init {
-        /// Universe name. If provided, initializes a new universe repository.
-        universe: Option<String>,
+        /// Repository name. If provided, initializes a new repository repository.
+        repository: Option<String>,
 
         /// Provider type: local, portals-cloud, or remote.
         #[arg(long)]
@@ -187,8 +187,8 @@ pub enum Commands {
 
     /// Publish changes to remote.
     Publish {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
     },
 
     /// Show system status.
@@ -196,8 +196,8 @@ pub enum Commands {
 
     /// Sync with remote.
     Sync {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
     },
 
     /// Create a new entity manifest.
@@ -208,9 +208,9 @@ pub enum Commands {
         /// Entity ID (slug). e.g., "lukeskywalker".
         entity_id: String,
 
-        /// Universe name.
+        /// Repository name.
         #[arg(long, short = 'u')]
-        universe: String,
+        repository: String,
 
         /// Human-readable name.
         #[arg(long, short = 'n')]
@@ -259,10 +259,10 @@ pub enum Commands {
         format: String,
     },
 
-    /// Commit changes to a universe repository.
+    /// Commit changes to a repository repository.
     Commit {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
 
         /// Commit message.
         #[arg(long, short = 'm')]
@@ -283,20 +283,20 @@ pub enum Commands {
         limit: usize,
     },
 
-    /// List universes or entities within a universe.
+    /// List repositories or entities within a repository.
     List {
-        /// Universe name. Omit to list all universes.
-        universe: Option<String>,
+        /// Repository name. Omit to list all repositories.
+        repository: Option<String>,
 
-        /// Entity type to list (if universe is specified).
+        /// Entity type to list (if repository is specified).
         #[arg(long, short = 't')]
         entity_type: Option<String>,
     },
 
     /// Create or list branches.
     Branch {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
 
         /// Branch name to create. Omit to list all branches.
         name: Option<String>,
@@ -304,8 +304,8 @@ pub enum Commands {
 
     /// Create or list tags.
     Tag {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
 
         /// Tag name to create. Omit to list all tags.
         name: Option<String>,
@@ -357,8 +357,8 @@ pub enum Commands {
 
     /// Revert a commit by hash (undoes all changes in that commit).
     Revert {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
 
         /// Commit hash to revert.
         #[arg(long, short = 'c')]
@@ -369,20 +369,20 @@ pub enum Commands {
         author: String,
     },
 
-    /// Clone or pull a universe from a remote.
+    /// Clone or pull a repository from a remote.
     ///
     /// If the argument is a URL, the repo is cloned (name is read from the
-    /// repo's own config).  If it's a universe name, the repo must already
+    /// repo's own config).  If it's a repository name, the repo must already
     /// exist locally and will be updated via `git pull`.
     Pull {
-        /// URL (clone) or universe name (pull existing).
+        /// URL (clone) or repository name (pull existing).
         url_or_name: String,
     },
 
     /// Push the current branch to its configured upstream remote.
     Push {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
 
         /// Remote name (default: tracking branch's remote, or "origin").
         #[arg(long, default_value = "origin")]
@@ -393,7 +393,7 @@ pub enum Commands {
         branch: Option<String>,
     },
 
-    /// Manage git remotes on a universe.
+    /// Manage git remotes on a repository.
     #[command(subcommand)]
     Remote(RemoteCmd),
 
@@ -411,16 +411,16 @@ pub enum Commands {
 
     /// Switch to a branch.
     Switch {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
         /// Branch name to switch to.
         name: String,
     },
 
     /// Show the current HEAD commit hash.
     HeadHash {
-        /// Universe name.
-        universe: String,
+        /// Repository name.
+        repository: String,
     },
 
     /// Validate a manifest against the NAP schema.
@@ -542,14 +542,14 @@ fn main() -> Result<()> {
 
     let result = match cli.command {
         Commands::Init {
-            universe,
+            repository,
             provider,
             remote_url,
             workspace_id,
             remote,
         } => cmd_init(
             &base_dir,
-            universe.as_deref(),
+            repository.as_deref(),
             provider,
             remote_url,
             workspace_id,
@@ -558,18 +558,18 @@ fn main() -> Result<()> {
         Commands::Install { target } => cmd_install(&base_dir, &target),
         Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
         Commands::Doctor { repair } => cmd_doctor(&base_dir, repair),
-        Commands::Publish { universe } => cmd_publish(&base_dir, &universe),
+        Commands::Publish { repository } => cmd_publish(&base_dir, &repository),
         Commands::Status => cmd_status(&base_dir),
-        Commands::Sync { universe } => cmd_sync(&base_dir, &universe),
+        Commands::Sync { repository } => cmd_sync(&base_dir, &repository),
         Commands::Create {
             entity_type,
             entity_id,
-            universe,
+            repository,
             name,
             author,
         } => cmd_create(
             &base_dir,
-            &universe,
+            &repository,
             &entity_type,
             &entity_id,
             &name,
@@ -584,17 +584,17 @@ fn main() -> Result<()> {
         } => cmd_resolve(&base_dir, &uri, branch, commit, tag, &format),
         Commands::Query { uri, path, format } => cmd_query(&base_dir, &uri, &path, &format),
         Commands::Commit {
-            universe,
+            repository,
             message,
             author,
-        } => cmd_commit(&base_dir, &universe, &message, &author),
+        } => cmd_commit(&base_dir, &repository, &message, &author),
         Commands::History { uri, limit } => cmd_history(&base_dir, &uri, limit),
         Commands::List {
-            universe,
+            repository,
             entity_type,
-        } => cmd_list(&base_dir, universe.as_deref(), entity_type.as_deref()),
-        Commands::Branch { universe, name } => cmd_branch(&base_dir, &universe, name.as_deref()),
-        Commands::Tag { universe, name } => cmd_tag(&base_dir, &universe, name.as_deref()),
+        } => cmd_list(&base_dir, repository.as_deref(), entity_type.as_deref()),
+        Commands::Branch { repository, name } => cmd_branch(&base_dir, &repository, name.as_deref()),
+        Commands::Tag { repository, name } => cmd_tag(&base_dir, &repository, name.as_deref()),
         Commands::Set {
             uri,
             key,
@@ -611,21 +611,21 @@ fn main() -> Result<()> {
             author,
         } => cmd_add_repr(&base_dir, &uri, &key, &file, &format, &message, &author),
         Commands::Revert {
-            universe,
+            repository,
             commit,
             author,
-        } => cmd_revert(&base_dir, &universe, &commit, &author),
+        } => cmd_revert(&base_dir, &repository, &commit, &author),
         Commands::Pull { url_or_name } => cmd_pull(&base_dir, &url_or_name),
         Commands::Push {
-            universe,
+            repository,
             remote,
             branch,
-        } => cmd_push(&base_dir, &universe, &remote, branch.as_deref()),
+        } => cmd_push(&base_dir, &repository, &remote, branch.as_deref()),
         Commands::Remote(cmd) => cmd_remote(&base_dir, cmd),
         Commands::Sign { uri } => cmd_sign(&uri),
         Commands::Verify { uri } => cmd_verify(&uri),
-        Commands::Switch { universe, name } => cmd_switch(&base_dir, &universe, &name),
-        Commands::HeadHash { universe } => cmd_head_hash(&base_dir, &universe),
+        Commands::Switch { repository, name } => cmd_switch(&base_dir, &repository, &name),
+        Commands::HeadHash { repository } => cmd_head_hash(&base_dir, &repository),
         Commands::Validate { uri, file } => {
             cmd_validate(&base_dir, uri.as_deref(), file.as_deref())
         }
@@ -692,17 +692,17 @@ fn prompt_for_provider() -> Result<String> {
     }
 }
 
-fn open_repo(base_dir: &Path, universe: &str) -> Result<Repository> {
-    let repo_path = base_dir.join(universe);
+fn open_repo(base_dir: &Path, repository: &str) -> Result<Repository> {
+    let repo_path = base_dir.join(repository);
     Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| match e {
-        NapError::RepositoryNotFound(_) => anyhow::anyhow!("repository not found: '{}'", universe),
+        NapError::RepositoryNotFound(_) => anyhow::anyhow!("repository not found: '{}'", repository),
         _ => anyhow::anyhow!(e),
     })
 }
 
 fn cmd_init(
     base_dir: &Path,
-    universe: Option<&str>,
+    repository: Option<&str>,
     provider_opt: Option<String>,
     remote_url: Option<String>,
     workspace_id: Option<String>,
@@ -714,7 +714,7 @@ fn cmd_init(
 
     // ── Step 2: Configure provider if requested or on first run ────────
     let should_configure_provider = provider_opt.is_some()
-        || (!provider_configured && (universe.is_some() || universe.is_none()));
+        || (!provider_configured && (repository.is_some() || repository.is_none()));
 
     if should_configure_provider {
         let provider_str = if let Some(p) = provider_opt {
@@ -763,8 +763,8 @@ fn cmd_init(
         ));
     }
 
-    // ── Step 3: Initialize universe repository if name given ───────────
-    if let Some(universe_name) = universe {
+    // ── Step 3: Initialize repository repository if name given ───────────
+    if let Some(universe_name) = repository {
         let provider_type = provider_manager
             .active_provider()
             .map(|p| p.provider_type())
@@ -796,14 +796,14 @@ fn cmd_init(
 
         cmd_init_universe(base_dir, universe_name, remote)?;
     } else if !should_configure_provider {
-        // No universe, no --provider → nothing to do
-        anyhow::bail!("Usage: nap init <universe>  or  nap init --provider <type>");
+        // No repository, no --provider → nothing to do
+        anyhow::bail!("Usage: nap init <repository>  or  nap init --provider <type>");
     }
 
     Ok(())
 }
 
-fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> Result<()> {
+fn cmd_init_universe(base_dir: &Path, repository: &str, remote: Option<&str>) -> Result<()> {
     // 1. Create a temporary path for atomic initialization
     let tmp_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -813,20 +813,20 @@ fn cmd_init_universe(base_dir: &Path, universe: &str, remote: Option<&str>) -> R
     std::fs::create_dir_all(&tmp_path).context("failed to create temporary directory for init")?;
 
     // 2. Perform initialization in temporary path
-    emit("Creating universe repository...");
-    let result = Repository::init(&tmp_path, universe, Box::new(LoreBackend::from_env()));
+    emit("Creating repository repository...");
+    let result = Repository::init(&tmp_path, repository, Box::new(LoreBackend::from_env()));
 
     match result {
         Ok(repo) => {
             // 3. Success: rename to final destination
-            let final_path = base_dir.join(universe);
+            let final_path = base_dir.join(repository);
             std::fs::rename(&tmp_path, &final_path).context(format!(
-                "failed to move initialized universe to {}",
+                "failed to move initialized repository to {}",
                 final_path.display()
             ))?;
 
             emit(format!(
-                "✓ Initialized universe '{universe}' at {}",
+                "✓ Initialized repository '{repository}' at {}",
                 final_path.display()
             ));
 
@@ -998,11 +998,11 @@ fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
     Ok(())
 }
 
-fn cmd_publish(base_dir: &Path, universe: &str) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_publish(base_dir: &Path, repository: &str) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     repo.push(Some("origin"), None)
         .context("failed to publish to remote")?;
-    emit(format!("✓ Published '{universe}'."));
+    emit(format!("✓ Published '{repository}'."));
     Ok(())
 }
 
@@ -1050,11 +1050,11 @@ fn cmd_status(base_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn cmd_sync(base_dir: &Path, universe: &str) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_sync(base_dir: &Path, repository: &str) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     repo.pull(None, None)
         .context("failed to sync from remote")?;
-    emit(format!("✓ Synced '{universe}'."));
+    emit(format!("✓ Synced '{repository}'."));
     Ok(())
 }
 
@@ -1066,14 +1066,14 @@ fn get_tokio_runtime() -> &'static tokio::runtime::Runtime {
 
 fn cmd_create(
     base_dir: &Path,
-    universe: &str,
+    repository: &str,
     entity_type_str: &str,
     entity_id: &str,
     name: &str,
     author: &str,
 ) -> Result<()> {
     let entity_type = EntityType::new(entity_type_str);
-    let repo = open_repo(base_dir, universe)?;
+    let repo = open_repo(base_dir, repository)?;
     let (manifest, hash) = repo
         .create_entity(&entity_type, entity_id, name, author)
         .context("failed to create entity")?;
@@ -1138,8 +1138,8 @@ fn cmd_query(base_dir: &Path, uri_str: &str, path: &str, format: &str) -> Result
     Ok(())
 }
 
-fn cmd_commit(base_dir: &Path, universe: &str, message: &str, author: &str) -> Result<()> {
-    let repo_path = base_dir.join(universe);
+fn cmd_commit(base_dir: &Path, repository: &str, message: &str, author: &str) -> Result<()> {
+    let repo_path = base_dir.join(repository);
     let vcs = LoreBackend::from_env();
     let hash = nap_core::vcs::VcsBackend::commit(&vcs, &repo_path, message, author)
         .context("failed to commit")?;
@@ -1149,7 +1149,7 @@ fn cmd_commit(base_dir: &Path, universe: &str, message: &str, author: &str) -> R
 
 fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
-    let repo = open_repo(base_dir, &uri.universe)?;
+    let repo = open_repo(base_dir, &uri.repository)?;
     let history = repo
         .history(&uri.entity_type, &uri.entity_id, limit)
         .context("failed to get history")?;
@@ -1178,28 +1178,28 @@ fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
     Ok(())
 }
 
-fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) -> Result<()> {
+fn cmd_list(base_dir: &Path, repository: Option<&str>, entity_type: Option<&str>) -> Result<()> {
     let is_piped = !std::io::stdout().is_terminal();
 
-    match universe {
+    match repository {
         None => {
             let resolver = Resolver::new(base_dir);
-            let universes = resolver
-                .list_universes()
+            let repositories = resolver
+                .list_repositories()
                 .context("failed to list repositories")?;
             if is_piped {
-                println!("{}", serde_json::to_string_pretty(&universes)?);
-            } else if universes.is_empty() {
+                println!("{}", serde_json::to_string_pretty(&repositories)?);
+            } else if repositories.is_empty() {
                 println!("No repositories found in {}", base_dir.display());
             } else {
                 println!("Repositories:");
-                for u in &universes {
+                for u in &repositories {
                     println!("  nap://{u}/");
                 }
             }
         }
-        Some(universe) => {
-            let repo = open_repo(base_dir, universe)?;
+        Some(repository) => {
+            let repo = open_repo(base_dir, repository)?;
             let is_piped = !std::io::stdout().is_terminal();
             match entity_type {
                 Some(et_str) => {
@@ -1208,9 +1208,9 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
                     if is_piped {
                         println!("{}", serde_json::to_string_pretty(&entities)?);
                     } else {
-                        println!("{} in {universe}:", et_str);
+                        println!("{} in {repository}:", et_str);
                         for e in &entities {
-                            println!("  nap://{universe}/{et}/{e}");
+                            println!("  nap://{repository}/{et}/{e}");
                         }
                     }
                 }
@@ -1227,13 +1227,13 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
                                 all.push(serde_json::json!({
                                     "type": et.to_string(),
                                     "id": e,
-                                    "uri": format!("nap://{universe}/{et}/{e}"),
+                                    "uri": format!("nap://{repository}/{et}/{e}"),
                                 }));
                             }
                         } else if !entities.is_empty() {
                             println!("{}:", et);
                             for e in &entities {
-                                println!("  nap://{universe}/{et}/{e}");
+                                println!("  nap://{repository}/{et}/{e}");
                             }
                         }
                     }
@@ -1247,20 +1247,20 @@ fn cmd_list(base_dir: &Path, universe: Option<&str>, entity_type: Option<&str>) 
     Ok(())
 }
 
-fn cmd_branch(base_dir: &Path, universe: &str, name: Option<&str>) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     match name {
         Some(branch_name) => {
             repo.create_branch(branch_name)
                 .context(format!("failed to create branch '{branch_name}'"))?;
-            emit(format!("✓ Created branch '{branch_name}' in {universe}"));
+            emit(format!("✓ Created branch '{branch_name}' in {repository}"));
         }
         None => {
             let branches = repo.list_branches().context("failed to list branches")?;
             if !std::io::stdout().is_terminal() {
                 println!("{}", serde_json::to_string_pretty(&branches)?);
             } else {
-                println!("Branches in {universe}:");
+                println!("Branches in {repository}:");
                 for b in &branches {
                     println!("  {b}");
                 }
@@ -1270,22 +1270,22 @@ fn cmd_branch(base_dir: &Path, universe: &str, name: Option<&str>) -> Result<()>
     Ok(())
 }
 
-fn cmd_tag(base_dir: &Path, universe: &str, name: Option<&str>) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_tag(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     match name {
         Some(tag_name) => {
             repo.create_tag(tag_name)
                 .context(format!("failed to create tag '{tag_name}'"))?;
-            emit(format!("✓ Created tag '{tag_name}' in {universe}"));
+            emit(format!("✓ Created tag '{tag_name}' in {repository}"));
         }
         None => {
             let tags = repo.list_tags().context("failed to list tags")?;
             if !std::io::stdout().is_terminal() {
                 println!("{}", serde_json::to_string_pretty(&tags)?);
             } else if tags.is_empty() {
-                println!("No tags in {universe}");
+                println!("No tags in {repository}");
             } else {
-                println!("Tags in {universe}:");
+                println!("Tags in {repository}:");
                 for t in &tags {
                     println!("  {t}");
                 }
@@ -1298,7 +1298,7 @@ fn cmd_tag(base_dir: &Path, universe: &str, name: Option<&str>) -> Result<()> {
 fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
     if looks_like_url(url_or_name) {
         // ── Clone from URL ──────────────────────────────────────
-        // Clone to a temp directory, read the universe name from the
+        // Clone to a temp directory, read the repository name from the
         // repo's own config, then rename to the final directory.
 
         let tmp_suffix = std::time::SystemTime::now()
@@ -1311,20 +1311,20 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         emit(format!("  Cloning from {url_or_name} …"));
         LoreBackend::clone_repo(url_or_name, &tmp_path).context("failed to clone repository")?;
 
-        // Read the universe name from .nap/config.yaml
+        // Read the repository name from .nap/config.yaml
         let config_path = tmp_path.join(".nap").join("config.yaml");
         let name = if config_path.exists() {
             let config_content = std::fs::read_to_string(&config_path)
                 .context("cloned repo is missing or corrupt .nap/config.yaml")?;
-            // Parse universe name from YAML front matter
+            // Parse repository name from YAML front matter
             let config_yaml: serde_yaml::Value = serde_yaml::from_str(&config_content)
                 .context("invalid .nap/config.yaml in cloned repo")?;
-            config_yaml["universe"]
+            config_yaml["repository"]
                 .as_str()
                 .map(|s| s.to_string())
-                .ok_or_else(|| anyhow::anyhow!("missing 'universe' key in .nap/config.yaml"))?
+                .ok_or_else(|| anyhow::anyhow!("missing 'repository' key in .nap/config.yaml"))?
         } else {
-            anyhow::bail!("not a NAP universe repository: missing .nap/config.yaml");
+            anyhow::bail!("not a NAP repository repository: missing .nap/config.yaml");
         };
 
         // Check if the target directory already exists
@@ -1332,7 +1332,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         if target.exists() {
             // Clean up the temp clone
             std::fs::remove_dir_all(&tmp_path).context("failed to clean up temp clone")?;
-            anyhow::bail!("universe '{name}' already exists at {}", target.display());
+            anyhow::bail!("repository '{name}' already exists at {}", target.display());
         }
 
         // Rename temp → final
@@ -1340,7 +1340,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
             .context(format!("failed to rename {tmp_name} → {name}"))?;
 
         emit(format!(
-            "✓ Cloned universe '{name}' to {}",
+            "✓ Cloned repository '{name}' to {}",
             target.display()
         ));
     } else {
@@ -1354,13 +1354,13 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn cmd_push(base_dir: &Path, universe: &str, remote: &str, branch: Option<&str>) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_push(base_dir: &Path, repository: &str, remote: &str, branch: Option<&str>) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     repo.push(Some(remote), branch)
         .context("failed to push to remote")?;
     match branch {
-        Some(b) => emit(format!("✓ Pushed '{universe}' ({b}) → {remote}")),
-        None => emit(format!("✓ Pushed '{universe}' → {remote}")),
+        Some(b) => emit(format!("✓ Pushed '{repository}' ({b}) → {remote}")),
+        None => emit(format!("✓ Pushed '{repository}' → {remote}")),
     }
     Ok(())
 }
@@ -1368,23 +1368,23 @@ fn cmd_push(base_dir: &Path, universe: &str, remote: &str, branch: Option<&str>)
 fn cmd_remote(base_dir: &Path, cmd: RemoteCmd) -> Result<()> {
     match cmd {
         RemoteCmd::Add {
-            universe,
+            repository,
             name,
             url,
         } => {
-            let repo = open_repo(base_dir, &universe)?;
+            let repo = open_repo(base_dir, &repository)?;
             repo.add_remote(&name, &url)
                 .context(format!("failed to add remote '{name}'"))?;
-            emit(format!("✓ Added remote '{name}' → {url} to '{universe}'"));
+            emit(format!("✓ Added remote '{name}' → {url} to '{repository}'"));
         }
-        RemoteCmd::Ls { universe } => {
-            let repo = open_repo(base_dir, &universe)?;
+        RemoteCmd::Ls { repository } => {
+            let repo = open_repo(base_dir, &repository)?;
             let remotes = repo.list_remotes().context("failed to list remotes")?;
             if remotes.is_empty() {
-                emit(format!("No remotes configured for '{universe}'"));
+                emit(format!("No remotes configured for '{repository}'"));
             } else {
                 if std::io::stdout().is_terminal() {
-                    println!("Remotes in '{universe}':");
+                    println!("Remotes in '{repository}':");
                     for (name, url) in &remotes {
                         println!("  {name}\t{url}");
                     }
@@ -1397,11 +1397,11 @@ fn cmd_remote(base_dir: &Path, cmd: RemoteCmd) -> Result<()> {
                 }
             }
         }
-        RemoteCmd::Rm { universe, name } => {
-            let repo = open_repo(base_dir, &universe)?;
+        RemoteCmd::Rm { repository, name } => {
+            let repo = open_repo(base_dir, &repository)?;
             repo.remove_remote(&name)
                 .context(format!("failed to remove remote '{name}'"))?;
-            emit(format!("✓ Removed remote '{name}' from '{universe}'"));
+            emit(format!("✓ Removed remote '{name}' from '{repository}'"));
         }
     }
     Ok(())
@@ -1416,7 +1416,7 @@ fn cmd_set(
     author: &str,
 ) -> Result<()> {
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
-    let repo = open_repo(base_dir, &uri.universe)?;
+    let repo = open_repo(base_dir, &uri.repository)?;
     let mut manifest = repo
         .read_manifest(&uri.entity_type, &uri.entity_id)
         .context("failed to read manifest")?;
@@ -1449,7 +1449,7 @@ fn cmd_add_repr(
     author: &str,
 ) -> Result<()> {
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
-    let repo = open_repo(base_dir, &uri.universe)?;
+    let repo = open_repo(base_dir, &uri.repository)?;
     let mut manifest = repo
         .read_manifest(&uri.entity_type, &uri.entity_id)
         .context("failed to read manifest")?;
@@ -1517,8 +1517,8 @@ fn cmd_add_repr(
     Ok(())
 }
 
-fn cmd_revert(base_dir: &Path, universe: &str, commit: &str, author: &str) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_revert(base_dir: &Path, repository: &str, commit: &str, author: &str) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     let new_hash = repo
         .revert_commit(commit, author)
         .context(format!("failed to revert commit '{commit}'"))?;
@@ -1534,22 +1534,22 @@ fn cmd_revert(base_dir: &Path, universe: &str, commit: &str, author: &str) -> Re
     Ok(())
 }
 
-fn cmd_switch(base_dir: &Path, universe: &str, name: &str) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_switch(base_dir: &Path, repository: &str, name: &str) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     repo.switch_branch(name)
         .context(format!("failed to switch to branch '{name}'"))?;
-    emit(format!("✓ Switched to branch '{name}' in {universe}"));
+    emit(format!("✓ Switched to branch '{name}' in {repository}"));
     Ok(())
 }
 
-fn cmd_head_hash(base_dir: &Path, universe: &str) -> Result<()> {
-    let repo = open_repo(base_dir, universe)?;
+fn cmd_head_hash(base_dir: &Path, repository: &str) -> Result<()> {
+    let repo = open_repo(base_dir, repository)?;
     let hash = repo.head_hash().context("failed to get HEAD hash")?;
     if !std::io::stdout().is_terminal() {
         println!(
             "{}",
             serde_json::to_string_pretty(&serde_json::json!({
-                "universe": universe,
+                "repository": repository,
                 "head": hash,
             }))?
         );
@@ -1564,7 +1564,7 @@ fn cmd_validate(base_dir: &Path, uri: Option<&str>, file: Option<&Path>) -> Resu
         (Some(uri_str), None) => {
             // Validate entity manifest by URI
             let uri_parsed: NapUri = uri_str.parse().context("invalid URI")?;
-            let repo = open_repo(base_dir, &uri_parsed.universe)?;
+            let repo = open_repo(base_dir, &uri_parsed.repository)?;
             let manifest = repo
                 .read_manifest(&uri_parsed.entity_type, &uri_parsed.entity_id)
                 .context("failed to read manifest")?;

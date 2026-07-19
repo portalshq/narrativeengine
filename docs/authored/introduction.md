@@ -1,6 +1,6 @@
 **NAP is a protocol that makes narrative resources addressable, resolvable, and interoperable across tools, storage systems, formats, and AI workflows.**
 
-Characters, locations, scenes, props, and entire fictional universes — NAP gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
+Characters, locations, scenes, props, and entire fictional repositories — NAP gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
 
 In the same way that IPFS content-addressed files and OCI container-addressed images, NAP is **narrative-addressed** — a universal namespace for the building blocks of stories.
 
@@ -38,7 +38,7 @@ A `nap://` URI identifies any narrative resource. Version, branch, and tag are *
 ```text
 nap://starwars/character/lukeskywalker#references.appears_in
 ────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
- scheme universe  entity_type entity_id          fragment (query)
+ scheme repository  entity_type entity_id          fragment (query)
 ```
 
 ### 2. Manifest — Current State
@@ -85,23 +85,23 @@ The resolver turns a `nap://` URI into a manifest (or a subtree of one). With op
 | Type | Example URI | Description |
 |---|---|---|
 | `character` | `nap://starwars/character/lukeskywalker` | Persistent character with identity across scenes/episodes |
-| `location` | `nap://starwars/location/tatooine` | Spatial location within a fictional universe |
+| `location` | `nap://starwars/location/tatooine` | Spatial location within a fictional repository |
 | `scene` | `nap://starwars/scene/cantina` | Narrative scene — participants, timeline, events |
 | `prop` | `nap://toystory/prop/andy-hat` | Physical object with materials, variants, ownership |
 | `group` | `nap://toystory/group/buzz-and-woody-flying` | Mixed-media groups |
-| `world` | `nap://starwars/world/starwars` | The universe itself — rules, canon, top-level metadata |
+| `world` | `nap://starwars/world/starwars` | The repository itself — rules, canon, top-level metadata |
 
 ---
 
 ## Repository Layout
 
-Each universe is a Git repository on disk:
+Each repository is a Git repository on disk:
 
 ```text
-starwars/                    ← universe root (Git repo)
+starwars/                    ← repository root (Git repo)
 ├── .nap/
 │   └── config.yaml          ← repository configuration
-├── universe.yaml            ← world manifest
+├── repository.yaml            ← world manifest
 ├── characters/
 │   ├── lukeskywalker.yaml
 │   └── darthvader.yaml

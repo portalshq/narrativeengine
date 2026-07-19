@@ -92,7 +92,7 @@ pub enum ResolveResult {
 
 /// The NAP resolver — resolves URIs to manifests or subtrees.
 pub struct Resolver {
-    /// Base directory containing universe repositories.
+    /// Base directory containing repository repositories.
     base_path: PathBuf,
     /// VCS backend factory (creates backend per-repo).
     vcs_factory: fn() -> Box<dyn VcsBackend>,
@@ -101,7 +101,7 @@ pub struct Resolver {
 }
 
 impl Resolver {
-    /// Create a resolver that looks for universe repos under `base_path`.
+    /// Create a resolver that looks for repository repos under `base_path`.
     ///
     /// WARNING: Uses [`LoreBackend::from_env()`] by default. For testing,
     /// use [`Resolver::with_vcs_factory()`] with a mock backend.
@@ -113,9 +113,9 @@ impl Resolver {
     /// # Example layout
     /// ```text
     /// base_path/
-    /// ├── starwars/    ← universe repo
-    /// ├── toystory/    ← universe repo
-    /// └── marvel/      ← universe repo
+    /// ├── starwars/    ← repository repo
+    /// ├── toystory/    ← repository repo
+    /// └── marvel/      ← repository repo
     /// ```
     pub fn new(base_path: &Path) -> Self {
         Self {
@@ -138,9 +138,9 @@ impl Resolver {
         }
     }
 
-    /// Open the repository for a given universe and read its resolve config.
-    fn open_repo(&self, universe: &str) -> Result<(Repository, ResolveConfig), NapError> {
-        let repo_path = self.base_path.join(universe);
+    /// Open the repository for a given repository and read its resolve config.
+    fn open_repo(&self, repository: &str) -> Result<(Repository, ResolveConfig), NapError> {
+        let repo_path = self.base_path.join(repository);
         let repo = Repository::open(&repo_path, (self.vcs_factory)())?;
         let repo_config = repo.read_resolve_config();
         Ok((repo, repo_config))
@@ -218,7 +218,7 @@ impl Resolver {
         uri: &NapUri,
         options: &ResolveOptions,
     ) -> Result<ResolveResult, NapError> {
-        let (repo, repo_config) = self.open_repo(&uri.universe)?;
+        let (repo, repo_config) = self.open_repo(&uri.repository)?;
         let query_path = options.query_path(uri);
 
         // ── 4-Rule Resolution ────────────────────────────────────────
@@ -410,21 +410,21 @@ impl Resolver {
     }
 
     /// List all repositories available.
-    pub fn list_universes(&self) -> Result<Vec<String>, NapError> {
-        let mut universes = Vec::new();
+    pub fn list_repositories(&self) -> Result<Vec<String>, NapError> {
+        let mut repositories = Vec::new();
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
             let path = entry.path();
-            // Check for repository.yaml or universe.yaml to identify valid repositories
+            // Check for repository.yaml or repository.yaml to identify valid repositories
             if path.is_dir()
-                && (path.join("repository.yaml").exists() || path.join("universe.yaml").exists())
+                && (path.join("repository.yaml").exists() || path.join("repository.yaml").exists())
                 && let Some(name) = path.file_name().and_then(|n| n.to_str())
             {
-                universes.push(name.to_string());
+                repositories.push(name.to_string());
             }
         }
-        universes.sort();
-        Ok(universes)
+        repositories.sort();
+        Ok(repositories)
     }
 }
 
@@ -550,10 +550,10 @@ mod unit_tests {
     }
 
     #[test]
-    fn test_list_universes() {
+    fn test_list_repositories() {
         let (_tmp, resolver) = setup();
-        let universes = resolver.list_universes().unwrap();
-        assert!(universes.contains(&"starwars".to_string()));
+        let repositories = resolver.list_repositories().unwrap();
+        assert!(repositories.contains(&"starwars".to_string()));
     }
 
     #[test]
@@ -639,11 +639,11 @@ mod lore_tests {
     }
 
     fn setup_lore() -> (TempDir, Resolver, String) {
-        let universe = format!("lr-{}", unique_suffix());
+        let repository = format!("lr-{}", unique_suffix());
         let tmp = TempDir::new().unwrap();
-        let repo_path = tmp.path().join(&universe);
+        let repo_path = tmp.path().join(&repository);
         let repo =
-            Repository::init(&repo_path, &universe, Box::new(LoreBackend::from_env())).unwrap();
+            Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
@@ -673,13 +673,13 @@ mod lore_tests {
                 default_branch: Some("main".to_string()),
             },
         );
-        (tmp, resolver, universe)
+        (tmp, resolver, repository)
     }
 
     #[test]
     fn test_resolve_lore_full_manifest() {
-        let (_tmp, resolver, universe) = setup_lore();
-        let uri = format!("nap://{}/character/lukeskywalker", universe);
+        let (_tmp, resolver, repository) = setup_lore();
+        let uri = format!("nap://{}/character/lukeskywalker", repository);
         let result = resolver.resolve(&uri, &Default::default()).unwrap();
         match result {
             ResolveResult::Full(m) => {

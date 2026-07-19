@@ -16,7 +16,7 @@ import native from "./native.js";
 
 /** A parsed NAP URI. */
 export interface NapUri {
-  universe: string;
+  repository: string;
   entity_type: string;
   entity_id: string;
   fragment?: string;
@@ -89,7 +89,7 @@ export type RemoteEntry = [string, string];
 /** Repo info result. */
 export interface RepoInfo {
   root: string;
-  universe: string;
+  repository: string;
 }
 
 /** Operation result with commit. */
@@ -161,19 +161,19 @@ export function parseUri(uri: string): NapUri {
 /**
  * Construct a new NAP URI from components.
  *
- * @param universe - Universe name (e.g. `"starwars"`)
+ * @param repository - Repository name (e.g. `"starwars"`)
  * @param entityType - Entity type (e.g. `"character"`)
  * @param entityId - Entity ID slug (e.g. `"lukeskywalker"`)
  * @param fragment - Optional query fragment
  * @returns Parsed URI components
  */
 export function uriNew(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   fragment?: string,
 ): NapUri {
-  return JSON.parse(native.uriNew(universe, entityType, entityId, fragment)) as NapUri;
+  return JSON.parse(native.uriNew(repository, entityType, entityId, fragment)) as NapUri;
 }
 
 /**
@@ -199,19 +199,19 @@ export function uriManifestPath(uri: string): string {
 /**
  * Format URI components into a `nap://` URI string.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type
  * @param entityId - Entity ID
  * @param fragment - Optional query fragment
  * @returns Full NAP URI string
  */
 export function uriFormat(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   fragment?: string,
 ): string {
-  return native.uriFormat(universe, entityType, entityId, fragment);
+  return native.uriFormat(repository, entityType, entityId, fragment);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -264,19 +264,19 @@ export function parseManifest(yamlStr: string): Manifest {
 /**
  * Create a new manifest with minimal required fields.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID slug
  * @param name - Human-readable name
  * @returns New manifest
  */
 export function manifestNew(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   name: string,
 ): Manifest {
-  return JSON.parse(native.manifestNew(universe, entityType, entityId, name)) as Manifest;
+  return JSON.parse(native.manifestNew(repository, entityType, entityId, name)) as Manifest;
 }
 
 /**
@@ -498,31 +498,31 @@ export function commitVerifyId(commit: Commit): boolean {
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * Initialize a new NAP universe repository.
+ * Initialize a new NAP repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
- * @returns Repo info with `root` and `universe`
+ * @returns Repo info with `root` and `repository`
  */
-export function repoInit(universe: string, basePath?: string): RepoInfo {
-  return JSON.parse(native.repoInit(resolveRepoPath(basePath), universe)) as RepoInfo;
+export function repoInit(repository: string, basePath?: string): RepoInfo {
+  return JSON.parse(native.repoInit(resolveRepoPath(basePath), repository)) as RepoInfo;
 }
 
 /**
- * Open an existing NAP universe repository.
+ * Open an existing NAP repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Repo info
  */
-export function repoOpen(universe: string, basePath?: string): RepoInfo {
-  return JSON.parse(native.repoOpen(resolveRepoPath(basePath), universe)) as RepoInfo;
+export function repoOpen(repository: string, basePath?: string): RepoInfo {
+  return JSON.parse(native.repoOpen(resolveRepoPath(basePath), repository)) as RepoInfo;
 }
 
 /**
  * Create a new entity manifest and commit it.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID slug
  * @param name - Human-readable name
@@ -531,7 +531,7 @@ export function repoOpen(universe: string, basePath?: string): RepoInfo {
  * @returns Object with `manifest` and `commit_hash`
  */
 export function repoCreateEntity(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   name: string,
@@ -539,34 +539,34 @@ export function repoCreateEntity(
   basePath?: string,
 ): CreateEntityResult {
   return JSON.parse(
-    native.repoCreateEntity(resolveRepoPath(basePath), universe, entityType, entityId, name, author),
+    native.repoCreateEntity(resolveRepoPath(basePath), repository, entityType, entityId, name, author),
   ) as CreateEntityResult;
 }
 
 /**
  * Read a manifest from the repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Manifest object
  */
 export function repoReadManifest(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   basePath?: string,
 ): Manifest {
   return JSON.parse(
-    native.repoReadManifest(resolveRepoPath(basePath), universe, entityType, entityId),
+    native.repoReadManifest(resolveRepoPath(basePath), repository, entityType, entityId),
   ) as Manifest;
 }
 
 /**
  * Read a manifest at a specific VCS reference (commit, branch, tag).
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID
  * @param reference - VCS ref (commit hash, branch name, or tag)
@@ -574,37 +574,37 @@ export function repoReadManifest(
  * @returns Manifest object
  */
 export function repoReadManifestAtRef(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   reference: string,
   basePath?: string,
 ): Manifest {
   return JSON.parse(
-    native.repoReadManifestAtRef(resolveRepoPath(basePath), universe, entityType, entityId, reference),
+    native.repoReadManifestAtRef(resolveRepoPath(basePath), repository, entityType, entityId, reference),
   ) as Manifest;
 }
 
 /**
  * Write a manifest to the repository (does NOT commit).
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param manifest - Manifest object
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns The filesystem path where the manifest was written
  */
 export function repoWriteManifest(
-  universe: string,
+  repository: string,
   manifest: Manifest,
   basePath?: string,
 ): string {
-  return native.repoWriteManifest(resolveRepoPath(basePath), universe, JSON.stringify(manifest));
+  return native.repoWriteManifest(resolveRepoPath(basePath), repository, JSON.stringify(manifest));
 }
 
 /**
  * Commit changes to a manifest.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID
  * @param message - Commit message
@@ -614,7 +614,7 @@ export function repoWriteManifest(
  * @returns Object with `commit` and `version`
  */
 export function repoCommitManifest(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   message: string,
@@ -624,7 +624,7 @@ export function repoCommitManifest(
 ): CommitResult {
   return JSON.parse(
     native.repoCommitManifest(
-      resolveRepoPath(basePath), universe, entityType, entityId,
+      resolveRepoPath(basePath), repository, entityType, entityId,
       message, author, JSON.stringify(changes),
     ),
   ) as CommitResult;
@@ -633,7 +633,7 @@ export function repoCommitManifest(
 /**
  * Delete an entity manifest and commit the deletion.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID
  * @param author - Author identifier (default: `"nap-sdk"`)
@@ -641,19 +641,19 @@ export function repoCommitManifest(
  * @returns The VCS commit hash of the deletion
  */
 export function repoDeleteEntity(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   author: string = "nap-sdk",
   basePath?: string,
 ): string {
-  return native.repoDeleteEntity(resolveRepoPath(basePath), universe, entityType, entityId, author);
+  return native.repoDeleteEntity(resolveRepoPath(basePath), repository, entityType, entityId, author);
 }
 
 /**
  * Get commit history for an entity.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID
  * @param limit - Maximum number of commits (default: 20)
@@ -661,244 +661,244 @@ export function repoDeleteEntity(
  * @returns Array of commit entries
  */
 export function repoHistory(
-  universe: string,
+  repository: string,
   entityType: string,
   entityId: string,
   limit: number = 20,
   basePath?: string,
 ): CommitEntry[] {
   return JSON.parse(
-    native.repoHistory(resolveRepoPath(basePath), universe, entityType, entityId, limit),
+    native.repoHistory(resolveRepoPath(basePath), repository, entityType, entityId, limit),
   ) as CommitEntry[];
 }
 
 /**
- * List all entity IDs of a given type in a universe.
+ * List all entity IDs of a given type in a repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param entityType - Entity type string
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Array of entity ID strings
  */
 export function repoListEntities(
-  universe: string,
+  repository: string,
   entityType: string,
   basePath?: string,
 ): string[] {
   return JSON.parse(
-    native.repoListEntities(resolveRepoPath(basePath), universe, entityType),
+    native.repoListEntities(resolveRepoPath(basePath), repository, entityType),
   ) as string[];
 }
 
 /**
- * Create a branch in a universe repository.
+ * Create a branch in a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param name - Branch name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoCreateBranch(
-  universe: string,
+  repository: string,
   name: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoCreateBranch(resolveRepoPath(basePath), universe, name),
+    native.repoCreateBranch(resolveRepoPath(basePath), repository, name),
   ) as SuccessResponse;
 }
 
 /**
- * Switch to a branch in a universe repository.
+ * Switch to a branch in a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param name - Branch name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoSwitchBranch(
-  universe: string,
+  repository: string,
   name: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoSwitchBranch(resolveRepoPath(basePath), universe, name),
+    native.repoSwitchBranch(resolveRepoPath(basePath), repository, name),
   ) as SuccessResponse;
 }
 
 /**
- * List all branches in a universe repository.
+ * List all branches in a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Array of branch names
  */
 export function repoListBranches(
-  universe: string,
+  repository: string,
   basePath?: string,
 ): string[] {
   return JSON.parse(
-    native.repoListBranches(resolveRepoPath(basePath), universe),
+    native.repoListBranches(resolveRepoPath(basePath), repository),
   ) as string[];
 }
 
 /**
- * Create a tag in a universe repository.
+ * Create a tag in a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param name - Tag name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoCreateTag(
-  universe: string,
+  repository: string,
   name: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoCreateTag(resolveRepoPath(basePath), universe, name),
+    native.repoCreateTag(resolveRepoPath(basePath), repository, name),
   ) as SuccessResponse;
 }
 
 /**
- * List all tags in a universe repository.
+ * List all tags in a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Array of tag names
  */
 export function repoListTags(
-  universe: string,
+  repository: string,
   basePath?: string,
 ): string[] {
   return JSON.parse(
-    native.repoListTags(resolveRepoPath(basePath), universe),
+    native.repoListTags(resolveRepoPath(basePath), repository),
   ) as string[];
 }
 
 /**
- * Get the current HEAD hash of a universe repository.
+ * Get the current HEAD hash of a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns The HEAD commit hash
  */
 export function repoHeadHash(
-  universe: string,
+  repository: string,
   basePath?: string,
 ): string {
-  return native.repoHeadHash(resolveRepoPath(basePath), universe);
+  return native.repoHeadHash(resolveRepoPath(basePath), repository);
 }
 
 /**
- * Revert a commit across an entire universe.
+ * Revert a commit across an entire repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param commitHash - Hash of the commit to revert
  * @param author - Author identifier (default: `"nap-sdk"`)
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns The new revert commit hash
  */
 export function repoRevertCommit(
-  universe: string,
+  repository: string,
   commitHash: string,
   author: string = "nap-sdk",
   basePath?: string,
 ): string {
-  return native.repoRevertCommit(resolveRepoPath(basePath), universe, commitHash, author);
+  return native.repoRevertCommit(resolveRepoPath(basePath), repository, commitHash, author);
 }
 
 /**
- * Add a remote to a universe repository.
+ * Add a remote to a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param name - Remote name (e.g. `"origin"`)
  * @param url - Remote URL
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoAddRemote(
-  universe: string,
+  repository: string,
   name: string,
   url: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoAddRemote(resolveRepoPath(basePath), universe, name, url),
+    native.repoAddRemote(resolveRepoPath(basePath), repository, name, url),
   ) as SuccessResponse;
 }
 
 /**
- * Remove a remote from a universe repository.
+ * Remove a remote from a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param name - Remote name to remove
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoRemoveRemote(
-  universe: string,
+  repository: string,
   name: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoRemoveRemote(resolveRepoPath(basePath), universe, name),
+    native.repoRemoveRemote(resolveRepoPath(basePath), repository, name),
   ) as SuccessResponse;
 }
 
 /**
- * List remotes on a universe repository.
+ * List remotes on a repository repository.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Array of `[name, url]` tuples
  */
 export function repoListRemotes(
-  universe: string,
+  repository: string,
   basePath?: string,
 ): RemoteEntry[] {
   return JSON.parse(
-    native.repoListRemotes(resolveRepoPath(basePath), universe),
+    native.repoListRemotes(resolveRepoPath(basePath), repository),
   ) as RemoteEntry[];
 }
 
 /**
  * Push the current branch to a remote.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param remote - Remote name (optional)
  * @param branch - Branch to push (optional)
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoPush(
-  universe: string,
+  repository: string,
   remote?: string,
   branch?: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoPush(resolveRepoPath(basePath), universe, remote, branch),
+    native.repoPush(resolveRepoPath(basePath), repository, remote, branch),
   ) as SuccessResponse;
 }
 
 /**
  * Pull the current branch from a remote.
  *
- * @param universe - Universe name
+ * @param repository - Repository name
  * @param remote - Remote name (optional)
  * @param branch - Branch to pull (optional)
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Success response
  */
 export function repoPull(
-  universe: string,
+  repository: string,
   remote?: string,
   branch?: string,
   basePath?: string,
 ): SuccessResponse {
   return JSON.parse(
-    native.repoPull(resolveRepoPath(basePath), universe, remote, branch),
+    native.repoPull(resolveRepoPath(basePath), repository, remote, branch),
   ) as SuccessResponse;
 }
 
@@ -910,7 +910,7 @@ export function repoPull(
  * Resolve a NAP URI to a manifest or subtree.
  *
  * @param uri - NAP URI (e.g. `"nap://starwars/character/lukeskywalker"`)
- * @param repoPath - Base directory for universes (defaults to `$NAP_DIR` / `~/.nap`)
+ * @param repoPath - Base directory for repositories (defaults to `$NAP_DIR` / `~/.nap`)
  * @param branch - Optional branch selector
  * @param commit - Optional commit hash selector (BLAKE3)
  * @param path - Optional subtree query path
@@ -949,13 +949,13 @@ export function resolveQuery(
 }
 
 /**
- * List all universe repositories available.
+ * List all repository repositories available.
  *
  * @param repoPath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
- * @returns Array of universe names
+ * @returns Array of repository names
  */
-export function listUniverses(repoPath?: string): string[] {
-  return JSON.parse(native.listUniverses(resolveRepoPath(repoPath))) as string[];
+export function listRepositories(repoPath?: string): string[] {
+  return JSON.parse(native.listRepositories(resolveRepoPath(repoPath))) as string[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════
