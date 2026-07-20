@@ -593,7 +593,9 @@ fn main() -> Result<()> {
             repository,
             entity_type,
         } => cmd_list(&base_dir, repository.as_deref(), entity_type.as_deref()),
-        Commands::Branch { repository, name } => cmd_branch(&base_dir, &repository, name.as_deref()),
+        Commands::Branch { repository, name } => {
+            cmd_branch(&base_dir, &repository, name.as_deref())
+        }
         Commands::Tag { repository, name } => cmd_tag(&base_dir, &repository, name.as_deref()),
         Commands::Set {
             uri,
@@ -695,7 +697,9 @@ fn prompt_for_provider() -> Result<String> {
 fn open_repo(base_dir: &Path, repository: &str) -> Result<Repository> {
     let repo_path = base_dir.join(repository);
     Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| match e {
-        NapError::RepositoryNotFound(_) => anyhow::anyhow!("repository not found: '{}'", repository),
+        NapError::RepositoryNotFound(_) => {
+            anyhow::anyhow!("repository not found: '{}'", repository)
+        }
         _ => anyhow::anyhow!(e),
     })
 }

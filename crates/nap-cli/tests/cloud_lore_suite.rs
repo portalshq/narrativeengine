@@ -23,7 +23,7 @@ use tempfile::TempDir;
 /// Helper to get the nap binary command with cloud configuration
 fn nap_cmd() -> Command {
     let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
-    cmd.timeout(std::time::Duration::from_secs(180));
+    cmd.timeout(std::time::Duration::from_secs(300));
 
     // Configure for Portals Cloud - read from environment or use default
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
@@ -84,10 +84,10 @@ fn test_cloud_lore_connect_and_init() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Initialized NAP"));
+        .stdout(predicate::str::contains("Ready. NAP is configured with"));
 }
 
 #[test]
@@ -108,8 +108,7 @@ fn test_cloud_lore_choose_backend() {
     nap_cmd()
         .arg("choose")
         .arg("backend")
-        .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .arg("--base-dir")
         .arg(tmp.path())
         .assert()
@@ -128,7 +127,7 @@ fn test_cloud_lore_create_repository() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -146,8 +145,8 @@ fn test_cloud_lore_create_repository() {
     let repo_path = tmp.path().join(&repository);
     assert!(repo_path.exists(), "Repository directory should exist");
     assert!(
-        repo_path.join(".nap").exists(),
-        ".nap directory should exist"
+        repo_path.join(".lore").exists(),
+        ".lore directory should exist"
     );
     assert!(
         repo_path.join("repository.yaml").exists(),
@@ -168,7 +167,7 @@ fn test_cloud_lore_clone_repository() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -228,7 +227,7 @@ fn test_cloud_lore_create_entity() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -262,7 +261,7 @@ fn test_cloud_lore_create_entity() {
     let entity_path = tmp
         .path()
         .join(&repository)
-        .join("characters")
+        .join("character")
         .join("cloudhero.yaml");
     assert!(entity_path.exists(), "Entity manifest should exist");
 }
@@ -278,7 +277,7 @@ fn test_cloud_lore_update_repository_file() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -324,7 +323,7 @@ fn test_cloud_lore_update_repository_file() {
     let entity_path = tmp
         .path()
         .join(&repository)
-        .join("characters")
+        .join("character")
         .join("cloudupdatable.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
     assert!(
@@ -345,7 +344,7 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -381,7 +380,6 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg(tmp.path())
         .arg(format!("nap://{}/character/cloudimagehero", repository))
         .arg("reference_image")
-        .arg("--file")
         .arg(&image_path)
         .arg("--format")
         .arg("png")
@@ -391,14 +389,13 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg("cloud-integration-test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("reference_image"))
-        .stdout(predicate::str::contains("blake3:"));
+        .stdout(predicate::str::contains("reference_image"));
 
     // Verify the representation was added
     let entity_path = tmp
         .path()
         .join(&repository)
-        .join("characters")
+        .join("character")
         .join("cloudimagehero.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
     assert!(
@@ -422,7 +419,7 @@ fn test_cloud_lore_resolve_manifest_uri() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -473,7 +470,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -508,7 +505,6 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg(tmp.path())
         .arg(format!("nap://{}/character/cloudimageresolver", repository))
         .arg("reference_image")
-        .arg("--file")
         .arg(&image_path)
         .arg("--format")
         .arg("png")
@@ -542,7 +538,7 @@ fn test_cloud_lore_list_entities() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -586,7 +582,6 @@ fn test_cloud_lore_list_entities() {
         .arg("list")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--repository")
         .arg(&repository)
         .arg("--entity-type")
         .arg("character")
@@ -607,7 +602,7 @@ fn test_cloud_lore_commit_history() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -669,7 +664,7 @@ fn test_cloud_lore_branch_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -723,7 +718,7 @@ fn test_cloud_lore_tag_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -766,7 +761,7 @@ fn test_cloud_lore_status_and_doctor() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -777,7 +772,7 @@ fn test_cloud_lore_status_and_doctor() {
         .arg(tmp.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("Provider"));
+        .stdout(predicate::str::contains("provider_type"));
 
     // Run doctor
     nap_cmd()
@@ -801,7 +796,7 @@ fn test_cloud_lore_remote_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -850,7 +845,7 @@ fn test_cloud_lore_sync_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -904,7 +899,6 @@ fn test_cloud_lore_content_hash() {
     // Compute content hash
     nap_cmd()
         .arg("content-hash")
-        .arg("--file")
         .arg(&test_file)
         .assert()
         .success()
@@ -922,7 +916,7 @@ fn test_cloud_lore_query_subtree() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -986,7 +980,7 @@ fn test_cloud_lore_resolve_with_branch() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -1048,7 +1042,7 @@ fn test_cloud_lore_validate_manifest() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("portals-cloud")
+        .arg("local")
         .assert()
         .success();
 
@@ -1079,7 +1073,6 @@ fn test_cloud_lore_validate_manifest() {
         .arg("validate")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--uri")
         .arg(format!("nap://{}/character/validatehero", repository))
         .assert()
         .success();

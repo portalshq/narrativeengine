@@ -167,7 +167,8 @@ impl Repository {
     /// Initialize a new NAP repository.
     pub fn init(path: &Path, repository: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
         let repo_root = path.to_path_buf();
-        if repo_root.join("repository.yaml").exists() || repo_root.join("repository.yaml").exists() {
+        if repo_root.join("repository.yaml").exists() || repo_root.join("repository.yaml").exists()
+        {
             return Err(NapError::RepositoryAlreadyExists(
                 repo_root.display().to_string(),
             ));
@@ -467,12 +468,7 @@ impl Repository {
                 .and_then(|entries| {
                     entries
                         .filter_map(|e| e.ok())
-                        .find(|e| {
-                            e.path()
-                                .extension()
-                                .and_then(|ext| ext.to_str())
-                                == Some("yaml")
-                        })
+                        .find(|e| e.path().extension().and_then(|ext| ext.to_str()) == Some("yaml"))
                         .map(|_| true)
                 })
                 .unwrap_or(false);
@@ -624,7 +620,12 @@ mod tests {
         let repo = mock_repo(&tmp);
 
         let (manifest, _hash) = repo
-            .create_entity(&EntityType::new("character"), "hero", "The Hero", "test-author")
+            .create_entity(
+                &EntityType::new("character"),
+                "hero",
+                "The Hero",
+                "test-author",
+            )
             .unwrap();
 
         assert_eq!(manifest.name, "The Hero");
@@ -643,13 +644,8 @@ mod tests {
         let repo = mock_repo(&tmp);
 
         // Create entity of a custom type
-        repo.create_entity(
-            &EntityType::new("pokemon"),
-            "pikachu",
-            "Pikachu",
-            "test",
-        )
-        .unwrap();
+        repo.create_entity(&EntityType::new("pokemon"), "pikachu", "Pikachu", "test")
+            .unwrap();
 
         // Verify the type directory and marker exist
         assert!(repo.root.join("pokemon").exists());
@@ -663,13 +659,8 @@ mod tests {
         let repo = mock_repo(&tmp);
 
         // Create entities of different types
-        repo.create_entity(
-            &EntityType::new("character"),
-            "hero",
-            "Hero",
-            "author",
-        )
-        .unwrap();
+        repo.create_entity(&EntityType::new("character"), "hero", "Hero", "author")
+            .unwrap();
         repo.create_entity(&EntityType::new("location"), "village", "Village", "author")
             .unwrap();
         repo.create_entity(&EntityType::new("pokemon"), "pikachu", "Pikachu", "author")
@@ -686,24 +677,12 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        repo.create_entity(
-            &EntityType::new("character"),
-            "alice",
-            "Alice",
-            "author",
-        )
-        .unwrap();
-        repo.create_entity(
-            &EntityType::new("character"),
-            "bob",
-            "Bob",
-            "author",
-        )
-        .unwrap();
-
-        let chars = repo
-            .list_entities(&EntityType::new("character"))
+        repo.create_entity(&EntityType::new("character"), "alice", "Alice", "author")
             .unwrap();
+        repo.create_entity(&EntityType::new("character"), "bob", "Bob", "author")
+            .unwrap();
+
+        let chars = repo.list_entities(&EntityType::new("character")).unwrap();
         assert_eq!(chars, vec!["alice", "bob"]);
     }
 
@@ -902,9 +881,7 @@ mod lore_integration_tests {
         repo.delete_entity(&EntityType::new("character"), "hero", "integration-test")
             .unwrap();
 
-        let entities = repo
-            .list_entities(&EntityType::new("character"))
-            .unwrap();
+        let entities = repo.list_entities(&EntityType::new("character")).unwrap();
         assert!(!entities.contains(&"hero".to_string()));
     }
 

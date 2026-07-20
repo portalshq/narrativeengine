@@ -8,7 +8,7 @@ describe("CLI Loading Order", () => {
 
   it("should load user config BEFORE starting lab server", () => {
     const configImportIndex = cliContent.indexOf("await import(absolutePath)");
-    const labImportIndex = cliContent.indexOf('await import("narrative-engine-lab")');
+    const labImportIndex = cliContent.indexOf('await import("../dist/lab/server.js")');
 
     expect(configImportIndex).toBeGreaterThan(0);
     expect(labImportIndex).toBeGreaterThan(0);
@@ -17,7 +17,7 @@ describe("CLI Loading Order", () => {
 
   it("should await config import before importing lab", () => {
     const configImportIndex = cliContent.indexOf("await import(absolutePath)");
-    const labImportIndex = cliContent.indexOf('await import("narrative-engine-lab")');
+    const labImportIndex = cliContent.indexOf('await import("../dist/lab/server.js")');
 
     expect(configImportIndex).toBeGreaterThan(0);
     expect(labImportIndex).toBeGreaterThan(0);
@@ -33,7 +33,7 @@ describe("CLI Loading Order", () => {
       if (line.includes("import(absolutePath)")) {
         userConfigLine = index;
       }
-      if (line.includes('import("narrative-engine-lab")')) {
+      if (line.includes('import("../dist/lab/server.js")')) {
         labImportLine = index;
       }
     });

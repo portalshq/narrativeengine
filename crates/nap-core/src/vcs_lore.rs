@@ -14,7 +14,7 @@
 //! | `log`                        | `lore log --format json`                                 |
 //! | `create_branch`              | `lore branch create <name>`                              |
 //! | `switch_branch`              | `lore branch switch <name>`                              |
-//! | `create_tag`                 | `lore file metadata set --key nap.labels --value <name>` |
+//! | `create_tag`                 | `lore file metadata set repository.yaml nap.labels <json>` |
 //! | `current_branch`             | `lore branch show`                                       |
 //! | `head_hash`                  | `lore log --limit 1 --format json`                       |
 //! | `revert`                     | `lore revision revert <hash>`                            |
@@ -528,17 +528,26 @@ impl VcsBackend for LoreBackend {
                 "file",
                 "metadata",
                 "get",
-                "--key",
+                "repository.yaml",
                 "nap.labels",
-                "--format",
-                "json",
                 "--non-interactive",
             ],
             Some(path),
         )
-        .unwrap_or_else(|_| "[]".to_string());
+        .unwrap_or_else(|_| String::new());
 
-        let mut labels: Vec<String> = serde_json::from_str(&current).unwrap_or_default();
+        // Output format is "nap.labels: [...]" — strip the prefix before JSON parsing.
+        let json_str = current
+            .strip_prefix("nap.labels: ")
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default();
+
+        let mut labels: Vec<String> = if json_str.is_empty() || json_str == "[]" || json_str == "null" {
+            Vec::new()
+        } else {
+            serde_json::from_str(&json_str).unwrap_or_default()
+        };
+
         if !labels.contains(&name.to_string()) {
             labels.push(name.to_string());
         }
@@ -551,9 +560,8 @@ impl VcsBackend for LoreBackend {
                 "file",
                 "metadata",
                 "set",
-                "--key",
+                "repository.yaml",
                 "nap.labels",
-                "--value",
                 &labels_json,
                 "--non-interactive",
             ],
@@ -569,20 +577,28 @@ impl VcsBackend for LoreBackend {
                 "file",
                 "metadata",
                 "get",
-                "--key",
+                "repository.yaml",
                 "nap.labels",
-                "--format",
-                "json",
                 "--non-interactive",
             ],
             Some(path),
         )?;
 
-        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+        if stdout.is_empty() {
             return Ok(Vec::new());
         }
 
-        let labels: Vec<String> = serde_json::from_str(&stdout).map_err(|e| {
+        // Output format is "nap.labels: [...]" — strip the prefix before JSON parsing.
+        let json_str = stdout
+            .strip_prefix("nap.labels: ")
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|| stdout.trim().to_string());
+
+        if json_str.is_empty() || json_str == "[]" || json_str == "null" {
+            return Ok(Vec::new());
+        }
+
+        let labels: Vec<String> = serde_json::from_str(&json_str).map_err(|e| {
             NapError::VcsError(format!(
                 "failed to parse lore labels JSON: {}. Raw: {}",
                 e, stdout

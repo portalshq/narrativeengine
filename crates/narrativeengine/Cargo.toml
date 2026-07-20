@@ -16,8 +16,20 @@ schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+once_cell = { workspace = true }
+chrono = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+
+[build-dependencies]
+tonic-build = { version = "0.12" }
+prost-build = { version = "0.13" }
+protoc-bin-vendored = "3"
 
 [dev-dependencies]
 narrativeengine = { path = ".", package = "narrativeengine" }
 proptest = { workspace = true }
 rstest = { workspace = true }
+tokio = { workspace = true }
+
+

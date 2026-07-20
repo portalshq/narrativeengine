@@ -1716,24 +1716,22 @@ dependencies = [
 name = "narrativeengine"
 version = "0.4.5"
 dependencies = [
+ "chrono",
  "nap-core",
  "narrativeengine",
+ "once_cell",
  "proptest",
+ "prost",
+ "prost-build",
+ "protoc-bin-vendored",
  "rstest",
  "schemars",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "narrativeengine-codegen"
-version = "0.4.5"
-dependencies = [
- "anyhow",
- "clap",
- "narrativeengine",
- "serde_json",
+ "tokio",
+ "tonic",
+ "tonic-build",
 ]
 
 [[package]]

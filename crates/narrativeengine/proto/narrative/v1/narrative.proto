@@ -1,0 +1,24 @@
+syntax = "proto3";
+package narrative.v1;
+
+message BlockId {
+  oneof id {
+    int64 num = 1;
+    string str = 2;
+  }
+}
+
+message BaseNarrativeBlock {
+  BlockId id = 1;
+  uint64 index = 2;
+  string content = 3;
+  int64 happened_at = 4;
+  optional bool is_notable = 5;
+}
+
+message BaseNarrativeLore {
+  BlockId id = 1;
+  string content = 2;
+  int64 happened_at = 3;
+  optional bool is_active = 4;
+}

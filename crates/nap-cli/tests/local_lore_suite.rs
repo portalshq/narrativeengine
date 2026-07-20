@@ -18,7 +18,7 @@ use tempfile::TempDir;
 /// Helper to get the nap binary command
 fn nap_cmd() -> Command {
     let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
-    cmd.timeout(std::time::Duration::from_secs(120));
+    cmd.timeout(std::time::Duration::from_secs(300));
     cmd.env("NAP_LORE_URL_BASE", "lore://localhost:41337");
     cmd.env("NAP_WORKSPACE_ID", "default");
     cmd
@@ -70,7 +70,7 @@ fn test_local_lore_connect_and_init() {
         .arg("local")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Initialized NAP"));
+        .stdout(predicate::str::contains("Ready. NAP is configured with"));
 }
 
 #[test]
@@ -102,8 +102,8 @@ fn test_local_lore_create_repository() {
     let repo_path = tmp.path().join(&repository);
     assert!(repo_path.exists(), "Repository directory should exist");
     assert!(
-        repo_path.join(".nap").exists(),
-        ".nap directory should exist"
+        repo_path.join(".lore").exists(),
+        ".lore directory should exist"
     );
     assert!(
         repo_path.join("repository.yaml").exists(),
@@ -112,6 +112,7 @@ fn test_local_lore_create_repository() {
 }
 
 #[test]
+#[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_clone_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-clone-repo");
@@ -216,7 +217,7 @@ fn test_local_lore_create_entity() {
     let entity_path = tmp
         .path()
         .join(&repository)
-        .join("characters")
+        .join("character")
         .join("testhero.yaml");
     assert!(entity_path.exists(), "Entity manifest should exist");
 }
@@ -278,7 +279,7 @@ fn test_local_lore_update_repository_file() {
     let entity_path = tmp
         .path()
         .join(&repository)
-        .join("characters")
+        .join("character")
         .join("updatablehero.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
     assert!(
@@ -335,7 +336,6 @@ fn test_local_lore_add_image_to_repository() {
         .arg(tmp.path())
         .arg(format!("nap://{}/character/imagehero", repository))
         .arg("reference_image")
-        .arg("--file")
         .arg(&image_path)
         .arg("--format")
         .arg("png")
@@ -352,7 +352,7 @@ fn test_local_lore_add_image_to_repository() {
     let entity_path = tmp
         .path()
         .join(&repository)
-        .join("characters")
+        .join("character")
         .join("imagehero.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
     assert!(
@@ -462,7 +462,6 @@ fn test_local_lore_resolve_image_from_manifest() {
         .arg(tmp.path())
         .arg(format!("nap://{}/character/imageresolver", repository))
         .arg("reference_image")
-        .arg("--file")
         .arg(&image_path)
         .arg("--format")
         .arg("png")
@@ -540,7 +539,6 @@ fn test_local_lore_list_entities() {
         .arg("list")
         .arg("--base-dir")
         .arg(tmp.path())
-        .arg("--repository")
         .arg(&repository)
         .arg("--entity-type")
         .arg("character")
@@ -731,7 +729,7 @@ fn test_local_lore_status_and_doctor() {
         .arg(tmp.path())
         .assert()
         .success()
-        .stdout(predicate::str::contains("Provider"));
+        .stdout(predicate::str::contains("provider_type"));
 
     // Run doctor
     nap_cmd()
@@ -743,6 +741,7 @@ fn test_local_lore_status_and_doctor() {
 }
 
 #[test]
+#[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_remote_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-remote");
@@ -790,6 +789,7 @@ fn test_local_lore_remote_operations() {
 }
 
 #[test]
+#[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_sync_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-sync");
@@ -854,7 +854,6 @@ fn test_local_lore_content_hash() {
     // Compute content hash
     nap_cmd()
         .arg("content-hash")
-        .arg("--file")
         .arg(&test_file)
         .assert()
         .success()

@@ -48,3 +48,5 @@ toystory/
 
 # Lore workspace data
 .lore/
+python/narrativeengine/narrativeengine/gen/
+typescript/narrativeengine/src/gen/

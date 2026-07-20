@@ -42,17 +42,31 @@ impl RemoteProvider {
     }
 
     /// Parse URL to extract HTTP health check endpoint
+    /// 
+    /// Lore server uses port 41337 for gRPC/QUIC (lore:// URLs) and port 41339 for HTTP.
+    /// This function converts lore://host:41337 to http://host:41339/health_check
     fn http_health_url(&self) -> Result<String> {
-        // Convert lore://host:port to http://host:port
-        let url = if self.url_base.starts_with("lore://") {
-            self.url_base.replace("lore://", "http://")
+        // Parse the lore:// URL to extract host and optionally port
+        let (scheme, rest) = if self.url_base.starts_with("lore://") {
+            ("http", &self.url_base[7..]) // "lore://" is 7 characters
         } else if self.url_base.starts_with("lores://") {
-            self.url_base.replace("lores://", "https://")
+            ("https", &self.url_base[8..]) // "lores://" is 8 characters
         } else {
             anyhow::bail!("Invalid Lore URL format: {}", self.url_base);
         };
 
-        Ok(format!("{}/health_check", url))
+        // Split host and port if present
+        let host = if rest.contains(':') {
+            // Extract host part, ignore the lore port (typically 41337)
+            rest.split(':').next().unwrap()
+        } else {
+            rest
+        };
+
+        // Lore server uses port 41339 for HTTP health checks
+        let http_port = 41339;
+        
+        Ok(format!("{}://{}:{}/health_check", scheme, host, http_port))
     }
 }
 
@@ -155,13 +169,20 @@ mod tests {
         let provider = RemoteProvider::new("lore://localhost:41337", "default");
         assert_eq!(
             provider.http_health_url().unwrap(),
-            "http://localhost:41337/health_check"
+            "http://localhost:41339/health_check"
         );
 
         let provider = RemoteProvider::new("lores://example.com:41337", "default");
         assert_eq!(
             provider.http_health_url().unwrap(),
-            "https://example.com:41337/health_check"
+            "https://example.com:41339/health_check"
+        );
+        
+        // Test without port in URL
+        let provider = RemoteProvider::new("lore://192.168.0.27", "default");
+        assert_eq!(
+            provider.http_health_url().unwrap(),
+            "http://192.168.0.27:41339/health_check"
         );
     }
 }

@@ -475,7 +475,11 @@ pub fn repo_list_branches(base_path: String, repository: String) -> napi::Result
 }
 
 #[napi(js_name = "repoCreateTag")]
-pub fn repo_create_tag(base_path: String, repository: String, name: String) -> napi::Result<String> {
+pub fn repo_create_tag(
+    base_path: String,
+    repository: String,
+    name: String,
+) -> napi::Result<String> {
     let repo = open_repo(&base_path, &repository)?;
     repo.create_tag(&name).map_err(map_error)?;
     Ok(serde_json::json!({"success": true, "tag": name}).to_string())

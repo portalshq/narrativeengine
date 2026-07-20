@@ -14,7 +14,12 @@ pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
 
     // Contract: create and read entity
     let (manifest, _) = repo
-        .create_entity(&EntityType::new("character"), "hero", "Test Hero", "contract")
+        .create_entity(
+            &EntityType::new("character"),
+            "hero",
+            "Test Hero",
+            "contract",
+        )
         .unwrap();
     assert_eq!(manifest.name, "Test Hero");
 
@@ -39,9 +44,7 @@ pub fn run_repository_contract(backend: impl VcsBackend + 'static) {
     assert!(after.version >= 2);
 
     // Contract: list entities
-    let entities = repo
-        .list_entities(&EntityType::new("character"))
-        .unwrap();
+    let entities = repo.list_entities(&EntityType::new("character")).unwrap();
     assert!(entities.contains(&"hero".to_string()));
 
     // Contract: history is non-empty

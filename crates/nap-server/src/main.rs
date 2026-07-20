@@ -192,7 +192,10 @@ async fn main() {
         // List repositories
         .route("/repositories", get(handle_list_repositories))
         // List entities
-        .route("/repositories/{repository}/entities", get(handle_list_entities))
+        .route(
+            "/repositories/{repository}/entities",
+            get(handle_list_entities),
+        )
         // Init repository
         .route("/init/{repository}", post(handle_init))
         // Switch branch
@@ -252,8 +255,8 @@ async fn handle_init(
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let repo_path = state.base_path.join(&repository);
-    let repo = Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env())).map_err(
-        |e| {
+    let repo = Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env()))
+        .map_err(|e| {
             let (status, code) = match &e {
                 nap_core::NapError::RepositoryAlreadyExists(_) => {
                     (StatusCode::CONFLICT, "ALREADY_EXISTS")
@@ -268,8 +271,7 @@ async fn handle_init(
                     code: code.to_string(),
                 }),
             )
-        },
-    )?;
+        })?;
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -1077,17 +1079,15 @@ async fn handle_list_entities(
     let type_filter = params.get("type");
 
     // Discover all entity types dynamically
-    let types = repo
-        .list_entity_types()
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError {
-                    error: e.to_string(),
-                    code: "TYPE_DISCOVERY_FAILED".to_string(),
-                }),
-            )
-        })?;
+    let types = repo.list_entity_types().map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiError {
+                error: e.to_string(),
+                code: "TYPE_DISCOVERY_FAILED".to_string(),
+            }),
+        )
+    })?;
 
     for et in types {
         if let Some(filter) = type_filter
