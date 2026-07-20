@@ -30,21 +30,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install target
         run: rustup target add ${{ matrix.target }}
-       - uses: actions/setup-python@v5
-         with:
-           python-version: "3.13"
-
-       - name: Install Protobuf
-         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-       - name: Install Codegen Tools
-         run: pip install maturin grpcio-tools
-       - name: Generate Protos
-         run: just generate-protos
- 
-       - run: maturin build --release --out ../../target/wheels --target ${{ matrix.target }}
-         working-directory: python/narrativeengine
-
-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install maturin
+      - run: maturin build --release --out ../../target/wheels --target ${{ matrix.target }}
+        working-directory: python/narrativeengine
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-narrativeengine-${{ matrix.target }}
@@ -62,14 +53,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-
       - run: pip install twine
-
       - uses: actions/download-artifact@v4
         with:
           pattern: wheel-narrativeengine-*
           path: target/wheels/
           merge-multiple: true
-
       - run: ls -la target/wheels/
       - run: twine upload --skip-existing --username __token__ --password "${{ secrets.MATURIN_PYPI_TOKEN }}" target/wheels/*.whl

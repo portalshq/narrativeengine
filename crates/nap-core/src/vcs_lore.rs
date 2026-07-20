@@ -542,11 +542,12 @@ impl VcsBackend for LoreBackend {
             .map(|s| s.trim().to_string())
             .unwrap_or_default();
 
-        let mut labels: Vec<String> = if json_str.is_empty() || json_str == "[]" || json_str == "null" {
-            Vec::new()
-        } else {
-            serde_json::from_str(&json_str).unwrap_or_default()
-        };
+        let mut labels: Vec<String> =
+            if json_str.is_empty() || json_str == "[]" || json_str == "null" {
+                Vec::new()
+            } else {
+                serde_json::from_str(&json_str).unwrap_or_default()
+            };
 
         if !labels.contains(&name.to_string()) {
             labels.push(name.to_string());

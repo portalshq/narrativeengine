@@ -42,7 +42,7 @@ impl RemoteProvider {
     }
 
     /// Parse URL to extract HTTP health check endpoint
-    /// 
+    ///
     /// Lore server uses port 41337 for gRPC/QUIC (lore:// URLs) and port 41339 for HTTP.
     /// This function converts lore://host:41337 to http://host:41339/health_check
     fn http_health_url(&self) -> Result<String> {
@@ -65,7 +65,7 @@ impl RemoteProvider {
 
         // Lore server uses port 41339 for HTTP health checks
         let http_port = 41339;
-        
+
         Ok(format!("{}://{}:{}/health_check", scheme, host, http_port))
     }
 }
@@ -177,7 +177,7 @@ mod tests {
             provider.http_health_url().unwrap(),
             "https://example.com:41339/health_check"
         );
-        
+
         // Test without port in URL
         let provider = RemoteProvider::new("lore://192.168.0.27", "default");
         assert_eq!(

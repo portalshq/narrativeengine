@@ -27,7 +27,7 @@ pub mod narrative {
 
 // Convenience re-exports
 pub use engine::{LabConfig, NarrativeEngine, ResolvedLabConfig};
-pub use provider::{HybridCandidate, InMemoryNarrativeProvider, NarrativeProvider};
-pub use types::{BlockId};
 pub use narrative::v1::{BaseNarrativeBlock, BaseNarrativeLore};
+pub use provider::{HybridCandidate, InMemoryNarrativeProvider, NarrativeProvider};
+pub use types::BlockId;
 pub use utils::{normalize_score, validate_provider_shape};

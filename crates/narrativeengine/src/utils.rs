@@ -36,7 +36,9 @@ where
 /// Returns `false` and logs an error if `provider` is `None`.
 pub fn validate_provider_shape_dyn(provider: Option<&dyn std::any::Any>) -> bool {
     if provider.is_none() {
-        eprintln!("[NarrativeEngine] Invalid Provider: Missing methods [getLoreAtoms, getNotableEvents, getBlocksByIndices, getHybridSearchCandidates, getBlockCount]");
+        eprintln!(
+            "[NarrativeEngine] Invalid Provider: Missing methods [getLoreAtoms, getNotableEvents, getBlocksByIndices, getHybridSearchCandidates, getBlockCount]"
+        );
         return false;
     }
     true

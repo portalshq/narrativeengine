@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::provider::{HybridCandidate, InMemoryNarrativeProvider, NarrativeProvider};
 use crate::sequence::{
-    generate_reciprocal_sequence, sequence_to_block_indices, RAG_DIVISIONS, RAG_MIN_BLOCKS,
+    RAG_DIVISIONS, RAG_MIN_BLOCKS, generate_reciprocal_sequence, sequence_to_block_indices,
 };
-use crate::trace::{logger_narrative_trace, TraceObject, TracePhases};
+use crate::trace::{TraceObject, TracePhases, logger_narrative_trace};
 use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, NarrativeBlockExt};
 
 /// Maximum hybrid-search survivors kept after the saliency gate.
@@ -91,18 +91,30 @@ pub trait HasNarrativeLore {
 }
 
 impl HasNarrativeBlock for BaseNarrativeBlock {
-    fn block_id_str(&self) -> String { self.block_id().to_string() }
-    fn block_index(&self) -> usize   { self.index as usize }
-    fn block_content(&self) -> &str  { &self.content }
-    fn happened_at(&self) -> i64     { self.happened_at }
-    fn notable(&self) -> bool        { self.is_notable() }
+    fn block_id_str(&self) -> String {
+        self.block_id().to_string()
+    }
+    fn block_index(&self) -> usize {
+        self.index as usize
+    }
+    fn block_content(&self) -> &str {
+        &self.content
+    }
+    fn happened_at(&self) -> i64 {
+        self.happened_at
+    }
+    fn notable(&self) -> bool {
+        self.is_notable()
+    }
 }
 
-
-
 impl HasNarrativeLore for BaseNarrativeLore {
-    fn lore_content(&self) -> &str { &self.content }
-    fn happened_at(&self) -> i64   { self.happened_at }
+    fn lore_content(&self) -> &str {
+        &self.content
+    }
+    fn happened_at(&self) -> i64 {
+        self.happened_at
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,9 +141,9 @@ struct SharedContext<TBlock, TLore> {
 
 pub struct NarrativeEngine<
     TBlock: Clone + Send + Sync = BaseNarrativeBlock,
-    TLore:  Clone + Send + Sync = BaseNarrativeLore,
+    TLore: Clone + Send + Sync = BaseNarrativeLore,
 > {
-    provider:   Box<dyn NarrativeProvider<TBlock, TLore>>,
+    provider: Box<dyn NarrativeProvider<TBlock, TLore>>,
     lab_config: ResolvedLabConfig,
 }
 
@@ -144,10 +156,13 @@ impl Default for NarrativeEngine {
 impl<TBlock, TLore> NarrativeEngine<TBlock, TLore>
 where
     TBlock: Clone + Send + Sync + HasNarrativeBlock + 'static,
-    TLore:  Clone + Send + Sync + HasNarrativeLore  + 'static,
+    TLore: Clone + Send + Sync + HasNarrativeLore + 'static,
 {
     pub fn new(provider: Box<dyn NarrativeProvider<TBlock, TLore>>) -> Self {
-        Self { provider, lab_config: ResolvedLabConfig::default() }
+        Self {
+            provider,
+            lab_config: ResolvedLabConfig::default(),
+        }
     }
 
     pub fn set_lab_config(&mut self, overrides: LabConfig) {
@@ -163,8 +178,11 @@ where
     /// Generates a single context prompt.
     pub async fn generate_context(&self, channel_id: &str, query: &str) -> String {
         match self.generate_context_single(channel_id, query).await {
-            Ok(p)  => p,
-            Err(e) => { eprintln!("[NarrativeEngine] Error: {e}"); String::new() }
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("[NarrativeEngine] Error: {e}");
+                String::new()
+            }
         }
     }
 
@@ -175,8 +193,11 @@ where
         queries: &[String],
     ) -> HashMap<String, String> {
         let shared = match self.fetch_shared_context(channel_id).await {
-            Ok(s)  => s,
-            Err(e) => { eprintln!("[NarrativeEngine] Batch error: {e}"); return HashMap::new(); }
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("[NarrativeEngine] Batch error: {e}");
+                return HashMap::new();
+            }
         };
 
         let candidate_map = self
@@ -202,14 +223,17 @@ where
         let total_block_count = self.provider.get_block_count(channel_id).await;
 
         let mut lore_atoms = self.provider.get_lore_atoms(channel_id).await;
-        lore_atoms.sort_by(|a, b| b.happened_at().cmp(&a.happened_at()));
+        lore_atoms.sort_by_key(|b| std::cmp::Reverse(b.happened_at()));
         lore_atoms.truncate(self.lab_config.max_lore_atoms);
 
         let mut blocks_historical: Vec<TBlock> = Vec::new();
         if total_block_count >= RAG_MIN_BLOCKS {
-            let seq     = generate_reciprocal_sequence(total_block_count, RAG_DIVISIONS);
+            let seq = generate_reciprocal_sequence(total_block_count, RAG_DIVISIONS);
             let indices = sequence_to_block_indices(&seq);
-            blocks_historical = self.provider.get_blocks_by_indices(channel_id, &indices).await;
+            blocks_historical = self
+                .provider
+                .get_blocks_by_indices(channel_id, &indices)
+                .await;
         }
 
         let current_block_count = blocks_historical
@@ -217,7 +241,12 @@ where
             .map(|b| b.block_index() + 1)
             .unwrap_or(0);
 
-        Ok(SharedContext { total_block_count, lore_atoms, blocks_historical, current_block_count })
+        Ok(SharedContext {
+            total_block_count,
+            lore_atoms,
+            blocks_historical,
+            current_block_count,
+        })
     }
 
     /// Processes candidates against shared context (batch path only).
@@ -228,8 +257,14 @@ where
         shared: &SharedContext<TBlock, TLore>,
     ) -> String {
         let survivors = self.score_and_filter(candidates);
-        let blocks_chrono = self.merge_and_sort_chronologically(&shared.blocks_historical, &survivors);
-        self.compose_prose(&blocks_chrono, &shared.lore_atoms, query, shared.current_block_count)
+        let blocks_chrono =
+            self.merge_and_sort_chronologically(&shared.blocks_historical, &survivors);
+        self.compose_prose(
+            &blocks_chrono,
+            &shared.lore_atoms,
+            query,
+            shared.current_block_count,
+        )
     }
 
     // ── Core single-query pipeline ────────────────────────────────────────────
@@ -243,7 +278,7 @@ where
         let total_block_count = self.provider.get_block_count(channel_id).await;
 
         let mut lore_atoms = self.provider.get_lore_atoms(channel_id).await;
-        lore_atoms.sort_by(|a, b| b.happened_at().cmp(&a.happened_at()));
+        lore_atoms.sort_by_key(|b| std::cmp::Reverse(b.happened_at()));
         lore_atoms.truncate(self.lab_config.max_lore_atoms);
 
         let candidates_hybrid = self
@@ -255,10 +290,13 @@ where
         let mut block_sequence_intervals: Vec<usize> = Vec::new();
 
         if total_block_count >= RAG_MIN_BLOCKS {
-            let seq     = generate_reciprocal_sequence(total_block_count, RAG_DIVISIONS);
+            let seq = generate_reciprocal_sequence(total_block_count, RAG_DIVISIONS);
             let indices = sequence_to_block_indices(&seq);
             block_sequence_intervals = indices.clone();
-            blocks_historical = self.provider.get_blocks_by_indices(channel_id, &indices).await;
+            blocks_historical = self
+                .provider
+                .get_blocks_by_indices(channel_id, &indices)
+                .await;
         }
 
         // ── PHASE 2 + 3: FUSION, SCORING, SALIENCY GATE, TIE-BREAKER ────────
@@ -277,7 +315,11 @@ where
                     } else {
                         score_raw
                     };
-                    ScoredCandidate { block: c.block, score_raw_fused: score_raw, score_final_fused: score_final }
+                    ScoredCandidate {
+                        block: c.block,
+                        score_raw_fused: score_raw,
+                        score_final_fused: score_final,
+                    }
                 })
                 .collect();
 
@@ -312,9 +354,16 @@ where
         let blocks_chrono = self.merge_and_sort_chronologically(&blocks_historical, &survivors);
 
         // ── PHASE 5: PROSE GENERATION ─────────────────────────────────────────
-        let current_block_count = blocks_chrono.last().map(|b| b.block_index() + 1).unwrap_or(0);
-        let finalized_prompt =
-            self.compose_prose(&blocks_chrono, &lore_atoms, input_query, current_block_count);
+        let current_block_count = blocks_chrono
+            .last()
+            .map(|b| b.block_index() + 1)
+            .unwrap_or(0);
+        let finalized_prompt = self.compose_prose(
+            &blocks_chrono,
+            &lore_atoms,
+            input_query,
+            current_block_count,
+        );
 
         // ── TRACE ─────────────────────────────────────────────────────────────
         let trace = TraceObject {
@@ -324,11 +373,11 @@ where
             provider_type: Some(self.provider.get_provider_type().to_string()),
             lab_config: Some(LabConfig {
                 saliency_threshold: Some(self.lab_config.saliency_threshold),
-                weight_dense:       Some(self.lab_config.weight_dense),
-                significance_coef:  Some(self.lab_config.significance_coef),
-                temporal_phrasing:  Some(self.lab_config.temporal_phrasing),
-                max_lore_atoms:     Some(self.lab_config.max_lore_atoms),
-                timestamp:          self.lab_config.timestamp.clone(),
+                weight_dense: Some(self.lab_config.weight_dense),
+                significance_coef: Some(self.lab_config.significance_coef),
+                temporal_phrasing: Some(self.lab_config.temporal_phrasing),
+                max_lore_atoms: Some(self.lab_config.max_lore_atoms),
+                timestamp: self.lab_config.timestamp.clone(),
             }),
             phases: TracePhases {
                 harvest: Some(serde_json::json!({
@@ -342,14 +391,14 @@ where
                     "survivorCount": survivors.len(),
                 })),
                 timeline: Some(serde_json::json!({ "blockCount": blocks_chrono.len() })),
-                prose:    Some(serde_json::json!({
+                prose: Some(serde_json::json!({
                     "promptLength": finalized_prompt.len(),
                     "loreAtoms":    lore_atoms.len(),
                     "blockCount":   blocks_chrono.len(),
                 })),
                 fusion: None,
             },
-            finalized_prompt:    Some(finalized_prompt.clone()),
+            finalized_prompt: Some(finalized_prompt.clone()),
             discarded_candidates: None,
             error: None,
         };
@@ -370,8 +419,16 @@ where
             .map(|c| {
                 let raw = c.score_vector_dense * self.lab_config.weight_dense
                     + c.score_keyword_sparse * weight_sparse;
-                let fin = if c.block.notable() { raw * self.lab_config.significance_coef } else { raw };
-                ScoredCandidate { block: c.block, score_raw_fused: raw, score_final_fused: fin }
+                let fin = if c.block.notable() {
+                    raw * self.lab_config.significance_coef
+                } else {
+                    raw
+                };
+                ScoredCandidate {
+                    block: c.block,
+                    score_raw_fused: raw,
+                    score_final_fused: fin,
+                }
             })
             .collect();
 
@@ -384,11 +441,14 @@ where
         });
         scored.truncate(LIMIT_HYBRID_TOP);
 
-        scored.into_iter().map(|s| HybridCandidate {
-            block: s.block,
-            score_vector_dense: s.score_raw_fused,
-            score_keyword_sparse: 0.0,
-        }).collect()
+        scored
+            .into_iter()
+            .map(|s| HybridCandidate {
+                block: s.block,
+                score_vector_dense: s.score_raw_fused,
+                score_keyword_sparse: 0.0,
+            })
+            .collect()
     }
 
     // ── Merge + chronological sort ────────────────────────────────────────────
@@ -444,7 +504,11 @@ where
             .map(|block| {
                 if self.lab_config.temporal_phrasing {
                     let offset = current_block_count.saturating_sub(block.block_index()) + 1;
-                    let unit = if offset == 1 { "storyblock" } else { "storyblocks" };
+                    let unit = if offset == 1 {
+                        "storyblock"
+                    } else {
+                        "storyblocks"
+                    };
                     format!("{offset} {unit} ago: {}", block.block_content())
                 } else {
                     format!("Entry {}: {}", block.block_id_str(), block.block_content())
@@ -478,7 +542,7 @@ mod tests {
 
     struct StubProvider {
         candidates: Vec<HybridCandidate<BaseNarrativeBlock>>,
-        lore:       Vec<BaseNarrativeLore>,
+        lore: Vec<BaseNarrativeLore>,
         block_count: usize,
     }
 
@@ -503,36 +567,87 @@ mod tests {
     }
 
     impl NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore> for StubProvider {
-        fn get_block_count(&self, _: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = usize> + Send + '_>> {
+        fn get_block_count(
+            &self,
+            _: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = usize> + Send + '_>> {
             let c = self.block_count;
             Box::pin(async move { c })
         }
-        fn get_lore_atoms(&self, _: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<BaseNarrativeLore>> + Send + '_>> {
+        fn get_lore_atoms(
+            &self,
+            _: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<BaseNarrativeLore>> + Send + '_>>
+        {
             let l = self.lore.clone();
             Box::pin(async move { l })
         }
-        fn get_hybrid_search_candidates(&self, _: &str, _: &str, _: usize) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<HybridCandidate<BaseNarrativeBlock>>> + Send + '_>> {
+        fn get_hybrid_search_candidates(
+            &self,
+            _: &str,
+            _: &str,
+            _: usize,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<Output = Vec<HybridCandidate<BaseNarrativeBlock>>>
+                    + Send
+                    + '_,
+            >,
+        > {
             let c = self.candidates.clone();
             Box::pin(async move { c })
         }
-        fn get_hybrid_search_candidates_batch(&self, _: &str, qs: &[String], _: usize) -> std::pin::Pin<Box<dyn std::future::Future<Output = HashMap<String, Vec<HybridCandidate<BaseNarrativeBlock>>>> + Send + '_>> {
+        fn get_hybrid_search_candidates_batch(
+            &self,
+            _: &str,
+            qs: &[String],
+            _: usize,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = HashMap<String, Vec<HybridCandidate<BaseNarrativeBlock>>>,
+                    > + Send
+                    + '_,
+            >,
+        > {
             let c = self.candidates.clone();
             let q2 = qs.to_vec();
             Box::pin(async move { q2.into_iter().map(|q| (q, c.clone())).collect() })
         }
-        fn get_blocks_by_indices(&self, _: &str, _: &[usize]) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<BaseNarrativeBlock>> + Send + '_>> {
+        fn get_blocks_by_indices(
+            &self,
+            _: &str,
+            _: &[usize],
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<BaseNarrativeBlock>> + Send + '_>>
+        {
             Box::pin(async { vec![] })
         }
-        fn get_notable_events(&self, _: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<BaseNarrativeBlock>> + Send + '_>> {
+        fn get_notable_events(
+            &self,
+            _: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<BaseNarrativeBlock>> + Send + '_>>
+        {
             Box::pin(async { vec![] })
         }
-        fn add_block(&self, _: &str, _: BaseNarrativeBlock) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
+        fn add_block(
+            &self,
+            _: &str,
+            _: BaseNarrativeBlock,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
             Box::pin(async {})
         }
-        fn get_provider_type(&self) -> &'static str { "test" }
+        fn get_provider_type(&self) -> &'static str {
+            "test"
+        }
     }
 
-    fn block(id: &str, index: usize, content: &str, happened_at: i64, notable: bool) -> BaseNarrativeBlock {
+    fn block(
+        id: &str,
+        index: usize,
+        content: &str,
+        happened_at: i64,
+        notable: bool,
+    ) -> BaseNarrativeBlock {
         BaseNarrativeBlock {
             id: Some(BlockId::Str(id.into()).into()),
             index: index as u64,
@@ -573,14 +688,17 @@ mod tests {
         let mut engine = NarrativeEngine::new(Box::new(StubProvider::new(vec![], lore)));
         engine.set_lab_config(LabConfig {
             max_lore_atoms: Some(5),
-            saliency_threshold: None, weight_dense: None,
-            significance_coef: None, temporal_phrasing: None, timestamp: None,
+            saliency_threshold: None,
+            weight_dense: None,
+            significance_coef: None,
+            temporal_phrasing: None,
+            timestamp: None,
         });
 
         let result = engine.generate_context("test", "query").await;
         // Top-5 by happened_at descending: Rule 49 .. Rule 45
         assert!(result.contains("Rule 49"), "result: {result}");
-        assert!(!result.contains("Rule 0"),  "result: {result}");
+        assert!(!result.contains("Rule 0"), "result: {result}");
     }
 
     // ── Significance Coefficient 1.5× ─────────────────────────────────────────
@@ -618,16 +736,37 @@ mod tests {
     #[tokio::test]
     async fn temporal_phrasing_offset_calculation() {
         let blocks = vec![
-            BaseNarrativeBlock { id: Some(BlockId::Num(1).into()), index: 1, content: "The beginning".into(), happened_at: 100, is_notable: Some(false) },
-            BaseNarrativeBlock { id: Some(BlockId::Num(2).into()), index: 2, content: "The middle".into(),    happened_at: 150, is_notable: Some(false) },
-            BaseNarrativeBlock { id: Some(BlockId::Num(3).into()), index: 3, content: "The end".into(),       happened_at: 200, is_notable: Some(false) },
+            BaseNarrativeBlock {
+                id: Some(BlockId::Num(1).into()),
+                index: 1,
+                content: "The beginning".into(),
+                happened_at: 100,
+                is_notable: Some(false),
+            },
+            BaseNarrativeBlock {
+                id: Some(BlockId::Num(2).into()),
+                index: 2,
+                content: "The middle".into(),
+                happened_at: 150,
+                is_notable: Some(false),
+            },
+            BaseNarrativeBlock {
+                id: Some(BlockId::Num(3).into()),
+                index: 3,
+                content: "The end".into(),
+                happened_at: 200,
+                is_notable: Some(false),
+            },
         ];
         let provider = InMemoryNarrativeProvider::new(blocks, vec![]);
         let mut engine = NarrativeEngine::new(Box::new(provider));
         engine.set_lab_config(LabConfig {
             temporal_phrasing: Some(true),
-            saliency_threshold: None, weight_dense: None,
-            significance_coef: None, max_lore_atoms: None, timestamp: None,
+            saliency_threshold: None,
+            weight_dense: None,
+            significance_coef: None,
+            max_lore_atoms: None,
+            timestamp: None,
         });
 
         let result = engine.generate_context("test", "query").await;
@@ -650,8 +789,11 @@ mod tests {
         let mut engine = NarrativeEngine::default();
         engine.set_lab_config(LabConfig {
             saliency_threshold: Some(0.9),
-            weight_dense: None, significance_coef: None,
-            temporal_phrasing: None, max_lore_atoms: None, timestamp: None,
+            weight_dense: None,
+            significance_coef: None,
+            temporal_phrasing: None,
+            max_lore_atoms: None,
+            timestamp: None,
         });
         let cfg = engine.get_lab_config();
         assert!((cfg.saliency_threshold - 0.9).abs() < f64::EPSILON);

@@ -2,8 +2,8 @@
 //!
 //! Mirrors `mocks.ts`: 100 story blocks and 20 lore entries.
 
-use once_cell::sync::Lazy;
 use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, BlockId};
+use once_cell::sync::Lazy;
 
 macro_rules! block {
     ($id:expr, $idx:expr, $content:expr, $at:expr, $notable:expr) => {
@@ -30,130 +30,830 @@ macro_rules! lore {
 
 pub static MOCK_BLOCKS: Lazy<Vec<BaseNarrativeBlock>> = Lazy::new(|| {
     vec![
-        block!(1,  1,  "Kael woke up in the cryo-pod with no memory.", 2000, true),
-        block!(2,  2,  "The cryo-fluid drained slowly, hissing against the cold floor.", 2050, false),
-        block!(3,  3,  "He pushed the heavy glass lid open, shivering violently.", 2100, false),
-        block!(4,  4,  "Emergency lights painted the cryo-bay in a dull, pulsing red.", 2150, false),
-        block!(5,  5,  "He checked his cybernetic left arm; the servos whined but engaged.", 2200, true),
-        block!(6,  6,  "A sharp pain pulsed behind his eyes, a side effect of prolonged stasis.", 2300, false),
-        block!(7,  7,  "He stumbled to the nearest wall console to check the ship's status.", 2400, false),
-        block!(8,  8,  "The console screen was cracked, displaying a cascade of error logs.", 2450, false),
-        block!(9,  9,  "He bypassed the hardware fault using his arm's diagnostic port.", 2600, true),
-        block!(10, 10, "Main power was offline. Auxiliary reserves were at 14%.", 2700, false),
-        block!(11, 11, "Kael found his environmental suit in locker 4A and suited up.", 3000, false),
-        block!(12, 12, "The suit's HUD flickered to life, syncing with his neural link.", 3100, false),
-        block!(13, 13, "He unsealed the cryo-bay doors manually.", 3300, false),
-        block!(14, 14, "The main corridor was devoid of gravity; he pushed off the bulkhead.", 3400, false),
-        block!(15, 15, "Debris floated aimlessly—shattered data pads and frozen coolant droplets.", 3500, false),
-        block!(16, 16, "He navigated through the engineering deck, looking for the AI core.", 3800, false),
-        block!(17, 17, "A localized gravity field caught him off guard near the reactor.", 4000, false),
-        block!(18, 18, "He landed hard, testing the durability of his prosthetic shoulder.", 4050, false),
-        block!(19, 19, "Booting the secondary AI node in engineering took three attempts.", 4300, true),
-        block!(20, 20, "A synthetic voice finally chimed in his earpiece.", 4500, false),
-        block!(21, 21, "'Captain Kael. Diagnostics restored,' ELARA stated flatly.", 4600, true),
-        block!(22, 22, "Kael asked for a ship-wide damage assessment.", 4700, false),
-        block!(23, 23, "ELARA processed the request, the HUD displaying structural schematics.", 4800, false),
-        block!(24, 24, "Several red zones flashed across the mid-section.", 4900, false),
-        block!(25, 25, "The ship's AI, ELARA, reported a hull breach in Sector 4.", 5000, false),
-        block!(26, 26, "Sector 4 housed the primary cargo bay and atmospheric processors.", 5100, false),
-        block!(27, 27, "Kael sprinted down the transit tube toward the breach.", 5300, false),
-        block!(28, 28, "The bulkheads had sealed, trapping the decompression.", 5500, false),
-        block!(29, 29, "He grabbed a heavy plasma welder from a maintenance cache.", 5800, true),
-        block!(30, 30, "Overriding the Sector 4 blast doors required his command codes.", 6000, false),
-        block!(31, 31, "The doors cracked open, and a violent rush of air pushed past him.", 6100, false),
-        block!(32, 32, "He engaged his magnetic boots, locking himself to the deck.", 6200, false),
-        block!(33, 33, "The breach was small, a micro-meteorite puncture, but widening.", 6500, false),
-        block!(34, 34, "Kael applied a durasteel patch and welded the edges shut.", 6800, true),
-        block!(35, 35, "The whistling sound of escaping oxygen finally ceased.", 7000, false),
-        block!(36, 36, "ELARA initiated repressurization of the cargo bay.", 7100, false),
-        block!(37, 37, "With the immediate threat neutralized, Kael inspected the cargo.", 7500, false),
-        block!(38, 38, "Several storage containers had come loose during the impact.", 7600, false),
-        block!(39, 39, "He began securing the magnetic locks on the loose crates.", 7800, false),
-        block!(40, 40, "A strange harmonic vibration caught his attention.", 8000, false),
-        block!(41, 41, "He tracked the hum to a damaged, unmarked stasis pod.", 8100, false),
-        block!(42, 42, "The pod's biometric scanner was dead, the glass frosted over.", 8200, false),
-        block!(43, 43, "Wiping the frost away, he expected to see a crew member.", 8300, false),
-        block!(44, 44, "Instead, the pod was empty save for a single object resting on the floor.", 8400, false),
-        block!(45, 45, "He pried the emergency release lever, popping the pod open.", 8450, false),
-        block!(46, 46, "The ambient temperature dropped sharply as he reached inside.", 8480, false),
-        block!(47, 47, "His cybernetic fingers brushed against cold, unnatural geometry.", 8490, false),
-        block!(48, 48, "Kael found a strange obsidian cube in the cargo bay.", 8500, true),
-        block!(49, 49, "ELARA warns that the cube is emitting a Void signature.", 8600, false),
-        block!(50, 50, "Kael reaches for his rebreather as the alarms scream.", 9000, false),
-        block!(51, 51, "A black mist began venting from the cube's intricate etchings.", 9050, true),
-        block!(52, 52, "The ship's gravity generators flickered and died completely.", 9100, false),
-        block!(53, 53, "Kael dropped the cube, but it remained suspended in the zero-g environment.", 9200, false),
-        block!(54, 54, "Shadows detached from the bulkheads, slithering toward the artifact.", 9300, false),
-        block!(55, 55, "ELARA initiated a localized EMP pulse to disrupt the entity.", 9500, true),
-        block!(56, 56, "The pulse shattered the shadows, sending them recoiling into the vents.", 9600, false),
-        block!(57, 57, "Kael sealed the cube inside a hazardous materials lockbox.", 9800, false),
-        block!(58, 58, "He needed to get the ship to the surface of Kepler-186f immediately.", 10000, true),
-        block!(59, 59, "Returning to the bridge, he strapped into the pilot's chair.", 10200, false),
-        block!(60, 60, "ELARA calculated an aggressive atmospheric entry vector.", 10500, false),
-        block!(61, 61, "The ship shuddered violently as it hit the exosphere.", 10800, false),
-        block!(62, 62, "Plasma licked the viewport screens, glowing a terrifying orange.", 11000, false),
-        block!(63, 63, "Heat shields were holding at 85% capacity.", 11200, false),
-        block!(64, 64, "Kael fought the manual controls to keep the nose aligned.", 11500, false),
-        block!(65, 65, "The toxic green clouds of Kepler-186f swallowed the ship.", 11800, true),
-        block!(66, 66, "Turbulence threw loose items across the bridge.", 12000, false),
-        block!(67, 67, "Altimeter readouts dropped rapidly: 10,000 meters, 8,000 meters.", 12200, false),
-        block!(68, 68, "He fired the retro-thrusters, straining the ship's fatigued chassis.", 12500, false),
-        block!(69, 69, "The ground approached rapidly—a dense jungle of alien flora.", 12800, false),
-        block!(70, 70, "The landing struts deployed with a heavy, mechanical thud.", 13000, true),
-        block!(71, 71, "Impact. The ship settled into the soft, acidic soil of the planet.", 13200, true),
-        block!(72, 72, "Kael let out a breath he didn't realize he was holding.", 13400, false),
-        block!(73, 73, "ELARA ran surface scans; the atmosphere was confirmed lethal.", 13600, false),
-        block!(74, 74, "He checked his suit's oxygen reserves: 12 hours remaining.", 13800, false),
-        block!(75, 75, "He packed a field kit, ensuring his plasma rifle was fully charged.", 14000, false),
-        block!(76, 76, "He secured the lockbox containing the cube to his tactical harness.", 14200, false),
-        block!(77, 77, "The airlock cycled with a hiss, exposing him to the alien world.", 14500, true),
-        block!(78, 78, "Visibility was low, choked by thick, luminescent spores.", 14700, false),
-        block!(79, 79, "He stepped off the ramp, his boots sinking into the violet moss.", 15000, false),
-        block!(80, 80, "The lockbox hummed softly, vibrating against his back.", 15200, false),
-        block!(81, 81, "He activated his wrist-mounted pathfinder module.", 15500, false),
-        block!(82, 82, "A signal beacon was detected three kilometers to the north.", 15800, true),
-        block!(83, 83, "He began the trek, cutting through dense, razor-sharp foliage.", 16000, false),
-        block!(84, 84, "Strange, multi-limbed creatures scurried away from his light.", 16200, false),
-        block!(85, 85, "An acidic rain began to fall, pattering aggressively against his visor.", 16500, false),
-        block!(86, 86, "His suit's corrosive resistant shielding held, but energy drained faster.", 16800, false),
-        block!(87, 87, "The terrain shifted from jungle to a rocky, obsidian plateau.", 17000, false),
-        block!(88, 88, "He noticed the rock formations mirrored the etchings on the cube.", 17200, true),
-        block!(89, 89, "A low rumble vibrated through the ground beneath him.", 17500, false),
-        block!(90, 90, "The beacon signal grew stronger, leading him to a massive crater.", 17800, false),
-        block!(91, 91, "At the center of the crater lay an ancient, derelict structure.", 18000, true),
-        block!(92, 92, "The structure was emitting a harmonic frequency matching the cube's.", 18200, false),
-        block!(93, 93, "Shadows detached from the ruins, swirling in the green mist.", 18500, false),
-        block!(94, 94, "Void-Eaters materialised, blocking his path to the entrance.", 18800, true),
-        block!(95, 95, "Kael leveled his plasma rifle, disabling the safety.", 19000, false),
-        block!(96, 96, "He fired a concentrated blast, incinerating the closest entity.", 19200, false),
-        block!(97, 97, "The lockbox unlatched itself, the cube hovering into the open air.", 19500, true),
-        block!(98, 98, "The cube projected a beam of dark light towards the ruins.", 19700, false),
-        block!(99, 99, "The doors of the ancient structure ground open, revealing an abyss.", 19900, true),
-        block!(100,100,"Kael took a deep breath of recycled air and stepped inside.", 20000, true),
+        block!(
+            1,
+            1,
+            "Kael woke up in the cryo-pod with no memory.",
+            2000,
+            true
+        ),
+        block!(
+            2,
+            2,
+            "The cryo-fluid drained slowly, hissing against the cold floor.",
+            2050,
+            false
+        ),
+        block!(
+            3,
+            3,
+            "He pushed the heavy glass lid open, shivering violently.",
+            2100,
+            false
+        ),
+        block!(
+            4,
+            4,
+            "Emergency lights painted the cryo-bay in a dull, pulsing red.",
+            2150,
+            false
+        ),
+        block!(
+            5,
+            5,
+            "He checked his cybernetic left arm; the servos whined but engaged.",
+            2200,
+            true
+        ),
+        block!(
+            6,
+            6,
+            "A sharp pain pulsed behind his eyes, a side effect of prolonged stasis.",
+            2300,
+            false
+        ),
+        block!(
+            7,
+            7,
+            "He stumbled to the nearest wall console to check the ship's status.",
+            2400,
+            false
+        ),
+        block!(
+            8,
+            8,
+            "The console screen was cracked, displaying a cascade of error logs.",
+            2450,
+            false
+        ),
+        block!(
+            9,
+            9,
+            "He bypassed the hardware fault using his arm's diagnostic port.",
+            2600,
+            true
+        ),
+        block!(
+            10,
+            10,
+            "Main power was offline. Auxiliary reserves were at 14%.",
+            2700,
+            false
+        ),
+        block!(
+            11,
+            11,
+            "Kael found his environmental suit in locker 4A and suited up.",
+            3000,
+            false
+        ),
+        block!(
+            12,
+            12,
+            "The suit's HUD flickered to life, syncing with his neural link.",
+            3100,
+            false
+        ),
+        block!(
+            13,
+            13,
+            "He unsealed the cryo-bay doors manually.",
+            3300,
+            false
+        ),
+        block!(
+            14,
+            14,
+            "The main corridor was devoid of gravity; he pushed off the bulkhead.",
+            3400,
+            false
+        ),
+        block!(
+            15,
+            15,
+            "Debris floated aimlessly—shattered data pads and frozen coolant droplets.",
+            3500,
+            false
+        ),
+        block!(
+            16,
+            16,
+            "He navigated through the engineering deck, looking for the AI core.",
+            3800,
+            false
+        ),
+        block!(
+            17,
+            17,
+            "A localized gravity field caught him off guard near the reactor.",
+            4000,
+            false
+        ),
+        block!(
+            18,
+            18,
+            "He landed hard, testing the durability of his prosthetic shoulder.",
+            4050,
+            false
+        ),
+        block!(
+            19,
+            19,
+            "Booting the secondary AI node in engineering took three attempts.",
+            4300,
+            true
+        ),
+        block!(
+            20,
+            20,
+            "A synthetic voice finally chimed in his earpiece.",
+            4500,
+            false
+        ),
+        block!(
+            21,
+            21,
+            "'Captain Kael. Diagnostics restored,' ELARA stated flatly.",
+            4600,
+            true
+        ),
+        block!(
+            22,
+            22,
+            "Kael asked for a ship-wide damage assessment.",
+            4700,
+            false
+        ),
+        block!(
+            23,
+            23,
+            "ELARA processed the request, the HUD displaying structural schematics.",
+            4800,
+            false
+        ),
+        block!(
+            24,
+            24,
+            "Several red zones flashed across the mid-section.",
+            4900,
+            false
+        ),
+        block!(
+            25,
+            25,
+            "The ship's AI, ELARA, reported a hull breach in Sector 4.",
+            5000,
+            false
+        ),
+        block!(
+            26,
+            26,
+            "Sector 4 housed the primary cargo bay and atmospheric processors.",
+            5100,
+            false
+        ),
+        block!(
+            27,
+            27,
+            "Kael sprinted down the transit tube toward the breach.",
+            5300,
+            false
+        ),
+        block!(
+            28,
+            28,
+            "The bulkheads had sealed, trapping the decompression.",
+            5500,
+            false
+        ),
+        block!(
+            29,
+            29,
+            "He grabbed a heavy plasma welder from a maintenance cache.",
+            5800,
+            true
+        ),
+        block!(
+            30,
+            30,
+            "Overriding the Sector 4 blast doors required his command codes.",
+            6000,
+            false
+        ),
+        block!(
+            31,
+            31,
+            "The doors cracked open, and a violent rush of air pushed past him.",
+            6100,
+            false
+        ),
+        block!(
+            32,
+            32,
+            "He engaged his magnetic boots, locking himself to the deck.",
+            6200,
+            false
+        ),
+        block!(
+            33,
+            33,
+            "The breach was small, a micro-meteorite puncture, but widening.",
+            6500,
+            false
+        ),
+        block!(
+            34,
+            34,
+            "Kael applied a durasteel patch and welded the edges shut.",
+            6800,
+            true
+        ),
+        block!(
+            35,
+            35,
+            "The whistling sound of escaping oxygen finally ceased.",
+            7000,
+            false
+        ),
+        block!(
+            36,
+            36,
+            "ELARA initiated repressurization of the cargo bay.",
+            7100,
+            false
+        ),
+        block!(
+            37,
+            37,
+            "With the immediate threat neutralized, Kael inspected the cargo.",
+            7500,
+            false
+        ),
+        block!(
+            38,
+            38,
+            "Several storage containers had come loose during the impact.",
+            7600,
+            false
+        ),
+        block!(
+            39,
+            39,
+            "He began securing the magnetic locks on the loose crates.",
+            7800,
+            false
+        ),
+        block!(
+            40,
+            40,
+            "A strange harmonic vibration caught his attention.",
+            8000,
+            false
+        ),
+        block!(
+            41,
+            41,
+            "He tracked the hum to a damaged, unmarked stasis pod.",
+            8100,
+            false
+        ),
+        block!(
+            42,
+            42,
+            "The pod's biometric scanner was dead, the glass frosted over.",
+            8200,
+            false
+        ),
+        block!(
+            43,
+            43,
+            "Wiping the frost away, he expected to see a crew member.",
+            8300,
+            false
+        ),
+        block!(
+            44,
+            44,
+            "Instead, the pod was empty save for a single object resting on the floor.",
+            8400,
+            false
+        ),
+        block!(
+            45,
+            45,
+            "He pried the emergency release lever, popping the pod open.",
+            8450,
+            false
+        ),
+        block!(
+            46,
+            46,
+            "The ambient temperature dropped sharply as he reached inside.",
+            8480,
+            false
+        ),
+        block!(
+            47,
+            47,
+            "His cybernetic fingers brushed against cold, unnatural geometry.",
+            8490,
+            false
+        ),
+        block!(
+            48,
+            48,
+            "Kael found a strange obsidian cube in the cargo bay.",
+            8500,
+            true
+        ),
+        block!(
+            49,
+            49,
+            "ELARA warns that the cube is emitting a Void signature.",
+            8600,
+            false
+        ),
+        block!(
+            50,
+            50,
+            "Kael reaches for his rebreather as the alarms scream.",
+            9000,
+            false
+        ),
+        block!(
+            51,
+            51,
+            "A black mist began venting from the cube's intricate etchings.",
+            9050,
+            true
+        ),
+        block!(
+            52,
+            52,
+            "The ship's gravity generators flickered and died completely.",
+            9100,
+            false
+        ),
+        block!(
+            53,
+            53,
+            "Kael dropped the cube, but it remained suspended in the zero-g environment.",
+            9200,
+            false
+        ),
+        block!(
+            54,
+            54,
+            "Shadows detached from the bulkheads, slithering toward the artifact.",
+            9300,
+            false
+        ),
+        block!(
+            55,
+            55,
+            "ELARA initiated a localized EMP pulse to disrupt the entity.",
+            9500,
+            true
+        ),
+        block!(
+            56,
+            56,
+            "The pulse shattered the shadows, sending them recoiling into the vents.",
+            9600,
+            false
+        ),
+        block!(
+            57,
+            57,
+            "Kael sealed the cube inside a hazardous materials lockbox.",
+            9800,
+            false
+        ),
+        block!(
+            58,
+            58,
+            "He needed to get the ship to the surface of Kepler-186f immediately.",
+            10000,
+            true
+        ),
+        block!(
+            59,
+            59,
+            "Returning to the bridge, he strapped into the pilot's chair.",
+            10200,
+            false
+        ),
+        block!(
+            60,
+            60,
+            "ELARA calculated an aggressive atmospheric entry vector.",
+            10500,
+            false
+        ),
+        block!(
+            61,
+            61,
+            "The ship shuddered violently as it hit the exosphere.",
+            10800,
+            false
+        ),
+        block!(
+            62,
+            62,
+            "Plasma licked the viewport screens, glowing a terrifying orange.",
+            11000,
+            false
+        ),
+        block!(
+            63,
+            63,
+            "Heat shields were holding at 85% capacity.",
+            11200,
+            false
+        ),
+        block!(
+            64,
+            64,
+            "Kael fought the manual controls to keep the nose aligned.",
+            11500,
+            false
+        ),
+        block!(
+            65,
+            65,
+            "The toxic green clouds of Kepler-186f swallowed the ship.",
+            11800,
+            true
+        ),
+        block!(
+            66,
+            66,
+            "Turbulence threw loose items across the bridge.",
+            12000,
+            false
+        ),
+        block!(
+            67,
+            67,
+            "Altimeter readouts dropped rapidly: 10,000 meters, 8,000 meters.",
+            12200,
+            false
+        ),
+        block!(
+            68,
+            68,
+            "He fired the retro-thrusters, straining the ship's fatigued chassis.",
+            12500,
+            false
+        ),
+        block!(
+            69,
+            69,
+            "The ground approached rapidly—a dense jungle of alien flora.",
+            12800,
+            false
+        ),
+        block!(
+            70,
+            70,
+            "The landing struts deployed with a heavy, mechanical thud.",
+            13000,
+            true
+        ),
+        block!(
+            71,
+            71,
+            "Impact. The ship settled into the soft, acidic soil of the planet.",
+            13200,
+            true
+        ),
+        block!(
+            72,
+            72,
+            "Kael let out a breath he didn't realize he was holding.",
+            13400,
+            false
+        ),
+        block!(
+            73,
+            73,
+            "ELARA ran surface scans; the atmosphere was confirmed lethal.",
+            13600,
+            false
+        ),
+        block!(
+            74,
+            74,
+            "He checked his suit's oxygen reserves: 12 hours remaining.",
+            13800,
+            false
+        ),
+        block!(
+            75,
+            75,
+            "He packed a field kit, ensuring his plasma rifle was fully charged.",
+            14000,
+            false
+        ),
+        block!(
+            76,
+            76,
+            "He secured the lockbox containing the cube to his tactical harness.",
+            14200,
+            false
+        ),
+        block!(
+            77,
+            77,
+            "The airlock cycled with a hiss, exposing him to the alien world.",
+            14500,
+            true
+        ),
+        block!(
+            78,
+            78,
+            "Visibility was low, choked by thick, luminescent spores.",
+            14700,
+            false
+        ),
+        block!(
+            79,
+            79,
+            "He stepped off the ramp, his boots sinking into the violet moss.",
+            15000,
+            false
+        ),
+        block!(
+            80,
+            80,
+            "The lockbox hummed softly, vibrating against his back.",
+            15200,
+            false
+        ),
+        block!(
+            81,
+            81,
+            "He activated his wrist-mounted pathfinder module.",
+            15500,
+            false
+        ),
+        block!(
+            82,
+            82,
+            "A signal beacon was detected three kilometers to the north.",
+            15800,
+            true
+        ),
+        block!(
+            83,
+            83,
+            "He began the trek, cutting through dense, razor-sharp foliage.",
+            16000,
+            false
+        ),
+        block!(
+            84,
+            84,
+            "Strange, multi-limbed creatures scurried away from his light.",
+            16200,
+            false
+        ),
+        block!(
+            85,
+            85,
+            "An acidic rain began to fall, pattering aggressively against his visor.",
+            16500,
+            false
+        ),
+        block!(
+            86,
+            86,
+            "His suit's corrosive resistant shielding held, but energy drained faster.",
+            16800,
+            false
+        ),
+        block!(
+            87,
+            87,
+            "The terrain shifted from jungle to a rocky, obsidian plateau.",
+            17000,
+            false
+        ),
+        block!(
+            88,
+            88,
+            "He noticed the rock formations mirrored the etchings on the cube.",
+            17200,
+            true
+        ),
+        block!(
+            89,
+            89,
+            "A low rumble vibrated through the ground beneath him.",
+            17500,
+            false
+        ),
+        block!(
+            90,
+            90,
+            "The beacon signal grew stronger, leading him to a massive crater.",
+            17800,
+            false
+        ),
+        block!(
+            91,
+            91,
+            "At the center of the crater lay an ancient, derelict structure.",
+            18000,
+            true
+        ),
+        block!(
+            92,
+            92,
+            "The structure was emitting a harmonic frequency matching the cube's.",
+            18200,
+            false
+        ),
+        block!(
+            93,
+            93,
+            "Shadows detached from the ruins, swirling in the green mist.",
+            18500,
+            false
+        ),
+        block!(
+            94,
+            94,
+            "Void-Eaters materialised, blocking his path to the entrance.",
+            18800,
+            true
+        ),
+        block!(
+            95,
+            95,
+            "Kael leveled his plasma rifle, disabling the safety.",
+            19000,
+            false
+        ),
+        block!(
+            96,
+            96,
+            "He fired a concentrated blast, incinerating the closest entity.",
+            19200,
+            false
+        ),
+        block!(
+            97,
+            97,
+            "The lockbox unlatched itself, the cube hovering into the open air.",
+            19500,
+            true
+        ),
+        block!(
+            98,
+            98,
+            "The cube projected a beam of dark light towards the ruins.",
+            19700,
+            false
+        ),
+        block!(
+            99,
+            99,
+            "The doors of the ancient structure ground open, revealing an abyss.",
+            19900,
+            true
+        ),
+        block!(
+            100,
+            100,
+            "Kael took a deep breath of recycled air and stepped inside.",
+            20000,
+            true
+        ),
     ]
 });
 
 pub static MOCK_LORE: Lazy<Vec<BaseNarrativeLore>> = Lazy::new(|| {
     vec![
-        lore!("lore-1",  "The atmosphere on Kepler-186f is toxic without a rebreather.", 1000, true),
-        lore!("lore-2",  "Captain Kael has a cybernetic left arm from the Sol Wars.", 1005, true),
-        lore!("lore-3",  "The 'Void-Eaters' are attracted to high-energy signatures.", 1010, true),
-        lore!("lore-4",  "The USS Daedalus is a deep-space freighter retrofitted for reconnaissance.", 1015, true),
-        lore!("lore-5",  "ELARA stands for Electronic Logistics and Reconnaissance Automaton.", 1020, true),
-        lore!("lore-6",  "Obsidian Cubes are Class-Omega artifacts, prohibited by the Terran Coalition.", 1025, true),
-        lore!("lore-7",  "The Sol Wars ended in 2098 after the destruction of the Lunar colonies.", 1030, false),
-        lore!("lore-8",  "Kepler-186f's flora secretes a highly acidic neuro-sap.", 1035, true),
-        lore!("lore-9",  "Cryo-stasis memory fragmentation is a common but temporary condition.", 1040, true),
-        lore!("lore-10", "Void signatures disrupt localized gravitational fields and electronics.", 1045, true),
-        lore!("lore-11", "Kael's neural link allows him to interface directly with Terran tech.", 1050, true),
-        lore!("lore-12", "Sector 4 of the Daedalus houses restricted atmospheric processors.", 1055, false),
-        lore!("lore-13", "Standard plasma welders operate at 15,000 degrees Kelvin.", 1060, true),
-        lore!("lore-14", "A localized EMP is the only known deterrent for low-tier Void entities.", 1065, true),
-        lore!("lore-15", "Terran Hazard Lockboxes are lined with quantum-sealed lead.", 1070, true),
-        lore!("lore-16", "The Ruins of Kepler were discovered by probes but never explored by humans.", 1075, true),
-        lore!("lore-17", "Magnetic boots are standard issue for zero-gravity EVA and internal breaches.", 1080, true),
-        lore!("lore-18", "Dark light projection is a theoretical physics phenomenon linked to the Void.", 1085, true),
-        lore!("lore-19", "The Daedalus's heat shields were past their recommended maintenance cycle.", 1090, false),
-        lore!("lore-20", "Kael lost his original arm during the Siege of Mare Crisium.", 1095, true),
+        lore!(
+            "lore-1",
+            "The atmosphere on Kepler-186f is toxic without a rebreather.",
+            1000,
+            true
+        ),
+        lore!(
+            "lore-2",
+            "Captain Kael has a cybernetic left arm from the Sol Wars.",
+            1005,
+            true
+        ),
+        lore!(
+            "lore-3",
+            "The 'Void-Eaters' are attracted to high-energy signatures.",
+            1010,
+            true
+        ),
+        lore!(
+            "lore-4",
+            "The USS Daedalus is a deep-space freighter retrofitted for reconnaissance.",
+            1015,
+            true
+        ),
+        lore!(
+            "lore-5",
+            "ELARA stands for Electronic Logistics and Reconnaissance Automaton.",
+            1020,
+            true
+        ),
+        lore!(
+            "lore-6",
+            "Obsidian Cubes are Class-Omega artifacts, prohibited by the Terran Coalition.",
+            1025,
+            true
+        ),
+        lore!(
+            "lore-7",
+            "The Sol Wars ended in 2098 after the destruction of the Lunar colonies.",
+            1030,
+            false
+        ),
+        lore!(
+            "lore-8",
+            "Kepler-186f's flora secretes a highly acidic neuro-sap.",
+            1035,
+            true
+        ),
+        lore!(
+            "lore-9",
+            "Cryo-stasis memory fragmentation is a common but temporary condition.",
+            1040,
+            true
+        ),
+        lore!(
+            "lore-10",
+            "Void signatures disrupt localized gravitational fields and electronics.",
+            1045,
+            true
+        ),
+        lore!(
+            "lore-11",
+            "Kael's neural link allows him to interface directly with Terran tech.",
+            1050,
+            true
+        ),
+        lore!(
+            "lore-12",
+            "Sector 4 of the Daedalus houses restricted atmospheric processors.",
+            1055,
+            false
+        ),
+        lore!(
+            "lore-13",
+            "Standard plasma welders operate at 15,000 degrees Kelvin.",
+            1060,
+            true
+        ),
+        lore!(
+            "lore-14",
+            "A localized EMP is the only known deterrent for low-tier Void entities.",
+            1065,
+            true
+        ),
+        lore!(
+            "lore-15",
+            "Terran Hazard Lockboxes are lined with quantum-sealed lead.",
+            1070,
+            true
+        ),
+        lore!(
+            "lore-16",
+            "The Ruins of Kepler were discovered by probes but never explored by humans.",
+            1075,
+            true
+        ),
+        lore!(
+            "lore-17",
+            "Magnetic boots are standard issue for zero-gravity EVA and internal breaches.",
+            1080,
+            true
+        ),
+        lore!(
+            "lore-18",
+            "Dark light projection is a theoretical physics phenomenon linked to the Void.",
+            1085,
+            true
+        ),
+        lore!(
+            "lore-19",
+            "The Daedalus's heat shields were past their recommended maintenance cycle.",
+            1090,
+            false
+        ),
+        lore!(
+            "lore-20",
+            "Kael lost his original arm during the Siege of Mare Crisium.",
+            1095,
+            true
+        ),
     ]
 });

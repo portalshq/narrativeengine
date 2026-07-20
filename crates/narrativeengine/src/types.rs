@@ -3,8 +3,8 @@
 //! Mirrors generated Protobuf structures for wire compatibility,
 //! with extension traits for internal business logic.
 
-use serde::{Deserialize, Serialize};
 pub use crate::narrative::v1::{BaseNarrativeBlock, BaseNarrativeLore};
+use serde::{Deserialize, Serialize};
 
 /// Internal representation of a block or lore entry ID.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -36,8 +36,12 @@ impl From<crate::narrative::v1::BlockId> for BlockId {
 impl From<BlockId> for crate::narrative::v1::BlockId {
     fn from(id: BlockId) -> Self {
         match id {
-            BlockId::Num(n) => Self { id: Some(crate::narrative::v1::block_id::Id::Num(n)) },
-            BlockId::Str(s) => Self { id: Some(crate::narrative::v1::block_id::Id::Str(s)) },
+            BlockId::Num(n) => Self {
+                id: Some(crate::narrative::v1::block_id::Id::Num(n)),
+            },
+            BlockId::Str(s) => Self {
+                id: Some(crate::narrative::v1::block_id::Id::Str(s)),
+            },
         }
     }
 }
@@ -63,7 +67,10 @@ impl NarrativeBlockExt for BaseNarrativeBlock {
     }
 
     fn block_id(&self) -> BlockId {
-        self.id.clone().map(BlockId::from).unwrap_or(BlockId::Num(0))
+        self.id
+            .clone()
+            .map(BlockId::from)
+            .unwrap_or(BlockId::Num(0))
     }
 }
 
@@ -78,6 +85,9 @@ impl NarrativeLoreExt for BaseNarrativeLore {
     }
 
     fn lore_id(&self) -> BlockId {
-        self.id.clone().map(BlockId::from).unwrap_or(BlockId::Num(0))
+        self.id
+            .clone()
+            .map(BlockId::from)
+            .unwrap_or(BlockId::Num(0))
     }
 }

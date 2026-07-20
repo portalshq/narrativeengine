@@ -30,24 +30,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install target
         run: rustup target add ${{ matrix.target }}
-       - uses: actions/setup-node@v4
-         with:
-           node-version: lts/*
- 
-       - name: Install Protobuf
-         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-       - name: Install Codegen Tools
-         run: npm install --prefix typescript/narrativeengine ts-proto protoc-gen-ts_proto
-       - name: Generate Protos
-         run: just generate-protos
- 
-       - run: npm ci
-         working-directory: typescript/narrativeengine
-
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm ci
+        working-directory: typescript/narrativeengine
       - run: npx napi build --cargo-cwd . --platform --release --target ${{ matrix.target }}
         working-directory: typescript/narrativeengine
-
       - uses: actions/upload-artifact@v4
         with:
           name: napi-narrativeengine-${{ matrix.target }}
@@ -68,21 +57,16 @@ jobs:
         with:
           node-version: lts/*
           registry-url: "https://registry.npmjs.org"
-
       - run: npm ci
         working-directory: typescript/narrativeengine
-
       - uses: actions/download-artifact@v4
         with:
           pattern: napi-narrativeengine-*
           path: typescript/narrativeengine/
           merge-multiple: true
-
       - run: npm run build:types
         working-directory: typescript/narrativeengine
-
       - run: ls -la typescript/narrativeengine/*.node
-
       - run: npm publish --access public
         working-directory: typescript/narrativeengine
         env:

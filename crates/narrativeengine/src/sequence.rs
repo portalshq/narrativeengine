@@ -111,7 +111,10 @@ mod tests {
         // Gaps should be larger at the start than the end
         let gap_start = seq[1] - seq[0];
         let gap_end = seq[5] - seq[4];
-        assert!(gap_start > gap_end, "gap_start={gap_start}, gap_end={gap_end}");
+        assert!(
+            gap_start > gap_end,
+            "gap_start={gap_start}, gap_end={gap_end}"
+        );
     }
 
     #[test]

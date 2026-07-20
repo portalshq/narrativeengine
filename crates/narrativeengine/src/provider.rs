@@ -4,8 +4,16 @@
 //! and `InMemoryNarrativeProvider`.
 
 use std::collections::HashMap;
+use std::pin::Pin;
 
 use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, NarrativeBlockExt};
+
+/// Type alias for the complex batch hybrid search future return type
+type BatchHybridSearchFuture<'a, TBlock> = Pin<
+    Box<
+        dyn std::future::Future<Output = HashMap<String, Vec<HybridCandidate<TBlock>>>> + Send + 'a,
+    >,
+>;
 
 /// A search result candidate pairing a block with its retrieval scores.
 #[derive(Debug, Clone)]
@@ -45,7 +53,9 @@ where
         channel_id: &str,
         query: &str,
         limit: usize,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<HybridCandidate<TBlock>>> + Send + '_>>;
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Vec<HybridCandidate<TBlock>>> + Send + '_>,
+    >;
 
     /// Batch hybrid search — one call for N queries.
     fn get_hybrid_search_candidates_batch(
@@ -53,9 +63,7 @@ where
         channel_id: &str,
         queries: &[String],
         limit: usize,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = HashMap<String, Vec<HybridCandidate<TBlock>>>> + Send + '_>,
-    >;
+    ) -> BatchHybridSearchFuture<'_, TBlock>;
 
     /// Returns blocks whose 1-based `index` matches one of `indices`.
     fn get_blocks_by_indices(
@@ -183,14 +191,7 @@ impl NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore>
         _channel_id: &str,
         queries: &[String],
         limit: usize,
-    ) -> std::pin::Pin<
-        Box<
-            dyn std::future::Future<
-                    Output = HashMap<String, Vec<HybridCandidate<BaseNarrativeBlock>>>,
-                > + Send
-                + '_,
-        >,
-    > {
+    ) -> BatchHybridSearchFuture<'_, BaseNarrativeBlock> {
         let blocks_snapshot = self.blocks.lock().unwrap().clone();
         let queries_owned = queries.to_vec();
         Box::pin(async move {
@@ -298,7 +299,12 @@ mod tests {
         // MOCK_LORE has 17 active (3 inactive), plus our new inactive one → still 17
         assert_eq!(atoms.len(), 17);
         assert!(atoms.iter().all(|l| l.is_active()));
-        assert!(atoms.iter().find(|l| l.lore_id().to_string() == "lore-inactive").is_none());
+        assert!(
+            atoms
+                .iter()
+                .find(|l| l.lore_id().to_string() == "lore-inactive")
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -306,7 +312,10 @@ mod tests {
         let p = provider();
         let blocks = p.get_blocks_by_indices("test", &[1, 48]).await;
         assert_eq!(blocks.len(), 2);
-        let ids: Vec<i64> = blocks.iter().map(|b| b.block_id().as_num().unwrap()).collect();
+        let ids: Vec<i64> = blocks
+            .iter()
+            .map(|b| b.block_id().as_num().unwrap())
+            .collect();
         assert!(ids.contains(&1));
         assert!(ids.contains(&48));
     }
@@ -335,10 +344,8 @@ mod tests {
 
     #[tokio::test]
     async fn add_block_increases_count() {
-        let p = InMemoryNarrativeProvider::<BaseNarrativeBlock, BaseNarrativeLore>::new(
-            vec![],
-            vec![],
-        );
+        let p =
+            InMemoryNarrativeProvider::<BaseNarrativeBlock, BaseNarrativeLore>::new(vec![], vec![]);
         assert_eq!(p.get_block_count("test").await, 0);
         let new_block = BaseNarrativeBlock {
             id: Some(BlockId::Num(1).into()),
@@ -373,7 +380,9 @@ mod tests {
     async fn batch_search_returns_map() {
         let p = provider();
         let queries = vec!["cube".to_string(), "ELARA".to_string()];
-        let map = p.get_hybrid_search_candidates_batch("test", &queries, 5).await;
+        let map = p
+            .get_hybrid_search_candidates_batch("test", &queries, 5)
+            .await;
         assert!(map.contains_key("cube"));
         assert!(map.contains_key("ELARA"));
         let cube_results = &map["cube"];

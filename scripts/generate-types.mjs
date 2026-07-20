@@ -2,7 +2,7 @@
 
 /**
  * Generates type definitions for all SDK languages from Rust schemas.
- * Cross-platform equivalent of generate-types.sh — works on Windows, macOS, and Linux.
+ * Now delegates to `just generate-protos`.
  *
  * Usage: node scripts/generate-types.mjs
  *
@@ -32,11 +32,8 @@ export const targets = [
 ];
 
 /**
- * Run codegen for every target.
- * Exits the process on first failure.
+ * Run codegen via just generate-protos.
  * @param {object} [opts] - Options for testing.
- * @param {(cmd: string, opts: object) => void} [opts.exec] - Exec function (defaults to execSync).
- * @param {(path: string) => boolean} [opts.exists] - File-existence checker (defaults to existsSync).
  */
 export function run({ exec = execSync, exists = existsSync, log = console } = {}) {
   if (!exists(manifest)) {
@@ -48,30 +45,11 @@ export function run({ exec = execSync, exists = existsSync, log = console } = {}
     process.exit(1);
   }
 
-  for (const [lang, out] of targets) {
-    const cmd = [
-      "cargo",
-      "run",
-      "--quiet",
-      `--manifest-path "${manifest}"`,
-      "--package narrativeengine-codegen",
-      "--",
-      `--language ${lang}`,
-      `--out "${out}"`,
-    ].join(" ");
-
-    try {
-      exec(cmd, { stdio: "inherit", cwd: rootDir });
-    } catch (err) {
-      log.error(`Failed to generate ${lang} types -> ${out}`);
-      if (err instanceof Error && "stderr" in err) {
-        const stderr = err.stderr?.toString().trim();
-        if (stderr) log.error(stderr);
-      } else if (err instanceof Error) {
-        log.error(err.message);
-      }
-      process.exit(1);
-    }
+  try {
+    exec("just generate-protos", { stdio: "inherit", cwd: rootDir });
+  } catch (err) {
+    log.error(`Failed to generate types via just generate-protos`);
+    process.exit(1);
   }
 }
 

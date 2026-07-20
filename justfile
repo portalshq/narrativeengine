@@ -79,12 +79,9 @@ install:
 generate-types:
     @./scripts/generate-types.sh
 
-# Generate protobufs for narrativeengine
+# Generate protobufs for narrativeengine (no-op: gen/ was dead code, Rust uses tonic-build in build.rs)
 generate-protos:
-    @mkdir -p python/narrativeengine/narrativeengine/gen
-    protoc --python_out=python/narrativeengine/narrativeengine/gen --proto_path=crates/narrativeengine/proto/ crates/narrativeengine/proto/narrative/v1/*.proto
-    @mkdir -p typescript/narrativeengine/src/gen
-    protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=typescript/narrativeengine/src/gen --proto_path=crates/narrativeengine/proto/ crates/narrativeengine/proto/narrative/v1/*.proto
+    @echo "Proto codegen handled by tonic-build in build.rs. Nothing to generate."
 
 # Watch for changes and rebuild (requires cargo-watch)
 watch:

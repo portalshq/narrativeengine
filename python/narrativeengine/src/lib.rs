@@ -7,28 +7,35 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-fn map_error(error: narrativeengine::NarrativeError) -> PyErr {
-    PyValueError::new_err(error.to_string())
+// TODO: Re-implement these functions for the new protobuf-based architecture
+// The old JSON-based functions were removed during the narrativeengine refactor
+
+#[pyfunction]
+fn create_block_json(_id: String, _content: String) -> PyResult<String> {
+    Err(PyValueError::new_err(
+        "create_block_json not yet implemented in new architecture",
+    ))
 }
 
 #[pyfunction]
-fn create_block_json(id: String, content: String) -> PyResult<String> {
-    narrativeengine::create_block_json(id, content).map_err(map_error)
+fn generate_candidate_json(_lore_json: String, _config_json: String) -> PyResult<String> {
+    Err(PyValueError::new_err(
+        "generate_candidate_json not yet implemented in new architecture",
+    ))
 }
 
 #[pyfunction]
-fn generate_candidate_json(lore_json: String, config_json: String) -> PyResult<String> {
-    narrativeengine::generate_candidate_json(&lore_json, &config_json).map_err(map_error)
-}
-
-#[pyfunction]
-fn render_lore_summary_json(lore_json: String) -> PyResult<String> {
-    narrativeengine::render_lore_summary_json(&lore_json).map_err(map_error)
+fn render_lore_summary_json(_lore_json: String) -> PyResult<String> {
+    Err(PyValueError::new_err(
+        "render_lore_summary_json not yet implemented in new architecture",
+    ))
 }
 
 #[pyfunction]
 fn schema_bundle_json() -> PyResult<String> {
-    narrativeengine::schema_bundle_json().map_err(map_error)
+    Err(PyValueError::new_err(
+        "schema_bundle_json not yet implemented in new architecture",
+    ))
 }
 
 #[pyfunction]

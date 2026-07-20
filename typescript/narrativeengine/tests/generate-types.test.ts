@@ -73,21 +73,17 @@ describe("generate-types.mjs run()", () => {
     vi.restoreAllMocks();
   });
 
-  it("invokes exec once per target when all succeed", () => {
+  it("invokes exec once with just generate-protos", () => {
     const execMock = vi.fn();
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
     mod.run({ exec: execMock });
 
-    expect(execMock).toHaveBeenCalledTimes(7);
+    expect(execMock).toHaveBeenCalledTimes(1);
     expect(exitSpy).not.toHaveBeenCalled();
 
-    for (const call of execMock.mock.calls) {
-      const cmd = call[0] as string;
-      expect(cmd).toContain("cargo run");
-      expect(cmd).toContain("--package narrativeengine-codegen");
-      expect(cmd).toContain("--manifest-path");
-    }
+    const cmd = execMock.mock.calls[0][0] as string;
+    expect(cmd).toBe("just generate-protos");
     exitSpy.mockRestore();
   });
 
@@ -139,14 +135,15 @@ describe("generate-types.mjs run()", () => {
     exitSpy.mockRestore();
   });
 
-  it("builds command with quoted manifest path", () => {
+  it("passes cwd: rootDir to the exec call", () => {
     const execMock = vi.fn();
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
     mod.run({ exec: execMock });
 
-    const cmd = execMock.mock.calls[0][0] as string;
-    expect(cmd).toMatch(/--manifest-path ".*Cargo\.toml"/);
+    const [, opts] = execMock.mock.calls[0];
+    expect(opts).toHaveProperty("cwd", mod.rootDir);
+    expect(opts).toHaveProperty("stdio", "inherit");
     exitSpy.mockRestore();
   });
 });
