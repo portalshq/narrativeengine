@@ -32,7 +32,7 @@
 //! Unknown failures capture the full CLI stderr for debugging.  No error
 //! is ever silently swallowed.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
@@ -46,6 +46,9 @@ struct ProviderConfigToml {
     remote_url: Option<String>,
     workspace_id: Option<String>,
 }
+
+/// Hardcoded Portals Cloud URL (can be overridden by NAP_LORE_URL_BASE env var)
+const PORTALS_CLOUD_URL: &str = "lore://cloud.portals.sh:41337";
 
 // ---------------------------------------------------------------------------
 // LoreProcessRunner
@@ -249,25 +252,79 @@ impl LoreBackend {
         }
 
         // Priority 2: Provider configuration
-        if let Ok(nap_dir) = std::env::var("NAP_DIR") {
-            let provider_config_path = Path::new(&nap_dir).join("provider.toml");
-            if provider_config_path.exists() {
-                if let Ok(config_content) = std::fs::read_to_string(&provider_config_path) {
-                    if let Ok(config) = toml::from_str::<ProviderConfigToml>(&config_content) {
-                        if config.provider_type == "remote" {
-                            if let (Some(url), Some(workspace)) = (config.remote_url, config.workspace_id) {
-                                tracing::debug!(
-                                    url_base = %url,
-                                    workspace_id = %workspace,
-                                    "LoreBackend::from_env using provider configuration"
-                                );
-                                return Self {
-                                    remote_url: url,
-                                    workspace_id: workspace,
-                                };
-                            }
-                        }
+        let nap_dir = if let Ok(nap_dir_str) = std::env::var("NAP_DIR") {
+            // Expand ~ in NAP_DIR if present (same logic as nap-cli expand_path)
+            let path = PathBuf::from(&nap_dir_str);
+            if let Some(s) = path.to_str() {
+                if let Some(stripped) = s.strip_prefix('~') {
+                    let home = std::env::var("HOME")
+                        .or_else(|_| std::env::var("USERPROFILE"))
+                        .unwrap_or_else(|_| ".".to_string());
+                    PathBuf::from(home).join(stripped.trim_start_matches('/'))
+                } else {
+                    path
+                }
+            } else {
+                path
+            }
+        } else {
+            // Default to ~/.nap if NAP_DIR is not set
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| ".".to_string());
+            PathBuf::from(home).join(".nap")
+        };
+
+        let provider_config_path = nap_dir.join("provider.toml");
+        if provider_config_path.exists()
+            && let Ok(config_content) = std::fs::read_to_string(&provider_config_path)
+            && let Ok(config) = toml::from_str::<ProviderConfigToml>(&config_content)
+        {
+            match config.provider_type.as_str() {
+                "local" => {
+                    // Local provider uses localhost defaults
+                    tracing::debug!(
+                        url_base = "lore://localhost:41337",
+                        workspace_id = "default",
+                        "LoreBackend::from_env using local provider configuration"
+                    );
+                    return Self {
+                        remote_url: "lore://localhost:41337".to_string(),
+                        workspace_id: "default".to_string(),
+                    };
+                }
+                "remote" => {
+                    // Remote provider uses configured URL and workspace
+                    if let (Some(url), Some(workspace)) = (config.remote_url, config.workspace_id) {
+                        tracing::debug!(
+                            url_base = %url,
+                            workspace_id = %workspace,
+                            "LoreBackend::from_env using remote provider configuration"
+                        );
+                        return Self {
+                            remote_url: url,
+                            workspace_id: workspace,
+                        };
                     }
+                }
+                "portals-cloud" => {
+                    // Portals Cloud uses hardcoded URL (env vars already checked above)
+                    let workspace_id = config.workspace_id.unwrap_or_else(|| "default".to_string());
+                    tracing::debug!(
+                        url_base = %PORTALS_CLOUD_URL,
+                        workspace_id = %workspace_id,
+                        "LoreBackend::from_env using portals-cloud provider configuration"
+                    );
+                    return Self {
+                        remote_url: PORTALS_CLOUD_URL.to_string(),
+                        workspace_id,
+                    };
+                }
+                _ => {
+                    tracing::debug!(
+                        provider_type = %config.provider_type,
+                        "Unknown provider type, falling back to defaults"
+                    );
                 }
             }
         }
@@ -889,6 +946,231 @@ mod tests {
                 let from_env = LoreBackend::from_env();
                 assert_eq!(from_env.remote_url, "lore://custom:9999");
                 assert_eq!(from_env.workspace_id, "custom-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_default_without_env_vars() {
+        // Test default behavior when no env vars are set and no provider config exists
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_env_var_override() {
+        // Test that env vars take precedence over provider config
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", Some("lore://override:1234")),
+                ("NAP_WORKSPACE_ID", Some("override-ws")),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://override:1234");
+                assert_eq!(backend.workspace_id, "override-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_partial_env_override() {
+        // Test partial env var override (only URL set, workspace defaults)
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", Some("lore://partial:5678")),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://partial:5678");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_provider_config() {
+        // Test provider config reading when env vars are not set
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "remote"
+remote_url = "lore://provider:9999"
+workspace_id = "provider-ws"
+"#,
+        )
+        .unwrap();
+
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://provider:9999");
+                assert_eq!(backend.workspace_id, "provider-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_nap_dir_with_tilde() {
+        // Test NAP_DIR with ~ expansion
+        let _home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                // Should use defaults since provider config doesn't exist
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_local_provider_config() {
+        // Test local provider configuration
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "local"
+"#,
+        )
+        .unwrap();
+
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_portals_cloud_provider_config() {
+        // Test portals-cloud provider configuration
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "portals-cloud"
+workspace_id = "cloud-ws"
+"#,
+        )
+        .unwrap();
+
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, PORTALS_CLOUD_URL);
+                assert_eq!(backend.workspace_id, "cloud-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_portals_cloud_default_workspace() {
+        // Test portals-cloud with default workspace
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "portals-cloud"
+"#,
+        )
+        .unwrap();
+
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, PORTALS_CLOUD_URL);
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_unknown_provider_type() {
+        // Test unknown provider type falls back to defaults
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "unknown-provider"
+"#,
+        )
+        .unwrap();
+
+        let nap_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("NAP_LORE_URL_BASE", None::<&str>),
+                ("NAP_WORKSPACE_ID", None::<&str>),
+                ("NAP_DIR", Some(nap_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
             },
         );
     }

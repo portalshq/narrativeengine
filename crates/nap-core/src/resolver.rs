@@ -627,6 +627,7 @@ mod unit_tests {
 #[cfg(all(test, feature = "lore-integration"))]
 mod lore_tests {
     use super::*;
+    use crate::types::EntityType;
     use crate::vcs_lore::LoreBackend;
     use std::time::{SystemTime, UNIX_EPOCH};
     use tempfile::TempDir;
