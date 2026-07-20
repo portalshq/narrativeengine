@@ -694,9 +694,15 @@ fn prompt_for_provider() -> Result<String> {
     }
 }
 
+/// Get LoreBackend with precedence: env vars > provider config > defaults
+fn get_lore_backend(_base_dir: &Path) -> LoreBackend {
+    LoreBackend::from_env()
+}
+
 fn open_repo(base_dir: &Path, repository: &str) -> Result<Repository> {
     let repo_path = base_dir.join(repository);
-    Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| match e {
+    let lore_backend = get_lore_backend(base_dir);
+    Repository::open(&repo_path, Box::new(lore_backend)).map_err(|e| match e {
         NapError::RepositoryNotFound(_) => {
             anyhow::anyhow!("repository not found: '{}'", repository)
         }
@@ -818,7 +824,8 @@ fn cmd_init_universe(base_dir: &Path, repository: &str, remote: Option<&str>) ->
 
     // 2. Perform initialization in temporary path
     emit("Creating repository repository...");
-    let result = Repository::init(&tmp_path, repository, Box::new(LoreBackend::from_env()));
+    let lore_backend = LoreBackend::from_env();
+    let result = Repository::init(&tmp_path, repository, Box::new(lore_backend));
 
     match result {
         Ok(repo) => {
@@ -1144,7 +1151,7 @@ fn cmd_query(base_dir: &Path, uri_str: &str, path: &str, format: &str) -> Result
 
 fn cmd_commit(base_dir: &Path, repository: &str, message: &str, author: &str) -> Result<()> {
     let repo_path = base_dir.join(repository);
-    let vcs = LoreBackend::from_env();
+    let vcs = get_lore_backend(base_dir);
     let hash = nap_core::vcs::VcsBackend::commit(&vcs, &repo_path, message, author)
         .context("failed to commit")?;
     emit(format!("✓ Committed: {} ({})", message, &hash[..12]));

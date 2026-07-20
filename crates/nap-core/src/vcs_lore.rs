@@ -39,6 +39,14 @@ use std::time::Instant;
 use crate::error::NapError;
 use crate::vcs::{CommitInfo, VcsBackend};
 
+/// Minimal TOML structure for parsing provider.toml
+#[derive(serde::Deserialize)]
+struct ProviderConfigToml {
+    provider_type: String,
+    remote_url: Option<String>,
+    workspace_id: Option<String>,
+}
+
 // ---------------------------------------------------------------------------
 // LoreProcessRunner
 // ---------------------------------------------------------------------------
@@ -202,6 +210,8 @@ impl LoreBackend {
     /// Convenience constructor that reads configuration from environment
     /// variables with sensible local-development defaults.
     ///
+    /// Precedence: env vars > provider config > defaults
+    ///
     /// | Env var               | Default                   |
     /// |-----------------------|---------------------------|
     /// | `NAP_LORE_URL_BASE`   | `lore://localhost:41337`  |
@@ -220,10 +230,56 @@ impl LoreBackend {
             });
         }
 
-        let base = std::env::var("NAP_LORE_URL_BASE")
-            .unwrap_or_else(|_| "lore://localhost:41337".to_string());
-        let workspace_id =
-            std::env::var("NAP_WORKSPACE_ID").unwrap_or_else(|_| "default".to_string());
+        // Priority 1: Environment variables (for testing/override)
+        let url_from_env = std::env::var("NAP_LORE_URL_BASE").ok();
+        let workspace_from_env = std::env::var("NAP_WORKSPACE_ID").ok();
+
+        if url_from_env.is_some() || workspace_from_env.is_some() {
+            let base = url_from_env.unwrap_or_else(|| "lore://localhost:41337".to_string());
+            let workspace_id = workspace_from_env.unwrap_or_else(|| "default".to_string());
+            tracing::debug!(
+                url_base = %base,
+                workspace_id = %workspace_id,
+                "LoreBackend::from_env using environment variables (override)"
+            );
+            return Self {
+                remote_url: base,
+                workspace_id,
+            };
+        }
+
+        // Priority 2: Provider configuration
+        if let Ok(nap_dir) = std::env::var("NAP_DIR") {
+            let provider_config_path = Path::new(&nap_dir).join("provider.toml");
+            if provider_config_path.exists() {
+                if let Ok(config_content) = std::fs::read_to_string(&provider_config_path) {
+                    if let Ok(config) = toml::from_str::<ProviderConfigToml>(&config_content) {
+                        if config.provider_type == "remote" {
+                            if let (Some(url), Some(workspace)) = (config.remote_url, config.workspace_id) {
+                                tracing::debug!(
+                                    url_base = %url,
+                                    workspace_id = %workspace,
+                                    "LoreBackend::from_env using provider configuration"
+                                );
+                                return Self {
+                                    remote_url: url,
+                                    workspace_id: workspace,
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Priority 3: Defaults
+        let base = "lore://localhost:41337".to_string();
+        let workspace_id = "default".to_string();
+        tracing::debug!(
+            url_base = %base,
+            workspace_id = %workspace_id,
+            "LoreBackend::from_env using defaults"
+        );
         Self {
             remote_url: base,
             workspace_id,
