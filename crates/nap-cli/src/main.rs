@@ -923,6 +923,29 @@ fn cmd_choose(base_dir: &Path, cmd: ChooseCmd) -> Result<()> {
 fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
     let doctor = NapDoctor::new(base_dir);
 
+    // Check configured provider type
+    let mut provider_manager = ProviderManager::new(base_dir);
+    let provider_type = provider_manager
+        .load_configured_provider()
+        .map(|p| p.map(|p| p.provider_type()))
+        .unwrap_or(None);
+
+    // Block repair for non-local providers
+    if repair {
+        if let Some(ProviderType::Local) = provider_type {
+            // Allow repair for local provider
+        } else {
+            anyhow::bail!(
+                "nap doctor --repair is only available for the local provider. \
+                 Your configured provider is {}. \
+                 Repair operations are not needed for remote or cloud providers.",
+                provider_type
+                    .map(|t| t.as_str().to_string())
+                    .unwrap_or("none".to_string())
+            );
+        }
+    }
+
     // Use shared tokio runtime for async doctor operations
     let rt = get_tokio_runtime();
 
@@ -933,6 +956,24 @@ fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
     if std::io::stdout().is_terminal() {
         emit("NAP Doctor Report");
         emit("==================");
+
+        // Add provider context message
+        if let Some(pt) = provider_type {
+            match pt {
+                ProviderType::Local => {
+                    emit("Provider: local (doctor checks apply)");
+                }
+                ProviderType::Remote | ProviderType::PortalsCloud => {
+                    emit(format!(
+                        "Provider: {} (doctor checks apply only to local provider)",
+                        pt.as_str()
+                    ));
+                }
+            }
+        } else {
+            emit("Provider: not configured (doctor checks apply only to local provider)");
+        }
+        emit(String::new());
 
         for check in &report.checks {
             let status = if check.passed { "✓" } else { "✗" };
