@@ -10,7 +10,6 @@
  *   import { targets, rootDir, manifest, run } from "./generate-types.mjs";
  */
 
-import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,7 +34,7 @@ export const targets = [
  * Run codegen via just generate-protos.
  * @param {object} [opts] - Options for testing.
  */
-export function run({ exec = execSync, exists = existsSync, log = console } = {}) {
+export function run({ exists = existsSync, log = console } = {}) {
   if (!exists(manifest)) {
     const msg =
       `FATAL: Cargo manifest not found at ${manifest}\n` +
@@ -45,12 +44,8 @@ export function run({ exec = execSync, exists = existsSync, log = console } = {}
     process.exit(1);
   }
 
-  try {
-    exec("just generate-protos", { stdio: "inherit", cwd: rootDir });
-  } catch (err) {
-    log.error(`Failed to generate types via just generate-protos`);
-    process.exit(1);
-  }
+  // generate-protos is a no-op (proto codegen is handled by tonic-build in build.rs)
+  log.log("→ Proto codegen: handled by tonic-build in build.rs. Nothing to generate.");
 }
 
 // Auto-execute when run as CLI, but not when imported for testing.

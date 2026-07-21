@@ -24,6 +24,10 @@ HAS_TS=$([ "$CHANGED_TS" -gt 0 ] && echo 1 || echo 0)
 
 echo "── Pre-commit checks ─────────────────────────"
 
+# ── 0. nap-docgen ─────────────────────────────────────────────
+echo "→ cargo run -p nap-docgen..."
+cargo run -p nap-docgen
+
 # ── 1. Rust formatting ─────────────────────────────────────────
 if [ "$HAS_RUST" -eq 1 ]; then
   echo "→ cargo fmt ($CHANGED_RUST changed .rs files)..."

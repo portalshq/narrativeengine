@@ -2,7 +2,7 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
+git_sha: 1c431d2
 source: clap
 ---
 
@@ -13,5 +13,4 @@ The following environment variables are recognized by `nap`.
 
 | Variable | Description |
 |---|---|
-| NAP\_OUTPUT | Override for --format |
 

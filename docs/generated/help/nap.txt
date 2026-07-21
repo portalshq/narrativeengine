@@ -4,7 +4,7 @@ Usage: nap [OPTIONS] <COMMAND>
 
 Commands:
   install       Install required dependencies
-  init          Initialize a universe repository and/or configure the backend provider
+  init          Initialize a repository repository and/or configure the backend provider
   choose        Choose backend provider
   doctor        Run diagnostics and repair
   publish       Publish changes to remote
@@ -13,17 +13,17 @@ Commands:
   create        Create a new entity manifest
   resolve       Resolve a NAP URI to its manifest or a subtree
   query         Query a subtree from a manifest
-  commit        Commit changes to a universe repository
+  commit        Commit changes to a repository repository
   history       View commit history for an entity
-  list          List universes or entities within a universe
+  list          List repositories or entities within a repository
   branch        Create or list branches
   tag           Create or list tags
   set           Set a property on an entity manifest
   add-repr      Add a representation to an entity manifest
   revert        Revert a commit by hash (undoes all changes in that commit)
-  pull          Clone or pull a universe from a remote
+  pull          Clone or pull a repository from a remote
   push          Push the current branch to its configured upstream remote
-  remote        Manage git remotes on a universe
+  remote        Manage git remotes on a repository
   sign          Sign a manifest (stub for v0)
   verify        Verify a manifest signature (stub for v0)
   switch        Switch to a branch
@@ -36,7 +36,7 @@ Commands:
   help          Print this message or the help of the given subcommand(s)
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
   -v, --verbose              Enable verbose debug logging
   -h, --help                 Print help
   -V, --version              Print version
