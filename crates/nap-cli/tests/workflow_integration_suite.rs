@@ -15,11 +15,16 @@
 //! Run with:
 //!   cargo test -p nap-cli --test workflow_integration_suite --features lore-e2e -- --test-threads=1
 
+#[cfg(feature = "workflow-e2e")]
 use assert_cmd::Command;
+#[cfg(feature = "workflow-e2e")]
 use predicates::prelude::*;
+#[cfg(feature = "workflow-e2e")]
 use std::path::Path;
+#[cfg(feature = "workflow-e2e")]
 use tempfile::TempDir;
 
+#[cfg(feature = "workflow-e2e")]
 /// Helper to get the nap binary command, correctly configured for testing.
 ///
 /// Uses `--provider remote` to avoid each test starting its own lore server
@@ -39,6 +44,7 @@ fn nap_cmd(nap_home: &Path) -> Command {
     cmd
 }
 
+#[cfg(feature = "workflow-e2e")]
 /// Initialize a provider and repository using `--provider remote`.
 ///
 /// This avoids the port-conflict problem where multiple tests each try to
@@ -64,6 +70,7 @@ fn init_provider_and_universe(nap_home: &Path, repository: &str) {
         .success();
 }
 
+#[cfg(feature = "workflow-e2e")]
 #[test]
 fn test_readme_quick_start_workflow() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -112,6 +119,7 @@ fn test_readme_quick_start_workflow() {
         .stdout(predicate::str::contains("species"));
 }
 
+#[cfg(feature = "workflow-e2e")]
 #[test]
 fn test_usage_guide_world_building_workflow() {
     let tmp = TempDir::new().expect("Failed to create temp dir");

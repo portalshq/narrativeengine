@@ -14,6 +14,7 @@ path = "src/main.rs"
 default = []
 lore-e2e = []
 local-e2e = []
+workflow-e2e = []
 
 [dependencies]
 nap-core = { path = "../nap-core" }
