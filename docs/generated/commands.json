@@ -1,6 +1,6 @@
 {
   "generator": "nap-docgen",
-  "version": "0.5.0",
+  "version": "0.4.7",
   "commands": [
     {
       "name": "add-repr",
