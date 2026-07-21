@@ -3,7 +3,7 @@ name: nap-entity-mutation
 description: Update entity properties in a creative workflow and properly store creative assets back into the entity manifest, ensuring proper provenance.
 metadata:
   author: portals
-  version: "0.4.7"
+  version: "0.5.0"
 ---
 
 # NAP Skill: Entity Mutation and Creative Workflow Integration
@@ -48,7 +48,7 @@ representations:
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.4.7) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.0) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
