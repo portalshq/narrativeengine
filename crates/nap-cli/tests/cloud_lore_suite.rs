@@ -14,12 +14,18 @@
 //! Run with:
 //!   cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1
 
+#[cfg(feature = "lore-e2e")]
 use assert_cmd::Command;
+#[cfg(feature = "lore-e2e")]
 use predicates::prelude::*;
+#[cfg(feature = "lore-e2e")]
 use std::fs;
+#[cfg(feature = "lore-e2e")]
 use std::path::{Path, PathBuf};
+#[cfg(feature = "lore-e2e")]
 use tempfile::TempDir;
 
+#[cfg(feature = "lore-e2e")]
 /// Helper to get the nap binary command with cloud configuration
 fn nap_cmd() -> Command {
     let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
@@ -41,6 +47,7 @@ fn nap_cmd() -> Command {
     cmd
 }
 
+#[cfg(feature = "lore-e2e")]
 /// Helper to create a test image file
 fn create_test_image(dir: &Path, name: &str) -> PathBuf {
     let image_path = dir.join(name);
@@ -65,6 +72,7 @@ fn create_test_image(dir: &Path, name: &str) -> PathBuf {
     image_path
 }
 
+#[cfg(feature = "lore-e2e")]
 /// Generate a unique repository name for testing
 fn unique_universe_name(prefix: &str) -> String {
     let timestamp = std::time::SystemTime::now()
@@ -74,6 +82,7 @@ fn unique_universe_name(prefix: &str) -> String {
     format!("{}-cloud-{}", prefix, timestamp)
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_connect_and_init() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -90,6 +99,7 @@ fn test_cloud_lore_connect_and_init() {
         .stdout(predicate::str::contains("Ready. NAP is configured with"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_choose_backend() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -116,6 +126,7 @@ fn test_cloud_lore_choose_backend() {
         .stdout(predicate::str::contains("Switched to"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_create_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -154,6 +165,7 @@ fn test_cloud_lore_create_repository() {
     );
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_clone_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -216,6 +228,7 @@ fn test_cloud_lore_clone_repository() {
     assert!(clone_path.exists(), "Cloned repository should exist");
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_create_entity() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -266,6 +279,7 @@ fn test_cloud_lore_create_entity() {
     assert!(entity_path.exists(), "Entity manifest should exist");
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_update_repository_file() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -333,6 +347,7 @@ fn test_cloud_lore_update_repository_file() {
     assert!(content.contains("human"), "Species should be set to human");
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_add_image_to_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -408,6 +423,7 @@ fn test_cloud_lore_add_image_to_repository() {
     );
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_resolve_manifest_uri() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -459,6 +475,7 @@ fn test_cloud_lore_resolve_manifest_uri() {
         .stdout(predicate::str::contains("cloudresolvable"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_resolve_image_from_manifest() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -527,6 +544,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .stdout(predicate::str::contains("blake3:"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_list_entities() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -591,6 +609,7 @@ fn test_cloud_lore_list_entities() {
         .stdout(predicate::str::contains("cloudhero2"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_commit_history() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -653,6 +672,7 @@ fn test_cloud_lore_commit_history() {
         .success();
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_branch_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -707,6 +727,7 @@ fn test_cloud_lore_branch_operations() {
         .success();
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_tag_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -751,6 +772,7 @@ fn test_cloud_lore_tag_operations() {
         .stdout(predicate::str::contains("cloud-v1.0.0"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_status_and_doctor() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -783,6 +805,7 @@ fn test_cloud_lore_status_and_doctor() {
         .success();
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_remote_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -832,6 +855,7 @@ fn test_cloud_lore_remote_operations() {
         .stdout(predicate::str::contains("origin"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_sync_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -888,6 +912,7 @@ fn test_cloud_lore_sync_operations() {
         .success();
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_content_hash() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -905,6 +930,7 @@ fn test_cloud_lore_content_hash() {
         .stdout(predicate::str::contains("blake3:"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_query_subtree() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -969,6 +995,7 @@ fn test_cloud_lore_query_subtree() {
         .stdout(predicate::str::contains("human"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_resolve_with_branch() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -1031,6 +1058,7 @@ fn test_cloud_lore_resolve_with_branch() {
         .stdout(predicate::str::contains("Branch Hero"));
 }
 
+#[cfg(feature = "lore-e2e")]
 #[test]
 fn test_cloud_lore_validate_manifest() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
