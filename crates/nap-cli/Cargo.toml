@@ -13,6 +13,7 @@ path = "src/main.rs"
 [features]
 default = []
 lore-e2e = []
+local-e2e = []
 
 [dependencies]
 nap-core = { path = "../nap-core" }

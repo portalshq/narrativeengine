@@ -9,12 +9,18 @@
 //! Run with:
 //!   cargo test -p nap-cli --test local_lore_suite --features lore-e2e -- --test-threads=1
 
+#[cfg(feature = "local-e2e")]
 use assert_cmd::Command;
+#[cfg(feature = "local-e2e")]
 use predicates::prelude::*;
+#[cfg(feature = "local-e2e")]
 use std::fs;
+#[cfg(feature = "local-e2e")]
 use std::path::{Path, PathBuf};
+#[cfg(feature = "local-e2e")]
 use tempfile::TempDir;
 
+#[cfg(feature = "local-e2e")]
 /// Helper to get the nap binary command
 fn nap_cmd() -> Command {
     let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
@@ -24,6 +30,7 @@ fn nap_cmd() -> Command {
     cmd
 }
 
+#[cfg(feature = "local-e2e")]
 /// Helper to create a test image file
 fn create_test_image(dir: &Path, name: &str) -> PathBuf {
     let image_path = dir.join(name);
@@ -48,6 +55,7 @@ fn create_test_image(dir: &Path, name: &str) -> PathBuf {
     image_path
 }
 
+#[cfg(feature = "local-e2e")]
 /// Generate a unique repository name for testing
 fn unique_universe_name(prefix: &str) -> String {
     let timestamp = std::time::SystemTime::now()
@@ -57,6 +65,7 @@ fn unique_universe_name(prefix: &str) -> String {
     format!("{}-{}", prefix, timestamp)
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_connect_and_init() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -73,6 +82,7 @@ fn test_local_lore_connect_and_init() {
         .stdout(predicate::str::contains("Ready. NAP is configured with"));
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_create_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -111,6 +121,7 @@ fn test_local_lore_create_repository() {
     );
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 #[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_clone_repository() {
@@ -172,6 +183,7 @@ fn test_local_lore_clone_repository() {
     assert!(clone_path.exists(), "Cloned repository should exist");
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_create_entity() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -222,6 +234,7 @@ fn test_local_lore_create_entity() {
     assert!(entity_path.exists(), "Entity manifest should exist");
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_update_repository_file() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -289,6 +302,7 @@ fn test_local_lore_update_repository_file() {
     assert!(content.contains("human"), "Species should be set to human");
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_add_image_to_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -365,6 +379,7 @@ fn test_local_lore_add_image_to_repository() {
     );
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_resolve_manifest_uri() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -416,6 +431,7 @@ fn test_local_lore_resolve_manifest_uri() {
         .stdout(predicate::str::contains("resolvablehero"));
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_resolve_image_from_manifest() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -484,6 +500,7 @@ fn test_local_lore_resolve_image_from_manifest() {
         .stdout(predicate::str::contains("blake3:"));
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_list_entities() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -548,6 +565,7 @@ fn test_local_lore_list_entities() {
         .stdout(predicate::str::contains("hero2"));
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_commit_history() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -610,6 +628,7 @@ fn test_local_lore_commit_history() {
         .success();
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_branch_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -664,6 +683,7 @@ fn test_local_lore_branch_operations() {
         .success();
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_tag_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -708,6 +728,7 @@ fn test_local_lore_tag_operations() {
         .stdout(predicate::str::contains("v1.0.0"));
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_status_and_doctor() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
@@ -740,6 +761,7 @@ fn test_local_lore_status_and_doctor() {
         .success();
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 #[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_remote_operations() {
@@ -788,6 +810,7 @@ fn test_local_lore_remote_operations() {
         .stdout(predicate::str::contains("origin"));
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 #[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_sync_operations() {
@@ -843,6 +866,7 @@ fn test_local_lore_sync_operations() {
         .success();
 }
 
+#[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_content_hash() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
