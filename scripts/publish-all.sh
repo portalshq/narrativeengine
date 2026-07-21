@@ -8,9 +8,10 @@ CURRENT_VERSION=$(grep '^version = ' "$ROOT_DIR/Cargo.toml" | head -1 | sed 's/^
 WORKSPACE_PACKAGES=(
   "nap-cli"
   "nap-core"
+  "nap-docgen"
   "nap-server"
+  "nap-test-utils"
   "narrativeengine"
-  "narrativeengine-codegen"
   "narrativeengine-py"
   "narrativeengine-ts"
   "nap-sdk-py"
@@ -123,9 +124,10 @@ new = sys.argv[3]
 workspace_packages = [
     "nap-cli",
     "nap-core",
+    "nap-docgen",
     "nap-server",
+    "nap-test-utils",
     "narrativeengine",
-    "narrativeengine-codegen",
     "narrativeengine-py",
     "narrativeengine-ts",
     "nap-sdk-py",
@@ -175,7 +177,7 @@ echo "✓ Release validation passed"
 echo ""
 echo "Committing and tagging $RELEASE_TAG..."
 
-git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-server/Cargo.toml crates/narrativeengine/Cargo.toml crates/narrativeengine-codegen/Cargo.toml python/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/nap-sdk/Cargo.toml python/nap-sdk/pyproject.toml typescript/narrativeengine/Cargo.toml typescript/narrativeengine/package.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json nap-mcp-server/package.json
+git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-docgen/Cargo.toml crates/nap-server/Cargo.toml crates/nap-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/nap-sdk/pyproject.toml typescript/narrativeengine/Cargo.toml typescript/narrativeengine/package.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json
 git commit -m "chore(release): cut $RELEASE_TAG"
 git tag -a "$RELEASE_TAG" -m "$RELEASE_TAG"
 
