@@ -255,7 +255,7 @@ nap resolve nap://starwars/character/lukeskywalker -f yaml
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.0) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.4.7) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
