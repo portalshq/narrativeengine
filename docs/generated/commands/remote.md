@@ -2,13 +2,12 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap remote
-Manage git remotes on a universe
+Manage git remotes on a repository
 
 
 ## Synopsis
@@ -28,9 +27,9 @@ nap remote <COMMAND>
 
 | Command | Description |
 |---|---|
-| add | Add a remote to a universe repository |
-| ls | List remotes on a universe repository |
-| rm | Remove a remote from a universe repository |
+| add | Add a remote to a repository repository |
+| ls | List remotes on a repository repository |
+| rm | Remove a remote from a repository repository |
 
 
 ## Source

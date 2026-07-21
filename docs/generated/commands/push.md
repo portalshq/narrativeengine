@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Push the current branch to its configured upstream remote
 
 ## Synopsis
 ```bash
-nap push [OPTIONS] <UNIVERSE>
+nap push [OPTIONS] <REPOSITORY>
 ```
 
 
@@ -21,7 +20,7 @@ nap push [OPTIONS] <UNIVERSE>
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Options

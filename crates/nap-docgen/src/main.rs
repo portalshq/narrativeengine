@@ -34,14 +34,10 @@ fn main() -> Result<()> {
     let cargo_meta = cargo_meta::read_workspace_meta(&workspace_root)?;
     eprintln!("nap-docgen: workspace version = {}", cargo_meta.version);
 
-    // 4. Get git SHA for version stamping
-    let git_sha = util::get_git_sha();
-
-    // 5. Build doc metadata
+    // 4. Build doc metadata
     let doc_meta = DocMeta {
         generator_version: env!("CARGO_PKG_VERSION").to_string(),
         crate_version: cargo_meta.version.clone(),
-        git_sha,
         generator_name: "nap-docgen".to_string(),
     };
 

@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Create or list tags
 
 ## Synopsis
 ```bash
-nap tag <UNIVERSE> [NAME]
+nap tag <REPOSITORY> [NAME]
 ```
 
 
@@ -22,7 +21,7 @@ nap tag <UNIVERSE> [NAME]
 | Name | Description | Required |
 |---|---|---|
 | name | Tag name to create. Omit to list all tags | No |
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Flags

@@ -5,7 +5,6 @@ use serde::Serialize;
 struct CommandsJson {
     generator: String,
     version: String,
-    git_sha: Option<String>,
     commands: Vec<CommandJson>,
 }
 
@@ -43,7 +42,6 @@ pub fn render_commands_json(
     let json = CommandsJson {
         generator: meta.generator_name.clone(),
         version: meta.crate_version.clone(),
-        git_sha: meta.git_sha.clone(),
         commands: commands.iter().map(command_to_json).collect(),
     };
 

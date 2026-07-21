@@ -8,7 +8,7 @@ Arguments:
   <VALUE>  Property value
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
   -m, --message <MESSAGE>    Commit message [default: "set property"]
   -a, --author <AUTHOR>      Author identifier [default: nap-cli]
   -v, --verbose              Enable verbose debug logging

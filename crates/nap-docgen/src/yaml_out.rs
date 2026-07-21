@@ -21,9 +21,6 @@ pub fn render_commands_yaml(
     let mut yaml = String::new();
     yaml.push_str(&format!("generator: {}\n", meta.generator_name));
     yaml.push_str(&format!("version: \"{}\"\n", meta.crate_version));
-    if let Some(ref sha) = meta.git_sha {
-        yaml.push_str(&format!("git_sha: \"{sha}\"\n"));
-    }
     yaml.push_str("commands:\n");
 
     for cmd in commands {

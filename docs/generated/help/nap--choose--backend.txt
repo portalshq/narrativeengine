@@ -6,7 +6,7 @@ Arguments:
   <PROVIDER>  Provider type: local, portals-cloud, or remote
 
 Options:
-  -d, --base-dir <BASE_DIR>          Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>          Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
       --remote-url <REMOTE_URL>      Remote URL (required for remote provider)
   -v, --verbose                      Enable verbose debug logging
       --workspace-id <WORKSPACE_ID>  Workspace ID (for remote provider)

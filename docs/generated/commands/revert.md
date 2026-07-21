@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Revert a commit by hash (undoes all changes in that commit)
 
 ## Synopsis
 ```bash
-nap revert [OPTIONS] --commit <COMMIT> <UNIVERSE>
+nap revert [OPTIONS] --commit <COMMIT> <REPOSITORY>
 ```
 
 
@@ -21,7 +20,7 @@ nap revert [OPTIONS] --commit <COMMIT> <UNIVERSE>
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Options

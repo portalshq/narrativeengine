@@ -6,7 +6,7 @@ Arguments:
   [URI]  NAP URI of the entity to validate
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
       --file <FILE>          Path to a manifest YAML file to validate
   -v, --verbose              Enable verbose debug logging
   -h, --help                 Print help

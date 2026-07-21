@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Switch to a branch
 
 ## Synopsis
 ```bash
-nap switch <UNIVERSE> <NAME>
+nap switch <REPOSITORY> <NAME>
 ```
 
 
@@ -22,7 +21,7 @@ nap switch <UNIVERSE> <NAME>
 | Name | Description | Required |
 |---|---|---|
 | name | Branch name to switch to | Yes |
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Flags

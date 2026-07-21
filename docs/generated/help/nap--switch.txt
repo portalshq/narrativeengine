@@ -1,12 +1,12 @@
 Switch to a branch
 
-Usage: nap switch [OPTIONS] <UNIVERSE> <NAME>
+Usage: nap switch [OPTIONS] <REPOSITORY> <NAME>
 
 Arguments:
-  <UNIVERSE>  Universe name
-  <NAME>      Branch name to switch to
+  <REPOSITORY>  Repository name
+  <NAME>        Branch name to switch to
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
   -v, --verbose              Enable verbose debug logging
   -h, --help                 Print help

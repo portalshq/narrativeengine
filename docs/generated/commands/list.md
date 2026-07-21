@@ -2,18 +2,17 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap list
-List universes or entities within a universe
+List repositories or entities within a repository
 
 
 ## Synopsis
 ```bash
-nap list [OPTIONS] [UNIVERSE]
+nap list [OPTIONS] [REPOSITORY]
 ```
 
 
@@ -21,14 +20,14 @@ nap list [OPTIONS] [UNIVERSE]
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name. Omit to list all universes | No |
+| repository | Repository name. Omit to list all repositories | No |
 
 
 ## Options
 
 | Flag | Description | Default |
 |---|---|---|
-| -t, --entity-type | Entity type to list (if universe is specified) |  |
+| -t, --entity-type | Entity type to list (if repository is specified) |  |
 
 
 ## Flags

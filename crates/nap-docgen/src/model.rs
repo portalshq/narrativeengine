@@ -2,7 +2,6 @@
 pub struct DocMeta {
     pub generator_version: String,
     pub crate_version: String,
-    pub git_sha: Option<String>,
     pub generator_name: String,
 }
 

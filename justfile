@@ -122,7 +122,7 @@ docs:
 docs-check:
     cargo run -p nap-docgen
     @echo "Checking for uncommitted documentation changes..."
-    @if git diff --exit-code docs/generated/ > /dev/null 2>&1; then \
+    @if git diff --exit-code -- docs/generated/ skills/ README.md > /dev/null 2>&1; then \
         echo "Documentation is up to date."; \
     else \
         echo "ERROR: Generated documentation is stale. Commit the changes."; \

@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Create or list branches
 
 ## Synopsis
 ```bash
-nap branch <UNIVERSE> [NAME]
+nap branch <REPOSITORY> [NAME]
 ```
 
 
@@ -22,7 +21,7 @@ nap branch <UNIVERSE> [NAME]
 | Name | Description | Required |
 |---|---|---|
 | name | Branch name to create. Omit to list all branches | No |
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Flags

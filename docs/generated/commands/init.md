@@ -2,34 +2,33 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap init
-Initialize a universe repository and/or configure the backend provider
+Initialize a repository repository and/or configure the backend provider
 
 
 ## Synopsis
 ```bash
-nap init [OPTIONS] [UNIVERSE]
+nap init [OPTIONS] [REPOSITORY]
 ```
 
 
 ## Description
-Initialize a universe repository and/or configure the backend provider.
+Initialize a repository repository and/or configure the backend provider.
 
-When a universe name is provided, creates the repository structure (directories, config, universe manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
+When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
 
-nap init starwars                     # create universe nap init starwars --provider local    # create universe + configure provider nap init --provider local             # configure provider only
+nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
 
 
 ## Arguments
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name. If provided, initializes a new universe repository | No |
+| repository | Repository name. If provided, initializes a new repository repository | No |
 
 
 ## Options
@@ -51,7 +50,7 @@ nap init starwars                     # create universe nap init starwars --prov
 
 ## Examples
 ```bash
-# Initialize a new universe
+# Initialize a new repository
 nap init starwars
 
 # Initialize with local provider
@@ -60,7 +59,7 @@ nap init starwars --provider local
 # Initialize with remote provider
 nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
 
-# Configure provider only (no universe creation)
+# Configure provider only (no repository creation)
 nap init --provider local
 
 # Initialize with a remote origin

@@ -13,7 +13,7 @@ Options:
           Resolve at a specific branch
 
   -d, --base-dir <BASE_DIR>
-          Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+          Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset
           
           [env: NAP_DIR=]
 

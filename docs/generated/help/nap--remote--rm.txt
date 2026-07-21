@@ -1,12 +1,12 @@
-Remove a remote from a universe repository
+Remove a remote from a repository repository
 
-Usage: nap remote rm [OPTIONS] <UNIVERSE> <NAME>
+Usage: nap remote rm [OPTIONS] <REPOSITORY> <NAME>
 
 Arguments:
-  <UNIVERSE>  Universe name
-  <NAME>      Remote name to remove
+  <REPOSITORY>  Repository name
+  <NAME>        Remote name to remove
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
   -v, --verbose              Enable verbose debug logging
   -h, --help                 Print help

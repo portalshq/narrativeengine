@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Create a new entity manifest
 
 ## Synopsis
 ```bash
-nap create [OPTIONS] --universe <UNIVERSE> --name <NAME> <ENTITY_TYPE> <ENTITY_ID>
+nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTITY_ID>
 ```
 
 
@@ -22,7 +21,7 @@ nap create [OPTIONS] --universe <UNIVERSE> --name <NAME> <ENTITY_TYPE> <ENTITY_I
 | Name | Description | Required |
 |---|---|---|
 | entity\_id | Entity ID (slug). e.g., "lukeskywalker" | Yes |
-| entity\_type | Entity type: character, location, scene, prop, world | Yes |
+| entity\_type | Entity type (any non-empty string, e.g. character, location, custom-type) | Yes |
 
 
 ## Options
@@ -31,7 +30,7 @@ nap create [OPTIONS] --universe <UNIVERSE> --name <NAME> <ENTITY_TYPE> <ENTITY_I
 |---|---|---|
 | -a, --author | Author identifier | nap-cli |
 | -n, --name | Human-readable name |  |
-| -u, --universe | Universe name |  |
+| -u, --repository | Repository name |  |
 
 
 ## Flags

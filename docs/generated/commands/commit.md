@@ -2,18 +2,17 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap commit
-Commit changes to a universe repository
+Commit changes to a repository repository
 
 
 ## Synopsis
 ```bash
-nap commit [OPTIONS] --message <MESSAGE> <UNIVERSE>
+nap commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
 ```
 
 
@@ -21,7 +20,7 @@ nap commit [OPTIONS] --message <MESSAGE> <UNIVERSE>
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Options
@@ -41,7 +40,7 @@ nap commit [OPTIONS] --message <MESSAGE> <UNIVERSE>
 
 ## Examples
 ```bash
-# Commit all changes in a universe
+# Commit all changes in a repository
 nap commit starwars -m "Add Luke Skywalker character"
 
 # Commit with a specific author

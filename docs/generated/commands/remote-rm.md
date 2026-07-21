@@ -2,18 +2,17 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap remote rm
-Remove a remote from a universe repository
+Remove a remote from a repository repository
 
 
 ## Synopsis
 ```bash
-nap rm <UNIVERSE> <NAME>
+nap rm <REPOSITORY> <NAME>
 ```
 
 
@@ -22,7 +21,7 @@ nap rm <UNIVERSE> <NAME>
 | Name | Description | Required |
 |---|---|---|
 | name | Remote name to remove | Yes |
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Flags

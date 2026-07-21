@@ -2,13 +2,12 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap pull
-Clone or pull a universe from a remote
+Clone or pull a repository from a remote
 
 
 ## Synopsis
@@ -18,16 +17,16 @@ nap pull <URL_OR_NAME>
 
 
 ## Description
-Clone or pull a universe from a remote.
+Clone or pull a repository from a remote.
 
-If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a universe name, the repo must already exist locally and will be updated via `git pull`.
+If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via `git pull`.
 
 
 ## Arguments
 
 | Name | Description | Required |
 |---|---|---|
-| url\_or\_name | URL (clone) or universe name (pull existing) | Yes |
+| url\_or\_name | URL (clone) or repository name (pull existing) | Yes |
 
 
 ## Flags

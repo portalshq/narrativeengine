@@ -1,13 +1,13 @@
 Revert a commit by hash (undoes all changes in that commit)
 
-Usage: nap revert [OPTIONS] --commit <COMMIT> <UNIVERSE>
+Usage: nap revert [OPTIONS] --commit <COMMIT> <REPOSITORY>
 
 Arguments:
-  <UNIVERSE>  Universe name
+  <REPOSITORY>  Repository name
 
 Options:
   -c, --commit <COMMIT>      Commit hash to revert
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
   -a, --author <AUTHOR>      Author identifier [default: nap-cli]
   -v, --verbose              Enable verbose debug logging
   -h, --help                 Print help

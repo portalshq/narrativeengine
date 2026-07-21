@@ -8,7 +8,7 @@ Arguments:
   <FILE>  File path to the asset
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
       --format <FORMAT>      Asset format. e.g., "png", "glb"
   -m, --message <MESSAGE>    Commit message [default: "add representation"]
   -v, --verbose              Enable verbose debug logging

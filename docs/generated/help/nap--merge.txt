@@ -8,7 +8,7 @@ Arguments:
   <PROPOSED>  Proposed (theirs) file
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
   -f, --format <FORMAT>      Output format: json, yaml [default: yaml]
   -v, --verbose              Enable verbose debug logging
   -h, --help                 Print help

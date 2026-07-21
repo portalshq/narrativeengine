@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: fa06fff
 source: clap
 ---
 
@@ -13,6 +12,6 @@ These options are available on all `nap` commands.
 
 | Flag | Description | Default |
 |---|---|---|
-| -d, --base-dir <BASE\_DIR> |  |  |
-| -v, --verbose <VERBOSE> |  |  |
+| -d, --base-dir <BASE\_DIR> | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -v, --verbose <VERBOSE> | Enable verbose debug logging |  |
 

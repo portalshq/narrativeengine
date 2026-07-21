@@ -2,7 +2,6 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
@@ -13,7 +12,7 @@ Publish changes to remote
 
 ## Synopsis
 ```bash
-nap publish <UNIVERSE>
+nap publish <REPOSITORY>
 ```
 
 
@@ -21,7 +20,7 @@ nap publish <UNIVERSE>
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Flags

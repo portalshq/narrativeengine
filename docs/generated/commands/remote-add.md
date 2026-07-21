@@ -2,18 +2,17 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap remote add
-Add a remote to a universe repository
+Add a remote to a repository repository
 
 
 ## Synopsis
 ```bash
-nap add <UNIVERSE> <NAME> <URL>
+nap add <REPOSITORY> <NAME> <URL>
 ```
 
 
@@ -22,7 +21,7 @@ nap add <UNIVERSE> <NAME> <URL>
 | Name | Description | Required |
 |---|---|---|
 | name | Remote name (e.g., "origin") | Yes |
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 | url | Remote URL | Yes |
 
 

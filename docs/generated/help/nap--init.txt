@@ -1,18 +1,18 @@
-Initialize a universe repository and/or configure the backend provider.
+Initialize a repository repository and/or configure the backend provider.
 
-When a universe name is provided, creates the repository structure (directories, config, universe manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
+When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
 
-nap init starwars                     # create universe nap init starwars --provider local    # create universe + configure provider nap init --provider local             # configure provider only
+nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
 
-Usage: nap init [OPTIONS] [UNIVERSE]
+Usage: nap init [OPTIONS] [REPOSITORY]
 
 Arguments:
-  [UNIVERSE]
-          Universe name. If provided, initializes a new universe repository
+  [REPOSITORY]
+          Repository name. If provided, initializes a new repository repository
 
 Options:
   -d, --base-dir <BASE_DIR>
-          Base directory for universe repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+          Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset
           
           [env: NAP_DIR=]
 

@@ -2,18 +2,17 @@
 generated: "true"
 generator: nap-docgen
 version: 0.4.5
-git_sha: 01f23ae
 source: clap
 ---
 
 
 # nap remote ls
-List remotes on a universe repository
+List remotes on a repository repository
 
 
 ## Synopsis
 ```bash
-nap ls <UNIVERSE>
+nap ls <REPOSITORY>
 ```
 
 
@@ -21,7 +20,7 @@ nap ls <UNIVERSE>
 
 | Name | Description | Required |
 |---|---|---|
-| universe | Universe name | Yes |
+| repository | Repository name | Yes |
 
 
 ## Flags

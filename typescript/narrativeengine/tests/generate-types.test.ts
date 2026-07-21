@@ -73,40 +73,15 @@ describe("generate-types.mjs run()", () => {
     vi.restoreAllMocks();
   });
 
-  it("invokes exec once with just generate-protos", () => {
-    const execMock = vi.fn();
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+  it("logs proto codegen is a no-op (handled by tonic-build)", () => {
+    const logSpy = { log: vi.fn(), error: vi.fn() };
 
-    mod.run({ exec: execMock });
+    mod.run({ log: logSpy });
 
-    expect(execMock).toHaveBeenCalledTimes(1);
-    expect(exitSpy).not.toHaveBeenCalled();
-
-    const cmd = execMock.mock.calls[0][0] as string;
-    expect(cmd).toBe("just generate-protos");
-    exitSpy.mockRestore();
-  });
-
-  it("stops and exits on first exec failure", () => {
-    const execMock = vi
-      .fn()
-      .mockImplementationOnce(() => {
-        const err = new Error("cargo failed") as Error & { stderr: Buffer };
-        err.stderr = Buffer.from("compile error");
-        throw err;
-      });
-    // Make process.exit throw so execution actually stops (mocking it as no-op
-    // would let the for-loop continue to the next target).
-    const exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(() => { throw new Error("process.exit"); });
-    const logSpy = { error: vi.fn() };
-
-    expect(() => mod.run({ exec: execMock, log: logSpy })).toThrow("process.exit");
-
-    expect(execMock).toHaveBeenCalledTimes(1);
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    exitSpy.mockRestore();
+    expect(logSpy.log).toHaveBeenCalledWith(
+      expect.stringContaining("tonic-build"),
+    );
+    expect(logSpy.error).not.toHaveBeenCalled();
   });
 
   it("exits with error when Cargo.toml is missing", () => {
@@ -114,37 +89,23 @@ describe("generate-types.mjs run()", () => {
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(() => { throw new Error("process.exit"); });
-    const logSpy = { error: vi.fn() };
+    const logSpy = { log: vi.fn(), error: vi.fn() };
 
     expect(() => mod.run({ exec: execMock, exists: () => false, log: logSpy })).toThrow("process.exit");
 
     expect(execMock).toHaveBeenCalledTimes(0);
     expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(logSpy.error).toHaveBeenCalledWith(expect.stringContaining("Cargo manifest not found"));
     exitSpy.mockRestore();
   });
 
-  it("passes cwd: rootDir to exec", () => {
+  it("does not call exec (proto codegen is a no-op)", () => {
     const execMock = vi.fn();
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    const logSpy = { log: vi.fn(), error: vi.fn() };
 
-    mod.run({ exec: execMock });
+    mod.run({ exec: execMock, log: logSpy });
 
-    for (const [, opts] of execMock.mock.calls) {
-      expect(opts).toHaveProperty("cwd", mod.rootDir);
-    }
-    exitSpy.mockRestore();
-  });
-
-  it("passes cwd: rootDir to the exec call", () => {
-    const execMock = vi.fn();
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-
-    mod.run({ exec: execMock });
-
-    const [, opts] = execMock.mock.calls[0];
-    expect(opts).toHaveProperty("cwd", mod.rootDir);
-    expect(opts).toHaveProperty("stdio", "inherit");
-    exitSpy.mockRestore();
+    expect(execMock).not.toHaveBeenCalled();
   });
 });
 

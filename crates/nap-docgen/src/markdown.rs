@@ -70,9 +70,6 @@ impl MarkdownDoc {
         fm.insert("generated".to_string(), "true".to_string());
         fm.insert("generator".to_string(), meta.generator_name.clone());
         fm.insert("version".to_string(), meta.crate_version.clone());
-        if let Some(ref sha) = meta.git_sha {
-            fm.insert("git_sha".to_string(), sha.clone());
-        }
         fm.insert("source".to_string(), "clap".to_string());
         self.sections.push(Section::FrontMatter(fm));
     }
