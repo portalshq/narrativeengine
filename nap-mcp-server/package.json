@@ -1,7 +1,7 @@
 {
   "name": "@portalshq/nap-mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for the Narrative Addressing Protocol (NAP) — let LLMs resolve, query, create, and manage narrative repositories",
+  "description": "DEPRECATED: MCP server for the Narrative Addressing Protocol (NAP). No longer maintained.",
   "type": "module",
   "main": "dist/index.js",
   "publishConfig": {

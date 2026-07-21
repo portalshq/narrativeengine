@@ -58,6 +58,10 @@ pub enum ChooseCmd {
         /// Workspace ID (for remote provider).
         #[arg(long)]
         workspace_id: Option<String>,
+
+        /// Reset the provider configuration file.
+        #[arg(long)]
+        reset: bool,
     },
 }
 
@@ -72,7 +76,7 @@ pub enum Commands {
     /// Initialize a repository repository and/or configure the backend provider.
     ///
     /// When a repository name is provided, creates the repository structure
-    /// (directories, config, repository manifest, initial Git commit).
+    /// (directories, config, repository manifest, initial commit).
     /// When --provider is given (or no provider is configured), sets up the
     /// backend provider. Both can be combined:
     ///
@@ -98,6 +102,10 @@ pub enum Commands {
         /// Remote URL to add as origin after init.
         #[arg(long)]
         remote: Option<String>,
+
+        /// Reset the provider configuration file.
+        #[arg(long)]
+        reset: bool,
     },
 
     /// Choose backend provider.
@@ -166,9 +174,6 @@ pub enum Commands {
         #[arg(long)]
         commit: Option<String>,
 
-        /// Resolve at a specific tag.
-        #[arg(long)]
-        tag: Option<String>,
 
         /// Output format: yaml, json.
         #[arg(long, short = 'f', default_value = "yaml", env = "NAP_OUTPUT")]
@@ -231,14 +236,6 @@ pub enum Commands {
         name: Option<String>,
     },
 
-    /// Create or list tags.
-    Tag {
-        /// Repository name.
-        repository: String,
-
-        /// Tag name to create. Omit to list all tags.
-        name: Option<String>,
-    },
 
     /// Set a property on an entity manifest.
     Set {
@@ -302,7 +299,7 @@ pub enum Commands {
     ///
     /// If the argument is a URL, the repo is cloned (name is read from the
     /// repo's own config).  If it's a repository name, the repo must already
-    /// exist locally and will be updated via `git pull`.
+    /// exist locally and will be updated via pull.
     Pull {
         /// URL (clone) or repository name (pull existing).
         url_or_name: String,
@@ -322,7 +319,7 @@ pub enum Commands {
         branch: Option<String>,
     },
 
-    /// Manage git remotes on a repository.
+    /// Manage remotes on a repository.
     #[command(subcommand)]
     Remote(RemoteCmd),
 

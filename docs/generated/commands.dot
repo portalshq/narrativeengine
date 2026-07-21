@@ -64,8 +64,6 @@ digraph nap_commands {
     "nap" -> "switch";
     "sync" [label="nap sync"];
     "nap" -> "sync";
-    "tag" [label="nap tag"];
-    "nap" -> "tag";
     "validate" [label="nap validate"];
     "nap" -> "validate";
     "verify" [label="nap verify"];

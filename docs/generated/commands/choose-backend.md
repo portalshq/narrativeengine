@@ -35,6 +35,7 @@ nap backend [OPTIONS] <PROVIDER>
 
 | Flag | Description |
 |---|---|
+|     --reset | Reset the provider configuration file |
 | -h, --help | Print help |
 
 

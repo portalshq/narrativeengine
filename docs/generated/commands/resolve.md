@@ -35,7 +35,6 @@ Fragment queries are supported via the URI: nap resolve nap://starwars/character
 |---|---|---|
 |     --branch | Resolve at a specific branch |  |
 |     --commit | Resolve at a specific commit hash |  |
-|     --tag | Resolve at a specific tag |  |
 | -f, --format | Output format: yaml, json | yaml |
 
 

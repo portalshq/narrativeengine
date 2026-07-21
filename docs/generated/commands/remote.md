@@ -7,7 +7,7 @@ source: clap
 
 
 # nap remote
-Manage git remotes on a repository
+Manage remotes on a repository
 
 
 ## Synopsis

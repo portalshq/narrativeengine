@@ -2,7 +2,7 @@
 //!
 //! **Lore** — a centralized VCS with
 //! global revision numbers, file-level metadata, dependency graphs, and
-//! git-style branching.
+//! style branching.
 //!
 //! The [`VcsBackend`] trait is the low-level seam between NAP and any VCS.
 //! [`LoreBackend`](crate::vcs_lore::LoreBackend) is the only production
@@ -31,7 +31,7 @@ use crate::error::NapError;
 // Core VCS types (Lore-native, also serve as the RepoService vocabulary)
 // ---------------------------------------------------------------------------
 
-/// A Lore repository identity — analogous to a Git remote, but with a
+/// A Lore repository identity — analogous to a remote, but with a
 /// workspace-scoped multi-tenant owner.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Repository {
@@ -86,19 +86,6 @@ pub struct Revision {
     pub author: String,
     /// Parent revision signature, if any.
     pub parent_signature: Option<String>,
-}
-
-/// A label (tag) attached to a revision via Lore metadata.
-///
-/// Lore has no first-class "tag" object — labels are stored as metadata
-/// under the reserved key `nap.labels`.  See the [`LabelConvention`]
-/// documentation for how tags round-trip through the metadata system.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Label {
-    /// The revision this label points to.
-    pub revision_signature: String,
-    /// Label/tag names applied to this revision.
-    pub names: Vec<String>,
 }
 
 /// A directory- or file-level access-control entry.
@@ -195,9 +182,6 @@ pub trait VcsBackend: Send + Sync {
     /// Switch to a branch.
     fn switch_branch(&self, path: &Path, name: &str) -> Result<(), NapError>;
 
-    /// Create a tag at the current HEAD.
-    fn create_tag(&self, path: &Path, name: &str) -> Result<(), NapError>;
-
     /// Get the current branch name.
     fn current_branch(&self, path: &Path) -> Result<String, NapError>;
 
@@ -213,9 +197,6 @@ pub trait VcsBackend: Send + Sync {
 
     /// List all branches.
     fn list_branches(&self, path: &Path) -> Result<Vec<String>, NapError>;
-
-    /// List all tags.
-    fn list_tags(&self, path: &Path) -> Result<Vec<String>, NapError>;
 
     /// Resolve the most recent commit hash on a given branch.
     ///

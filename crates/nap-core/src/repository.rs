@@ -447,7 +447,7 @@ impl Repository {
             if !path.is_dir() {
                 continue;
             }
-            // Skip hidden directories (.nap, .git, etc.)
+            // Skip hidden directories (.nap, etc.)
             let dir_name = match path.file_name().and_then(|n| n.to_str()) {
                 Some(name) => name,
                 None => continue,
@@ -511,19 +511,9 @@ impl Repository {
         self.vcs.switch_branch(&self.root, name)
     }
 
-    /// Create a tag.
-    pub fn create_tag(&self, name: &str) -> Result<(), NapError> {
-        self.vcs.create_tag(&self.root, name)
-    }
-
     /// List branches.
     pub fn list_branches(&self) -> Result<Vec<String>, NapError> {
         self.vcs.list_branches(&self.root)
-    }
-
-    /// List tags.
-    pub fn list_tags(&self) -> Result<Vec<String>, NapError> {
-        self.vcs.list_tags(&self.root)
     }
 
     /// Revert a commit by creating a new VCS commit that undoes the specified one.

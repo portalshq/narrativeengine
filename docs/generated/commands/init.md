@@ -19,7 +19,7 @@ nap init [OPTIONS] [REPOSITORY]
 ## Description
 Initialize a repository repository and/or configure the backend provider.
 
-When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
+When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
 
 nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
 
@@ -45,6 +45,7 @@ nap init starwars                     # create repository nap init starwars --pr
 
 | Flag | Description |
 |---|---|
+|     --reset | Reset the provider configuration file |
 | -h, --help | Print help (see more with '--help') |
 
 

@@ -729,51 +729,6 @@ fn test_cloud_lore_branch_operations() {
 
 #[cfg(feature = "lore-e2e")]
 #[test]
-fn test_cloud_lore_tag_operations() {
-    let tmp = TempDir::new().expect("Failed to create temp dir");
-    let repository = unique_universe_name("test-tag");
-
-    // Initialize nap with portals-cloud
-    nap_cmd()
-        .arg("init")
-        .arg("--base-dir")
-        .arg(tmp.path())
-        .arg("--provider")
-        .arg("local")
-        .assert()
-        .success();
-
-    nap_cmd()
-        .arg("init")
-        .arg("--base-dir")
-        .arg(tmp.path())
-        .arg(&repository)
-        .assert()
-        .success();
-
-    // Create a tag
-    nap_cmd()
-        .arg("tag")
-        .arg("--base-dir")
-        .arg(tmp.path())
-        .arg(&repository)
-        .arg("cloud-v1.0.0")
-        .assert()
-        .success();
-
-    // List tags
-    nap_cmd()
-        .arg("tag")
-        .arg("--base-dir")
-        .arg(tmp.path())
-        .arg(&repository)
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("cloud-v1.0.0"));
-}
-
-#[cfg(feature = "lore-e2e")]
-#[test]
 fn test_cloud_lore_status_and_doctor() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
 

@@ -4,7 +4,7 @@
 //! patch metadata describing what changed. This is Option C from the
 //! design requirements: **Snapshot + Patch Metadata**.
 //!
-//! - The VCS (Git) stores the full snapshot (tree).
+//! - The VCS stores the full snapshot (tree).
 //! - The commit object stores change descriptions (patches) for efficient
 //!   audit/provenance without requiring full diff reconstruction.
 //!

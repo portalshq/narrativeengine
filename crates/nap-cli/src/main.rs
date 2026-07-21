@@ -18,18 +18,20 @@
 //!   tag          — Create or list tags
 //!   pull         — Clone or pull a repository from a remote
 //!   push         — Push a repository to a remote
-//!   remote       — Manage git remotes on a repository
+//!   remote       — Manage remotes on a repository
 //!   sign         — Sign a manifest (stub for v0)
 //!   verify       — Verify a manifest signature (stub for v0)
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use rand::RngCore;
 use nap_cli::{ChooseCmd, Cli, Commands, RemoteCmd};
 use nap_core::{
     commit::Change,
     error::NapError,
     manifest::Representation,
     provider::{ProviderFactory, ProviderManager, ProviderType},
+    grpc_client::{LoreGrpcClient, RepositoryCreateRequest},
     repository::Repository,
     resolver::{ResolveOptions, ResolveResult, Resolver},
     server::{LoreInstaller, NapDoctor, ServerManager},
@@ -64,7 +66,7 @@ fn expand_path(path: &Path) -> PathBuf {
 /// Return `true` if `s` looks like a URL rather than a repository name.
 ///
 /// Repository names are simple identifiers (`[a-zA-Z0-9_-]+`).
-/// Everything else (contains `@`, `://`, `/`, `.git`, etc.) is a URL.
+/// Everything else (contains `@`, `://`, `/`, special characters, etc.) is a URL.
 fn looks_like_url(s: &str) -> bool {
     !s.chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
@@ -145,6 +147,7 @@ fn main() -> Result<()> {
             remote_url,
             workspace_id,
             remote,
+            reset,
         } => cmd_init(
             &base_dir,
             repository.as_deref(),
@@ -152,6 +155,7 @@ fn main() -> Result<()> {
             remote_url,
             workspace_id,
             remote.as_deref(),
+            reset,
         ),
         Commands::Install { target } => cmd_install(&base_dir, &target),
         Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
@@ -194,8 +198,8 @@ fn main() -> Result<()> {
         Commands::Branch { repository, name } => {
             cmd_branch(&base_dir, &repository, name.as_deref())
         }
-        Commands::Tag { repository, name } => cmd_tag(&base_dir, &repository, name.as_deref()),
         Commands::Set {
+
             uri,
             key,
             value,
@@ -312,13 +316,24 @@ fn cmd_init(
     base_dir: &Path,
     repository: Option<&str>,
     provider_opt: Option<String>,
-    remote_url: Option<String>,
-    workspace_id: Option<String>,
-    remote: Option<&str>,
-) -> Result<()> {
-    // ── Step 1: Check if provider is configured ────────
-    let mut provider_manager = ProviderManager::new(base_dir);
-    let provider_configured = provider_manager.load_configured_provider()?.is_some();
+        remote_url: Option<String>,
+        workspace_id: Option<String>,
+        remote: Option<&str>,
+        reset: bool,
+    ) -> Result<()> {
+        // ── Step 0: Reset provider config if requested ────────
+        if reset {
+            let config_path = base_dir.join("provider.toml");
+            if config_path.exists() {
+                std::fs::remove_file(&config_path).context("failed to reset provider configuration")?;
+                emit("✓ Reset provider configuration.");
+            }
+        }
+
+        // ── Step 1: Check if provider is configured ────────
+        let mut provider_manager = ProviderManager::new(base_dir);
+        let provider_configured = provider_manager.load_configured_provider()?.is_some();
+
 
     // ── Step 2: Configure provider if requested or on first run ────────
     let should_configure_provider = provider_opt.is_some()
@@ -473,7 +488,15 @@ fn cmd_choose(base_dir: &Path, cmd: ChooseCmd) -> Result<()> {
             provider,
             remote_url,
             workspace_id,
+            reset,
         } => {
+            if reset {
+                let config_path = base_dir.join("provider.toml");
+                if config_path.exists() {
+                    std::fs::remove_file(&config_path).context("failed to reset provider configuration")?;
+                    emit("✓ Reset provider configuration.");
+                }
+            }
             let provider_type = ProviderType::parse_from_str(&provider)
                 .context(format!("invalid provider type '{provider}'"))?;
 
@@ -897,60 +920,15 @@ fn cmd_list(base_dir: &Path, repository: Option<&str>, entity_type: Option<&str>
     Ok(())
 }
 
-fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
-    let repo = open_repo(base_dir, repository)?;
-    match name {
-        Some(branch_name) => {
-            repo.create_branch(branch_name)
-                .context(format!("failed to create branch '{branch_name}'"))?;
-            emit(format!("✓ Created branch '{branch_name}' in {repository}"));
-        }
-        None => {
-            let branches = repo.list_branches().context("failed to list branches")?;
-            if !std::io::stdout().is_terminal() {
-                println!("{}", serde_json::to_string_pretty(&branches)?);
-            } else {
-                println!("Branches in {repository}:");
-                for b in &branches {
-                    println!("  {b}");
-                }
-            }
-        }
-    }
-    Ok(())
-}
 
-fn cmd_tag(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
-    let repo = open_repo(base_dir, repository)?;
-    match name {
-        Some(tag_name) => {
-            repo.create_tag(tag_name)
-                .context(format!("failed to create tag '{tag_name}'"))?;
-            emit(format!("✓ Created tag '{tag_name}' in {repository}"));
-        }
-        None => {
-            let tags = repo.list_tags().context("failed to list tags")?;
-            if !std::io::stdout().is_terminal() {
-                println!("{}", serde_json::to_string_pretty(&tags)?);
-            } else if tags.is_empty() {
-                println!("No tags in {repository}");
-            } else {
-                println!("Tags in {repository}:");
-                for t in &tags {
-                    println!("  {t}");
-                }
-            }
-        }
-    }
-    Ok(())
-}
+fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
 
 fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
     if looks_like_url(url_or_name) {
         // ── Clone from URL ──────────────────────────────────────
-        // Clone to a temp directory, read the repository name from the
-        // repo's own config, then rename to the final directory.
-
+        // ... (existing clone logic)
+        // [I will just copy the existing code here to avoid broken edit]
+        
         let tmp_suffix = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
@@ -994,17 +972,98 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
             target.display()
         ));
     } else {
-        // ── Pull existing repo ───────────────────────────────────
-        let repo = open_repo(base_dir, url_or_name)?;
-        repo.pull(None, None)
-            .context("failed to pull latest changes")?;
-        emit(format!("✓ Pulled latest changes for '{url_or_name}'"));
+        // ── Pull existing repo OR clone by name ───────────────────
+        let target_dir = base_dir.join(url_or_name);
+        if target_dir.exists() {
+            // Already exists locally, pull latest changes
+            let repo = open_repo(base_dir, url_or_name)?;
+            repo.pull(None, None)
+                .context("failed to pull latest changes")?;
+            emit(format!("✓ Pulled latest changes for '{url_or_name}'"));
+        } else {
+            // Doesn't exist locally, try to resolve on server and clone
+            emit(format!("  Resolving repository '{url_or_name}' on server …"));
+            let grpc_client = nap_core::grpc_client::LoreGrpcClient::builder_from_env()?
+                .ok_or_else(|| anyhow::anyhow!("gRPC not configured (required to resolve repository name)"))?;
+
+            let repo_metadata = nap_core::grpc_client::block_on_grpc(grpc_client.resolve_repository_by_name(url_or_name))
+                .context(format!("failed to resolve repository name '{url_or_name}'"))?;
+            
+            // Construct the repository URL
+            let backend_config = LoreBackend::from_env();
+            let remote_url = format!("{}/{}", backend_config.remote_url, repo_metadata.name);
+
+            // Perform clone
+            let tmp_suffix = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0);
+            let tmp_name = format!(".__nap_clone_{tmp_suffix}");
+            let tmp_path = base_dir.join(&tmp_name);
+
+            emit(format!("  Cloning from {remote_url} …"));
+            LoreBackend::clone_repo(&remote_url, &tmp_path).context("failed to clone repository")?;
+
+            // Rename temp → final
+            let target = base_dir.join(url_or_name);
+            std::fs::rename(&tmp_path, &target)
+                .context(format!("failed to rename {tmp_name} → {url_or_name}"))?;
+
+            emit(format!(
+                "✓ Cloned repository '{url_or_name}' to {}",
+                target.display()
+            ));
+        }
     }
 
     Ok(())
 }
 
 fn cmd_push(base_dir: &Path, repository: &str, remote: &str, branch: Option<&str>) -> Result<()> {
+    // Ensure repository is registered on the server
+    let mut pm = ProviderManager::new(base_dir);
+    let provider_url = pm.load_configured_provider()?.and_then(|p| p.lore_url_base().ok());
+    
+    let grpc_client = nap_core::grpc_client::LoreGrpcClient::from_env_or_provider(base_dir, provider_url)?
+        .ok_or_else(|| anyhow::anyhow!("gRPC not configured"))?;
+    
+    // Check if registered
+    let registration_check = nap_core::grpc_client::block_on_grpc(grpc_client.resolve_repository_by_name(repository));
+    
+    match registration_check {
+        Ok(_) => {
+            // Repository already registered, proceed to push
+        }
+        Err(nap_core::error::NapError::RefNotFound(_)) => {
+            // Repository not found, need to register
+            emit(format!("  Registering repository '{repository}' on server …"));
+            
+            let mut id = [0u8; 16];
+            rand::thread_rng().fill_bytes(&mut id);
+            let repo_id = id.to_vec();
+            
+            let mut branch_id = [0u8; 16];
+            rand::thread_rng().fill_bytes(&mut branch_id);
+            
+            let create_request = nap_core::grpc_client::RepositoryCreateRequest {
+                id: repo_id,
+                name: repository.to_string(),
+                description: format!("Repository {repository}"),
+                default_branch_id: branch_id.to_vec(),
+                default_branch_name: "main".to_string(),
+                creator: None,
+            };
+            
+            nap_core::grpc_client::block_on_grpc(grpc_client.create_repository(create_request))
+                .context("failed to register repository on server")?;
+            emit(format!("✓ Registered '{repository}'"));
+        }
+        Err(e) => {
+            // Other error (e.g. network, permission) - abort push
+            return Err(e).context(format!("failed to verify repository registration for '{repository}'"));
+        }
+    }
+
     let repo = open_repo(base_dir, repository)?;
     repo.push(Some(remote), branch)
         .context("failed to push to remote")?;

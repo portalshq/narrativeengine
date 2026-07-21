@@ -65,7 +65,7 @@ The `nap` command-line interface (v0.5.0) provides tools for creating, resolving
 | [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
 | [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
 | [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
-| [\`nap remote\`](docs/generated/commands/remote.md) | Manage git remotes on a repository |
+| [\`nap remote\`](docs/generated/commands/remote.md) | Manage remotes on a repository |
 | [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
 | [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
 | [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
@@ -74,7 +74,6 @@ The `nap` command-line interface (v0.5.0) provides tools for creating, resolving
 | [\`nap status\`](docs/generated/commands/status.md) | Show system status |
 | [\`nap switch\`](docs/generated/commands/switch.md) | Switch to a branch |
 | [\`nap sync\`](docs/generated/commands/sync.md) | Sync with remote |
-| [\`nap tag\`](docs/generated/commands/tag.md) | Create or list tags |
 | [\`nap validate\`](docs/generated/commands/validate.md) | Validate a manifest against the NAP schema |
 | [\`nap verify\`](docs/generated/commands/verify.md) | Verify a manifest signature (stub for v0) |
 

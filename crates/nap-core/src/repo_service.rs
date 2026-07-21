@@ -255,16 +255,6 @@ impl RepoService {
         self.backend.list_branches(&self.workspace_root)
     }
 
-    /// Create a tag.
-    pub fn create_tag(&self, name: &str) -> Result<(), NapError> {
-        self.backend.create_tag(&self.workspace_root, name)
-    }
-
-    /// List tags.
-    pub fn list_tags(&self) -> Result<Vec<String>, NapError> {
-        self.backend.list_tags(&self.workspace_root)
-    }
-
     /// Push to the lore server.
     pub fn push(&self, remote: Option<&str>, branch: Option<&str>) -> Result<(), NapError> {
         self.backend.push(&self.workspace_root, remote, branch)

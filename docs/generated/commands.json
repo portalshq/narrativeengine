@@ -184,6 +184,15 @@
           ],
           "flags": [
             {
+              "name": "reset",
+              "about": "Reset the provider configuration file",
+              "required": false,
+              "default_value": "false",
+              "short": null,
+              "long": "reset",
+              "takes_value": false
+            },
+            {
               "name": "help",
               "about": "Print help",
               "required": false,
@@ -518,7 +527,7 @@
       "name": "init",
       "full_path": "init",
       "about": "Initialize a repository repository and/or configure the backend provider",
-      "long_about": "Initialize a repository repository and/or configure the backend provider.\n\nWhen a repository name is provided, creates the repository structure (directories, config, repository manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:\n\nnap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only",
+      "long_about": "Initialize a repository repository and/or configure the backend provider.\n\nWhen a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:\n\nnap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only",
       "usage": "Usage: init [OPTIONS] [REPOSITORY]",
       "aliases": [],
       "arguments": [
@@ -571,6 +580,15 @@
         }
       ],
       "flags": [
+        {
+          "name": "reset",
+          "about": "Reset the provider configuration file",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "reset",
+          "takes_value": false
+        },
         {
           "name": "help",
           "about": "Print help (see more with '--help')",
@@ -758,7 +776,7 @@
       "name": "pull",
       "full_path": "pull",
       "about": "Clone or pull a repository from a remote",
-      "long_about": "Clone or pull a repository from a remote.\n\nIf the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via `git pull`.",
+      "long_about": "Clone or pull a repository from a remote.\n\nIf the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via pull.",
       "usage": "Usage: pull <URL_OR_NAME>",
       "aliases": [],
       "arguments": [
@@ -894,7 +912,7 @@
     {
       "name": "remote",
       "full_path": "remote",
-      "about": "Manage git remotes on a repository",
+      "about": "Manage remotes on a repository",
       "long_about": null,
       "usage": "Usage: remote <COMMAND>",
       "aliases": [],
@@ -1076,15 +1094,6 @@
           "default_value": null,
           "short": null,
           "long": "commit",
-          "takes_value": true
-        },
-        {
-          "name": "tag",
-          "about": "Resolve at a specific tag",
-          "required": false,
-          "default_value": null,
-          "short": null,
-          "long": "tag",
           "takes_value": true
         },
         {
@@ -1386,48 +1395,6 @@
           "name": "repository",
           "about": "Repository name",
           "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        }
-      ],
-      "options": [],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [],
-      "hidden": false
-    },
-    {
-      "name": "tag",
-      "full_path": "tag",
-      "about": "Create or list tags",
-      "long_about": null,
-      "usage": "Usage: tag <REPOSITORY> [NAME]",
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "repository",
-          "about": "Repository name",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        },
-        {
-          "name": "name",
-          "about": "Tag name to create. Omit to list all tags",
-          "required": false,
           "default_value": null,
           "short": null,
           "long": null,

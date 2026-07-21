@@ -1,6 +1,6 @@
 //! Conflict representation for three-way merge outcomes.
 //!
-//! Conflicts are **structured** — no textual markers, no Git merge
+//! Conflicts are **structured** — no textual markers, no merge
 //! syntax, no YAML corruption.  Every conflict carries the original
 //! base, current, and proposed values so that agents and UIs can
 //! resolve them programmatically.

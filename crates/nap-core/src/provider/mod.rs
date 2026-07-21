@@ -574,4 +574,15 @@ mod tests {
         );
         assert_eq!(deserialized.workspace_id, Some("my-workspace".to_string()));
     }
+
+    #[test]
+    fn test_provider_manager_load_invalid_config_fails() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("provider.toml");
+        std::fs::write(&config_path, "invalid-toml").unwrap();
+
+        let mut manager = ProviderManager::new(temp_dir.path());
+        let result = manager.load_configured_provider();
+        assert!(result.is_err());
+    }
 }

@@ -108,7 +108,7 @@ pub fn manifest_schema() -> Value {
                 "type": "string",
                 "pattern": "^[a-f0-9]{40}$|^[a-f0-9]{64}$",
                 "description": concat!(
-                    "Pointer to the latest VCS commit hash (40-char Git SHA-1 ",
+                    "Pointer to the latest VCS commit hash (40-char SHA-1 ",
                     "or 64-char BLAKE3). ",
                     "History lives in the VCS, not the manifest."
                 )

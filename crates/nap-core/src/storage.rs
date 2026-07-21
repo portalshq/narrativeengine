@@ -23,8 +23,8 @@
 //!   concatenation with `/` or `\`.
 //! * **Idempotency** — `ingest_media` issues a HEAD before PUT; if the object
 //!   already exists, the write is skipped and the hash is returned immediately.
-//! * **Gitignore** — The local initialiser ensures `.nap-assets/` is present
-//!   in `<NAP_DIR>/.gitignore` so raw binaries never enter the Git graph.
+//! * **Ignore management** — The local initialiser ensures `.nap-assets/` is present
+//!   in `<NAP_DIR>/.gitignore` so raw binaries never enter the storage graph.
 
 use blake3;
 use bytes::Bytes;

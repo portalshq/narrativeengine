@@ -986,7 +986,8 @@ async fn handle_sync(
         )
     })?;
 
-    // Use the current branch and let git figure out the remote from tracking config.
+        // Use the current branch and let the VCS figure out the remote from tracking config.
+
     // Default to pushing "origin" if no tracking branch is set.
     let branch = repo.vcs().current_branch(&repo.root).ok();
     let branch_str = branch.as_deref().unwrap_or("main");

@@ -10,7 +10,7 @@
 //!
 //! **Key design decisions:**
 //! - Version/branch/tag are NEVER encoded in the URI path. They are orthogonal
-//!   selectors passed alongside the URI (mirrors Git, OCI, package managers).
+//!   selectors passed alongside the URI (mirrors VCS, OCI, package managers).
 //! - Fragment (`#`) carries the query path for subtree extraction.
 //! - Entity type is any non-empty string — fully dynamic and user-defined.
 

@@ -10,4 +10,5 @@ Options:
       --remote-url <REMOTE_URL>      Remote URL (required for remote provider)
   -v, --verbose                      Enable verbose debug logging
       --workspace-id <WORKSPACE_ID>  Workspace ID (for remote provider)
+      --reset                        Reset the provider configuration file
   -h, --help                         Print help

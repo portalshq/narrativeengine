@@ -67,6 +67,8 @@ commands:
           - name: "workspace_id"
             about: "Workspace ID (for remote provider)"
         flags:
+          - name: "reset"
+            about: "Reset the provider configuration file"
           - name: "help"
             about: "Print help"
   - name: "commit"
@@ -185,7 +187,7 @@ commands:
     long_about: |
       Initialize a repository repository and/or configure the backend provider.
       
-      When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial Git commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
+      When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
       
       nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
     usage: "Usage: init [OPTIONS] [REPOSITORY]"
@@ -204,6 +206,8 @@ commands:
       - name: "remote"
         about: "Remote URL to add as origin after init"
     flags:
+      - name: "reset"
+        about: "Reset the provider configuration file"
       - name: "help"
         about: "Print help (see more with '--help')"
   - name: "install"
@@ -273,7 +277,7 @@ commands:
     long_about: |
       Clone or pull a repository from a remote.
       
-      If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via `git pull`.
+      If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via pull.
     usage: "Usage: pull <URL_OR_NAME>"
     hidden: false
     arguments:
@@ -322,7 +326,7 @@ commands:
         about: "Print help"
   - name: "remote"
     full_path: "remote"
-    about: "Manage git remotes on a repository"
+    about: "Manage remotes on a repository"
     usage: "Usage: remote <COMMAND>"
     hidden: false
     flags:
@@ -392,8 +396,6 @@ commands:
         about: "Resolve at a specific branch"
       - name: "commit"
         about: "Resolve at a specific commit hash"
-      - name: "tag"
-        about: "Resolve at a specific tag"
       - name: "format"
         about: "Output format: yaml, json"
         default: "yaml"
@@ -503,21 +505,6 @@ commands:
       - name: "repository"
         about: "Repository name"
         required: true
-    flags:
-      - name: "help"
-        about: "Print help"
-  - name: "tag"
-    full_path: "tag"
-    about: "Create or list tags"
-    usage: "Usage: tag <REPOSITORY> [NAME]"
-    hidden: false
-    arguments:
-      - name: "repository"
-        about: "Repository name"
-        required: true
-      - name: "name"
-        about: "Tag name to create. Omit to list all tags"
-        required: false
     flags:
       - name: "help"
         about: "Print help"

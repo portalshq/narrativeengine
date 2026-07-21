@@ -31,5 +31,8 @@ Options:
       --remote <REMOTE>
           Remote URL to add as origin after init
 
+      --reset
+          Reset the provider configuration file
+
   -h, --help
           Print help (see a summary with '-h')
