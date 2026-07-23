@@ -9,7 +9,6 @@ use std::path::Path;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_dir = Path::new("proto");
     let revision_proto = proto_dir.join("lore/revision/v1/revision.proto");
-    let repository_proto = proto_dir.join("lore/repository/v1/repository.proto");
 
     // ── Ensure protoc is available ────────────────────────────────────
     // Use vendored protoc so the build works on CI (no system protoc
@@ -35,11 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_client(true)
         .build_server(false)
-        .compile_protos_with_config(
-            prost_config,
-            &[&revision_proto, &repository_proto],
-            &[proto_dir],
-        )?;
+        .compile_protos_with_config(prost_config, &[&revision_proto], &[proto_dir])?;
 
     Ok(())
 }
