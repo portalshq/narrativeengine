@@ -474,24 +474,6 @@ pub fn repo_list_branches(base_path: String, repository: String) -> napi::Result
     serde_json::to_string(&branches).map_err(|e| Error::from_reason(e.to_string()))
 }
 
-#[napi(js_name = "repoCreateTag")]
-pub fn repo_create_tag(
-    base_path: String,
-    repository: String,
-    name: String,
-) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &repository)?;
-    repo.create_tag(&name).map_err(map_error)?;
-    Ok(serde_json::json!({"success": true, "tag": name}).to_string())
-}
-
-#[napi(js_name = "repoListTags")]
-pub fn repo_list_tags(base_path: String, repository: String) -> napi::Result<String> {
-    let repo = open_repo(&base_path, &repository)?;
-    let tags = repo.list_tags().map_err(map_error)?;
-    serde_json::to_string(&tags).map_err(|e| Error::from_reason(e.to_string()))
-}
-
 #[napi(js_name = "repoHeadHash")]
 pub fn repo_head_hash(base_path: String, repository: String) -> napi::Result<String> {
     let repo = open_repo(&base_path, &repository)?;
@@ -599,7 +581,6 @@ pub fn resolve_with_options(
     let options = ResolveOptions {
         branch,
         commit,
-        tag: None,
         path,
         recursive: None,
         max_depth: None,

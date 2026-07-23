@@ -98,10 +98,6 @@ impl VcsBackend for MockBackend {
         Ok(())
     }
 
-    fn create_tag(&self, _path: &Path, _name: &str) -> Result<(), NapError> {
-        Ok(())
-    }
-
     fn current_branch(&self, _path: &Path) -> Result<String, NapError> {
         Ok("main".to_string())
     }
@@ -140,10 +136,6 @@ impl VcsBackend for MockBackend {
 
     fn list_branches(&self, _path: &Path) -> Result<Vec<String>, NapError> {
         Ok(self.branches.lock().unwrap().clone())
-    }
-
-    fn list_tags(&self, _path: &Path) -> Result<Vec<String>, NapError> {
-        Ok(Vec::new())
     }
 
     fn add_remote(&self, _path: &Path, _name: &str, _url: &str) -> Result<(), NapError> {

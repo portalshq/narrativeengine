@@ -23,9 +23,6 @@ Options:
   -v, --verbose
           Enable verbose debug logging
 
-      --tag <TAG>
-          Resolve at a specific tag
-
   -f, --format <FORMAT>
           Output format: yaml, json
           

@@ -492,20 +492,6 @@ fn repo_list_branches(base_path: String, repository: String) -> PyResult<String>
 }
 
 #[pyfunction]
-fn repo_create_tag(base_path: String, repository: String, name: String) -> PyResult<String> {
-    let repo = open_repo(&base_path, &repository)?;
-    repo.create_tag(&name).map_err(map_error)?;
-    Ok(serde_json::json!({"success": true, "tag": name}).to_string())
-}
-
-#[pyfunction]
-fn repo_list_tags(base_path: String, repository: String) -> PyResult<String> {
-    let repo = open_repo(&base_path, &repository)?;
-    let tags = repo.list_tags().map_err(map_error)?;
-    serde_json::to_string(&tags).map_err(|e| PyValueError::new_err(e.to_string()))
-}
-
-#[pyfunction]
 fn repo_head_hash(base_path: String, repository: String) -> PyResult<String> {
     let repo = open_repo(&base_path, &repository)?;
     let hash = repo.head_hash().map_err(map_error)?;
@@ -608,7 +594,6 @@ fn resolve_with_options(
     let options = ResolveOptions {
         branch,
         commit,
-        tag: None,
         path,
         recursive: None,
         max_depth: None,
@@ -842,8 +827,6 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(repo_create_branch, module)?)?;
     module.add_function(wrap_pyfunction!(repo_switch_branch, module)?)?;
     module.add_function(wrap_pyfunction!(repo_list_branches, module)?)?;
-    module.add_function(wrap_pyfunction!(repo_create_tag, module)?)?;
-    module.add_function(wrap_pyfunction!(repo_list_tags, module)?)?;
     module.add_function(wrap_pyfunction!(repo_head_hash, module)?)?;
     module.add_function(wrap_pyfunction!(repo_revert_commit, module)?)?;
     module.add_function(wrap_pyfunction!(repo_add_remote, module)?)?;

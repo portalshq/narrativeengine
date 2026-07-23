@@ -564,12 +564,12 @@ export function repoReadManifest(
 }
 
 /**
- * Read a manifest at a specific VCS reference (commit, branch, tag).
+ * Read a manifest at a specific VCS reference (commit, branch).
  *
  * @param repository - Repository name
  * @param entityType - Entity type string
  * @param entityId - Entity ID
- * @param reference - VCS ref (commit hash, branch name, or tag)
+ * @param reference - VCS ref (commit hash or branch name)
  * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
  * @returns Manifest object
  */
@@ -739,40 +739,6 @@ export function repoListBranches(
 ): string[] {
   return JSON.parse(
     native.repoListBranches(resolveRepoPath(basePath), repository),
-  ) as string[];
-}
-
-/**
- * Create a tag in a repository repository.
- *
- * @param repository - Repository name
- * @param name - Tag name
- * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
- * @returns Success response
- */
-export function repoCreateTag(
-  repository: string,
-  name: string,
-  basePath?: string,
-): SuccessResponse {
-  return JSON.parse(
-    native.repoCreateTag(resolveRepoPath(basePath), repository, name),
-  ) as SuccessResponse;
-}
-
-/**
- * List all tags in a repository repository.
- *
- * @param repository - Repository name
- * @param basePath - Base directory (defaults to `$NAP_DIR` / `~/.nap`)
- * @returns Array of tag names
- */
-export function repoListTags(
-  repository: string,
-  basePath?: string,
-): string[] {
-  return JSON.parse(
-    native.repoListTags(resolveRepoPath(basePath), repository),
   ) as string[];
 }
 

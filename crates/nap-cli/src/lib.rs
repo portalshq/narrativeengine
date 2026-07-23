@@ -174,7 +174,6 @@ pub enum Commands {
         #[arg(long)]
         commit: Option<String>,
 
-
         /// Output format: yaml, json.
         #[arg(long, short = 'f', default_value = "yaml", env = "NAP_OUTPUT")]
         format: String,
@@ -235,7 +234,6 @@ pub enum Commands {
         /// Branch name to create. Omit to list all branches.
         name: Option<String>,
     },
-
 
     /// Set a property on an entity manifest.
     Set {

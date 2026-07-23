@@ -523,13 +523,13 @@ def repo_read_manifest_at_ref(
     reference: str,
     base_path: str | None = None,
 ) -> dict[str, Any]:
-    """Read a manifest at a specific VCS reference (commit, branch, tag).
+    """Read a manifest at a specific VCS reference (commit, branch).
 
     Args:
         repository: Repository name.
         entity_type: Entity type string.
         entity_id: Entity ID.
-        reference: VCS ref (commit hash, branch name, or tag).
+        reference: VCS ref (commit hash or branch name).
         base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
 
     Returns:
@@ -737,50 +737,6 @@ def repo_list_branches(
         list[str],
         json.loads(
             _native.repo_list_branches(_resolve_repo_path(base_path), repository)
-        ),
-    )
-
-
-def repo_create_tag(
-    repository: str,
-    name: str,
-    base_path: str | None = None,
-) -> dict[str, Any]:
-    """Create a tag in a repository repository.
-
-    Args:
-        repository: Repository name.
-        name: Tag name.
-        base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
-
-    Returns:
-        Dict with ``success`` and ``tag``.
-    """
-    return cast(
-        dict[str, Any],
-        json.loads(
-            _native.repo_create_tag(_resolve_repo_path(base_path), repository, name)
-        ),
-    )
-
-
-def repo_list_tags(
-    repository: str,
-    base_path: str | None = None,
-) -> list[str]:
-    """List all tags in a repository repository.
-
-    Args:
-        repository: Repository name.
-        base_path: Base directory (defaults to ``$NAP_DIR`` / ``~/.nap``).
-
-    Returns:
-        List of tag names.
-    """
-    return cast(
-        list[str],
-        json.loads(
-            _native.repo_list_tags(_resolve_repo_path(base_path), repository)
         ),
     )
 
@@ -1220,8 +1176,6 @@ __all__ = [
     "repo_create_branch",
     "repo_switch_branch",
     "repo_list_branches",
-    "repo_create_tag",
-    "repo_list_tags",
     "repo_head_hash",
     "repo_revert_commit",
     "repo_add_remote",

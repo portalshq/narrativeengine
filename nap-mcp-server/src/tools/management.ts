@@ -14,8 +14,6 @@ import {
   listBranches,
   createBranch,
   switchBranch,
-  listTags,
-  createTag,
   listRemotes,
   addRemote,
   removeRemote,
@@ -367,107 +365,6 @@ Examples:
     async (params: { repository: string; name: string }) => {
       try {
         const result = await switchBranch(params.repository, params.name);
-        return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (err) {
-        return handleManagementError(err);
-      }
-    },
-  );
-
-  // ── nap_list_tags ──────────────────────────────────────────────────────
-  const ListTagsInputSchema = z
-    .object({
-      repository: z
-        .string()
-        .min(1)
-        .describe("Repository name (e.g., 'starwars')."),
-    })
-    .strict();
-
-  server.registerTool(
-    "nap_list_tags",
-    {
-      title: "List Tags",
-      description: `List all Git tags in a repository repository.
-
-Tags are read-only snapshots of a branch at a specific point in time.
-They are useful for marking releases or important milestones.
-
-Args:
-  repository (string): Repository name
-
-Returns: { tags: string[] }
-
-Examples:
-  - "What tags exist in Star Wars?" → repository="starwars"
-  - "List all tags in Toy Story" → repository="toystory"`,
-      inputSchema: ListTagsInputSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false,
-      },
-    },
-    async (params: { repository: string }) => {
-      try {
-        const result = await listTags(params.repository);
-        return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (err) {
-        return handleManagementError(err);
-      }
-    },
-  );
-
-  // ── nap_create_tag ─────────────────────────────────────────────────────
-  const CreateTagInputSchema = z
-    .object({
-      repository: z
-        .string()
-        .min(1)
-        .describe("Repository name (e.g., 'starwars')."),
-      name: z
-        .string()
-        .min(1)
-        .describe(
-          "Tag name (e.g., 'v1.0', 'episode-4-release', 'pilot-episode').",
-        ),
-    })
-    .strict();
-
-  server.registerTool(
-    "nap_create_tag",
-    {
-      title: "Create Tag",
-      description: `Create a Git tag at the current HEAD in a repository repository.
-
-Tags are immutable references to a specific commit. Use them to mark releases,
-important milestones, or any version you want to reference later.
-
-Args:
-  repository (string): Repository name
-  name (string): Tag name (e.g., 'v1.0', 'episode-4')
-
-Returns: { tag: string }
-
-Examples:
-  - "Tag the current state as v1.0" → repository="starwars", name="v1.0"
-  - "Mark this as the pilot episode" → repository="toystory", name="pilot"`,
-      inputSchema: CreateTagInputSchema,
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: false,
-        openWorldHint: true,
-      },
-    },
-    async (params: { repository: string; name: string }) => {
-      try {
-        const result = await createTag(params.repository, params.name);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };

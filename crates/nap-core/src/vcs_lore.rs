@@ -14,12 +14,10 @@
 //! | `log`                        | `lore log --format json`                                 |
 //! | `create_branch`              | `lore branch create <name>`                              |
 //! | `switch_branch`              | `lore branch switch <name>`                              |
-//! | `create_tag`                 | `lore file metadata set repository.yaml nap.labels <json>` |
 //! | `current_branch`             | `lore branch show`                                       |
 //! | `head_hash`                  | `lore log --limit 1 --format json`                       |
 //! | `revert`                     | `lore revision revert <hash>`                            |
 //! | `list_branches`              | `lore branch list`                                       |
-//! | `list_tags`                  | `lore label list`                                        |
 //! | `add_remote`                 | `lore repository add <url>`                              |
 //! | `remove_remote`              | `lore repository remove <url>`                           |
 //! | `list_remotes`               | `lore repository list`                                   |
@@ -190,6 +188,10 @@ impl LoreBackend {
             remote_url: remote_url.to_string(),
             workspace_id: workspace_id.to_string(),
         }
+    }
+
+    pub fn remote_url(&self) -> &str {
+        &self.remote_url
     }
 
     /// Clone a remote Lore repository to a local path.
@@ -630,9 +632,6 @@ impl VcsBackend for LoreBackend {
         }
         Ok(branches)
     }
-
-
-
 
     // ── head / revert ────────────────────────────────────────────────
     fn head_hash(&self, path: &Path) -> Result<String, NapError> {

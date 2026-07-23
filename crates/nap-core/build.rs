@@ -35,7 +35,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_client(true)
         .build_server(false)
-        .compile_protos_with_config(prost_config, &[&revision_proto, &repository_proto], &[proto_dir])?;
+        .compile_protos_with_config(
+            prost_config,
+            &[&revision_proto, &repository_proto],
+            &[proto_dir],
+        )?;
 
     Ok(())
 }

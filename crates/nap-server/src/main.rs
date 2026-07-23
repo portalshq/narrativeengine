@@ -15,8 +15,6 @@
 //!   GET   /head/:repository                              — Get HEAD commit hash
 //!   GET   /branches/:repository                          — List branches
 //!   POST  /branches/:repository                          — Create a branch
-//!   GET   /tags/:repository                              — List tags
-//!   POST  /tags/:repository                              — Create a tag
 //!   GET   /remotes/:repository                           — List remotes
 //!   POST  /remotes/:repository                           — Add a remote
 //!   DELETE /remotes/:repository/:name                    — Remove a remote
@@ -30,7 +28,6 @@
 //! Query parameters:
 //!   branch — Resolve at a specific branch
 //!   commit — Resolve at a specific commit hash
-//!   tag    — Resolve at a specific tag
 //!   path   — Subtree query path
 
 use std::net::SocketAddr;
@@ -69,7 +66,6 @@ struct AppState {
 struct ResolveQuery {
     branch: Option<String>,
     commit: Option<String>,
-    tag: Option<String>,
     path: Option<String>,
     recursive: Option<bool>,
     max_depth: Option<usize>,
@@ -103,9 +99,9 @@ struct DeleteRequest {
     author: String,
 }
 
-/// Request body for branch/tag creation.
+/// Request body for branch creation.
 #[derive(Debug, Deserialize)]
-struct BranchTagRequest {
+struct BranchRequest {
     name: String,
 }
 
@@ -206,11 +202,6 @@ async fn main() {
         .route(
             "/branches/{repository}",
             get(handle_list_branches).post(handle_create_branch),
-        )
-        // Tags
-        .route(
-            "/tags/{repository}",
-            get(handle_list_tags).post(handle_create_tag),
         )
         // Remotes
         .route(
@@ -462,7 +453,7 @@ async fn handle_list_branches(
 async fn handle_create_branch(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
-    Json(body): Json<BranchTagRequest>,
+    Json(body): Json<BranchRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let repo_path = state.base_path.join(&repository);
     let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
@@ -489,81 +480,6 @@ async fn handle_create_branch(
     Ok(Json(serde_json::json!({
         "success": true,
         "branch": body.name,
-    })))
-}
-
-/// GET /tags/:repository
-async fn handle_list_tags(
-    State(state): State<Arc<AppState>>,
-    Path(repository): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    // To avoid conflicting with POST /tags/:repository body parsing,
-    // we use a function-level approach
-    let repo_path = state.base_path.join(&repository);
-    let repo = match Repository::open(&repo_path, Box::new(LoreBackend::from_env())) {
-        Ok(r) => r,
-        Err(e) => {
-            return Err((
-                StatusCode::NOT_FOUND,
-                Json(ApiError {
-                    error: e.to_string(),
-                    code: "UNIVERSE_NOT_FOUND".to_string(),
-                }),
-            ));
-        }
-    };
-
-    let tags = match repo.list_tags() {
-        Ok(t) => t,
-        Err(e) => {
-            error!(error = %e, "list tags failed");
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiError {
-                    error: e.to_string(),
-                    code: "LIST_TAGS_FAILED".to_string(),
-                }),
-            ));
-        }
-    };
-
-    Ok(Json(serde_json::json!({
-        "repository": repository,
-        "tags": tags,
-    })))
-}
-
-/// POST /tags/:repository
-async fn handle_create_tag(
-    State(state): State<Arc<AppState>>,
-    Path(repository): Path<String>,
-    Json(body): Json<BranchTagRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
-        (
-            StatusCode::NOT_FOUND,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "UNIVERSE_NOT_FOUND".to_string(),
-            }),
-        )
-    })?;
-
-    repo.create_tag(&body.name).map_err(|e| {
-        error!(error = %e, tag = %body.name, "create tag failed");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiError {
-                error: e.to_string(),
-                code: "CREATE_TAG_FAILED".to_string(),
-            }),
-        )
-    })?;
-
-    Ok(Json(serde_json::json!({
-        "success": true,
-        "tag": body.name,
     })))
 }
 
@@ -820,7 +736,6 @@ async fn handle_resolve(
     let options = ResolveOptions {
         branch: query.branch,
         commit: query.commit,
-        tag: query.tag,
         path: query.path,
         recursive: query.recursive,
         max_depth: query.max_depth,
@@ -986,7 +901,7 @@ async fn handle_sync(
         )
     })?;
 
-        // Use the current branch and let the VCS figure out the remote from tracking config.
+    // Use the current branch and let the VCS figure out the remote from tracking config.
 
     // Default to pushing "origin" if no tracking branch is set.
     let branch = repo.vcs().current_branch(&repo.root).ok();

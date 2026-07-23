@@ -1503,6 +1503,7 @@ dependencies = [
  "clap",
  "nap-core",
  "predicates",
+ "rand 0.8.6",
  "serde",
  "serde_json",
  "serde_yaml",

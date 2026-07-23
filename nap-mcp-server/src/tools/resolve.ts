@@ -34,10 +34,6 @@ const ResolveSelectorSchema = z
       .string()
       .optional()
       .describe("Specific commit hash to resolve at. Omit for HEAD."),
-    tag: z
-      .string()
-      .optional()
-      .describe("Tag name (e.g., 'episode-4'). Omit for HEAD."),
   })
   .strict();
 
@@ -48,7 +44,6 @@ const ResolveManifestInputSchema = z
     uri: NapUrnField,
     branch: z.string().optional().describe("Branch name to resolve at (e.g., 'canon')."),
     commit: z.string().optional().describe("Specific commit hash."),
-    tag: z.string().optional().describe("Tag name (e.g., 'episode-4')."),
     path: z
       .string()
       .optional()
@@ -108,7 +103,6 @@ Args:
   uri (string): NAP URI (e.g., 'nap://starwars/character/lukeskywalker')
   branch (string, optional): Branch name (e.g., 'canon', 'legends')
   commit (string, optional): Specific commit hash
-  tag (string, optional): Tag name (e.g., 'episode-4')
   path (string, optional): Subtree path override (e.g., 'properties.species')
 
 Returns: JSON object with the manifest or the queried subtree value.
@@ -132,7 +126,6 @@ Examples:
         const manifest = await resolveManifest(decoded, {
           branch: params.branch,
           commit: params.commit,
-          tag: params.tag,
           path: params.path,
         });
 
@@ -165,7 +158,6 @@ Examples:
         ),
       branch: z.string().optional().describe("Branch name."),
       commit: z.string().optional().describe("Specific commit hash."),
-      tag: z.string().optional().describe("Tag name."),
     })
     .strict();
 
@@ -186,7 +178,6 @@ Args:
   path (string): Dot-notation path (e.g., 'properties.species', 'references.appears_in')
   branch (string, optional): Branch name
   commit (string, optional): Specific commit hash
-  tag (string, optional): Tag name
 
 Returns: The value at the given path (string, number, array, or object).
 
@@ -210,7 +201,6 @@ Examples:
         const value = await resolveManifest(decoded, {
           branch: params.branch,
           commit: params.commit,
-          tag: params.tag,
           path: params.path,
         });
 

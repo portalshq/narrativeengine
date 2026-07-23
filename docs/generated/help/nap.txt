@@ -17,13 +17,12 @@ Commands:
   history       View commit history for an entity
   list          List repositories or entities within a repository
   branch        Create or list branches
-  tag           Create or list tags
   set           Set a property on an entity manifest
   add-repr      Add a representation to an entity manifest
   revert        Revert a commit by hash (undoes all changes in that commit)
   pull          Clone or pull a repository from a remote
   push          Push the current branch to its configured upstream remote
-  remote        Manage git remotes on a repository
+  remote        Manage remotes on a repository
   sign          Sign a manifest (stub for v0)
   verify        Verify a manifest signature (stub for v0)
   switch        Switch to a branch

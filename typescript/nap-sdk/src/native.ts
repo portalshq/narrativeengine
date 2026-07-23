@@ -52,8 +52,6 @@ interface NativeBindings {
   repoCreateBranch(basePath: string, repository: string, name: string): string;
   repoSwitchBranch(basePath: string, repository: string, name: string): string;
   repoListBranches(basePath: string, repository: string): string;
-  repoCreateTag(basePath: string, repository: string, name: string): string;
-  repoListTags(basePath: string, repository: string): string;
   repoHeadHash(basePath: string, repository: string): string;
   repoRevertCommit(basePath: string, repository: string, commitHash: string, author: string): string;
   repoAddRemote(basePath: string, repository: string, name: string, url: string): string;
@@ -64,7 +62,7 @@ interface NativeBindings {
 
   // Resolver
   resolve(uri: string, repoPath: string): string;
-  resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, tag?: string, path?: string): string;
+  resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, path?: string): string;
   resolveQuery(uri: string, repoPath: string, path: string): string;
   listRepositories(repoPath: string): string;
 

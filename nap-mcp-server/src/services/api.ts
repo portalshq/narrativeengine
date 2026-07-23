@@ -128,12 +128,11 @@ async function napFetch<T>(
 /** Resolve a manifest (with optional selectors). */
 export async function resolveManifest(
   parts: NapUriParts,
-  params?: { branch?: string; commit?: string; tag?: string; path?: string },
+  params?: { branch?: string; commit?: string; path?: string },
 ): Promise<Manifest | unknown> {
   const query = new URLSearchParams();
   if (params?.branch) query.set("branch", params.branch);
   if (params?.commit) query.set("commit", params.commit);
-  if (params?.tag) query.set("tag", params.tag);
   if (params?.path) query.set("path", params.path);
 
   const qs = query.toString();
@@ -284,26 +283,6 @@ export async function switchBranch(
 ): Promise<{ success: boolean; branch: string }> {
   return napFetch<{ success: boolean; branch: string }>(
     `/switch/${repository}`,
-    { method: "POST", body: JSON.stringify({ name }) },
-  );
-}
-
-// ── Tag Operations ────────────────────────────────────────────
-
-/** List tags in a repository. */
-export async function listTags(
-  repository: string,
-): Promise<{ repository: string; tags: string[] }> {
-  return napFetch<{ repository: string; tags: string[] }>(`/tags/${repository}`);
-}
-
-/** Create a tag in a repository. */
-export async function createTag(
-  repository: string,
-  name: string,
-): Promise<{ success: boolean; tag: string }> {
-  return napFetch<{ success: boolean; tag: string }>(
-    `/tags/${repository}`,
     { method: "POST", body: JSON.stringify({ name }) },
   );
 }

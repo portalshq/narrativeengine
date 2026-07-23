@@ -1,4 +1,4 @@
-Manage git remotes on a repository
+Manage remotes on a repository
 
 Usage: nap remote [OPTIONS] <COMMAND>
 
