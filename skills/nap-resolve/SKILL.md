@@ -1,48 +1,40 @@
 ---
-name: nap-entity-mutation
-description: Update entity properties in a creative workflow and properly store creative assets back into the entity manifest, ensuring proper provenance.
+name: nap-resolve
+description: Create new nap entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for AI workflows.
 metadata:
   author: portals
   version: "0.5.2"
 ---
 
-# NAP Skill: Entity Mutation and Creative Workflow Integration
+# NAP Skill: Entity Creation and Resolution
 
-Update entity properties in a creative workflow and properly store creative assets back into the entity manifest, ensuring proper provenance.
+Create new nap entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for AI workflows. 
 
 ## When to Apply
 
 Reference these guidelines when:
-- Making changes to entity properties in a creative workflow
-- Generating new assets as part of a creative workflow
-- Storing assets back into the entity manifest
+- Creating new entities (e.g., characters, locations, items, events)
+- Resolving NAP URIs into manifests
+- Querying subtree data for creative workflows
 
 ## Core Commands
 
-* **Set a Property:** To modify or add a property to an entity's manifest, use `nap set <URI> <property_key> <value>`.
-  * *Example:* `nap set nap://toystory/character/woody toy_type pullstring_cowboy`.
-  * *Example:* `nap set nap://toystory/character/woody location "nap://toystory/location/andysroom"`.
+* **Create an Entity:** Use `nap create <entity_type> <entity_id> -u <repository> -n "<Name>"`.
+  * *Example:* `nap create character woody -u toystory -n "Sheriff Woody"`.
 
-## Creative Workflow Pipeline
-When using a creative tool (like a text model, Midjourney, or video generation platform) to generate assets for a NAP entity, you must follow this exact sequence:
+* **Resolve a Full Manifest:** To fetch the complete YAML manifest of a resource, use `nap resolve <URI>`.
+  * *Example:* `nap resolve nap://toystory/character/woody`.
+  * You can specify output formats using the `-f` flag, such as `-f json` or `-f yaml`.
 
-1. **Resolve/Query:** Fetch necessary context using `nap resolve` or `nap query` (see Entity Access Skill).
-2. **Generate:** Use your available creative tools to generate the text, image, or video based on the context.
-3. **Store Representation:** When saving the generated asset back to the entity's manifest, you must track its provenance. Ensure the manifest is updated with the following structured YAML/JSON:
-   * **Hash:** Every piece of content must be strictly indexed by its BLAKE3 hash. Do not use SHA-256.
-   * **Provenance Tracking:** Record the AI generation metadata, including the `model` used (e.g., "midjourney-v6" or the specific LLM), the `prompt_hash`, and any `derived_from` URIs.
+* **Query a Subtree (Crucial for AI workflows):** To fetch only specific data and save token context, append a fragment to the URI or use the query command. Subtree queries let AI agents fetch exactly the data they need, preserving token budget.
+  * *Example (Fragment):* `nap resolve nap://toystory/character/woody#properties.toy_type`.
+  * *Example (Command):* `nap query nap://toystory/character/woody properties`.
 
-*Example of updating a manifest's representations block via CLI/script editing:*
-```yaml
-representations:
-  ai_description:
-    hash: "blake3:abc123def..." 
-    format: text
-    provenance:
-      model: "claude-3-opus"
-      prompt_hash: "blake3:def456..."
-      derived_from: "nap://toystory/character/woody"
-```
+## Creative Workflow Example (Context Gathering)
+If tasked with generating an image of a location:
+1. Run `nap query nap://toystory/location/andysroom properties` to extract atmospheric details.
+2. Run `nap resolve nap://toystory/location/andysroom#references.appears_in` to find associated scenes.
+3. Use this targeted data to construct your generation prompt.
 
 ## CLI Reference
 

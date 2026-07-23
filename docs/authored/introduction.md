@@ -72,7 +72,7 @@ head: "a72c9f3b..."
 
 ### 3. Commit — History
 
-Commits are content-addressed (SHA-256) snapshots with patch metadata. The manifest stores only `head` — a pointer to the latest commit. Full history lives in the VCS, keeping manifests bounded.
+Commits are content-addressed (BLAKE3) snapshots with patch metadata. The manifest stores only `head` — a pointer to the latest commit. Full history lives in the VCS, keeping manifests bounded.
 
 ### 4. Resolver — URI → Manifest
 

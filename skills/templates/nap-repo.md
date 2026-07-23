@@ -1,5 +1,5 @@
 ---
-name: nap-repo-management
+name: nap-repo
 description: Initialize NAP repositories, including creating new repositories, cloning repositories, and branching existing ones.
 metadata:
   author: portals

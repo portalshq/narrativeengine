@@ -1,6 +1,6 @@
 ---
-name: nap-entity-access
-description: Create new narrative entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for creative AI workflows.
+name: nap-resolve
+description: Create new nap entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for AI workflows.
 metadata:
   author: portals
   version: "{{version}}"
@@ -8,7 +8,7 @@ metadata:
 
 # NAP Skill: Entity Creation and Resolution
 
-Create new narrative entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for creative AI workflows. 
+Create new nap entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for AI workflows. 
 
 ## When to Apply
 

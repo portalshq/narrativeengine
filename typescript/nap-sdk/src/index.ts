@@ -372,27 +372,27 @@ export function manifestBumpVersion(manifest: Manifest): Manifest {
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * Compute the SHA-256 content hash of raw bytes.
+ * Compute the BLAKE3 content hash of raw bytes.
  *
  * @param data - Raw byte data
- * @returns Content hash `sha256:<hex>`
+ * @returns Content hash `blake3:<hex>`
  */
 export function contentHashFromBytes(data: Buffer): string {
   return native.contentHashFromBytes(data);
 }
 
 /**
- * Compute the SHA-256 content hash of a string.
+ * Compute the BLAKE3 content hash of a string.
  *
  * @param s - Input string
- * @returns Content hash `sha256:<hex>`
+ * @returns Content hash `blake3:<hex>`
  */
 export function contentHashFromString(s: string): string {
   return native.contentHashFromString(s);
 }
 
 /**
- * Parse and validate a `sha256:<hex>` content hash string.
+ * Parse and validate a `blake3:<hex>` content hash string.
  *
  * @param s - Content hash string
  * @returns The validated content hash

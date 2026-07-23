@@ -255,7 +255,7 @@ nap set nap://starwars/character/darthvader base "nap://starwars/location/deaths
 
 ### 2.2 Content-Addressed Assets
 
-Manifests don't store files — they store **SHA-256 hashes** pointing to assets. This makes everything verifiable, deduplicatable, and cacheable:
+Manifests don't store files — they store **BLAKE3 hashes** pointing to assets. This makes everything verifiable, deduplicatable, and cacheable:
 
 ```bash
 # Link a reference image by content hash
@@ -873,7 +873,7 @@ starwars/                    ← repository root (Git repo)
 | `nap revert <repository> -c <hash>` | Revert a commit |
 | `nap diff <base> <candidate>` | Diff two manifest files |
 | `nap merge <base> <current> <proposed>` | Three-way merge |
-| `nap content-hash <file>` | Compute SHA-256 content hash |
+| `nap content-hash <file>` | Compute BLAKE3 content hash |
 | `nap schema <name>` | Print JSON schema (manifest or commit) |
 | `nap sign <uri>` | Sign a manifest (stub in v0) |
 | `nap verify <uri>` | Verify a manifest signature (stub in v0) |
@@ -899,7 +899,7 @@ Repository repositories are stored in `~/.nap/<repository>/` by default. Use `-d
 
 - **Manifest is current state. History is external.** Manifests store only `head` — a pointer to the latest commit. Full history lives in the VCS, preventing unbounded manifest growth.
 - **Version/branch/tag are NEVER in the URI.** They are orthogonal selectors passed alongside the URI (mirrors Git, OCI, package managers).
-- **Content-address everything.** Every representation is identified by its SHA-256 hash. Manifests are content-hashable for signing and verification.
+- **Content-address everything.** Every representation is identified by its BLAKE3 hash. Manifests are content-hashable for signing and verification.
 - **Subtree queries are first-class.** AI systems, CLI tools, and HTTP clients all use the same query engine. Fragment queries enable efficient data access without fetching entire manifests.
 
 ---

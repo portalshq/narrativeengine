@@ -664,7 +664,7 @@ Examples:
         .string()
         .min(1)
         .describe(
-          "Base64-encoded data to compute the SHA-256 hash of. " +
+          "Base64-encoded data to compute the BLAKE3 hash of. " +
             "Encode file contents as base64 before calling.",
         ),
     })
@@ -674,9 +674,9 @@ Examples:
     "nap_content_hash",
     {
       title: "Compute Content Hash",
-      description: `Compute the SHA-256 content hash of base64-encoded data.
+      description: `Compute the BLAKE3 content hash of base64-encoded data.
 
-Returns the hash in 'sha256:<hex>' format. Use this to verify content integrity
+Returns the hash in 'blake3:<hex>' format. Use this to verify content integrity
 or to generate hashes for representation references.
 
 Args:

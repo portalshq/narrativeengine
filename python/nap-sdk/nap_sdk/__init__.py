@@ -200,13 +200,13 @@ def manifest_from_yaml(yaml_str: str) -> dict[str, Any]:
 
 
 def manifest_content_hash(manifest: dict[str, Any]) -> str:
-    """Compute the SHA-256 content hash of a manifest.
+    """Compute the BLAKE3 content hash of a manifest.
 
     Args:
         manifest: A manifest dict.
 
     Returns:
-        Content hash string in ``sha256:<hex>`` format.
+        Content hash string in ``blake3:<hex>`` format.
     """
     return _native.manifest_content_hash(json.dumps(manifest))
 
@@ -286,31 +286,31 @@ def manifest_bump_version(manifest: dict[str, Any]) -> dict[str, Any]:
 
 
 def content_hash_from_bytes(data: bytes) -> str:
-    """Compute the SHA-256 content hash of raw bytes.
+    """Compute the BLAKE3 content hash of raw bytes.
 
     Args:
         data: Raw byte data.
 
     Returns:
-        Content hash string ``sha256:<hex>``.
+        Content hash string ``blake3:<hex>``.
     """
     return _native.content_hash_from_bytes(data)
 
 
 def content_hash_from_string(s: str) -> str:
-    """Compute the SHA-256 content hash of a string.
+    """Compute the BLAKE3 content hash of a string.
 
     Args:
         s: Input string.
 
     Returns:
-        Content hash string ``sha256:<hex>``.
+        Content hash string ``blake3:<hex>``.
     """
     return _native.content_hash_from_string(s)
 
 
 def content_hash_parse(s: str) -> str:
-    """Parse and validate a ``sha256:<hex>`` content hash string.
+    """Parse and validate a ``blake3:<hex>`` content hash string.
 
     Args:
         s: Content hash string.
@@ -406,7 +406,7 @@ def commit_new(
     Args:
         author: Author identifier.
         message: Human-readable commit message.
-        manifest_hash: SHA-256 hash of the resulting manifest.
+        manifest_hash: BLAKE3 hash of the resulting manifest.
         changes: List of change dicts.
         parent: Optional parent commit hash.
 

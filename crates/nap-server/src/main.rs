@@ -680,7 +680,7 @@ async fn handle_content_hash(
     let hash = ContentHash::from_bytes(&bytes);
     Ok(Json(serde_json::json!({
         "hash": hash.as_str(),
-        "algorithm": "sha256",
+        "algorithm": "blake3",
     })))
 }
 

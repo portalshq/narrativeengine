@@ -1449,7 +1449,7 @@ fn cmd_content_hash(file: &Path) -> Result<()> {
             serde_json::to_string_pretty(&serde_json::json!({
                 "file": file.to_string_lossy(),
                 "hash": hash.as_str(),
-                "algorithm": "sha256",
+                "algorithm": "blake3",
             }))?
         );
     } else {

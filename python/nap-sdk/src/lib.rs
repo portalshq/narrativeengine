@@ -726,7 +726,7 @@ fn storage_config() -> PyResult<String> {
 /// 1. Releases the Python GIL before entering the async runtime
 ///    (prevents FastAPI / multi-threaded deadlocks).
 /// 2. Delegates all storage logic to the Rust engine — no Python I/O.
-/// 3. Returns the `sha256:<hex>` content hash.
+/// 3. Returns the `blake3:<hex>` content hash.
 ///
 /// # Arguments
 ///
@@ -736,7 +736,7 @@ fn storage_config() -> PyResult<String> {
 ///
 /// # Returns
 ///
-/// The content-addressed hash string `sha256:<hex>`.
+/// The content-addressed hash string `blake3:<hex>`.
 #[pyfunction]
 fn ingest_media(py: Python<'_>, data: Vec<u8>, format: String) -> PyResult<String> {
     let engine = nap_core::storage::get_engine().map_err(map_storage_error)?;
