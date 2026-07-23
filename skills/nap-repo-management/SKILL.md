@@ -3,7 +3,7 @@ name: nap-repo-management
 description: Initialize NAP repositories, including creating new repositories, cloning repositories, and branching existing ones.
 metadata:
   author: portals
-  version: "0.5.0"
+  version: "0.5.1"
 ---
 
 # NAP Skill: Repository Management
@@ -32,7 +32,7 @@ Reference these guidelines when:
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.0) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.1) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
