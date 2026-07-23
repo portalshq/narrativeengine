@@ -3,7 +3,7 @@ name: nap-entity-access
 description: Create new narrative entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for creative AI workflows.
 metadata:
   author: portals
-  version: "0.5.1"
+  version: "0.5.2"
 ---
 
 # NAP Skill: Entity Creation and Resolution
@@ -40,7 +40,7 @@ If tasked with generating an image of a location:
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.1) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.2) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
