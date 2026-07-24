@@ -6,6 +6,14 @@
 curl -fsSL https://github.com/portalshq/narrativeengine/releases/download/v0.4.2/install.sh | bash
 ```
 
+### Skills Install
+
+Install these skills to use NAP with agent workflows, including entity-aware prompts, generation templates, and the resolve/update steps that keep character and scene output consistent.
+
+```bash
+npx skills add portalshq/narrativeengine
+```
+
 ### CLI & Server (Rust — compile from source)
 
 ```bash

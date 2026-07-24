@@ -61,4 +61,4 @@ NAP core uses environment variables for configuration. All variables serve speci
 | `GET` | `/repositories/{repository}/entities` | List entities in a repository |
 | `GET` | `/health` | Health check |
 
-Query parameters for resolution: `branch`, `commit`, `tag`, `path` (subtree query).
+Query parameters for resolution: `branch`, `commit`, `path` (subtree query).

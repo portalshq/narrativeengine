@@ -33,7 +33,7 @@ NAP is built on four primitives:
 
 ### 1. URI — Identity
 
-A `nap://` URI identifies any narrative resource. Version, branch, and tag are **orthogonal selectors** passed alongside the URI — never encoded in the path (mirrors Git, OCI, and package managers).
+A `nap://` URI identifies any narrative resource. Version and branch are **orthogonal selectors** passed alongside the URI — never encoded in the path (mirrors Git, OCI, and package managers).
 
 ```text
 nap://starwars/character/lukeskywalker#references.appears_in
@@ -76,7 +76,7 @@ Commits are content-addressed (BLAKE3) snapshots with patch metadata. The manife
 
 ### 4. Resolver — URI → Manifest
 
-The resolver turns a `nap://` URI into a manifest (or a subtree of one). With optional selectors for branch, tag, or commit hash, it supports versioned resolution and fragment-based queries for efficient data access.
+The resolver turns a `nap://` URI into a manifest (or a subtree of one). With optional selectors for branch or commit hash, it supports versioned resolution and fragment-based queries for efficient data access.
 
 ---
 
