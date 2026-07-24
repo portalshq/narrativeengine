@@ -30,11 +30,23 @@ Reference these guidelines when:
   * *Example (Fragment):* `nap resolve nap://toystory/character/woody#properties.toy_type`.
   * *Example (Command):* `nap query nap://toystory/character/woody properties`.
 
+## Generation Context Requirements
+
+Before generating content from a NAP entity:
+
+1. Resolve the entity and gather every property relevant to the requested content, medium, scene, identity, style, behavior, or continuity.
+2. Gather applicable `representations` and `references`, including referenced entities that affect the requested result.
+3. Inspect the entity's properties for negative or exclusion constraints. Property names are schema-flexible, so look for semantically relevant keys such as `negative_constraints`, `exclusions`, `avoid`, `forbidden`, or other domain-specific constraint names rather than assuming one fixed path.
+4. Always provide discovered negative constraints to the content generator. Use a dedicated negative-prompt or exclusion field when the generator supports one; otherwise include them in the main prompt as explicit "do not" instructions. The absence of negative constraints does not block generation.
+5. For visual appearance, treat image and video representations as the source of truth. Use textual properties to supply supporting detail and explicit constraints without replacing observable visual identity.
+6. In multi-entity generations, keep each entity's properties, representations, references, and negative constraints associated with that entity so details do not bleed between entities.
+
 ## Creative Workflow Example (Context Gathering)
 If tasked with generating an image of a location:
-1. Run `nap query nap://toystory/location/andysroom properties` to extract atmospheric details.
-2. Run `nap resolve nap://toystory/location/andysroom#references.appears_in` to find associated scenes.
-3. Use this targeted data to construct your generation prompt.
+1. Resolve `nap://toystory/location/andysroom` to identify its available properties, representations, and references.
+2. Query relevant properties for atmospheric details and any negative or exclusion constraints.
+3. Resolve the applicable visual representations and referenced entities.
+4. Construct the generation prompt from that context, providing all discovered negative constraints to the generator.
 
 ## CLI Reference
 

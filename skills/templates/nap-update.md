@@ -26,8 +26,14 @@ Reference these guidelines when:
 ## Workflow Pipeline
 When using a tool (like a text model, Midjourney, or video generation platform) to generate assets for a NAP entity, you must follow this exact sequence:
 
-1. **Resolve/Query:** Fetch necessary context using `nap resolve` or `nap query` (see Entity Access Skill).
-2. **Generate:** Use your available creative tools to generate the text, image, or video based on the context.
+1. **Resolve/Query:** Fetch the context needed for the requested generation using `nap resolve` or `nap query` (see Entity Access Skill). Include:
+   * Every relevant entity property that affects the requested content, medium, scene, identity, style, behavior, continuity, or exclusions.
+   * Applicable `representations` and `references`, including context from referenced entities when it affects the result.
+   * Negative or exclusion constraints found in entity properties. Because properties are schema-flexible, inspect semantically relevant keys such as `negative_constraints`, `exclusions`, `avoid`, `forbidden`, and domain-specific constraint names instead of relying on one fixed key.
+2. **Generate:** Combine the gathered properties, representations, references, and constraints when generating the text, image, or video.
+   * For visual appearance, treat image and video representations as the source of truth. Textual properties provide supporting details and explicit constraints.
+   * Always provide available negative constraints to the generator. Use its dedicated negative-prompt or exclusion field when available; otherwise express the constraints in the main prompt as explicit "do not" instructions. Missing negative constraints do not block generation.
+   * For scenes with multiple entities, keep each entity's context and negative constraints associated with that entity to prevent attribute or identity bleed.
 3. **Store Representation:** When saving the generated asset back to the entity's manifest, you must track its provenance. Ensure the manifest is updated with the following structured YAML/JSON:
    * **Hash:** Every piece of content must be strictly indexed by its BLAKE3 hash. Do not use SHA-256.
    * **Provenance Tracking:** Record the AI generation metadata, including the `model` used (e.g., "midjourney-v6" or the specific LLM), the `prompt_hash`, and any `derived_from` URIs.
