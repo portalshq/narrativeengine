@@ -3,7 +3,7 @@ name: nap-update
 description: Update entity properties in a workflow and properly store properties and assets back into the entity manifest, ensuring proper provenance.
 metadata:
   author: portals
-  version: "0.5.2"
+  version: "0.5.3"
 ---
 
 # NAP Skill: Entity Update and Creative Workflow Integration
@@ -88,7 +88,7 @@ Prefer MCP tools over shell commands when in a sandbox.
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.2) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.3) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
