@@ -112,6 +112,7 @@ clean:
 
 # Generate documentation from source
 docgen:
+    cargo build -p nap-cli
     cargo run -p nap-docgen
 
 # Open rustdoc documentation in browser
@@ -120,6 +121,7 @@ docs:
 
 # Validate that generated documentation is current
 docs-check:
+    cargo build -p nap-cli
     cargo run -p nap-docgen
     @echo "Checking for uncommitted documentation changes..."
     @if git diff --exit-code -- docs/generated/ skills/ README.md > /dev/null 2>&1; then \

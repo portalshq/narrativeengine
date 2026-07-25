@@ -3,7 +3,7 @@ name: nap-resolve
 description: Create new nap entities, resolve NAP URIs into manifests, and perform subtree queries to extract specific context for AI workflows.
 metadata:
   author: portals
-  version: "0.5.2"
+  version: "0.5.3"
 ---
 
 # NAP Skill: Entity Creation and Resolution
@@ -66,8 +66,11 @@ Add to your agent's MCP configuration (e.g., `~/.codex/config.json`):
 {
   "mcpServers": {
     "nap": {
-      "command": "nap-mcp-server",
-      "env": { "NAP_DIR": "~/.nap" }
+      "command": "/bin/sh",
+      "args": [
+        "-lc",
+        "NAP_DIR=\"$HOME/.nap\" exec nap-mcp-server"
+      ]
     }
   }
 }
@@ -86,7 +89,7 @@ Prefer MCP tools over shell commands when in a sandbox.
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.2) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.3) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview

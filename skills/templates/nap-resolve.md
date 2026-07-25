@@ -66,8 +66,11 @@ Add to your agent's MCP configuration (e.g., `~/.codex/config.json`):
 {
   "mcpServers": {
     "nap": {
-      "command": "nap-mcp-server",
-      "env": { "NAP_DIR": "~/.nap" }
+      "command": "/bin/sh",
+      "args": [
+        "-lc",
+        "NAP_DIR=\"$HOME/.nap\" exec nap-mcp-server"
+      ]
     }
   }
 }

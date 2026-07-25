@@ -8,6 +8,10 @@
 
 ---
 
+{{include docs/authored/mcp.md}}
+
+---
+
 {{include docs/generated/cli.md}}
 
 ---
