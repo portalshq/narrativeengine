@@ -23,6 +23,7 @@
 //!               loreserver (authoritative store)
 //! ```
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::error::NapError;
@@ -235,6 +236,30 @@ pub trait VcsBackend: Send + Sync {
     fn remote_url_base(&self) -> Result<String, NapError> {
         Err(NapError::VcsError(
             "remote_url_base not supported by this VCS backend".to_string(),
+        ))
+    }
+
+    /// Read file metadata attached to a path at a specific revision.
+    ///
+    /// Lore file metadata is addressed by working-tree path plus revision,
+    /// not by the raw content hash of the file bytes.
+    fn file_metadata_at_ref(
+        &self,
+        _repo_path: &Path,
+        _file_path: &str,
+        _reference: &str,
+    ) -> Result<Option<BTreeMap<String, String>>, NapError> {
+        Ok(None)
+    }
+
+    /// Read a readable immutable provenance artifact by Lore address/hash.
+    ///
+    /// Production Lore verifies immutable fragment addressing internally. NAP
+    /// uses this only for known readable provenance artifacts, never arbitrary
+    /// binary assets.
+    fn read_provenance_blob(&self, _repo_path: &Path, _address: &str) -> Result<String, NapError> {
+        Err(NapError::VcsError(
+            "read_provenance_blob not supported by this VCS backend".to_string(),
         ))
     }
 }

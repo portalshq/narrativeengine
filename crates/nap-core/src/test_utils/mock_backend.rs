@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -28,6 +29,18 @@ impl MockBackend {
 
     fn commits_path(&self, repo_path: &Path) -> PathBuf {
         repo_path.join(".mock_commits.json")
+    }
+
+    fn file_metadata_path(&self, repo_path: &Path) -> PathBuf {
+        repo_path.join(".mock_file_metadata.json")
+    }
+
+    fn provenance_blobs_path(&self, repo_path: &Path) -> PathBuf {
+        repo_path.join(".mock_provenance_blobs.json")
+    }
+
+    fn metadata_requests_path(&self, repo_path: &Path) -> PathBuf {
+        repo_path.join(".mock_metadata_requests.json")
     }
 
     fn load_commits(&self, repo_path: &Path) -> Vec<CommitInfo> {
@@ -78,6 +91,50 @@ impl VcsBackend for MockBackend {
         let full_path = repo_path.join(file_path);
         std::fs::read_to_string(&full_path)
             .map_err(|e| NapError::Other(format!("mock: read failed: {}", e)))
+    }
+
+    fn file_metadata_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: &str,
+    ) -> Result<Option<BTreeMap<String, String>>, NapError> {
+        let requests_path = self.metadata_requests_path(repo_path);
+        let mut requests: Vec<BTreeMap<String, String>> = if requests_path.exists() {
+            std::fs::read_to_string(&requests_path)
+                .ok()
+                .and_then(|content| serde_json::from_str(&content).ok())
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        requests.push(BTreeMap::from([
+            ("path".to_string(), file_path.to_string()),
+            ("revision".to_string(), reference.to_string()),
+        ]));
+        std::fs::write(&requests_path, serde_json::to_string(&requests).unwrap())?;
+
+        let path = self.file_metadata_path(repo_path);
+        if !path.exists() {
+            return Ok(None);
+        }
+        let content = std::fs::read_to_string(path)?;
+        let metadata: BTreeMap<String, BTreeMap<String, String>> =
+            serde_json::from_str(&content).unwrap_or_default();
+        Ok(metadata
+            .get(&format!("{reference}:{file_path}"))
+            .cloned()
+            .or_else(|| metadata.get(file_path).cloned()))
+    }
+
+    fn read_provenance_blob(&self, repo_path: &Path, address: &str) -> Result<String, NapError> {
+        let path = self.provenance_blobs_path(repo_path);
+        let content = std::fs::read_to_string(path)?;
+        let blobs: BTreeMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
+        blobs
+            .get(address)
+            .cloned()
+            .ok_or_else(|| NapError::VcsError(format!("mock provenance blob not found: {address}")))
     }
 
     fn log(

@@ -30,8 +30,10 @@
 //! Unknown failures capture the full CLI stderr for debugging.  No error
 //! is ever silently swallowed.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use crate::error::NapError;
@@ -156,6 +158,51 @@ impl LoreProcessRunner {
 
         Err(nap_err)
     }
+}
+
+static TEMP_BLOB_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn temp_lore_output_path(prefix: &str) -> PathBuf {
+    let unique = TEMP_BLOB_COUNTER.fetch_add(1, Ordering::SeqCst);
+    std::env::temp_dir().join(format!(
+        "nap-{prefix}-{}-{}.tmp",
+        std::process::id(),
+        unique
+    ))
+}
+
+fn parse_metadata_output(stdout: &str) -> Result<BTreeMap<String, String>, String> {
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(stdout) {
+        let mut metadata = BTreeMap::new();
+        if let serde_json::Value::Object(map) = value {
+            for (key, value) in map {
+                let rendered = match value {
+                    serde_json::Value::String(s) => s,
+                    serde_json::Value::Bool(b) => b.to_string(),
+                    serde_json::Value::Number(n) => n.to_string(),
+                    serde_json::Value::Null => continue,
+                    other => serde_json::to_string(&other).map_err(|e| e.to_string())?,
+                };
+                metadata.insert(key, rendered);
+            }
+        }
+        return Ok(metadata);
+    }
+
+    let mut metadata = BTreeMap::new();
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Some((key, value)) = trimmed.split_once('=').or_else(|| trimmed.split_once(':')) {
+            let key = key.trim();
+            if !key.is_empty() {
+                metadata.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+    Ok(metadata)
 }
 
 // ---------------------------------------------------------------------------
@@ -478,14 +525,101 @@ impl VcsBackend for LoreBackend {
         &self,
         repo_path: &Path,
         file_path: &str,
-        _reference: Option<&str>,
+        reference: Option<&str>,
     ) -> Result<String, NapError> {
-        // lore file cat was removed from the CLI. Since the workspace is
-        // cloned at the current branch, read directly from disk.
-        let full_path = repo_path.join(file_path);
-        std::fs::read_to_string(&full_path).map_err(|e| {
-            NapError::VcsError(format!("failed to read {}: {}", full_path.display(), e))
-        })
+        let Some(reference) = reference else {
+            let full_path = repo_path.join(file_path);
+            return std::fs::read_to_string(&full_path).map_err(|e| {
+                NapError::VcsError(format!("failed to read {}: {}", full_path.display(), e))
+            });
+        };
+
+        let output_path = temp_lore_output_path("file-at-ref");
+        let output = output_path.to_string_lossy().into_owned();
+        LoreProcessRunner::run(
+            [
+                "file",
+                "write",
+                "--path",
+                file_path,
+                "--revision",
+                reference,
+                "--output",
+                &output,
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )?;
+
+        let content = std::fs::read_to_string(&output_path).map_err(|e| {
+            NapError::VcsError(format!(
+                "failed to read {} at revision {} from {}: {}",
+                file_path,
+                reference,
+                output_path.display(),
+                e
+            ))
+        })?;
+        let _ = std::fs::remove_file(&output_path);
+        Ok(content)
+    }
+
+    // ── file metadata ───────────────────────────────────────────────
+    fn file_metadata_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: &str,
+    ) -> Result<Option<BTreeMap<String, String>>, NapError> {
+        let stdout = LoreProcessRunner::run(
+            [
+                "file",
+                "metadata",
+                "get",
+                file_path,
+                "--revision",
+                reference,
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )?;
+
+        if stdout.trim().is_empty() || stdout.trim() == "null" {
+            return Ok(None);
+        }
+
+        parse_metadata_output(&stdout)
+            .map(Some)
+            .map_err(|e| NapError::VcsError(format!("failed to parse lore file metadata: {e}")))
+    }
+
+    fn read_provenance_blob(&self, repo_path: &Path, address: &str) -> Result<String, NapError> {
+        let output_path = temp_lore_output_path("provenance-blob");
+        let output = output_path.to_string_lossy().into_owned();
+
+        LoreProcessRunner::run(
+            [
+                "file",
+                "write",
+                "--address",
+                address,
+                "--output",
+                &output,
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )?;
+
+        let content = std::fs::read_to_string(&output_path).map_err(|e| {
+            NapError::VcsError(format!(
+                "failed to read hydrated provenance blob {} from {}: {}",
+                address,
+                output_path.display(),
+                e
+            ))
+        })?;
+        let _ = std::fs::remove_file(&output_path);
+        Ok(content)
     }
 
     // ── log ──────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ nap install <TARGET>
 
 | Name | Description | Required |
 |---|---|---|
-| target | Target to install (e.g., "lore") | Yes |
+| target | Target to install (e.g., "lore" or "mcp") | Yes |
 
 
 ## Flags

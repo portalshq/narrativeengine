@@ -122,8 +122,10 @@ starwars/                    ← repository root (Git repo)
 ### Installation Script
 
 ```bash
-curl -fsSL https://github.com/portalshq/narrativeengine/releases/download/v0.4.2/install.sh | bash
+curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash
 ```
+
+The installation script installs both native binaries: `nap` and `nap-mcp-server`. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use NAP through host-side CLI proxy calls.
 
 ### Skills Install
 

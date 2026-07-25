@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/nap-core",
     "crates/nap-cli",
+    "crates/nap-mcp-server",
     "crates/nap-docgen",
     "crates/nap-server",
     "crates/nap-test-utils",

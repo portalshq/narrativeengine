@@ -69,7 +69,7 @@ pub enum ChooseCmd {
 pub enum Commands {
     /// Install required dependencies.
     Install {
-        /// Target to install (e.g., "lore").
+        /// Target to install (e.g., "lore" or "mcp").
         target: String,
     },
 
@@ -177,6 +177,14 @@ pub enum Commands {
         /// Output format: yaml, json.
         #[arg(long, short = 'f', default_value = "yaml", env = "NAP_OUTPUT")]
         format: String,
+
+        /// Include condensed per-file provenance for the manifest and direct representations.
+        #[arg(long)]
+        provenance: bool,
+
+        /// Hydrate known readable provenance artifacts such as prompts and run records.
+        #[arg(long)]
+        include_blobs: bool,
     },
 
     /// Query a subtree from a manifest.

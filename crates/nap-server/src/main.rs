@@ -69,6 +69,8 @@ struct ResolveQuery {
     path: Option<String>,
     recursive: Option<bool>,
     max_depth: Option<usize>,
+    provenance: Option<bool>,
+    include_blobs: Option<bool>,
 }
 
 /// Request body for commits.
@@ -739,12 +741,27 @@ async fn handle_resolve(
         path: query.path,
         recursive: query.recursive,
         max_depth: query.max_depth,
+        provenance: query.provenance,
+        include_blobs: query.include_blobs,
     };
 
     let resolver = Resolver::new(&state.base_path);
     match resolver.resolve(&uri_str, &options) {
         Ok(ResolveResult::Full(manifest)) => {
             let json = serde_json::to_value(&manifest).map_err(|e| {
+                error!(error = %e, "serialization error");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiError {
+                        error: e.to_string(),
+                        code: "SERIALIZATION_ERROR".to_string(),
+                    }),
+                )
+            })?;
+            Ok(Json(json))
+        }
+        Ok(ResolveResult::Provenance(envelope)) => {
+            let json = serde_json::to_value(&envelope).map_err(|e| {
                 error!(error = %e, "serialization error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,

@@ -217,7 +217,7 @@ commands:
     hidden: false
     arguments:
       - name: "target"
-        about: "Target to install (e.g., \"lore\")"
+        about: "Target to install (e.g., \"lore\" or \"mcp\")"
         required: true
     flags:
       - name: "help"
@@ -400,6 +400,10 @@ commands:
         about: "Output format: yaml, json"
         default: "yaml"
     flags:
+      - name: "provenance"
+        about: "Include condensed per-file provenance for the manifest and direct representations"
+      - name: "include_blobs"
+        about: "Hydrate known readable provenance artifacts such as prompts and run records"
       - name: "help"
         about: "Print help (see more with '--help')"
   - name: "revert"

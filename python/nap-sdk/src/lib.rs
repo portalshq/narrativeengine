@@ -579,6 +579,7 @@ fn resolve(uri_str: String, repo_base_path: String) -> PyResult<String> {
             serde_json::to_string(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
+        ResolveResult::Provenance(_) => todo!(),
     }
 }
 
@@ -597,6 +598,8 @@ fn resolve_with_options(
         path,
         recursive: None,
         max_depth: None,
+        include_blobs: None,
+        provenance: None,
     };
     let result = resolver.resolve(&uri_str, &options).map_err(map_error)?;
     match result {
@@ -604,6 +607,7 @@ fn resolve_with_options(
             serde_json::to_string(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
+        ResolveResult::Provenance(_) => todo!(),
     }
 }
 

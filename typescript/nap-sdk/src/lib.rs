@@ -566,6 +566,7 @@ pub fn resolve(uri_str: String, repo_base_path: String) -> napi::Result<String> 
             serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
+        ResolveResult::Provenance(_) => todo!(),
     }
 }
 
@@ -584,6 +585,8 @@ pub fn resolve_with_options(
         path,
         recursive: None,
         max_depth: None,
+        include_blobs: None,
+        provenance: None,
     };
     let result = resolver.resolve(&uri_str, &options).map_err(map_error)?;
     match result {
@@ -591,6 +594,7 @@ pub fn resolve_with_options(
             serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
+        ResolveResult::Provenance(_) => todo!(),
     }
 }
 

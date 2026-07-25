@@ -8,7 +8,9 @@ set -euo pipefail
 
 REPO="portalshq/narrativeengine"
 BINARY_NAME="nap"
+MCP_BINARY_NAME="nap-mcp-server"
 VERSION="${VERSION:-latest}"
+BASE_URL="${NAP_INSTALL_BASE_URL:-}"
 
 ###############################################################################
 # Utilities
@@ -73,21 +75,29 @@ esac
 ###############################################################################
 
 ASSET="${BINARY_NAME}-${TARGET}"
+MCP_ASSET="${MCP_BINARY_NAME}-${TARGET}"
 
-if [[ "$VERSION" == "latest" ]]; then
+if [[ -n "$BASE_URL" ]]; then
+    URL="${BASE_URL%/}/${ASSET}"
+    MCP_URL="${BASE_URL%/}/${MCP_ASSET}"
+elif [[ "$VERSION" == "latest" ]]; then
     URL="https://github.com/${REPO}/releases/latest/download/${ASSET}"
+    MCP_URL="https://github.com/${REPO}/releases/latest/download/${MCP_ASSET}"
 else
     URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET}"
+    MCP_URL="https://github.com/${REPO}/releases/download/${VERSION}/${MCP_ASSET}"
 fi
 
 echo "Installing ${BINARY_NAME}..."
 echo "Platform : ${TARGET}"
 echo "Version  : ${VERSION}"
 
-TMP_FILE="$(mktemp)"
+TMP_DIR="$(mktemp -d)"
+TMP_FILE="$TMP_DIR/$ASSET"
+MCP_FILE="$TMP_DIR/$MCP_ASSET"
 
 cleanup() {
-    rm -f "$TMP_FILE"
+    rm -rf "$TMP_DIR"
 }
 
 trap cleanup EXIT
@@ -101,18 +111,33 @@ curl \
 
 chmod +x "$TMP_FILE"
 
+echo
+echo "Installing ${MCP_BINARY_NAME}..."
+
+curl \
+    --fail \
+    --location \
+    --progress-bar \
+    "$MCP_URL" \
+    --output "$MCP_FILE"
+
+chmod +x "$MCP_FILE"
+
 ###############################################################################
 # Install location
 ###############################################################################
 
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="${NAP_INSTALL_DIR:-/usr/local/bin}"
 
-if [[ ! -w "$INSTALL_DIR" ]]; then
+if [[ -n "${NAP_INSTALL_DIR:-}" ]]; then
+    mkdir -p "$INSTALL_DIR"
+elif [[ ! -w "$INSTALL_DIR" ]]; then
     INSTALL_DIR="$HOME/.local/bin"
     mkdir -p "$INSTALL_DIR"
 fi
 
 mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+mv "$MCP_FILE" "$INSTALL_DIR/$MCP_BINARY_NAME"
 
 ###############################################################################
 # PATH hint
@@ -138,3 +163,4 @@ echo
 echo "Installed successfully."
 
 "$INSTALL_DIR/$BINARY_NAME" --version
+"$INSTALL_DIR/$MCP_BINARY_NAME" --version

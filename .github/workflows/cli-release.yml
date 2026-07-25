@@ -61,15 +61,23 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             bin: nap
+            mcp_bin: nap-mcp-server
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            bin: nap
+            mcp_bin: nap-mcp-server
           - os: macos-15
             target: x86_64-apple-darwin
             bin: nap
+            mcp_bin: nap-mcp-server
           - os: macos-latest
             target: aarch64-apple-darwin
             bin: nap
+            mcp_bin: nap-mcp-server
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             bin: nap.exe
+            mcp_bin: nap-mcp-server.exe
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -83,7 +91,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --locked --release --target ${{ matrix.target }} --bin nap
+        run: cargo build --locked --release --target ${{ matrix.target }} --bin nap --bin nap-mcp-server
 
       - name: Prepare binary
         shell: bash
@@ -96,6 +104,13 @@ jobs:
           cp \
             "target/${{ matrix.target }}/release/${{ matrix.bin }}" \
             "artifacts/${NAME}"
+          MCP_NAME="nap-mcp-server-${{ matrix.target }}"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            MCP_NAME="${MCP_NAME}.exe"
+          fi
+          cp \
+            "target/${{ matrix.target }}/release/${{ matrix.mcp_bin }}" \
+            "artifacts/${MCP_NAME}"
 
       - uses: actions/upload-artifact@v4
         with:

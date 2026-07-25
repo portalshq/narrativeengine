@@ -42,6 +42,8 @@ Fragment queries are supported via the URI: nap resolve nap://starwars/character
 
 | Flag | Description |
 |---|---|
+|     --include-blobs | Hydrate known readable provenance artifacts such as prompts and run records |
+|     --provenance | Include condensed per-file provenance for the manifest and direct representations |
 | -h, --help | Print help (see more with '--help') |
 
 

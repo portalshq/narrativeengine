@@ -181,7 +181,17 @@ fn main() -> Result<()> {
             commit,
             //     tag,
             format,
-        } => cmd_resolve(&base_dir, &uri, branch, commit, &format),
+            provenance,
+            include_blobs,
+        } => cmd_resolve(
+            &base_dir,
+            &uri,
+            branch,
+            commit,
+            &format,
+            provenance,
+            include_blobs,
+        ),
         Commands::Query { uri, path, format } => cmd_query(&base_dir, &uri, &path, &format),
         Commands::Commit {
             repository,
@@ -473,7 +483,17 @@ fn cmd_install(_base_dir: &Path, target: &str) -> Result<()> {
             installer.install_all()?;
             emit("✓ Lore CLI and server installed successfully.");
         }
-        _ => anyhow::bail!("Unknown target '{}'. Available: 'lore'", target),
+        "mcp" => {
+            emit("nap-mcp-server is bundled with the standard NAP installer.");
+            emit("To repair a missing MCP server, rerun:");
+            emit(
+                "  curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash",
+            );
+            emit("");
+            emit("To use with Codex, add to your config:");
+            emit(r#"  "mcpServers": { "nap": { "command": "nap-mcp-server" } }"#);
+        }
+        _ => anyhow::bail!("Unknown target '{}'. Available: 'lore', 'mcp'", target),
     }
     Ok(())
 }
@@ -759,14 +779,19 @@ fn cmd_resolve(
     branch: Option<String>,
     commit: Option<String>,
     format: &str,
+    provenance: bool,
+    include_blobs: bool,
 ) -> Result<()> {
     let resolver = Resolver::new(base_dir);
+    let wants_provenance = provenance || include_blobs;
     let options = ResolveOptions {
         branch,
         commit,
         path: None,
-        recursive: Some(true),
+        recursive: Some(!wants_provenance),
         max_depth: None,
+        provenance: Some(wants_provenance),
+        include_blobs: Some(include_blobs),
     };
     let result = resolver
         .resolve(uri_str, &options)
@@ -777,6 +802,10 @@ fn cmd_resolve(
         ResolveResult::Full(manifest) => match fmt.as_str() {
             "json" => println!("{}", serde_json::to_string_pretty(&manifest)?),
             _ => println!("{}", serde_yaml::to_string(&manifest)?),
+        },
+        ResolveResult::Provenance(envelope) => match fmt.as_str() {
+            "json" => println!("{}", serde_json::to_string_pretty(&envelope)?),
+            _ => println!("{}", serde_yaml::to_string(&envelope)?),
         },
         ResolveResult::Subtree(value) => match fmt.as_str() {
             "yaml" => {

@@ -838,3 +838,148 @@ fn test_local_lore_content_hash() {
         .success()
         .stdout(predicate::str::contains("blake3:"));
 }
+
+#[cfg(feature = "local-e2e")]
+fn run_lore(repo_path: &Path, args: &[&str]) {
+    let status = std::process::Command::new("lore")
+        .args(args)
+        .current_dir(repo_path)
+        .status()
+        .expect("failed to execute lore command");
+    assert!(
+        status.success(),
+        "lore command failed: lore {}",
+        args.join(" ")
+    );
+}
+
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_resolve_provenance_and_include_blobs() {
+    let tmp = TempDir::new().expect("Failed to create temp dir");
+    let repository = unique_universe_name("test-provenance");
+
+    nap_cmd()
+        .arg("init")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg("--provider")
+        .arg("local")
+        .assert()
+        .success();
+
+    nap_cmd()
+        .arg("init")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    nap_cmd()
+        .arg("create")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg("--repository")
+        .arg(&repository)
+        .arg("character")
+        .arg("hero")
+        .arg("--name")
+        .arg("Provenance Hero")
+        .arg("--author")
+        .arg("integration-test")
+        .assert()
+        .success();
+
+    let repo_path = tmp.path().join(&repository);
+    let prompt_path = tmp.path().join("prompt.txt");
+    fs::write(&prompt_path, "Readable prompt from Lore metadata.")
+        .expect("failed to write prompt fixture");
+    let prompt_path_string = prompt_path.to_string_lossy().into_owned();
+
+    run_lore(
+        &repo_path,
+        &["stage", "character/hero.yaml", "--non-interactive"],
+    );
+    run_lore(
+        &repo_path,
+        &[
+            "file",
+            "metadata",
+            "set",
+            "character/hero.yaml",
+            "nap.provenance.kind",
+            "generation",
+            "nap.provenance.model",
+            "gpt-live",
+            "--non-interactive",
+        ],
+    );
+    run_lore(
+        &repo_path,
+        &[
+            "file",
+            "metadata",
+            "set",
+            "--binary",
+            "character/hero.yaml",
+            "nap.provenance.prompt.address",
+            &prompt_path_string,
+            "--non-interactive",
+        ],
+    );
+    run_lore(
+        &repo_path,
+        &[
+            "commit",
+            "provenance metadata",
+            "--identity",
+            "integration-test",
+            "--non-interactive",
+        ],
+    );
+
+    let output = nap_cmd()
+        .arg("resolve")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg(format!("{repository}/character/hero"))
+        .arg("--provenance")
+        .arg("--include-blobs")
+        .arg("-f")
+        .arg("json")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let stdout = String::from_utf8(output).expect("resolve output is utf8");
+    let envelope_start = stdout
+        .find("{\n  \"manifest\"")
+        .or_else(|| stdout.find("{\"manifest\""))
+        .expect("resolve output contains a JSON envelope");
+    let value: serde_json::Value =
+        serde_json::from_str(&stdout[envelope_start..]).expect("valid JSON envelope output");
+    assert_eq!(value["manifest"]["name"], "Provenance Hero");
+    assert_eq!(
+        value["provenance"]["files"][0]["path"],
+        "character/hero.yaml"
+    );
+    assert_eq!(
+        value["provenance"]["files"][0]["provenance"]["nap.provenance.kind"],
+        "generation"
+    );
+    assert_eq!(
+        value["provenance"]["files"][0]["provenance"]["nap.provenance.model"],
+        "gpt-live"
+    );
+    assert_eq!(
+        value["provenance"]["files"][0]["blobs"]["prompt"]["content"],
+        "Readable prompt from Lore metadata."
+    );
+    assert_eq!(
+        value["provenance"]["files"][0]["blobs"]["prompt"]["truncated"],
+        false
+    );
+}

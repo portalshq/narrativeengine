@@ -1571,6 +1571,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nap-mcp-server"
+version = "0.5.2"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "nap-sdk-py"
 version = "0.5.2"
 dependencies = [

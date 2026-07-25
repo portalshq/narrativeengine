@@ -612,7 +612,7 @@
       "arguments": [
         {
           "name": "target",
-          "about": "Target to install (e.g., \"lore\")",
+          "about": "Target to install (e.g., \"lore\" or \"mcp\")",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1107,6 +1107,24 @@
         }
       ],
       "flags": [
+        {
+          "name": "provenance",
+          "about": "Include condensed per-file provenance for the manifest and direct representations",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "provenance",
+          "takes_value": false
+        },
+        {
+          "name": "include_blobs",
+          "about": "Hydrate known readable provenance artifacts such as prompts and run records",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "include-blobs",
+          "takes_value": false
+        },
         {
           "name": "help",
           "about": "Print help (see more with '--help')",
