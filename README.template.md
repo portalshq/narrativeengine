@@ -8,6 +8,10 @@
 
 ---
 
+{{include docs/authored/primitives.md}}
+
+---
+
 {{include docs/authored/mcp.md}}
 
 ---
