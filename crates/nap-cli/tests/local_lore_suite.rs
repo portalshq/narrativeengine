@@ -278,15 +278,15 @@ fn test_local_lore_update_repository_file() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/updatablehero", repository))
-        .arg("properties.species")
-        .arg("human")
+        .arg("properties.toy_type")
+        .arg("plush")
         .arg("--message")
-        .arg("set species property")
+        .arg("set toy_type property")
         .arg("--author")
         .arg("integration-test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("species"));
+        .stdout(predicate::str::contains("toy_type"));
 
     // Verify the update by reading the manifest
     let entity_path = tmp
@@ -296,10 +296,10 @@ fn test_local_lore_update_repository_file() {
         .join("updatablehero.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
     assert!(
-        content.contains("species"),
-        "Manifest should contain species property"
+        content.contains("toy_type"),
+        "Manifest should contain toy_type property"
     );
-    assert!(content.contains("human"), "Species should be set to human");
+    assert!(content.contains("plush"), "Species should be set to human");
 }
 
 #[cfg(feature = "local-e2e")]
@@ -609,10 +609,10 @@ fn test_local_lore_commit_history() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/historyhero", repository))
-        .arg("properties.species")
-        .arg("human")
+        .arg("properties.toy_type")
+        .arg("plush")
         .arg("--message")
-        .arg("set species")
+        .arg("set toy_type")
         .assert()
         .success();
 

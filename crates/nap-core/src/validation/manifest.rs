@@ -161,12 +161,12 @@ schema:
     #[test]
     fn test_validate_valid_manifest() {
         let manifest = json!({
-            "id": "nap://test/char/luke",
-            "name": "Luke Skywalker",
+            "id": "nap://test/char/woody",
+            "name": "Woody",
             "version": 1,
-            "tags": ["hero", "jedi"],
+            "tags": ["hero", "hero"],
             "characters": [
-                {"id": "obiwan", "name": "Obi-Wan"}
+                {"id": "buzzlightyear", "name": "Buzz"}
             ]
         });
 
@@ -176,7 +176,7 @@ schema:
     #[test]
     fn test_validate_missing_required() {
         let manifest = json!({
-            "name": "Luke"
+            "name": "Woody"
             // missing "id"
         });
 
@@ -189,7 +189,7 @@ schema:
     #[test]
     fn test_validate_type_mismatch() {
         let manifest = json!({
-            "id": "nap://test/char/luke",
+            "id": "nap://test/char/woody",
             "version": "not-a-number"  // should be number
         });
 
@@ -202,9 +202,9 @@ schema:
     #[test]
     fn test_validate_missing_identity_key_in_array() {
         let manifest = json!({
-            "id": "nap://test/char/luke",
+            "id": "nap://test/char/woody",
             "characters": [
-                {"name": "Obi-Wan"}  // missing "id" key
+                {"name": "Buzz"}  // missing "id" key
             ]
         });
 

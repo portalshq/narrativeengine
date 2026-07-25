@@ -12,7 +12,7 @@
 //! It enables:
 //! - AI systems to retrieve 500 tokens instead of 40,000
 //! - Applications to fetch 10 KB instead of 5 MB
-//! - CLI queries: `nap resolve nap://toystory/character/luke#references.appears_in`
+//! - CLI queries: `nap resolve nap://toystory/character/woody#references.appears_in`
 
 use serde_yaml::Value;
 
@@ -37,14 +37,14 @@ impl ManifestQuery {
     /// use nap_core::query::ManifestQuery;
     ///
     /// let yaml = "
-    /// name: Luke Skywalker
+    /// name: Woody
     /// properties:
-    ///   homeworld: tatooine
-    ///   species: human
+    ///   homeworld: andys-room
+    ///   toy_type: human
     /// ";
     /// let root: Value = serde_yaml::from_str(yaml).unwrap();
     /// let result = ManifestQuery::query(&root, "properties.homeworld", "test").unwrap();
-    /// assert_eq!(result, Value::String("tatooine".to_string()));
+    /// assert_eq!(result, Value::String("andys-room".to_string()));
     /// ```
     pub fn query(root: &Value, path: &str, manifest_id: &str) -> Result<Value, NapError> {
         if path.is_empty() {
@@ -135,24 +135,24 @@ mod tests {
 
     fn test_manifest() -> Value {
         let yaml = r#"
-id: "nap://toystory/character/lukeskywalker"
-name: "Luke Skywalker"
+id: "nap://toystory/character/woody"
+name: "Woody"
 entity_type: character
 version: 17
 properties:
-  homeworld: "nap://toystory/location/tatooine"
-  species: human
-  affiliation: rebel_alliance
+  homeworld: "nap://toystory/location/andys-room"
+  toy_type: human
+  affiliation: toybox_alliance
 representations:
   reference_image:
     hash: "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     format: png
 references:
   appears_in:
-    - "nap://toystory/scene/cantina"
-    - "nap://toystory/scene/trench-run"
+    - "nap://toystory/scene/pizza-planet"
+    - "nap://toystory/scene/claw-machine"
   relationships:
-    - target: "nap://toystory/character/darthvader"
+    - target: "nap://toystory/character/slinky"
       type: parent
 "#;
         serde_yaml::from_str(yaml).unwrap()
@@ -161,8 +161,8 @@ references:
     #[test]
     fn test_query_simple_property() {
         let root = test_manifest();
-        let result = ManifestQuery::query(&root, "properties.species", "test").unwrap();
-        assert_eq!(result, Value::String("human".to_string()));
+        let result = ManifestQuery::query(&root, "properties.toy_type", "test").unwrap();
+        assert_eq!(result, Value::String("plush".to_string()));
     }
 
     #[test]
@@ -195,7 +195,7 @@ references:
         let result = ManifestQuery::query(&root, "references.appears_in.0", "test").unwrap();
         assert_eq!(
             result,
-            Value::String("nap://toystory/scene/cantina".to_string())
+            Value::String("nap://toystory/scene/pizza-planet".to_string())
         );
     }
 
@@ -225,7 +225,7 @@ references:
     fn test_list_keys_nested() {
         let root = test_manifest();
         let keys = ManifestQuery::list_keys(&root, "properties", "test").unwrap();
-        assert!(keys.contains(&"species".to_string()));
+        assert!(keys.contains(&"toy_type".to_string()));
         assert!(keys.contains(&"homeworld".to_string()));
     }
 }

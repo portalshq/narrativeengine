@@ -323,15 +323,15 @@ fn test_cloud_lore_update_repository_file() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/cloudupdatable", repository))
-        .arg("properties.species")
-        .arg("human")
+        .arg("properties.toy_type")
+        .arg("plush")
         .arg("--message")
-        .arg("set species property on cloud")
+        .arg("set toy_type property on cloud")
         .arg("--author")
         .arg("cloud-integration-test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("species"));
+        .stdout(predicate::str::contains("toy_type"));
 
     // Verify the update by reading the manifest
     let entity_path = tmp
@@ -341,10 +341,10 @@ fn test_cloud_lore_update_repository_file() {
         .join("cloudupdatable.yaml");
     let content = fs::read_to_string(&entity_path).expect("Failed to read entity manifest");
     assert!(
-        content.contains("species"),
-        "Manifest should contain species property"
+        content.contains("toy_type"),
+        "Manifest should contain toy_type property"
     );
-    assert!(content.contains("human"), "Species should be set to human");
+    assert!(content.contains("plush"), "Species should be set to human");
 }
 
 #[cfg(feature = "lore-e2e")]
@@ -653,10 +653,10 @@ fn test_cloud_lore_commit_history() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/cloudhistoryhero", repository))
-        .arg("properties.species")
-        .arg("human")
+        .arg("properties.toy_type")
+        .arg("plush")
         .arg("--message")
-        .arg("set species on cloud")
+        .arg("set toy_type on cloud")
         .assert()
         .success();
 
@@ -929,10 +929,10 @@ fn test_cloud_lore_query_subtree() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/queryhero", repository))
-        .arg("properties.species")
-        .arg("human")
+        .arg("properties.toy_type")
+        .arg("plush")
         .arg("--message")
-        .arg("set species")
+        .arg("set toy_type")
         .assert()
         .success();
 
@@ -942,12 +942,12 @@ fn test_cloud_lore_query_subtree() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/queryhero", repository))
-        .arg("properties.species")
+        .arg("properties.toy_type")
         .arg("--format")
         .arg("json")
         .assert()
         .success()
-        .stdout(predicate::str::contains("human"));
+        .stdout(predicate::str::contains("plush"));
 }
 
 #[cfg(feature = "lore-e2e")]

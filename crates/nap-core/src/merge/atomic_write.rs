@@ -106,7 +106,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.yaml");
 
-        let content = b"key: value\nname: Luke\n";
+        let content = b"key: value\nname: Woody\n";
         atomic_write(&path, content).unwrap();
 
         let mut file = std::fs::File::open(&path).unwrap();
@@ -137,7 +137,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("manifest.yaml");
 
-        let content = b"id: nap://test/char/luke\nname: Luke Skywalker\nversion: 1\n";
+        let content = b"id: nap://test/char/woody\nname: Woody\nversion: 1\n";
         atomic_write(&path, content).unwrap();
 
         let read_back = std::fs::read(&path).unwrap();

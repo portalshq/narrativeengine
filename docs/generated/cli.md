@@ -65,15 +65,15 @@ When stdout is not a terminal, JSON is used automatically. Override with `$NAP_O
 nap init toystory
 
 # Create an entity
-nap create character lukeskywalker -u toystory -n "Luke Skywalker"
+nap create character woody -u toystory -n "Woody"
 
 # Resolve a manifest
-nap resolve nap://toystory/character/lukeskywalker
+nap resolve nap://toystory/character/woody
 
 # Query a subtree
-nap query nap://toystory/character/lukeskywalker properties
+nap query nap://toystory/character/woody properties
 
 # View commit history
-nap history nap://toystory/character/lukeskywalker
+nap history nap://toystory/character/woody
 ```
 

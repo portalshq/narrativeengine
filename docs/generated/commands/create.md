@@ -20,7 +20,7 @@ nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTI
 
 | Name | Description | Required |
 |---|---|---|
-| entity\_id | Entity ID (slug). e.g., "lukeskywalker" | Yes |
+| entity\_id | Entity ID (slug). e.g., "woody" | Yes |
 | entity\_type | Entity type (any non-empty string, e.g. character, location, custom-type) | Yes |
 
 
@@ -43,13 +43,13 @@ nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTI
 ## Examples
 ```bash
 # Create a character
-nap create character lukeskywalker -u toystory -n "Luke Skywalker"
+nap create character woody -u toystory -n "Woody"
 
 # Create a location
-nap create location tatooine -u toystory -n "Tatooine"
+nap create location andys-room -u toystory -n "Andy's Room"
 
 # Create with a specific author
-nap create character leiaorgana -u toystory -n "Leia Organa" -a "worldbuilder"
+nap create character jessie -u toystory -n "Jessie" -a "toybox-builder"
 ```
 
 ## Source

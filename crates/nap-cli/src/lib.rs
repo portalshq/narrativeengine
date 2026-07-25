@@ -142,7 +142,7 @@ pub enum Commands {
         /// Entity type (any non-empty string, e.g. character, location, custom-type).
         entity_type: String,
 
-        /// Entity ID (slug). e.g., "lukeskywalker".
+        /// Entity ID (slug). e.g., "woody".
         entity_id: String,
 
         /// Repository name.
@@ -161,9 +161,9 @@ pub enum Commands {
     /// Resolve a NAP URI to its manifest or a subtree.
     ///
     /// Fragment queries are supported via the URI:
-    ///   nap resolve nap://toystory/character/lukeskywalker#references.appears_in
+    ///   nap resolve nap://toystory/character/woody#references.appears_in
     Resolve {
-        /// NAP URI. e.g., "nap://toystory/character/lukeskywalker"
+        /// NAP URI. e.g., "nap://toystory/character/woody"
         uri: String,
 
         /// Resolve at a specific branch.

@@ -52,60 +52,40 @@ mod tests {
 
     #[test]
     fn test_replace_accept_current() {
-        let result = merge_replace(
-            "name",
-            &json!("Luke"),
-            &json!("Luke Skywalker"),
-            &json!("Luke"),
-        );
+        let result = merge_replace("name", &json!("Woody"), &json!("Woody"), &json!("Woody"));
         assert!(result.is_merged());
-        assert_eq!(result.unwrap_merged(), json!("Luke Skywalker"));
+        assert_eq!(result.unwrap_merged(), json!("Woody"));
     }
 
     #[test]
     fn test_replace_accept_proposed() {
-        let result = merge_replace(
-            "name",
-            &json!("Luke"),
-            &json!("Luke"),
-            &json!("Luke Skywalker"),
-        );
+        let result = merge_replace("name", &json!("Woody"), &json!("Woody"), &json!("Woody"));
         assert!(result.is_merged());
-        assert_eq!(result.unwrap_merged(), json!("Luke Skywalker"));
+        assert_eq!(result.unwrap_merged(), json!("Woody"));
     }
 
     #[test]
     fn test_replace_accept_either_when_equal() {
-        let result = merge_replace(
-            "name",
-            &json!("Luke"),
-            &json!("Luke Skywalker"),
-            &json!("Luke Skywalker"),
-        );
+        let result = merge_replace("name", &json!("Woody"), &json!("Woody"), &json!("Woody"));
         assert!(result.is_merged());
-        assert_eq!(result.unwrap_merged(), json!("Luke Skywalker"));
+        assert_eq!(result.unwrap_merged(), json!("Woody"));
     }
 
     #[test]
     fn test_replace_accept_all_equal() {
-        let result = merge_replace("name", &json!("Luke"), &json!("Luke"), &json!("Luke"));
+        let result = merge_replace("name", &json!("Woody"), &json!("Woody"), &json!("Woody"));
         assert!(result.is_merged());
-        assert_eq!(result.unwrap_merged(), json!("Luke"));
+        assert_eq!(result.unwrap_merged(), json!("Woody"));
     }
 
     #[test]
     fn test_replace_conflict() {
-        let result = merge_replace(
-            "name",
-            &json!("Luke"),
-            &json!("Luke Skywalker"),
-            &json!("Anakin"),
-        );
+        let result = merge_replace("name", &json!("Woody"), &json!("Woody"), &json!("Sid"));
         assert!(result.is_conflict());
         let conflicts = result.unwrap_conflicts();
         assert_eq!(conflicts.len(), 1);
-        assert_eq!(conflicts[0].current, json!("Luke Skywalker"));
-        assert_eq!(conflicts[0].proposed, json!("Anakin"));
+        assert_eq!(conflicts[0].current, json!("Woody"));
+        assert_eq!(conflicts[0].proposed, json!("Sid"));
     }
 
     #[test]
@@ -120,9 +100,9 @@ mod tests {
         // Explicit deletion vs change
         let result = merge_replace(
             "homeworld",
-            &json!("Stewjon"),
+            &json!("Andy's Room"),
             &json!(Value::Null),
-            &json!("Stewjon"),
+            &json!("Andy's Room"),
         );
         assert!(result.is_merged());
         assert_eq!(result.unwrap_merged(), Value::Null);

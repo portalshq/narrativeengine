@@ -3,7 +3,7 @@
 //! The NAP URI scheme identifies narrative resources:
 //!
 //! ```text
-//! nap://toystory/character/lukeskywalker#appearances.audienceVotes
+//! nap://toystory/character/woody#appearances.audienceVotes
 //! ───┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
 //!  scheme repository  entity_type entity_id          fragment (query)
 //! ```
@@ -32,13 +32,13 @@ pub const NAP_SCHEME: &str = "nap://";
 /// ```
 /// use nap_core::uri::NapUri;
 ///
-/// let uri: NapUri = "nap://toystory/character/lukeskywalker#references.appears_in"
+/// let uri: NapUri = "nap://toystory/character/woody#references.appears_in"
 ///     .parse()
 ///     .unwrap();
 ///
 /// assert_eq!(uri.repository, "toystory");
 /// assert_eq!(uri.entity_type.as_str(), "character");
-/// assert_eq!(uri.entity_id, "lukeskywalker");
+/// assert_eq!(uri.entity_id, "woody");
 /// assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -49,7 +49,7 @@ pub struct NapUri {
     /// The kind of entity being addressed. Any non-empty string is valid.
     pub entity_type: EntityType,
 
-    /// The entity's identifier (slug). e.g., `"lukeskywalker"`, `"pikachu"`.
+    /// The entity's identifier (slug). e.g., `"woody"`, `"pikachu"`.
     pub entity_id: String,
 
     /// Optional fragment for subtree queries. e.g., `"appearances.audienceVotes"`.
@@ -99,7 +99,7 @@ impl NapUri {
     /// Returns the relative filesystem path for this entity's manifest within
     /// a repository.
     ///
-    /// e.g., `"character/lukeskywalker.yaml"` or `"repository.yaml"` for repo metadata.
+    /// e.g., `"character/woody.yaml"` or `"repository.yaml"` for repo metadata.
     pub fn manifest_path(&self) -> String {
         if self.entity_type.as_str() == "world" {
             "repository.yaml".to_string()
@@ -134,7 +134,7 @@ impl FromStr for NapUri {
         let input = s.trim();
 
         // ── Strip scheme (optional) ──────────────────────────────────────
-        // Accept both "nap://toystory/character/luke" and "toystory/character/luke".
+        // Accept both "nap://toystory/character/woody" and "toystory/character/woody".
         let without_scheme = input.strip_prefix(NAP_SCHEME).unwrap_or(input);
 
         // ── Split fragment ──────────────────────────────────────────────
@@ -196,21 +196,21 @@ mod tests {
 
     #[test]
     fn test_parse_full_uri_with_fragment() {
-        let uri: NapUri = "nap://toystory/character/lukeskywalker#appearances.audienceVotes"
+        let uri: NapUri = "nap://toystory/character/woody#appearances.audienceVotes"
             .parse()
             .unwrap();
         assert_eq!(uri.repository, "toystory");
         assert_eq!(uri.entity_type.as_str(), "character");
-        assert_eq!(uri.entity_id, "lukeskywalker");
+        assert_eq!(uri.entity_id, "woody");
         assert_eq!(uri.fragment.as_deref(), Some("appearances.audienceVotes"));
     }
 
     #[test]
     fn test_parse_uri_without_fragment() {
-        let uri: NapUri = "nap://toystory/location/pizzapalace".parse().unwrap();
+        let uri: NapUri = "nap://toystory/location/pizza-planet".parse().unwrap();
         assert_eq!(uri.repository, "toystory");
         assert_eq!(uri.entity_type.as_str(), "location");
-        assert_eq!(uri.entity_id, "pizzapalace");
+        assert_eq!(uri.entity_id, "pizza-planet");
         assert!(uri.fragment.is_none());
     }
 
@@ -224,9 +224,9 @@ mod tests {
 
     #[test]
     fn test_parse_scene_uri() {
-        let uri: NapUri = "nap://toystory/scene/cantina".parse().unwrap();
+        let uri: NapUri = "nap://toystory/scene/pizza-planet".parse().unwrap();
         assert_eq!(uri.entity_type.as_str(), "scene");
-        assert_eq!(uri.entity_id, "cantina");
+        assert_eq!(uri.entity_id, "pizza-planet");
     }
 
     #[test]
@@ -240,7 +240,7 @@ mod tests {
         let original = NapUri::with_fragment(
             "toystory",
             EntityType::new("character"),
-            "lukeskywalker",
+            "woody",
             "references.appears_in",
         );
         let displayed = original.to_string();
@@ -253,16 +253,16 @@ mod tests {
         let uri = NapUri::with_fragment(
             "toystory",
             EntityType::new("character"),
-            "lukeskywalker",
+            "woody",
             "appearances",
         );
-        assert_eq!(uri.identity(), "nap://toystory/character/lukeskywalker");
+        assert_eq!(uri.identity(), "nap://toystory/character/woody");
     }
 
     #[test]
     fn test_manifest_path_character() {
-        let uri = NapUri::new("toystory", EntityType::new("character"), "lukeskywalker");
-        assert_eq!(uri.manifest_path(), "character/lukeskywalker.yaml");
+        let uri = NapUri::new("toystory", EntityType::new("character"), "woody");
+        assert_eq!(uri.manifest_path(), "character/woody.yaml");
     }
 
     #[test]
@@ -285,21 +285,21 @@ mod tests {
 
     #[test]
     fn test_optional_scheme() {
-        let uri: NapUri = "toystory/character/lukeskywalker#references.appears_in"
+        let uri: NapUri = "toystory/character/woody#references.appears_in"
             .parse()
             .unwrap();
         assert_eq!(uri.repository, "toystory");
         assert_eq!(uri.entity_type.as_str(), "character");
-        assert_eq!(uri.entity_id, "lukeskywalker");
+        assert_eq!(uri.entity_id, "woody");
         assert_eq!(uri.fragment.as_deref(), Some("references.appears_in"));
     }
 
     #[test]
     fn test_bare_path_no_fragment() {
-        let uri: NapUri = "toystory/location/pizzapalace".parse().unwrap();
+        let uri: NapUri = "toystory/location/pizza-planet".parse().unwrap();
         assert_eq!(uri.repository, "toystory");
         assert_eq!(uri.entity_type.as_str(), "location");
-        assert_eq!(uri.entity_id, "pizzapalace");
+        assert_eq!(uri.entity_id, "pizza-planet");
         assert!(uri.fragment.is_none());
     }
 

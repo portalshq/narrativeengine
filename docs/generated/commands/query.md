@@ -48,13 +48,13 @@ nap query [OPTIONS] <URI> <PATH>
 ## Examples
 ```bash
 # Query a subtree
-nap query nap://toystory/character/lukeskywalker properties
+nap query nap://toystory/character/woody properties
 
 # Query nested properties
-nap query nap://toystory/character/lukeskywalker properties.species
+nap query nap://toystory/character/woody properties.toy_type
 
 # Query as YAML
-nap query nap://toystory/character/lukeskywalker properties -f yaml
+nap query nap://toystory/character/woody properties -f yaml
 ```
 
 ## Source

@@ -66,7 +66,7 @@ impl From<Value> for MergeResult {
 #[derive(Debug, Clone, Serialize)]
 pub struct Conflict {
     /// The canonical path to the conflicting value.
-    /// e.g. `"root.properties.homeworld"` or `"root.characters[obiwan].name"`.
+    /// e.g. `"root.properties.homeworld"` or `"root.characters[buzzlightyear].name"`.
     pub path: String,
 
     /// The type of conflict.
@@ -180,20 +180,20 @@ mod tests {
     fn test_value_mismatch_conflict() {
         let c = Conflict::value_mismatch(
             "root.properties.homeworld",
-            json!("Stewjon"),
-            json!("Tatooine"),
+            json!("Andy's Room"),
+            json!("Andy's Room"),
             json!("Coruscant"),
         );
         assert_eq!(c.path, "root.properties.homeworld");
         assert!(matches!(c.conflict_type, ConflictType::ValueMismatch));
-        assert_eq!(c.base, json!("Stewjon"));
-        assert_eq!(c.current, json!("Tatooine"));
+        assert_eq!(c.base, json!("Andy's Room"));
+        assert_eq!(c.current, json!("Andy's Room"));
         assert_eq!(c.proposed, json!("Coruscant"));
     }
 
     #[test]
     fn test_merge_result_merged() {
-        let v = json!({"name": "Luke"});
+        let v = json!({"name": "Woody"});
         let r = MergeResult::Merged(v.clone());
         assert!(r.is_merged());
         assert!(!r.is_conflict());
@@ -226,10 +226,10 @@ mod tests {
     #[test]
     fn test_identity_mutation_conflict() {
         let c = Conflict::identity_mutation(
-            "root.characters[obiwan].id",
-            json!("obiwan"),
-            json!("ben_kenobi"),
-            json!("obiwan"),
+            "root.characters[buzzlightyear].id",
+            json!("buzzlightyear"),
+            json!("buzzlightyear"),
+            json!("buzzlightyear"),
         );
         assert!(matches!(c.conflict_type, ConflictType::IdentityMutation));
     }

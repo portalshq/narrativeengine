@@ -314,7 +314,7 @@
         },
         {
           "name": "entity_id",
-          "about": "Entity ID (slug). e.g., \"lukeskywalker\"",
+          "about": "Entity ID (slug). e.g., \"woody\"",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1065,13 +1065,13 @@
       "name": "resolve",
       "full_path": "resolve",
       "about": "Resolve a NAP URI to its manifest or a subtree",
-      "long_about": "Resolve a NAP URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: nap resolve nap://toystory/character/lukeskywalker#references.appears_in",
+      "long_about": "Resolve a NAP URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: nap resolve nap://toystory/character/woody#references.appears_in",
       "usage": "Usage: resolve [OPTIONS] <URI>",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI. e.g., \"nap://toystory/character/lukeskywalker\"",
+          "about": "NAP URI. e.g., \"nap://toystory/character/woody\"",
           "required": true,
           "default_value": null,
           "short": null,

@@ -1,7 +1,7 @@
 //! # NAP Core — Narrative Addressing Protocol
 //!
 //! Four primitives for entertainment infrastructure:
-//! - **URI**: Identity — `nap://toystory/character/lukeskywalker`
+//! - **URI**: Identity — `nap://toystory/character/woody`
 //! - **Manifest**: Current state — YAML, human/machine/agent-readable
 //! - **Commit**: History — snapshot + delta metadata
 //! - **Resolver**: Resolution — URI → Manifest, with query/version selectors

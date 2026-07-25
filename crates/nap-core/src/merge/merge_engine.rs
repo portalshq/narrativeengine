@@ -172,8 +172,8 @@ impl MergeEngine {
     /// Check if a path is a sub-path of an identity-keyed array.
     ///
     /// For example, if `characters` is an `ordered_unique` array with
-    /// `identity: {key: id}`, then `characters[obiwan]` and
-    /// `characters[obiwan].name` are sub-paths that should be skipped
+    /// `identity: {key: id}`, then `characters[buzzlightyear]` and
+    /// `characters[buzzlightyear].name` are sub-paths that should be skipped
     /// during merge — the array-level strategy handles them.
     fn is_identity_array_subpath(&self, path: &str) -> bool {
         let parsed = match CanonicalPath::parse(path) {
@@ -232,8 +232,8 @@ impl MergeEngine {
     ///
     /// Detection strategy: compare items at the same **position** in the array
     /// and check whether their identity key values differ.  If the item at
-    /// position 0 in base has `id: "obiwan"` and the item at position 0 in
-    /// current has `id: "ben_kenobi"`, that is a mutation even though a
+    /// position 0 in base has `id: "buzzlightyear"` and the item at position 0 in
+    /// current has `id: "buzzlightyear"`, that is a mutation even though a
     /// by-identity-indexed map would see two unrelated items.
     fn check_identity_mutation(
         &self,
@@ -510,25 +510,22 @@ schema:
     fn test_merge_simple_replace() {
         let engine = MergeEngine::new(simple_sdl());
 
-        let base = json!({"name": "Luke"});
-        let current = json!({"name": "Luke Skywalker"});
-        let proposed = json!({"name": "Luke"});
+        let base = json!({"name": "Woody"});
+        let current = json!({"name": "Woody"});
+        let proposed = json!({"name": "Woody"});
 
         let result = engine.merge(base, current, proposed);
         assert!(result.is_merged());
-        assert_eq!(
-            result.unwrap_merged().get("name"),
-            Some(&json!("Luke Skywalker"))
-        );
+        assert_eq!(result.unwrap_merged().get("name"), Some(&json!("Woody")));
     }
 
     #[test]
     fn test_merge_replace_conflict() {
         let engine = MergeEngine::new(simple_sdl());
 
-        let base = json!({"name": "Luke"});
-        let current = json!({"name": "Luke Skywalker"});
-        let proposed = json!({"name": "Anakin"});
+        let base = json!({"name": "Woody"});
+        let current = json!({"name": "Woody"});
+        let proposed = json!({"name": "Sid"});
 
         let result = engine.merge(base, current, proposed);
         assert!(result.is_conflict());
@@ -538,15 +535,15 @@ schema:
     fn test_merge_missing_field_preserved() {
         let engine = MergeEngine::new(simple_sdl());
 
-        let base = json!({"name": "Obi Wan", "version": 1});
-        let current = json!({"name": "Obi Wan Kenobi"});
-        let proposed = json!({"name": "Obi Wan"});
+        let base = json!({"name": "Buzz", "version": 1});
+        let current = json!({"name": "Buzz Lightyear"});
+        let proposed = json!({"name": "Buzz"});
 
         // Normalization should fill in version from base
         let result = engine.merge(base, current, proposed);
         assert!(result.is_merged());
         let merged = result.unwrap_merged();
-        assert_eq!(merged.get("name"), Some(&json!("Obi Wan Kenobi")));
+        assert_eq!(merged.get("name"), Some(&json!("Buzz Lightyear")));
         assert_eq!(merged.get("version"), Some(&json!(1)));
     }
 
@@ -554,9 +551,9 @@ schema:
     fn test_merge_null_is_deletion() {
         let engine = MergeEngine::new(simple_sdl());
 
-        let base = json!({"name": "Luke", "version": 1});
-        let current = json!({"name": "Luke", "version": 1});
-        let proposed = json!({"name": "Luke", "version": null});
+        let base = json!({"name": "Woody", "version": 1});
+        let current = json!({"name": "Woody", "version": 1});
+        let proposed = json!({"name": "Woody", "version": null});
 
         let result = engine.merge(base, current, proposed);
         assert!(result.is_merged());
@@ -642,9 +639,9 @@ schema:
     fn test_merge_identity_mutation_conflict() {
         let engine = MergeEngine::new(simple_sdl());
 
-        let base = json!({"characters": [{"id": "obiwan", "name": "Obi-Wan"}]});
-        let current = json!({"characters": [{"id": "ben_kenobi", "name": "Obi-Wan"}]}); // id changed!
-        let proposed = json!({"characters": [{"id": "obiwan", "name": "Obi-Wan"}]});
+        let base = json!({"characters": [{"id": "buzzlightyear", "name": "Buzz"}]});
+        let current = json!({"characters": [{"id": "buzzlightyear", "name": "Buzz"}]}); // id changed!
+        let proposed = json!({"characters": [{"id": "buzzlightyear", "name": "Buzz"}]});
 
         let result = engine.merge(base, current, proposed);
         assert!(result.is_conflict());
@@ -654,9 +651,9 @@ schema:
     fn test_merge_deterministic() {
         let engine = MergeEngine::new(simple_sdl());
 
-        let base = json!({"name": "Luke", "version": 1, "tags": ["a"]});
-        let current = json!({"name": "Luke Skywalker", "version": 2, "tags": ["a", "b"]});
-        let proposed = json!({"name": "Luke", "version": 1, "tags": ["a", "c"]});
+        let base = json!({"name": "Woody", "version": 1, "tags": ["a"]});
+        let current = json!({"name": "Woody", "version": 2, "tags": ["a", "b"]});
+        let proposed = json!({"name": "Woody", "version": 1, "tags": ["a", "c"]});
 
         let result1 = engine.merge(base.clone(), current.clone(), proposed.clone());
         let result2 = engine.merge(base, current, proposed);

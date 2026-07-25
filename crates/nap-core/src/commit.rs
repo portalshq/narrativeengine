@@ -173,7 +173,7 @@ mod tests {
             "test-author",
             "initial commit",
             "blake3:0000000000000000000000000000000000000000000000000000000000000000",
-            vec![Change::set("properties.name", None, "Luke".to_string())],
+            vec![Change::set("properties.name", None, "Woody".to_string())],
         );
         assert!(commit.verify_id());
     }
@@ -195,7 +195,7 @@ mod tests {
             vec![Change::set(
                 "properties.homeworld",
                 None,
-                "nap://toystory/location/tatooine".to_string(),
+                "nap://toystory/location/andys-room".to_string(),
             )],
         );
         assert_eq!(child_commit.parent, Some(parent_commit.id));

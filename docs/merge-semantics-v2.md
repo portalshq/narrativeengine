@@ -136,20 +136,20 @@ This is the most important protocol invariant.
 
 ```json
 // Base
-{ "name": "Obi Wan", "homeworld": "Stewjon" }
+{ "name": "Buzz", "homeworld": "Andy's Room" }
 
 // Proposed
-{ "name": "Obi Wan Kenobi" }
+{ "name": "Buzz Lightyear" }
 
 // Result (missing = no change)
-{ "name": "Obi Wan Kenobi", "homeworld": "Stewjon" }
+{ "name": "Buzz Lightyear", "homeworld": "Andy's Room" }
 ```
 
 **Deletion example:**
 
 ```json
 // Base
-{ "homeworld": "Stewjon" }
+{ "homeworld": "Andy's Room" }
 
 // Proposed
 { "homeworld": null }
@@ -408,11 +408,11 @@ The identity is the value of a named field within each object element.
 
 ```yaml
 characters:
-  - id: obiwan
-    name: Obi-Wan Kenobi
+  - id: buzzlightyear
+    name: Buzz Lightyear
 ```
 
-Identity of `{ id: obiwan, ... }` is the string `"obiwan"`.
+Identity of `{ id: buzzlightyear, ... }` is the string `"buzzlightyear"`.
 
 ### Identity Immutability
 
@@ -420,14 +420,14 @@ Identity fields **cannot change**. An attempt to mutate an identity
 field produces `Conflict::IdentityMutation`.
 
 ```json
-// Base:      { id: "obiwan", name: "Obi-Wan" }
-// Current:   { id: "ben_kenobi", name: "Obi-Wan" }
+// Base:      { id: "buzzlightyear", name: "Buzz" }
+// Current:   { id: "buzzlightyear", name: "Buzz" }
 // Result:    CONFLICT — identity mutation
 ```
 
 Detection is **position-based**: if the item at position 0 in the base
-array has identity "obiwan" and the item at position 0 in the current
-array has identity "ben_kenobi", that is a mutation even if the
+array has identity "buzzlightyear" and the item at position 0 in the current
+array has identity "buzzlightyear", that is a mutation even if the
 identity-based lookup maps show two unrelated items.
 
 ---
@@ -447,14 +447,14 @@ array_identity[identity_value].sub_property
 |---|---|
 | `name` | Top-level string |
 | `properties.homeworld` | Nested property |
-| `characters[obiwan]` | Array element by identity |
-| `characters[obiwan].name` | Sub-field of array element |
+| `characters[buzzlightyear]` | Array element by identity |
+| `characters[buzzlightyear].name` | Sub-field of array element |
 | `tags[0]` | Array element by index (fallback, no identity) |
 
 ### Rules
 
 - **Never use array index** for identity-keyed arrays
-- Always use identity value: `characters[obiwan]` not `characters[0]`
+- Always use identity value: `characters[buzzlightyear]` not `characters[0]`
 - Index-based paths are only produced for arrays without identity rules
 - The `root.` prefix is presentation-only — never stored internally
 
@@ -473,7 +473,7 @@ if they don't exist in base.
 ### Sub-path Filtering
 
 For identity-keyed arrays, sub-paths of array items (like
-`characters[obiwan].name` or `tags[fantasy]`) are **skipped** during
+`characters[buzzlightyear].name` or `tags[fantasy]`) are **skipped** during
 merge — the array-level strategy handles the entire array. Sub-paths
 are still available in the diff API for detailed change inspection.
 
@@ -674,16 +674,16 @@ schema:
     {
       "path": "root.properties.homeworld",
       "conflict_type": "value_mismatch",
-      "base": "Stewjon",
-      "current": "Tatooine",
+      "base": "Andy's Room",
+      "current": "Andy's Room",
       "proposed": "Coruscant"
     },
     {
-      "path": "root.characters[obiwan].affiliation",
+      "path": "root.characters[buzzlightyear].affiliation",
       "conflict_type": "value_mismatch",
-      "base": "Jedi Order",
-      "current": "Jedi Order",
-      "proposed": "Galactic Republic"
+      "base": "Hero Squad",
+      "current": "Hero Squad",
+      "proposed": "Toybox Corp"
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 2. **URI-addressed** — Every entity has a stable, portable URI. URIs are never invalidated by renames or moves.
 
-3. **Human-readable** — YAML manifests are readable by worldbuilders and AI agents alike.
+3. **Human-readable** — YAML manifests are readable by toybox-builders and AI agents alike.
 
 4. **Portable** — No runtime dependencies. A manifest is just a YAML file. A repository is just a Git repo.
 

@@ -2,8 +2,8 @@
 //!
 //! The resolver is the primary interface for reading NAP resources.
 //! It handles:
-//! - Full manifest resolution: `nap://toystory/character/lukeskywalker`
-//! - Fragment queries: `nap://toystory/character/lukeskywalker#references.appears_in`
+//! - Full manifest resolution: `nap://toystory/character/woody`
+//! - Fragment queries: `nap://toystory/character/woody#references.appears_in`
 //! - Version selectors: branch, commit
 //! - Subtree extraction for efficient AI/application access
 //!
@@ -204,19 +204,19 @@ impl Resolver {
     /// # Examples
     /// ```text
     /// // Full manifest
-    /// resolver.resolve("nap://toystory/character/lukeskywalker", &Default::default())
+    /// resolver.resolve("nap://toystory/character/woody", &Default::default())
     ///
     /// // Without scheme (auto-normalized)
-    /// resolver.resolve("toystory/character/lukeskywalker", &Default::default())
+    /// resolver.resolve("toystory/character/woody", &Default::default())
     ///
     /// // With branch
-    /// resolver.resolve("nap://toystory/character/lukeskywalker", &ResolveOptions {
+    /// resolver.resolve("nap://toystory/character/woody", &ResolveOptions {
     ///     branch: Some("canon".to_string()),
     ///     ..Default::default()
     /// })
     ///
     /// // With fragment query (via URI)
-    /// resolver.resolve("nap://toystory/character/lukeskywalker#references.appears_in", &Default::default())
+    /// resolver.resolve("nap://toystory/character/woody#references.appears_in", &Default::default())
     /// ```
     pub fn resolve(
         &self,
@@ -725,24 +725,19 @@ mod unit_tests {
 
         // Create a character
         let (mut manifest, _) = repo
-            .create_entity(
-                &EntityType::new("character"),
-                "lukeskywalker",
-                "Luke Skywalker",
-                "test",
-            )
+            .create_entity(&EntityType::new("character"), "woody", "Woody", "test")
             .unwrap();
 
         // Add properties and commit
-        manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
+        manifest.set_property("toy_type", serde_yaml::Value::String("plush".to_string()));
         manifest.set_property(
             "homeworld",
-            serde_yaml::Value::String("nap://toystory/location/tatooine".to_string()),
+            serde_yaml::Value::String("nap://toystory/location/andys-room".to_string()),
         );
         manifest.add_reference(
             "appears_in",
             serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
-                "nap://toystory/scene/cantina".to_string(),
+                "nap://toystory/scene/pizza-planet".to_string(),
             )]),
         );
         manifest.set_representation(
@@ -759,9 +754,13 @@ mod unit_tests {
         use crate::commit::Change;
         repo.commit_manifest(
             &mut manifest,
-            "add Luke Skywalker details",
+            "add Woody details",
             "test",
-            vec![Change::set("properties.species", None, "human".to_string())],
+            vec![Change::set(
+                "properties.toy_type",
+                None,
+                "plush".to_string(),
+            )],
         )
         .unwrap();
 
@@ -779,14 +778,11 @@ mod unit_tests {
     fn test_resolve_full_manifest() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve(
-                "nap://toystory/character/lukeskywalker",
-                &Default::default(),
-            )
+            .resolve("nap://toystory/character/woody", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
-                assert_eq!(m.name, "Luke Skywalker");
+                assert_eq!(m.name, "Woody");
                 assert_eq!(m.entity_type.as_str(), "character");
             }
             _ => panic!("expected full manifest"),
@@ -812,7 +808,7 @@ mod unit_tests {
     fn resolve_with_provenance(resolver: &Resolver) -> ResolveEnvelope {
         let result = resolver
             .resolve(
-                "nap://toystory/character/lukeskywalker",
+                "nap://toystory/character/woody",
                 &ResolveOptions {
                     provenance: Some(true),
                     ..Default::default()
@@ -833,7 +829,7 @@ mod unit_tests {
             &repo_path,
             BTreeMap::from([
                 (
-                    "character/lukeskywalker.yaml".to_string(),
+                    "character/woody.yaml".to_string(),
                     BTreeMap::from([
                         ("nap.provenance.kind".to_string(), "edit".to_string()),
                         ("nap.provenance.model".to_string(), "gpt-5".to_string()),
@@ -851,15 +847,12 @@ mod unit_tests {
         );
 
         let envelope = resolve_with_provenance(&resolver);
-        assert_eq!(envelope.manifest.name, "Luke Skywalker");
+        assert_eq!(envelope.manifest.name, "Woody");
         assert_eq!(envelope.provenance.files.len(), 2);
 
         let manifest_file = &envelope.provenance.files[0];
         assert_eq!(manifest_file.role, "manifest");
-        assert_eq!(
-            manifest_file.path.as_deref(),
-            Some("character/lukeskywalker.yaml")
-        );
+        assert_eq!(manifest_file.path.as_deref(), Some("character/woody.yaml"));
         assert_eq!(manifest_file.provenance["nap.provenance.kind"], "edit");
         assert!(
             manifest_file
@@ -890,10 +883,7 @@ mod unit_tests {
         )
         .unwrap();
         assert_eq!(requests.len(), 2);
-        assert_eq!(
-            requests[0].get("path").unwrap(),
-            "character/lukeskywalker.yaml"
-        );
+        assert_eq!(requests[0].get("path").unwrap(), "character/woody.yaml");
         assert_eq!(
             requests[0].get("revision").unwrap(),
             &envelope.provenance.revision
@@ -925,7 +915,7 @@ mod unit_tests {
         write_mock_metadata(
             &repo_path,
             BTreeMap::from([(
-                "character/lukeskywalker.yaml".to_string(),
+                "character/woody.yaml".to_string(),
                 BTreeMap::from([
                     (
                         "nap.provenance.prompt.address".to_string(),
@@ -940,12 +930,12 @@ mod unit_tests {
         );
         write_mock_blobs(
             &repo_path,
-            BTreeMap::from([("lore:prompt:1".to_string(), "Describe Luke".to_string())]),
+            BTreeMap::from([("lore:prompt:1".to_string(), "Describe Woody".to_string())]),
         );
 
         let result = resolver
             .resolve(
-                "nap://toystory/character/lukeskywalker",
+                "nap://toystory/character/woody",
                 &ResolveOptions {
                     provenance: Some(true),
                     include_blobs: Some(true),
@@ -959,7 +949,7 @@ mod unit_tests {
 
         let blobs = &envelope.provenance.files[0].blobs;
         assert_eq!(blobs.len(), 1);
-        assert_eq!(blobs["prompt"].content, "Describe Luke");
+        assert_eq!(blobs["prompt"].content, "Describe Woody");
         assert!(!blobs["prompt"].truncated);
     }
 
@@ -968,7 +958,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://toystory/character/lukeskywalker",
+                "nap://toystory/character/woody",
                 &ResolveOptions {
                     include_blobs: Some(true),
                     ..Default::default()
@@ -985,7 +975,7 @@ mod unit_tests {
         write_mock_metadata(
             &repo_path,
             BTreeMap::from([(
-                "character/lukeskywalker.yaml".to_string(),
+                "character/woody.yaml".to_string(),
                 BTreeMap::from([(
                     "nap.provenance.prompt.address".to_string(),
                     "lore:prompt:large".to_string(),
@@ -1002,7 +992,7 @@ mod unit_tests {
 
         let result = resolver
             .resolve(
-                "nap://toystory/character/lukeskywalker",
+                "nap://toystory/character/woody",
                 &ResolveOptions {
                     provenance: Some(true),
                     include_blobs: Some(true),
@@ -1026,7 +1016,7 @@ mod unit_tests {
         let repo_path = tmp.path().join("toystory");
         let repo = Repository::init(&repo_path, "toystory", Box::new(MockBackend::new())).unwrap();
         let (mut manifest, _) = repo
-            .create_entity(&EntityType::new("character"), "leia", "Leia Organa", "test")
+            .create_entity(&EntityType::new("character"), "jessie", "Jessie", "test")
             .unwrap();
         manifest.set_representation(
             "unsafe",
@@ -1060,7 +1050,7 @@ mod unit_tests {
         );
         let err = resolver
             .resolve(
-                "nap://toystory/character/leia",
+                "nap://toystory/character/jessie",
                 &ResolveOptions {
                     provenance: Some(true),
                     ..Default::default()
@@ -1075,13 +1065,13 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://toystory/character/lukeskywalker#properties.species",
+                "nap://toystory/character/woody#properties.toy_type",
                 &Default::default(),
             )
             .unwrap();
         match result {
             ResolveResult::Subtree(v) => {
-                assert_eq!(v.as_str(), Some("human"));
+                assert_eq!(v.as_str(), Some("plush"));
             }
             _ => panic!("expected subtree"),
         }
@@ -1092,7 +1082,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://toystory/character/lukeskywalker",
+                "nap://toystory/character/woody",
                 &ResolveOptions {
                     path: Some("properties.homeworld".to_string()),
                     ..Default::default()
@@ -1101,7 +1091,7 @@ mod unit_tests {
             .unwrap();
         match result {
             ResolveResult::Subtree(v) => {
-                assert_eq!(v.as_str(), Some("nap://toystory/location/tatooine"));
+                assert_eq!(v.as_str(), Some("nap://toystory/location/andys-room"));
             }
             _ => panic!("expected subtree"),
         }
@@ -1111,12 +1101,9 @@ mod unit_tests {
     fn test_query_convenience() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .query(
-                "nap://toystory/character/lukeskywalker",
-                "properties.species",
-            )
+            .query("nap://toystory/character/woody", "properties.toy_type")
             .unwrap();
-        assert_eq!(result.as_str(), Some("human"));
+        assert_eq!(result.as_str(), Some("plush"));
     }
 
     #[test]
@@ -1137,11 +1124,11 @@ mod unit_tests {
     fn test_resolve_without_scheme() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("toystory/character/lukeskywalker", &Default::default())
+            .resolve("toystory/character/woody", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
-                assert_eq!(m.name, "Luke Skywalker");
+                assert_eq!(m.name, "Woody");
                 assert_eq!(m.entity_type.as_str(), "character");
             }
             _ => panic!("expected full manifest"),
@@ -1153,13 +1140,13 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "toystory/character/lukeskywalker#properties.species",
+                "toystory/character/woody#properties.toy_type",
                 &Default::default(),
             )
             .unwrap();
         match result {
             ResolveResult::Subtree(v) => {
-                assert_eq!(v.as_str(), Some("human"));
+                assert_eq!(v.as_str(), Some("plush"));
             }
             _ => panic!("expected subtree"),
         }
@@ -1169,11 +1156,11 @@ mod unit_tests {
     fn test_resolve_without_leading_slash() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("toystory/character/lukeskywalker", &Default::default())
+            .resolve("toystory/character/woody", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
-                assert_eq!(m.name, "Luke Skywalker");
+                assert_eq!(m.name, "Woody");
             }
             _ => panic!("expected full manifest"),
         }
@@ -1183,11 +1170,11 @@ mod unit_tests {
     fn test_resolve_with_leading_slash_without_scheme() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("/toystory/character/lukeskywalker", &Default::default())
+            .resolve("/toystory/character/woody", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
-                assert_eq!(m.name, "Luke Skywalker");
+                assert_eq!(m.name, "Woody");
             }
             _ => panic!("expected full manifest"),
         }
@@ -1218,22 +1205,21 @@ mod lore_tests {
 
         // Create a character
         let (mut manifest, _) = repo
-            .create_entity(
-                &EntityType::new("character"),
-                "lukeskywalker",
-                "Luke Skywalker",
-                "test",
-            )
+            .create_entity(&EntityType::new("character"), "woody", "Woody", "test")
             .unwrap();
 
         // Add properties and commit
-        manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
+        manifest.set_property("toy_type", serde_yaml::Value::String("plush".to_string()));
         use crate::commit::Change;
         repo.commit_manifest(
             &mut manifest,
-            "add Luke Skywalker details",
+            "add Woody details",
             "test",
-            vec![Change::set("properties.species", None, "human".to_string())],
+            vec![Change::set(
+                "properties.toy_type",
+                None,
+                "plush".to_string(),
+            )],
         )
         .unwrap();
 
@@ -1250,11 +1236,11 @@ mod lore_tests {
     #[test]
     fn test_resolve_lore_full_manifest() {
         let (_tmp, resolver, repository) = setup_lore();
-        let uri = format!("nap://{}/character/lukeskywalker", repository);
+        let uri = format!("nap://{}/character/woody", repository);
         let result = resolver.resolve(&uri, &Default::default()).unwrap();
         match result {
             ResolveResult::Full(m) => {
-                assert_eq!(m.name, "Luke Skywalker");
+                assert_eq!(m.name, "Woody");
             }
             _ => panic!("expected full manifest"),
         }

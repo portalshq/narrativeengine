@@ -201,34 +201,34 @@ schema:
 
     #[test]
     fn test_diff_modified() {
-        let base = json!({"name": "Luke"});
-        let candidate = json!({"name": "Luke Skywalker"});
+        let base = json!({"name": "Woody"});
+        let candidate = json!({"name": "Woody"});
 
         let result = diff(&base, &candidate, &test_sdl());
         assert_eq!(result.len(), 1);
         assert_eq!(result.changes[0].op, ChangeOp::Modified);
         assert_eq!(result.changes[0].path, "root.name");
-        assert_eq!(result.changes[0].old_value, Some(json!("Luke")));
-        assert_eq!(result.changes[0].new_value, Some(json!("Luke Skywalker")));
+        assert_eq!(result.changes[0].old_value, Some(json!("Woody")));
+        assert_eq!(result.changes[0].new_value, Some(json!("Woody")));
     }
 
     #[test]
     fn test_diff_added() {
-        let base = json!({"name": "Luke"});
-        let candidate = json!({"name": "Luke", "homeworld": "Tatooine"});
+        let base = json!({"name": "Woody"});
+        let candidate = json!({"name": "Woody", "homeworld": "Andy's Room"});
 
         let result = diff(&base, &candidate, &test_sdl());
         assert_eq!(result.len(), 1);
         assert_eq!(result.changes[0].op, ChangeOp::Added);
         assert_eq!(result.changes[0].path, "root.homeworld");
         assert_eq!(result.changes[0].old_value, None);
-        assert_eq!(result.changes[0].new_value, Some(json!("Tatooine")));
+        assert_eq!(result.changes[0].new_value, Some(json!("Andy's Room")));
     }
 
     #[test]
     fn test_diff_removed() {
-        let base = json!({"name": "Luke", "homeworld": "Tatooine"});
-        let candidate = json!({"name": "Luke", "homeworld": null});
+        let base = json!({"name": "Woody", "homeworld": "Andy's Room"});
+        let candidate = json!({"name": "Woody", "homeworld": null});
 
         let result = diff(&base, &candidate, &test_sdl());
         assert_eq!(result.len(), 1);
@@ -238,8 +238,8 @@ schema:
 
     #[test]
     fn test_diff_no_changes() {
-        let base = json!({"name": "Luke"});
-        let candidate = json!({"name": "Luke"});
+        let base = json!({"name": "Woody"});
+        let candidate = json!({"name": "Woody"});
 
         let result = diff(&base, &candidate, &test_sdl());
         assert!(result.is_empty());

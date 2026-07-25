@@ -1,17 +1,17 @@
 ```bash
 # Resolve a full manifest
-nap resolve nap://toystory/character/lukeskywalker
+nap resolve nap://toystory/character/woody
 
 # Resolve as JSON
-nap resolve nap://toystory/character/lukeskywalker -f json
+nap resolve nap://toystory/character/woody -f json
 
 # Resolve at a specific branch
-nap resolve nap://toystory/character/lukeskywalker --branch canon
+nap resolve nap://toystory/character/woody --branch canon
 
 # Resolve a subtree via fragment query
-nap resolve nap://toystory/character/lukeskywalker#properties.species
+nap resolve nap://toystory/character/woody#properties.toy_type
 # → human
 
 # Resolve a nested subtree
-nap resolve nap://toystory/character/lukeskywalker#references.appears_in
+nap resolve nap://toystory/character/woody#references.appears_in
 ```

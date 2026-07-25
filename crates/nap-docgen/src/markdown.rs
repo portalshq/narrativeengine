@@ -437,7 +437,7 @@ pub fn render_cli_summary(
     doc.heading(2, "Common Examples");
     doc.code_block(
         "bash",
-        "# Initialize a repository\nnap init toystory\n\n# Create an entity\nnap create character lukeskywalker -u toystory -n \"Luke Skywalker\"\n\n# Resolve a manifest\nnap resolve nap://toystory/character/lukeskywalker\n\n# Query a subtree\nnap query nap://toystory/character/lukeskywalker properties\n\n# View commit history\nnap history nap://toystory/character/lukeskywalker",
+        "# Initialize a repository\nnap init toystory\n\n# Create an entity\nnap create character woody -u toystory -n \"Woody\"\n\n# Resolve a manifest\nnap resolve nap://toystory/character/woody\n\n# Query a subtree\nnap query nap://toystory/character/woody properties\n\n# View commit history\nnap history nap://toystory/character/woody",
     );
 
     doc.render()

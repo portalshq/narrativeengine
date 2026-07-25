@@ -84,39 +84,39 @@ fn test_readme_quick_start_workflow() {
     nap_cmd(&nap_home)
         .arg("create")
         .arg("character")
-        .arg("lukeskywalker")
+        .arg("woody")
         .arg("-u")
         .arg("toystory")
         .arg("-n")
-        .arg("Luke Skywalker")
+        .arg("Woody")
         .assert()
         .success();
 
     // 3. Set properties
     nap_cmd(&nap_home)
         .arg("set")
-        .arg("nap://toystory/character/lukeskywalker")
-        .arg("species")
-        .arg("human")
+        .arg("nap://toystory/character/woody")
+        .arg("toy_type")
+        .arg("plush")
         .assert()
         .success();
 
     // 4. Resolve a manifest
     nap_cmd(&nap_home)
         .arg("resolve")
-        .arg("nap://toystory/character/lukeskywalker")
+        .arg("nap://toystory/character/woody")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Luke Skywalker"));
+        .stdout(predicate::str::contains("Woody"));
 
     // 5. Query a subtree
     nap_cmd(&nap_home)
         .arg("query")
-        .arg("nap://toystory/character/lukeskywalker")
+        .arg("nap://toystory/character/woody")
         .arg("properties")
         .assert()
         .success()
-        .stdout(predicate::str::contains("species"));
+        .stdout(predicate::str::contains("toy_type"));
 }
 
 #[cfg(feature = "workflow-e2e")]

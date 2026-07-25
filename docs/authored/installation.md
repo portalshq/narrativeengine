@@ -98,31 +98,31 @@ ls toystory/
 
 ```bash
 # Create a character
-nap create character lukeskywalker -u toystory -n "Luke Skywalker"
+nap create character woody -u toystory -n "Woody"
 
 # Create a location
-nap create location tatooine -u toystory -n "Tatooine"
+nap create location andys-room -u toystory -n "Andy's Room"
 
 # Set properties
-nap set nap://toystory/character/lukeskywalker species human
-nap set nap://toystory/character/lukeskywalker homeworld "nap://toystory/location/tatooine"
+nap set nap://toystory/character/woody toy_type human
+nap set nap://toystory/character/woody homeworld "nap://toystory/location/andys-room"
 
 # Resolve a manifest
-nap resolve nap://toystory/character/lukeskywalker
+nap resolve nap://toystory/character/woody
 
 # Query a specific field
-nap resolve nap://toystory/character/lukeskywalker#properties.species
+nap resolve nap://toystory/character/woody#properties.toy_type
 # → human
 
 # Query a subtree
-nap query nap://toystory/character/lukeskywalker properties
+nap query nap://toystory/character/woody properties
 ```
 
 ### Version Control
 
 ```bash
 # View commit history
-nap history nap://toystory/character/lukeskywalker
+nap history nap://toystory/character/woody
 
 # Create branches
 nap branch toystory canon
@@ -137,6 +137,6 @@ nap publish toystory
 ### Output Formats
 
 ```bash
-nap resolve nap://toystory/character/lukeskywalker -f json
-nap resolve nap://toystory/character/lukeskywalker -f yaml
+nap resolve nap://toystory/character/woody -f json
+nap resolve nap://toystory/character/woody -f yaml
 ```

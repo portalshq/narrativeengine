@@ -2,7 +2,7 @@
 //!
 //! The manifest is the durable representation of a narrative resource.
 //! It is:
-//! - **Human-editable** — YAML, readable by worldbuilders
+//! - **Human-editable** — YAML, readable by toybox-builders
 //! - **Machine-editable** — structured, schema-validated
 //! - **Agent-readable** — subtree-queryable for AI workflows
 //! - **Mergeable** — YAML maps merge cleanly
@@ -29,13 +29,13 @@ use crate::types::EntityType;
 ///
 /// # Example (YAML)
 /// ```yaml
-/// id: "nap://toystory/character/lukeskywalker"
-/// name: "Luke Skywalker"
+/// id: "nap://toystory/character/woody"
+/// name: "Woody"
 /// entity_type: character
 /// version: 17
 /// properties:
-///   homeworld: "nap://toystory/location/tatooine"
-///   species: human
+///   homeworld: "nap://toystory/location/andys-room"
+///   toy_type: human
 /// representations:
 ///   reference_image:
 ///     hash: "blake3:af1349b9..."
@@ -44,7 +44,7 @@ use crate::types::EntityType;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     /// The canonical NAP URI for this resource.
-    /// e.g., `"nap://toystory/character/lukeskywalker"`
+    /// e.g., `"nap://toystory/character/woody"`
     pub id: String,
 
     /// Human-readable name.
@@ -62,7 +62,7 @@ pub struct Manifest {
     pub principals: Option<Principal>,
 
     /// Entity-specific key-value properties.
-    /// Character: personality, species, homeworld, etc.
+    /// Character: personality, toy_type, homeworld, etc.
     /// Scene: setting, time_of_day, mood, etc.
     /// Location: geography, atmosphere, etc.
     #[serde(default)]
@@ -112,7 +112,7 @@ pub struct Representation {
     /// File format. e.g., `"png"`, `"glb"`, `"onnx"`, `"spz"`.
     pub format: String,
 
-    /// Optional storage URI. e.g., `"gs://assets/toystory/luke/ref.png"`.
+    /// Optional storage URI. e.g., `"gs://assets/toystory/woody/ref.png"`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
 
@@ -249,34 +249,25 @@ mod tests {
 
     #[test]
     fn test_manifest_new() {
-        let manifest = Manifest::new(
-            "toystory",
-            EntityType::new("character"),
-            "lukeskywalker",
-            "Luke Skywalker",
-        );
-        assert_eq!(manifest.id, "nap://toystory/character/lukeskywalker");
-        assert_eq!(manifest.name, "Luke Skywalker");
+        let manifest = Manifest::new("toystory", EntityType::new("character"), "woody", "Woody");
+        assert_eq!(manifest.id, "nap://toystory/character/woody");
+        assert_eq!(manifest.name, "Woody");
         assert_eq!(manifest.entity_type.as_str(), "character");
         assert_eq!(manifest.version, 0);
     }
 
     #[test]
     fn test_manifest_yaml_roundtrip() {
-        let mut manifest = Manifest::new(
-            "toystory",
-            EntityType::new("character"),
-            "lukeskywalker",
-            "Luke Skywalker",
-        );
-        manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
+        let mut manifest =
+            Manifest::new("toystory", EntityType::new("character"), "woody", "Woody");
+        manifest.set_property("toy_type", serde_yaml::Value::String("plush".to_string()));
         manifest.set_representation(
             "reference_image",
             Representation {
                 hash: "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                     .to_string(),
                 format: "png".to_string(),
-                uri: Some("gs://assets/luke/ref.png".to_string()),
+                uri: Some("gs://assets/woody/ref.png".to_string()),
                 tier: Some("production".to_string()),
             },
         );
@@ -286,15 +277,15 @@ mod tests {
 
         assert_eq!(parsed.id, manifest.id);
         assert_eq!(parsed.name, manifest.name);
-        assert!(parsed.properties.contains_key("species"));
+        assert!(parsed.properties.contains_key("toy_type"));
         assert!(parsed.representations.contains_key("reference_image"));
     }
 
     #[test]
     fn test_manifest_ignores_legacy_head_on_parse() {
         let yaml = r#"
-id: "nap://toystory/character/lukeskywalker"
-name: "Luke Skywalker"
+id: "nap://toystory/character/woody"
+name: "Woody"
 entity_type: character
 version: 1
 head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -303,7 +294,7 @@ head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         let parsed = Manifest::from_yaml(yaml).unwrap();
         let serialized = parsed.to_yaml().unwrap();
 
-        assert_eq!(parsed.id, "nap://toystory/character/lukeskywalker");
+        assert_eq!(parsed.id, "nap://toystory/character/woody");
         assert!(!serialized.contains("\nhead:"));
     }
 
@@ -313,7 +304,7 @@ head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             "toystory",
             EntityType::new("world"),
             "toystory",
-            "Star Wars Repository",
+            "Toy Story Repository",
         );
         assert_eq!(manifest.id, "nap://toystory/world/toystory");
     }
@@ -332,12 +323,7 @@ head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
     #[test]
     fn test_manifest_content_hash_deterministic() {
-        let manifest = Manifest::new(
-            "toystory",
-            EntityType::new("character"),
-            "lukeskywalker",
-            "Luke Skywalker",
-        );
+        let manifest = Manifest::new("toystory", EntityType::new("character"), "woody", "Woody");
         let hash_a = manifest.content_hash().unwrap();
         let hash_b = manifest.content_hash().unwrap();
         assert_eq!(hash_a, hash_b);

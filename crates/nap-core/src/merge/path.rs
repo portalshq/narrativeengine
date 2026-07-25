@@ -18,7 +18,7 @@
 //! For array items the identity value is used in brackets:
 //!
 //! ```text
-//! characters[obiwan].name
+//! characters[buzzlightyear].name
 //! references[scene_4].participants
 //! ```
 //!
@@ -38,7 +38,7 @@ use crate::merge::sdl::{IdentityRule, MergeStrategyType, SdlDocument};
 pub enum PathSegment {
     /// A named object key.  e.g. `properties`, `name`
     Key(String),
-    /// An array item identified by its identity value.  e.g. `obiwan`
+    /// An array item identified by its identity value.  e.g. `buzzlightyear`
     Identity(String),
 }
 
@@ -395,24 +395,24 @@ schema:
 
     #[test]
     fn test_parse_identity_path() {
-        let path = CanonicalPath::parse("characters[obiwan]").unwrap();
+        let path = CanonicalPath::parse("characters[buzzlightyear]").unwrap();
         assert_eq!(
             path.segments(),
             &[
                 PathSegment::Key("characters".to_string()),
-                PathSegment::Identity("obiwan".to_string()),
+                PathSegment::Identity("buzzlightyear".to_string()),
             ]
         );
     }
 
     #[test]
     fn test_parse_identity_with_subpath() {
-        let path = CanonicalPath::parse("characters[obiwan].name").unwrap();
+        let path = CanonicalPath::parse("characters[buzzlightyear].name").unwrap();
         assert_eq!(
             path.segments(),
             &[
                 PathSegment::Key("characters".to_string()),
-                PathSegment::Identity("obiwan".to_string()),
+                PathSegment::Identity("buzzlightyear".to_string()),
                 PathSegment::Key("name".to_string()),
             ]
         );
@@ -420,77 +420,80 @@ schema:
 
     #[test]
     fn test_path_to_string() {
-        let path = CanonicalPath::parse("characters[obiwan].name").unwrap();
-        assert_eq!(path.to_string(), "characters[obiwan].name");
+        let path = CanonicalPath::parse("characters[buzzlightyear].name").unwrap();
+        assert_eq!(path.to_string(), "characters[buzzlightyear].name");
     }
 
     #[test]
     fn test_build_path_map_with_identity_keys() {
         let value = json!({
-            "name": "Luke",
+            "name": "Woody",
             "characters": [
-                {"id": "obiwan", "name": "Obi-Wan"},
-                {"id": "anakin", "name": "Anakin"}
+                {"id": "buzzlightyear", "name": "Buzz"},
+                {"id": "sid", "name": "Sid"}
             ],
-            "tags": ["jedi", "force"]
+            "tags": ["hero", "magic"]
         });
 
         let schema = test_sdl();
         let map = build_path_map(&value, &schema);
 
         // Simple keys
-        assert_eq!(map.get("name"), Some(&json!("Luke")));
+        assert_eq!(map.get("name"), Some(&json!("Woody")));
 
         // Identity-keyed array items
-        assert_eq!(map.get("characters[obiwan].name"), Some(&json!("Obi-Wan")));
-        assert_eq!(map.get("characters[anakin].name"), Some(&json!("Anakin")));
+        assert_eq!(
+            map.get("characters[buzzlightyear].name"),
+            Some(&json!("Buzz"))
+        );
+        assert_eq!(map.get("characters[sid].name"), Some(&json!("Sid")));
 
         // Primitive identity array
-        assert!(map.contains_key("tags[jedi]"));
-        assert!(map.contains_key("tags[force]"));
+        assert!(map.contains_key("tags[hero]"));
+        assert!(map.contains_key("tags[magic]"));
 
         // The full item objects should also be in the map
-        assert!(map.contains_key("characters[obiwan]"));
-        assert!(map.contains_key("characters[anakin]"));
+        assert!(map.contains_key("characters[buzzlightyear]"));
+        assert!(map.contains_key("characters[sid]"));
     }
 
     #[test]
     fn test_resolve_simple_path() {
-        let value = json!({"name": "Luke", "homeworld": "Tatooine"});
+        let value = json!({"name": "Woody", "homeworld": "Andy's Room"});
         let path = CanonicalPath::parse("name").unwrap();
-        assert_eq!(resolve_path(&value, &path), Some(&json!("Luke")));
+        assert_eq!(resolve_path(&value, &path), Some(&json!("Woody")));
     }
 
     #[test]
     fn test_resolve_nested_path() {
-        let value = json!({"properties": {"homeworld": "Tatooine"}});
+        let value = json!({"properties": {"homeworld": "Andy's Room"}});
         let path = CanonicalPath::parse("properties.homeworld").unwrap();
-        assert_eq!(resolve_path(&value, &path), Some(&json!("Tatooine")));
+        assert_eq!(resolve_path(&value, &path), Some(&json!("Andy's Room")));
     }
 
     #[test]
     fn test_resolve_identity_path() {
         let value = json!({
             "characters": [
-                {"id": "obiwan", "name": "Obi-Wan"},
+                {"id": "buzzlightyear", "name": "Buzz"},
             ]
         });
-        let path = CanonicalPath::parse("characters[obiwan].name").unwrap();
-        assert_eq!(resolve_path(&value, &path), Some(&json!("Obi-Wan")));
+        let path = CanonicalPath::parse("characters[buzzlightyear].name").unwrap();
+        assert_eq!(resolve_path(&value, &path), Some(&json!("Buzz")));
     }
 
     #[test]
     fn test_resolve_nonexistent_path() {
-        let value = json!({"name": "Luke"});
+        let value = json!({"name": "Woody"});
         let path = CanonicalPath::parse("nonexistent").unwrap();
         assert_eq!(resolve_path(&value, &path), None);
     }
 
     #[test]
     fn test_parent_path() {
-        let path = CanonicalPath::parse("characters[obiwan].name").unwrap();
+        let path = CanonicalPath::parse("characters[buzzlightyear].name").unwrap();
         let parent = path.parent().unwrap();
-        assert_eq!(parent.to_string(), "characters[obiwan]");
+        assert_eq!(parent.to_string(), "characters[buzzlightyear]");
 
         let grandparent = parent.parent().unwrap();
         assert_eq!(grandparent.to_string(), "characters");

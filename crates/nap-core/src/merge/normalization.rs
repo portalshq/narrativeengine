@@ -109,18 +109,18 @@ mod tests {
 
     #[test]
     fn test_missing_field_copied_from_base() {
-        let base = json!({"name": "Obi Wan", "homeworld": "Stewjon"});
-        let candidate = json!({"name": "Obi Wan Kenobi"});
+        let base = json!({"name": "Buzz", "homeworld": "Andy's Room"});
+        let candidate = json!({"name": "Buzz Lightyear"});
 
         let result = normalize(&base, &candidate);
 
-        assert_eq!(result.get("name"), Some(&json!("Obi Wan Kenobi")));
-        assert_eq!(result.get("homeworld"), Some(&json!("Stewjon")));
+        assert_eq!(result.get("name"), Some(&json!("Buzz Lightyear")));
+        assert_eq!(result.get("homeworld"), Some(&json!("Andy's Room")));
     }
 
     #[test]
     fn test_explicit_null_preserved() {
-        let base = json!({"homeworld": "Stewjon"});
+        let base = json!({"homeworld": "Andy's Room"});
         let candidate = json!({"homeworld": null});
 
         let result = normalize(&base, &candidate);
@@ -130,37 +130,37 @@ mod tests {
 
     #[test]
     fn test_present_field_unchanged() {
-        let base = json!({"name": "Luke", "species": "human"});
-        let candidate = json!({"name": "Luke Skywalker", "species": "human"});
+        let base = json!({"name": "Woody", "toy_type": "plush"});
+        let candidate = json!({"name": "Woody", "toy_type": "plush"});
 
         let result = normalize(&base, &candidate);
 
-        assert_eq!(result.get("name"), Some(&json!("Luke Skywalker")));
-        assert_eq!(result.get("species"), Some(&json!("human")));
+        assert_eq!(result.get("name"), Some(&json!("Woody")));
+        assert_eq!(result.get("toy_type"), Some(&json!("plush")));
     }
 
     #[test]
     fn test_additions_are_preserved() {
-        let base = json!({"name": "Luke"});
-        let candidate = json!({"name": "Luke", "homeworld": "Tatooine"});
+        let base = json!({"name": "Woody"});
+        let candidate = json!({"name": "Woody", "homeworld": "Andy's Room"});
 
         let result = normalize(&base, &candidate);
 
-        assert_eq!(result.get("name"), Some(&json!("Luke")));
-        assert_eq!(result.get("homeworld"), Some(&json!("Tatooine")));
+        assert_eq!(result.get("name"), Some(&json!("Woody")));
+        assert_eq!(result.get("homeworld"), Some(&json!("Andy's Room")));
     }
 
     #[test]
     fn test_nested_missing_filled() {
         let base = json!({
             "character": {
-                "name": "Obi Wan",
-                "homeworld": "Stewjon"
+                "name": "Buzz",
+                "homeworld": "Andy's Room"
             }
         });
         let candidate = json!({
             "character": {
-                "name": "Obi Wan Kenobi"
+                "name": "Buzz Lightyear"
             }
         });
 
@@ -168,11 +168,11 @@ mod tests {
 
         assert_eq!(
             result.pointer("/character/name"),
-            Some(&json!("Obi Wan Kenobi"))
+            Some(&json!("Buzz Lightyear"))
         );
         assert_eq!(
             result.pointer("/character/homeworld"),
-            Some(&json!("Stewjon"))
+            Some(&json!("Andy's Room"))
         );
     }
 
@@ -180,21 +180,21 @@ mod tests {
     fn test_nested_null_preserved() {
         let base = json!({
             "character": {
-                "homeworld": "Stewjon",
-                "species": "human"
+                "homeworld": "Andy's Room",
+                "toy_type": "plush"
             }
         });
         let candidate = json!({
             "character": {
                 "homeworld": null,
-                "species": "human"
+                "toy_type": "plush"
             }
         });
 
         let result = normalize(&base, &candidate);
 
         assert_eq!(result.pointer("/character/homeworld"), Some(&Value::Null));
-        assert_eq!(result.pointer("/character/species"), Some(&json!("human")));
+        assert_eq!(result.pointer("/character/toy_type"), Some(&json!("plush")));
     }
 
     #[test]

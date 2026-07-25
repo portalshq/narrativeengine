@@ -111,7 +111,7 @@ commands:
         about: "Entity type (any non-empty string, e.g. character, location, custom-type)"
         required: true
       - name: "entity_id"
-        about: "Entity ID (slug). e.g., \"lukeskywalker\""
+        about: "Entity ID (slug). e.g., \"woody\""
         required: true
     options:
       - name: "repository"
@@ -384,12 +384,12 @@ commands:
     long_about: |
       Resolve a NAP URI to its manifest or a subtree.
       
-      Fragment queries are supported via the URI: nap resolve nap://toystory/character/lukeskywalker#references.appears_in
+      Fragment queries are supported via the URI: nap resolve nap://toystory/character/woody#references.appears_in
     usage: "Usage: resolve [OPTIONS] <URI>"
     hidden: false
     arguments:
       - name: "uri"
-        about: "NAP URI. e.g., \"nap://toystory/character/lukeskywalker\""
+        about: "NAP URI. e.g., \"nap://toystory/character/woody\""
         required: true
     options:
       - name: "branch"

@@ -19,8 +19,8 @@ Today, narrative assets live in silos:
 None of these tools talk to each other. NAP unifies them under a single addressing and resolution layer.
 
 ```text
-nap://toystory/character/lukeskywalker
-nap://toystory/location/tatooine
-nap://toystory/scene/cantina
+nap://toystory/character/woody
+nap://toystory/location/andys-room
+nap://toystory/scene/pizza-planet
 nap://toystory/prop/andy-hat
 ```

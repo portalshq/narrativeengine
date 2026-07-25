@@ -41,10 +41,10 @@ nap commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
 ## Examples
 ```bash
 # Commit all changes in a repository
-nap commit toystory -m "Add Luke Skywalker character"
+nap commit toystory -m "Add Woody character"
 
 # Commit with a specific author
-nap commit toystory -m "Update Tatooine properties" -a "worldbuilder"
+nap commit toystory -m "Update Andy's Room properties" -a "toybox-builder"
 ```
 
 ## Source

@@ -157,9 +157,9 @@ mod tests {
 
     #[test]
     fn test_edge_list_independent_adds_merge() {
-        let base = json!([{"id": "e1", "character": "luke", "scene": "cantina"}]);
-        let current = json!([{"id": "e1", "character": "luke", "scene": "cantina"}, {"id": "e2", "character": "leia", "scene": "death-star"}]);
-        let proposed = json!([{"id": "e1", "character": "luke", "scene": "cantina"}, {"id": "e3", "character": "han", "scene": "cantina"}]);
+        let base = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let current = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}, {"id": "e2", "character": "jessie", "scene": "kamikaze"}]);
+        let proposed = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}, {"id": "e3", "character": "rex", "scene": "pizza-planet"}]);
 
         let result = merge_edge_list(
             "edges",
@@ -179,9 +179,9 @@ mod tests {
 
     #[test]
     fn test_edge_list_conflict_on_same_edge() {
-        let base = json!([{"id": "e1", "character": "luke", "scene": "cantina"}]);
-        let current = json!([{"id": "e1", "character": "luke", "scene": "mos-eisley"}]);
-        let proposed = json!([{"id": "e1", "character": "luke", "scene": "jedi-temple"}]);
+        let base = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let current = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let proposed = json!([{"id": "e1", "character": "woody", "scene": "sunnyside"}]);
 
         let result = merge_edge_list(
             "edges",
@@ -197,9 +197,9 @@ mod tests {
 
     #[test]
     fn test_edge_list_one_side_unchanged() {
-        let base = json!([{"id": "e1", "character": "luke", "scene": "cantina"}]);
-        let current = json!([{"id": "e1", "character": "luke", "scene": "tatooine"}]);
-        let proposed = json!([{"id": "e1", "character": "luke", "scene": "cantina"}]); // unchanged from base
+        let base = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let current = json!([{"id": "e1", "character": "woody", "scene": "andys-room"}]);
+        let proposed = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]); // unchanged from base
 
         let result = merge_edge_list(
             "edges",
@@ -213,14 +213,14 @@ mod tests {
         assert!(result.is_merged());
 
         let merged = result.unwrap_merged();
-        assert_eq!(merged[0].get("scene"), Some(&json!("tatooine")));
+        assert_eq!(merged[0].get("scene"), Some(&json!("andys-room")));
     }
 
     #[test]
     fn test_edge_list_empty_base() {
         let base = json!([]);
-        let current = json!([{"id": "e1", "character": "luke", "scene": "cantina"}]);
-        let proposed = json!([{"id": "e2", "character": "vader", "scene": "death-star"}]);
+        let current = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let proposed = json!([{"id": "e2", "character": "slinky", "scene": "kamikaze"}]);
 
         let result = merge_edge_list(
             "edges",
@@ -256,9 +256,9 @@ mod tests {
 
     #[test]
     fn test_edge_list_both_add_same_edge_no_conflict() {
-        let base = json!([{"id": "e1", "character": "luke", "scene": "cantina"}]);
-        let current = json!([{"id": "e1", "character": "luke", "scene": "cantina"}, {"id": "e2", "character": "han", "scene": "falcon"}]);
-        let proposed = json!([{"id": "e1", "character": "luke", "scene": "cantina"}, {"id": "e2", "character": "han", "scene": "falcon"}]);
+        let base = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let current = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}, {"id": "e2", "character": "rex", "scene": "moving-van"}]);
+        let proposed = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}, {"id": "e2", "character": "rex", "scene": "moving-van"}]);
 
         let result = merge_edge_list(
             "edges",

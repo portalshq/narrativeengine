@@ -8,14 +8,14 @@
 //! ├── repository.yaml     ← repository metadata (name, description, nap config)
 //! ├── character/          ← entity type (has .entity-type marker)
 //! │   ├── .entity-type    ← marker file
-//! │   ├── lukeskywalker.yaml
-//! │   └── darthvader.yaml
+//! │   ├── woody.yaml
+//! │   └── slinky.yaml
 //! ├── location/
 //! │   ├── .entity-type
-//! │   └── tatooine.yaml
+//! │   └── andys-room.yaml
 //! └── scene/
 //!     ├── .entity-type
-//!     └── cantina-scene.yaml
+//!     └── pizza-planet-scene.yaml
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -664,14 +664,14 @@ mod tests {
             .unwrap();
 
         // Modify and commit
-        manifest.set_property("species", serde_yaml::Value::String("elf".to_string()));
-        let changes = vec![Change::set("properties.species", None, "elf".to_string())];
+        manifest.set_property("toy_type", serde_yaml::Value::String("elf".to_string()));
+        let changes = vec![Change::set("properties.toy_type", None, "elf".to_string())];
         let commit = repo
-            .commit_manifest(&mut manifest, "set species to elf", "author", changes)
+            .commit_manifest(&mut manifest, "set toy_type to elf", "author", changes)
             .unwrap();
 
         assert!(!commit.id.is_empty());
-        assert_eq!(commit.message, "set species to elf");
+        assert_eq!(commit.message, "set toy_type to elf");
         assert_eq!(commit.parent.as_deref(), Some(create_hash.as_str()));
 
         // Verify version incremented
@@ -715,9 +715,9 @@ mod tests {
         assert_eq!(manifest.name, "The Hero");
 
         // Modify and commit
-        manifest.set_property("species", serde_yaml::Value::String("elf".to_string()));
-        let changes = vec![Change::set("properties.species", None, "elf".to_string())];
-        repo.commit_manifest(&mut manifest, "set species to elf", "author", changes)
+        manifest.set_property("toy_type", serde_yaml::Value::String("elf".to_string()));
+        let changes = vec![Change::set("properties.toy_type", None, "elf".to_string())];
+        repo.commit_manifest(&mut manifest, "set toy_type to elf", "author", changes)
             .unwrap();
         let update_hash = repo.head_hash().unwrap();
 
@@ -804,9 +804,13 @@ mod lore_integration_tests {
             )
             .unwrap();
 
-        manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
-        let changes = vec![Change::set("properties.species", None, "human".to_string())];
-        repo.commit_manifest(&mut manifest, "add species", "integration-test", changes)
+        manifest.set_property("toy_type", serde_yaml::Value::String("plush".to_string()));
+        let changes = vec![Change::set(
+            "properties.toy_type",
+            None,
+            "plush".to_string(),
+        )];
+        repo.commit_manifest(&mut manifest, "add toy_type", "integration-test", changes)
             .unwrap();
 
         let read_back = repo

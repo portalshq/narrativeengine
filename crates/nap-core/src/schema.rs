@@ -28,12 +28,12 @@ pub fn manifest_schema() -> Value {
                 "pattern": "^nap://[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$",
                 "description": concat!(
                     "Canonical NAP URI. ",
-                    "e.g., nap://toystory/character/lukeskywalker"
+                    "e.g., nap://toystory/character/woody"
                 )
             },
             "name": {
                 "type": "string",
-                "description": "Human-readable display name. e.g., 'Luke Skywalker'"
+                "description": "Human-readable display name. e.g., 'Woody'"
             },
             "entity_type": {
                 "type": "string",
@@ -71,7 +71,7 @@ pub fn manifest_schema() -> Value {
                 "additionalProperties": true,
                 "description": concat!(
                     "Entity-specific key-value properties. ",
-                    "Character: species, homeworld, affiliation, lightsaber_color. ",
+                    "Character: toy_type, homeworld, affiliation, accessory. ",
                     "Scene: setting, participants, mood, time_of_day, outcome. ",
                     "Location: climate, type, controlled_by, population. ",
                     "Prop: owner, material, weight, color."
@@ -134,7 +134,7 @@ pub fn manifest_schema() -> Value {
                         "type": "string",
                         "description": concat!(
                             "Optional storage URI. ",
-                            "e.g., gs://assets/toystory/luke/ref.png, ",
+                            "e.g., gs://assets/toystory/woody/ref.png, ",
                             "s3://bucket/path/to/file.glb"
                         )
                     },
@@ -182,7 +182,7 @@ pub fn manifest_schema() -> Value {
                         "pattern": "^nap://",
                         "description": concat!(
                             "Parent entity URI this was derived from. ",
-                            "e.g., nap://toystory/character/lukeskywalker/v1"
+                            "e.g., nap://toystory/character/woody/v1"
                         )
                     },
                     "created_at": {
@@ -342,8 +342,8 @@ mod tests {
         let m = Manifest::new(
             "toystory",
             crate::types::EntityType::new("character"),
-            "luke",
-            "Luke Skywalker",
+            "woody",
+            "Woody",
         );
         assert!(validate_manifest(&m).is_ok());
     }
@@ -364,8 +364,8 @@ mod tests {
     fn test_validate_manifest_rejects_empty_entity_type() {
         // Build a manifest-like JSON value with an empty entity_type.
         let json = serde_json::json!({
-            "id": "nap://toystory/character/luke",
-            "name": "Luke",
+            "id": "nap://toystory/character/woody",
+            "name": "Woody",
             "entity_type": "",
             "version": 1,
         });
