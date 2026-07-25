@@ -74,5 +74,5 @@ fn test_nap_add_repr_alias_still_resolves_to_add_command() {
     cmd.arg("add-repr").arg("--help");
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Add a representation"));
+        .stdout(predicate::str::contains("Add a file representation"));
 }

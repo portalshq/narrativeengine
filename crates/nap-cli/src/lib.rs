@@ -263,7 +263,7 @@ pub enum Commands {
         author: String,
     },
 
-    /// Add a representation to an entity manifest.
+    /// Add a file representation to an entity manifest.
     #[command(alias = "add-repr")]
     Add {
         /// NAP URI.

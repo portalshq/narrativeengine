@@ -327,6 +327,8 @@ impl Repository {
             )));
         }
 
+        manifest.bump_version();
+
         // Validate against schema before writing
         crate::schema::validate_manifest(&manifest)
             .map_err(|errors| NapError::ManifestValidationError(errors.join("; ")))?;
@@ -337,11 +339,6 @@ impl Repository {
         // Commit via VCS
         let commit_message = format!("Create {entity_type} '{name}' ({entity_id})");
         let commit_hash = self.vcs.commit(&self.root, &commit_message, author)?;
-
-        // Update manifest with head pointer
-        manifest.head = Some(commit_hash.clone());
-        manifest.bump_version();
-        self.write_manifest(&manifest)?;
 
         info!(
             manifest_id = %manifest.id,
@@ -367,28 +364,18 @@ impl Repository {
         // Bump version
         manifest.bump_version();
 
-        // Write updated manifest (without new head — we don't know it yet)
+        // Write updated manifest.
         self.write_manifest(manifest)?;
 
         // Compute manifest hash
         let manifest_hash = manifest.content_hash()?.as_str().to_string();
+        let parent = Some(self.vcs.head_hash(&self.root)?);
 
         // VCS commit — produces the new HEAD hash
         let vcs_hash = self.vcs.commit(&self.root, message, author)?;
 
-        // Create NAP commit object with the now-known VCS hash
-        let nap_commit = Commit::new(
-            manifest.head.clone(),
-            author,
-            message,
-            &manifest_hash,
-            changes,
-        );
-
-        // Update head pointer and write again (leaves working tree dirty,
-        // same pattern as create_entity)
-        manifest.head = Some(vcs_hash.clone());
-        self.write_manifest(manifest)?;
+        // Create NAP commit metadata with the previous VCS HEAD as parent.
+        let nap_commit = Commit::new(parent, author, message, &manifest_hash, changes);
 
         debug!(
             manifest_id = %manifest.id,
@@ -520,18 +507,6 @@ impl Repository {
     pub fn revert_commit(&self, commit_hash: &str, author: &str) -> Result<String, NapError> {
         let new_hash = self.vcs.revert(&self.root, commit_hash)?;
 
-        // Re-read all entity manifests and update their `head` pointer
-        for entity_type in self.list_entity_types()? {
-            if let Ok(ids) = self.list_entities(&entity_type) {
-                for id in &ids {
-                    if let Ok(mut manifest) = self.read_manifest(&entity_type, id) {
-                        manifest.head = Some(new_hash.clone());
-                        self.write_manifest(&manifest)?;
-                    }
-                }
-            }
-        }
-
         info!(
             commit = %commit_hash,
             revert = %new_hash,
@@ -609,7 +584,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        let (manifest, _hash) = repo
+        let (manifest, hash) = repo
             .create_entity(
                 &EntityType::new("character"),
                 "hero",
@@ -620,12 +595,15 @@ mod tests {
 
         assert_eq!(manifest.name, "The Hero");
         assert_eq!(manifest.entity_type.as_str(), "character");
+        assert_eq!(manifest.version, 1);
+        assert_eq!(repo.head_hash().unwrap(), hash);
 
         // Read it back
         let read_back = repo
             .read_manifest(&EntityType::new("character"), "hero")
             .unwrap();
         assert_eq!(read_back.name, "The Hero");
+        assert_eq!(read_back.version, 1);
     }
 
     #[test]
@@ -681,7 +659,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = mock_repo(&tmp);
 
-        let (mut manifest, _) = repo
+        let (mut manifest, create_hash) = repo
             .create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
             .unwrap();
 
@@ -694,6 +672,7 @@ mod tests {
 
         assert!(!commit.id.is_empty());
         assert_eq!(commit.message, "set species to elf");
+        assert_eq!(commit.parent.as_deref(), Some(create_hash.as_str()));
 
         // Verify version incremented
         let read_back = repo
@@ -738,34 +717,18 @@ mod tests {
         // Modify and commit
         manifest.set_property("species", serde_yaml::Value::String("elf".to_string()));
         let changes = vec![Change::set("properties.species", None, "elf".to_string())];
-        let _commit = repo
-            .commit_manifest(&mut manifest, "set species to elf", "author", changes)
+        repo.commit_manifest(&mut manifest, "set species to elf", "author", changes)
             .unwrap();
+        let update_hash = repo.head_hash().unwrap();
 
-        // Verify the property was set
-        let read_back = repo
-            .read_manifest(&EntityType::new("character"), "hero")
-            .unwrap();
-        assert_eq!(
-            read_back.properties.get("species").and_then(|v| v.as_str()),
-            Some("elf")
-        );
-
-        // Get the VCS commit hash from the manifest's head pointer.
-        let vcs_hash = read_back
-            .head
-            .as_ref()
-            .expect("head should be set after commit");
-
-        // Revert that VCS commit
-        let revert_hash = repo.revert_commit(vcs_hash, "author").unwrap();
+        // Revert the VCS commit.
+        let revert_hash = repo.revert_commit(&update_hash, "author").unwrap();
         assert!(!revert_hash.is_empty());
 
-        // Verify the manifest head was updated to the revert commit
-        let after_revert = repo
-            .read_manifest(&EntityType::new("character"), "hero")
-            .unwrap();
-        assert_eq!(after_revert.head.as_deref(), Some(revert_hash.as_str()));
+        // Verify the manifest remains normal YAML without a cached head field.
+        let manifest_path = repo.manifest_path(&EntityType::new("character"), "hero");
+        let manifest_yaml = std::fs::read_to_string(&manifest_path).unwrap();
+        assert!(!manifest_yaml.contains("\nhead:"));
 
         // Verify the revert appears in history
         let hist = repo

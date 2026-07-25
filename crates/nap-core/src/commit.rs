@@ -8,8 +8,8 @@
 //! - The commit object stores change descriptions (patches) for efficient
 //!   audit/provenance without requiring full diff reconstruction.
 //!
-//! Commits are NOT stored inside the manifest. The manifest stores only
-//! `head` — a pointer to the latest commit hash.
+//! Commits are NOT stored inside the manifest. Revision identity and history
+//! live in the VCS.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

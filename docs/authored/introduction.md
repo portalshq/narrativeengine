@@ -67,12 +67,11 @@ representations:
 provenance:
   model: "midjourney-v6"
   prompt_hash: "sha256:abc123..."
-head: "a72c9f3b..."
 ```
 
 ### 3. Commit — History
 
-Commits are content-addressed (BLAKE3) snapshots with patch metadata. The manifest stores only `head` — a pointer to the latest commit. Full history lives in the VCS, keeping manifests bounded.
+Commits are content-addressed (BLAKE3) snapshots with patch metadata. Full history and revision identity live in the VCS, keeping manifests bounded and avoiding self-referential revision pointers.
 
 ### 4. Resolver — URI → Manifest
 
@@ -108,7 +107,6 @@ representations:
     hash: "blake3:af1349b9..."
     format: mp4
     uri: "clip-01.mp4"
-head: "a72c9f3b..."
 ```
 
 When resolved with provenance, NAP returns versioned per-file provenance for the manifest and each direct representation. This keeps generation metadata attached to the committed files without requiring users to manage the underlying VCS directly.

@@ -7,7 +7,7 @@ source: clap
 
 
 # nap add
-Add a representation to an entity manifest
+Add a file representation to an entity manifest
 
 
 ## Synopsis

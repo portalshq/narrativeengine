@@ -32,7 +32,6 @@ export interface Manifest {
   representations: Record<string, Representation>;
   references: Record<string, unknown>;
   provenance?: Provenance;
-  head?: string;
   metadata?: Record<string, unknown>;
 }
 

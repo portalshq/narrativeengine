@@ -1,4 +1,4 @@
-Add a representation to an entity manifest
+Add a file representation to an entity manifest
 
 Usage: nap add [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>
 

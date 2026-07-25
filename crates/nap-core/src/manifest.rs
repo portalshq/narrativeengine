@@ -12,9 +12,8 @@
 //!
 //! # Design: Manifest is current state. History is external.
 //!
-//! The manifest stores `head` (a pointer to the latest commit hash).
 //! The full commit history lives in the VCS, NOT inside the manifest.
-//! This prevents manifests from growing unboundedly with every edit.
+//! This keeps manifests bounded and avoids self-referential revision pointers.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -41,7 +40,6 @@ use crate::types::EntityType;
 ///   reference_image:
 ///     hash: "blake3:af1349b9..."
 ///     format: png
-/// head: "a72c9f3b..."
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
@@ -83,10 +81,6 @@ pub struct Manifest {
     /// AI generation provenance — which model, prompt, seed, etc.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provenance: Option<Provenance>,
-
-    /// Pointer to the latest VCS commit hash (BLAKE3). History lives in the VCS.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub head: Option<String>,
 
     /// Arbitrary extension metadata. Future-proof escape hatch.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -174,7 +168,6 @@ impl Manifest {
             representations: BTreeMap::new(),
             references: BTreeMap::new(),
             provenance: None,
-            head: None,
             metadata: BTreeMap::new(),
         }
     }
@@ -295,6 +288,23 @@ mod tests {
         assert_eq!(parsed.name, manifest.name);
         assert!(parsed.properties.contains_key("species"));
         assert!(parsed.representations.contains_key("reference_image"));
+    }
+
+    #[test]
+    fn test_manifest_ignores_legacy_head_on_parse() {
+        let yaml = r#"
+id: "nap://starwars/character/lukeskywalker"
+name: "Luke Skywalker"
+entity_type: character
+version: 1
+head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"#;
+
+        let parsed = Manifest::from_yaml(yaml).unwrap();
+        let serialized = parsed.to_yaml().unwrap();
+
+        assert_eq!(parsed.id, "nap://starwars/character/lukeskywalker");
+        assert!(!serialized.contains("\nhead:"));
     }
 
     #[test]

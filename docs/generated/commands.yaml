@@ -3,7 +3,7 @@ version: "0.5.4"
 commands:
   - name: "add"
     full_path: "add"
-    about: "Add a representation to an entity manifest"
+    about: "Add a file representation to an entity manifest"
     usage: "Usage: add [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>"
     hidden: false
     arguments:
