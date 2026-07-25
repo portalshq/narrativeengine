@@ -529,7 +529,7 @@
       "name": "init",
       "full_path": "init",
       "about": "Initialize a repository repository and/or configure the backend provider",
-      "long_about": "Initialize a repository repository and/or configure the backend provider.\n\nWhen a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:\n\nnap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only",
+      "long_about": "Initialize a repository repository and/or configure the backend provider.\n\nWhen a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:\n\nnap init toystory                     # create repository nap init toystory --provider local    # create repository + configure provider nap init --provider local             # configure provider only",
       "usage": "Usage: init [OPTIONS] [REPOSITORY]",
       "aliases": [],
       "arguments": [
@@ -1065,13 +1065,13 @@
       "name": "resolve",
       "full_path": "resolve",
       "about": "Resolve a NAP URI to its manifest or a subtree",
-      "long_about": "Resolve a NAP URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: nap resolve nap://starwars/character/lukeskywalker#references.appears_in",
+      "long_about": "Resolve a NAP URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: nap resolve nap://toystory/character/lukeskywalker#references.appears_in",
       "usage": "Usage: resolve [OPTIONS] <URI>",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI. e.g., \"nap://starwars/character/lukeskywalker\"",
+          "about": "NAP URI. e.g., \"nap://toystory/character/lukeskywalker\"",
           "required": true,
           "default_value": null,
           "short": null,

@@ -189,7 +189,7 @@ commands:
       
       When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
       
-      nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
+      nap init toystory                     # create repository nap init toystory --provider local    # create repository + configure provider nap init --provider local             # configure provider only
     usage: "Usage: init [OPTIONS] [REPOSITORY]"
     hidden: false
     arguments:
@@ -384,12 +384,12 @@ commands:
     long_about: |
       Resolve a NAP URI to its manifest or a subtree.
       
-      Fragment queries are supported via the URI: nap resolve nap://starwars/character/lukeskywalker#references.appears_in
+      Fragment queries are supported via the URI: nap resolve nap://toystory/character/lukeskywalker#references.appears_in
     usage: "Usage: resolve [OPTIONS] <URI>"
     hidden: false
     arguments:
       - name: "uri"
-        about: "NAP URI. e.g., \"nap://starwars/character/lukeskywalker\""
+        about: "NAP URI. e.g., \"nap://toystory/character/lukeskywalker\""
         required: true
     options:
       - name: "branch"

@@ -124,19 +124,19 @@ When stdout is not a terminal, JSON is used automatically. Override with `$NAP_O
 ## Common Examples
 ```bash
 # Initialize a repository
-nap init starwars
+nap init toystory
 
 # Create an entity
-nap create character lukeskywalker -u starwars -n "Luke Skywalker"
+nap create character lukeskywalker -u toystory -n "Luke Skywalker"
 
 # Resolve a manifest
-nap resolve nap://starwars/character/lukeskywalker
+nap resolve nap://toystory/character/lukeskywalker
 
 # Query a subtree
-nap query nap://starwars/character/lukeskywalker properties
+nap query nap://toystory/character/lukeskywalker properties
 
 # View commit history
-nap history nap://starwars/character/lukeskywalker
+nap history nap://toystory/character/lukeskywalker
 ```
 
 

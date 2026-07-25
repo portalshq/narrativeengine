@@ -80,8 +80,8 @@ pub enum Commands {
     /// When --provider is given (or no provider is configured), sets up the
     /// backend provider. Both can be combined:
     ///
-    ///   nap init starwars                     # create repository
-    ///   nap init starwars --provider local    # create repository + configure provider
+    ///   nap init toystory                     # create repository
+    ///   nap init toystory --provider local    # create repository + configure provider
     ///   nap init --provider local             # configure provider only
     Init {
         /// Repository name. If provided, initializes a new repository repository.
@@ -161,9 +161,9 @@ pub enum Commands {
     /// Resolve a NAP URI to its manifest or a subtree.
     ///
     /// Fragment queries are supported via the URI:
-    ///   nap resolve nap://starwars/character/lukeskywalker#references.appears_in
+    ///   nap resolve nap://toystory/character/lukeskywalker#references.appears_in
     Resolve {
-        /// NAP URI. e.g., "nap://starwars/character/lukeskywalker"
+        /// NAP URI. e.g., "nap://toystory/character/lukeskywalker"
         uri: String,
 
         /// Resolve at a specific branch.

@@ -51,34 +51,34 @@ Nap addresses are stable -- entity references are immutable.
 
 ```bash
 # Initialize a repository in ~/.nap/
-nap init starwars
+nap init toystory
 
 # Create entities
-nap create character lukeskywalker -u starwars -n "Luke Skywalker"
-nap create location tatooine -u starwars -n "Tatooine"
-nap create scene cantina -u starwars -n "Cantina Scene"
+nap create character lukeskywalker -u toystory -n "Luke Skywalker"
+nap create location tatooine -u toystory -n "Tatooine"
+nap create scene cantina -u toystory -n "Cantina Scene"
 
 # Set properties with cross-references
-nap set nap://starwars/character/lukeskywalker species human
-nap set nap://starwars/character/lukeskywalker homeworld "nap://starwars/location/tatooine"
+nap set nap://toystory/character/lukeskywalker species human
+nap set nap://toystory/character/lukeskywalker homeworld "nap://toystory/location/tatooine"
 
 # Resolve manifests
-nap resolve nap://starwars/character/lukeskywalker
+nap resolve nap://toystory/character/lukeskywalker
 
 # Fragment queries
-nap resolve nap://starwars/character/lukeskywalker#properties.homeworld
+nap resolve nap://toystory/character/lukeskywalker#properties.homeworld
 
 # Subtree queries
-nap query nap://starwars/character/lukeskywalker properties
+nap query nap://toystory/character/lukeskywalker properties
 
 # Version control
-nap history nap://starwars/character/lukeskywalker
-nap branch starwars canon
-nap tag starwars episode-4
+nap history nap://toystory/character/lukeskywalker
+nap branch toystory canon
+nap tag toystory episode-4
 
 # HTTP server
 nap-server
-curl http://localhost:3100/resolve/starwars/character/lukeskywalker
+curl http://localhost:3100/resolve/toystory/character/lukeskywalker
 ```
 
 ---
@@ -90,7 +90,7 @@ curl http://localhost:3100/resolve/starwars/character/lukeskywalker
 Every narrative resource gets a stable, canonical `nap://` URI:
 
 ```
-nap://starwars/character/lukeskywalker#properties.homeworld
+nap://toystory/character/lukeskywalker#properties.homeworld
 ────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
  scheme repository  entity_type entity_id          fragment (query)
 ```
@@ -106,43 +106,43 @@ Build a web of references between entities using `nap://` URIs as values:
 
 ```bash
 # Create locations
-nap create location tatooine -u starwars -n "Tatooine"
-nap create location alderaan -u starwars -n "Alderaan"
-nap create location deathstar -u starwars -n "Death Star"
+nap create location tatooine -u toystory -n "Tatooine"
+nap create location alderaan -u toystory -n "Alderaan"
+nap create location deathstar -u toystory -n "Death Star"
 
 # Create a scene
-nap create scene cantina -u starwars -n "Cantina Scene"
+nap create scene cantina -u toystory -n "Cantina Scene"
 
 # Cross-reference everything with nap:// URIs
-nap set nap://starwars/character/lukeskywalker homeworld "nap://starwars/location/tatooine"
-nap set nap://starwars/character/lukeskywalker affiliation "rebel_alliance"
-nap set nap://starwars/character/lukeskywalker master "nap://starwars/character/yoda"
+nap set nap://toystory/character/lukeskywalker homeworld "nap://toystory/location/tatooine"
+nap set nap://toystory/character/lukeskywalker affiliation "rebel_alliance"
+nap set nap://toystory/character/lukeskywalker master "nap://toystory/character/yoda"
 
-nap set nap://starwars/location/tatooine climate "desert"
-nap set nap://starwars/location/tatooine moons "2"
+nap set nap://toystory/location/tatooine climate "desert"
+nap set nap://toystory/location/tatooine moons "2"
 
-nap set nap://starwars/scene/cantina setting "nap://starwars/location/tatooine"
-nap set nap://starwars/scene/cantina participants \
-  '["nap://starwars/character/lukeskywalker", "nap://starwars/character/obiwankenobi"]'
+nap set nap://toystory/scene/cantina setting "nap://toystory/location/tatooine"
+nap set nap://toystory/scene/cantina participants \
+  '["nap://toystory/character/lukeskywalker", "nap://toystory/character/obiwankenobi"]'
 ```
 
 The resulting manifest for Luke Skywalker looks like this:
 
 ```yaml
-id: nap://starwars/character/lukeskywalker
+id: nap://toystory/character/lukeskywalker
 name: Luke Skywalker
 entity_type: character
 version: 5
 properties:
-  homeworld: "nap://starwars/location/tatooine"
+  homeworld: "nap://toystory/location/tatooine"
   species: human
   affiliation: rebel_alliance
-  master: "nap://starwars/character/yoda"
+  master: "nap://toystory/character/yoda"
 references: {}
 head: a72c9f3b...
 ```
 
-**Use case — story bible automation:** A script can traverse every `nap://` URI in a manifest and verify it resolves. If someone deletes `nap://starwars/character/yoda`, the broken reference is caught immediately.
+**Use case — story bible automation:** A script can traverse every `nap://` URI in a manifest and verify it resolves. If someone deletes `nap://toystory/character/yoda`, the broken reference is caught immediately.
 
 ### 1.3 Fragment Queries for Precision Addressing
 
@@ -150,31 +150,31 @@ Address sub-parts of a resource with `#fragment` syntax — ideal for AI agents,
 
 ```bash
 # Get a single field
-nap resolve nap://starwars/character/lukeskywalker#properties.homeworld
-# → "nap://starwars/location/tatooine"
+nap resolve nap://toystory/character/lukeskywalker#properties.homeworld
+# → "nap://toystory/location/tatooine"
 
 # Get a reference array
-nap resolve nap://starwars/scene/cantina#properties.participants
+nap resolve nap://toystory/scene/cantina#properties.participants
 
 # Chain into nested objects
-nap resolve nap://starwars/character/lukeskywalker#representations.reference_image.hash
+nap resolve nap://toystory/character/lukeskywalker#representations.reference_image.hash
 
 # Array index access
-nap resolve nap://starwars/character/lukeskywalker#references.appears_in.0
+nap resolve nap://toystory/character/lukeskywalker#references.appears_in.0
 ```
 
 **Use case — AI context window optimization:** Instead of feeding an LLM a 40K-token manifest, pull exactly the 500 tokens it needs:
 
 ```bash
 # An AI writing a scene only needs participants and setting
-nap query nap://starwars/scene/cantina properties.participants -f json
-nap query nap://starwars/scene/cantina properties.setting -f json
+nap query nap://toystory/scene/cantina properties.participants -f json
+nap query nap://toystory/scene/cantina properties.setting -f json
 ```
 
 **Use case — CI/CD validation:** Verify every cross-reference resolves:
 
 ```bash
-nap resolve nap://starwars/character/lukeskywalker#references.appears_in \
+nap resolve nap://toystory/character/lukeskywalker#references.appears_in \
   | jq -r '.[]' \
   | xargs -I{} nap resolve {}
 ```
@@ -185,28 +185,28 @@ Branch and tag are **orthogonal selectors** — never in the URI. Address the sa
 
 ```bash
 # Create branches for alternate canon tracks
-nap branch starwars legends
-nap branch starwars canon
-nap branch starwars "what-if"
+nap branch toystory legends
+nap branch toystory canon
+nap branch toystory "what-if"
 
 # Tag major releases
-nap tag starwars episode-4
-nap tag starwars episode-5
-nap tag starwars episode-6
+nap tag toystory episode-4
+nap tag toystory episode-5
+nap tag toystory episode-6
 
 # Resolve at specific points in time
-nap resolve nap://starwars/character/lukeskywalker --branch legends
-nap resolve nap://starwars/character/lukeskywalker --tag episode-4
-nap resolve nap://starwars/character/lukeskywalker --commit a72c9f3b
+nap resolve nap://toystory/character/lukeskywalker --branch legends
+nap resolve nap://toystory/character/lukeskywalker --tag episode-4
+nap resolve nap://toystory/character/lukeskywalker --commit a72c9f3b
 ```
 
 **Use case — divergent timelines:** In a "What If" branch, Luke joins the Empire. The `canon` branch has `affiliation: rebel_alliance`; the `what-if` branch has `affiliation: galactic_empire`. Both resolve from the same URI — only the selector differs. The manifests diverge silently, and the resolver picks the right one based on context.
 
 ```bash
-nap resolve nap://starwars/character/lukeskywalker#properties.affiliation
+nap resolve nap://toystory/character/lukeskywalker#properties.affiliation
 # → rebel_alliance
 
-nap resolve nap://starwars/character/lukeskywalker#properties.affiliation \
+nap resolve nap://toystory/character/lukeskywalker#properties.affiliation \
   --branch what-if
 # → galactic_empire
 ```
@@ -221,34 +221,34 @@ Every NAP repository is **files + Git** — zero runtime dependencies. This mean
 
 ```bash
 # Archive an entire repository as a tarball
-tar czf starwars.nap starwars/
+tar czf toystory.nap toystory/
 
 # Ship it via any medium — S3, Dropbox, scp, USB drive
-scp -r starwars/ user@server:/repositorys/
+scp -r toystory/ user@server:/repositorys/
 
 # Clone across teams
-git clone git@github.com:studio/starwars-nap.git
+git clone git@github.com:studio/toystory-nap.git
 
 # Sync to shared drives
-rsync -avz starwars/ /shared/drive/projects/
+rsync -avz toystory/ /shared/drive/projects/
 
 # Mount in cloud storage
-aws s3 sync starwars/ s3://studio-assets/repositorys/starwars/
+aws s3 sync toystory/ s3://studio-assets/repositorys/toystory/
 ```
 
 **Use case — multi-studio collaboration:** Studio A builds characters, Studio B builds locations, Studio C builds scenes. Each works in their own Git branch, and NAP URIs are the contract between them. When they merge, the references resolve across all three.
 
 ```bash
 # Studio A works on characters
-git clone git@github.com:studio/starwars-nap.git
-nap create character darthvader -u starwars -n "Darth Vader"
+git clone git@github.com:studio/toystory-nap.git
+nap create character darthvader -u toystory -n "Darth Vader"
 
 # Studio B works on locations
-git clone git@github.com:studio/starwars-nap.git
-nap create location deathstar -u starwars -n "Death Star"
+git clone git@github.com:studio/toystory-nap.git
+nap create location deathstar -u toystory -n "Death Star"
 
 # On merge, Studio A's character can reference Studio B's location
-nap set nap://starwars/character/darthvader base "nap://starwars/location/deathstar"
+nap set nap://toystory/character/darthvader base "nap://toystory/location/deathstar"
 ```
 
 **Use case — offline fieldwork:** A writer on a plane builds an entire repository with no internet, just the `nap` binary and a text editor. When they reconnect, `git push` syncs everything.
@@ -259,7 +259,7 @@ Manifests don't store files — they store **BLAKE3 hashes** pointing to assets.
 
 ```bash
 # Link a reference image by content hash
-nap add-repr nap://starwars/character/lukeskywalker reference_image \
+nap add-repr nap://toystory/character/lukeskywalker reference_image \
   ./assets/luke_ref.png --format png
 # ✓ Added representation 'reference_image' (png)
 #   Hash: blake3:e3b0c44...
@@ -278,10 +278,10 @@ representations:
 You can attach any asset type — images, 3D meshes, audio, video, ONNX models:
 
 ```bash
-nap add-repr nap://starwars/character/lukeskywalker voice_model \
+nap add-repr nap://toystory/character/lukeskywalker voice_model \
   ./assets/luke_voice.onnx --format onnx
 
-nap add-repr nap://starwars/location/tatooine concept_art \
+nap add-repr nap://toystory/location/tatooine concept_art \
   ./assets/tatooine_concept.png --format png
 
 nap add-repr nap://toystory/prop/andy-hat mesh \
@@ -302,11 +302,11 @@ echo "blake3:e3b0c44...  luke_ref.png" | b3sum --check
 Record which model, prompt, and seed generated a character design — right in the manifest:
 
 ```bash
-nap set nap://starwars/character/lukeskywalker provenance.model "midjourney-v6"
-nap set nap://starwars/character/lukeskywalker provenance.seed "8675309"
-nap set nap://starwars/character/lukeskywalker provenance.prompt_hash "blake3:abc123..."
-nap set nap://starwars/character/lukeskywalker provenance.derived_from \
-  "nap://starwars/character/lukeskywalker/v1"
+nap set nap://toystory/character/lukeskywalker provenance.model "midjourney-v6"
+nap set nap://toystory/character/lukeskywalker provenance.seed "8675309"
+nap set nap://toystory/character/lukeskywalker provenance.prompt_hash "blake3:abc123..."
+nap set nap://toystory/character/lukeskywalker provenance.derived_from \
+  "nap://toystory/character/lukeskywalker/v1"
 ```
 
 The manifest captures full generative lineage:
@@ -319,14 +319,14 @@ provenance:
   parameters:
     stylize: "1000"
     chaos: "20"
-  derived_from: "nap://starwars/character/lukeskywalker/v1"
+  derived_from: "nap://toystory/character/lukeskywalker/v1"
   created_at: "2026-06-09T20:00:00Z"
 ```
 
 **Use case — rights & attribution:** When a model is deprecated or a license changes, you can identify every asset generated with it:
 
 ```bash
-nap query nap://starwars/character/lukeskywalker provenance.model
+nap query nap://toystory/character/lukeskywalker provenance.model
 # → midjourney-v6
 ```
 
@@ -338,7 +338,7 @@ The `.yaml` manifest is simultaneously **human-editable**, **machine-readable**,
 
 ```yaml
 # characters/darthvader.yaml
-id: nap://starwars/character/darthvader
+id: nap://toystory/character/darthvader
 name: "Darth Vader"
 entity_type: character
 version: 3
@@ -346,20 +346,20 @@ properties:
   species: human
   affiliation: galactic_empire
   lightsaber_color: red
-  master: "nap://starwars/character/palpatine"
-  apprentice: "nap://starwars/character/lukeskywalker"
+  master: "nap://toystory/character/palpatine"
+  apprentice: "nap://toystory/character/lukeskywalker"
 representations:
   voice_actor:
     hash: "blake3:f8a2b1..."
     format: wav
-    uri: "gs://assets/starwars/vader/voice.wav"
+    uri: "gs://assets/toystory/vader/voice.wav"
 head: "f7e3d2c1a..."
 ```
 
 You can commit this directly to Git, review it in PRs, diff changes — it's a first-class citizen in your development workflow.
 
 ```bash
-git diff starwars/characters/darthvader.yaml
+git diff toystory/characters/darthvader.yaml
 # -  lightsaber_color: red
 # +  lightsaber_color: blue
 ```
@@ -374,26 +374,26 @@ The `query` command extracts exactly the data you need from deep manifest trees 
 
 ```bash
 # Get the first scene a character appears in
-nap query nap://starwars/character/lukeskywalker references.appears_in.0
+nap query nap://toystory/character/lukeskywalker references.appears_in.0
 
 # Get just image hashes across all characters (for caching)
-nap query nap://starwars/character/lukeskywalker representations.reference_image.hash
+nap query nap://toystory/character/lukeskywalker representations.reference_image.hash
 
 # List available keys for tab completion / introspection
-nap resolve nap://starwars/character/lukeskywalker#representations
+nap resolve nap://toystory/character/lukeskywalker#representations
 
 # Different output formats
-nap query nap://starwars/character/lukeskywalker properties -f json
-nap query nap://starwars/character/lukeskywalker properties -f yaml
+nap query nap://toystory/character/lukeskywalker properties -f json
+nap query nap://toystory/character/lukeskywalker properties -f yaml
 ```
 
 **Use case — AI story generator:** A GPT agent builds a scene by querying the setting, participants, and mood, then generates appropriate dialog — all from fragment queries:
 
 ```bash
 # Agent gathers context into variables
-SETTING=$(nap query nap://starwars/scene/cantina properties -f json)
-MOOD=$(nap query nap://starwars/scene/cantina properties.mood -f json)
-PARTICIPANTS=$(nap query nap://starwars/scene/cantina properties.participants -f json)
+SETTING=$(nap query nap://toystory/scene/cantina properties -f json)
+MOOD=$(nap query nap://toystory/scene/cantina properties.mood -f json)
+PARTICIPANTS=$(nap query nap://toystory/scene/cantina properties.participants -f json)
 
 # Agent generates scene using only the relevant data
 echo "Setting: $SETTING"
@@ -403,7 +403,7 @@ echo "Participants: $PARTICIPANTS"
 **Use case — API response size optimization:** A mobile client fetching character info only needs the `properties` subtree, not the full manifest (which may include provenance data, representations metadata, references arrays, etc.):
 
 ```bash
-nap query nap://starwars/character/lukeskywalker properties -f json
+nap query nap://toystory/character/lukeskywalker properties -f json
 # Returns ~200 bytes instead of ~2000
 ```
 
@@ -437,20 +437,20 @@ Resolution query parameters: `branch`, `commit`, `tag`, `path` (subtree query).
 
 ```bash
 # Resolve a manifest
-curl http://localhost:3100/resolve/starwars/character/lukeskywalker
+curl http://localhost:3100/resolve/toystory/character/lukeskywalker
 
 # With branch selector
-curl "http://localhost:3100/resolve/starwars/character/lukeskywalker?branch=canon"
+curl "http://localhost:3100/resolve/toystory/character/lukeskywalker?branch=canon"
 
 # Subtree query via API
-curl "http://localhost:3100/resolve/starwars/character/lukeskywalker?path=properties.species"
+curl "http://localhost:3100/resolve/toystory/character/lukeskywalker?path=properties.species"
 
 # List everything
 curl http://localhost:3100/repositorys
-curl http://localhost:3100/repositorys/starwars/entities?type=character
+curl http://localhost:3100/repositorys/toystory/entities?type=character
 
 # Commit changes via API
-curl -X POST http://localhost:3100/commit/starwars/character/lukeskywalker \
+curl -X POST http://localhost:3100/commit/toystory/character/lukeskywalker \
   -H "Content-Type: application/json" \
   -d '{
     "message": "update species",
@@ -466,7 +466,7 @@ curl -X POST http://localhost:3100/commit/starwars/character/lukeskywalker \
 ```csharp
 // Unity example — fetch character data at editor time
 string json = new WebClient().DownloadString(
-    "http://localhost:3100/resolve/starwars/character/lukeskywalker?path=properties"
+    "http://localhost:3100/resolve/toystory/character/lukeskywalker?path=properties"
 );
 CharacterData data = JsonUtility.FromJson<CharacterData>(json);
 ```
@@ -486,23 +486,23 @@ Every change is content-addressed and versioned. Trace exactly how a character e
 
 ```bash
 # View commit history
-nap history nap://starwars/character/lukeskywalker -n 20
+nap history nap://toystory/character/lukeskywalker -n 20
 # a72c9f3 2026-06-09T20:15:00Z — set species to human — alice
 # b83d1a2 2026-06-09T20:10:00Z — set homeworld — alice
 # c94e2b1 2026-06-09T20:05:00Z — added reference_image — bob
 # d05f3c0 2026-06-09T20:00:00Z — Create character 'Luke Skywalker' — alice
 
 # Resolve what the manifest looked like at a specific commit
-nap resolve nap://starwars/character/lukeskywalker --commit b83d1a2
+nap resolve nap://toystory/character/lukeskywalker --commit b83d1a2
 
 # View history via API
-curl http://localhost:3100/history/starwars/character/lukeskywalker
+curl http://localhost:3100/history/toystory/character/lukeskywalker
 ```
 
 **Use case — canon dispute resolution:** When two writers disagree on whether Luke's hair color changed between drafts, the commit log shows exactly when and by whom it was modified:
 
 ```bash
-nap history nap://starwars/character/lukeskywalker | grep "hair"
+nap history nap://toystory/character/lukeskywalker | grep "hair"
 # f7a2b1c 2026-06-08T14:30:00Z — set hair_color to brown — bob
 # e8d3c2b 2026-06-07T09:15:00Z — set hair_color to blond — alice
 ```
@@ -510,7 +510,7 @@ nap history nap://starwars/character/lukeskywalker | grep "hair"
 **Use case — rollback:** Revert a character to a known good state:
 
 ```bash
-git -C starwars revert b83d1a2
+git -C toystory revert b83d1a2
 ```
 
 ### 3.4 Cross-Repository Discovery
@@ -520,26 +520,26 @@ Discover what repositorys and entities are available:
 ```bash
 # List all repositorys in the base directory
 nap list
-# nap://starwars/
+# nap://toystory/
 # nap://toystory/
 # nap://middleearth/
 
 # List all entities in a repository
-nap list starwars
+nap list toystory
 # character:
-#   nap://starwars/character/lukeskywalker
-#   nap://starwars/character/darthvader
+#   nap://toystory/character/lukeskywalker
+#   nap://toystory/character/darthvader
 # location:
-#   nap://starwars/location/tatooine
-#   nap://starwars/location/deathstar
+#   nap://toystory/location/tatooine
+#   nap://toystory/location/deathstar
 # scene:
-#   nap://starwars/scene/cantina
+#   nap://toystory/scene/cantina
 
 # Filter by type
-nap list starwars -t character
+nap list toystory -t character
 # character:
-#   nap://starwars/character/lukeskywalker
-#   nap://starwars/character/darthvader
+#   nap://toystory/character/lukeskywalker
+#   nap://toystory/character/darthvader
 ```
 
 ---
@@ -632,19 +632,19 @@ The `references` field builds a directed graph between entities. This enables ri
 
 ```bash
 # Character → scenes they appear in
-nap set nap://starwars/character/lukeskywalker references.appears_in \
-  '["nap://starwars/scene/cantina", "nap://starwars/scene/trenchrun"]'
+nap set nap://toystory/character/lukeskywalker references.appears_in \
+  '["nap://toystory/scene/cantina", "nap://toystory/scene/trenchrun"]'
 
 # Location → scenes set there
-nap set nap://starwars/location/tatooine references.appears_in \
-  '["nap://starwars/scene/cantina"]'
+nap set nap://toystory/location/tatooine references.appears_in \
+  '["nap://toystory/scene/cantina"]'
 
 # Character → relationships
-nap set nap://starwars/character/lukeskywalker references.relationships \
+nap set nap://toystory/character/lukeskywalker references.relationships \
   '[
-    {"target": "nap://starwars/character/darthvader", "type": "father"},
-    {"target": "nap://starwars/character/leia", "type": "sister"},
-    {"target": "nap://starwars/character/hansolo", "type": "friend"}
+    {"target": "nap://toystory/character/darthvader", "type": "father"},
+    {"target": "nap://toystory/character/leia", "type": "sister"},
+    {"target": "nap://toystory/character/hansolo", "type": "friend"}
   ]'
 
 # Prop → owner
@@ -655,14 +655,14 @@ nap set nap://toystory/prop/andy-hat references.owner "nap://toystory/character/
 
 ```bash
 # Find all scenes a character appears in
-nap query nap://starwars/character/lukeskywalker references.appears_in
+nap query nap://toystory/character/lukeskywalker references.appears_in
 
 # Find all characters that visit a location
 # (resolve scene participants for each scene set at the location)
-nap resolve nap://starwars/scene/cantina#properties.participants
+nap resolve nap://toystory/scene/cantina#properties.participants
 
 # Find a character's relationships
-nap query nap://starwars/character/lukeskywalker references.relationships -f json
+nap query nap://toystory/character/lukeskywalker references.relationships -f json
 ```
 
 ### 4.4 Multi-Repository Portfolio
@@ -671,7 +671,7 @@ Manage multiple fictional worlds under one resolver:
 
 ```bash
 # Create repositorys side by side
-nap init starwars
+nap init toystory
 nap init toystory
 nap init middleearth
 
@@ -683,7 +683,7 @@ nap create location theshire -u middleearth -n "The Shire"
 
 # List all repositorys
 nap list
-# nap://starwars/
+# nap://toystory/
 # nap://toystory/
 # nap://middleearth/
 
@@ -696,7 +696,7 @@ nap tag middleearth fellowship-of-the-ring
 
 ```
 ~/.nap/
-├── starwars/              ← independent Git repo
+├── toystory/              ← independent Git repo
 │   ├── .nap/config.yaml
 │   ├── repository.yaml
 │   ├── characters/
@@ -725,17 +725,17 @@ Track every AI-generated asset with full lineage:
 
 ```bash
 # After generating a character design with Midjourney
-nap set nap://starwars/character/lukeskywalker provenance.model "midjourney-v6"
-nap set nap://starwars/character/lukeskywalker provenance.seed "8675309"
-nap set nap://starwars/character/lukeskywalker provenance.prompt_hash "blake3:abc123..."
-nap set nap://starwars/character/lukeskywalker provenance.parameters.stylize "1000"
+nap set nap://toystory/character/lukeskywalker provenance.model "midjourney-v6"
+nap set nap://toystory/character/lukeskywalker provenance.seed "8675309"
+nap set nap://toystory/character/lukeskywalker provenance.prompt_hash "blake3:abc123..."
+nap set nap://toystory/character/lukeskywalker provenance.parameters.stylize "1000"
 
 # After iterating with an LLM
-nap set nap://starwars/character/lukeskywalker provenance.derived_from \
-  "nap://starwars/character/lukeskywalker/v1"
+nap set nap://toystory/character/lukeskywalker provenance.derived_from \
+  "nap://toystory/character/lukeskywalker/v1"
 
 # Set the creation timestamp
-nap set nap://starwars/character/lukeskywalker provenance.created_at "2026-06-09T20:00:00Z"
+nap set nap://toystory/character/lukeskywalker provenance.created_at "2026-06-09T20:00:00Z"
 ```
 
 The provenance block captures complete generative lineage:
@@ -748,7 +748,7 @@ provenance:
   parameters:
     stylize: "1000"
     chaos: "20"
-  derived_from: "nap://starwars/character/lukeskywalker/v1"
+  derived_from: "nap://toystory/character/lukeskywalker/v1"
   created_at: "2026-06-09T20:00:00Z"
 ```
 
@@ -756,7 +756,7 @@ provenance:
 
 ```bash
 # Find all entities generated with a specific model
-nap query nap://starwars/character/lukeskywalker provenance.model
+nap query nap://toystory/character/lukeskywalker provenance.model
 # → midjourney-v6
 ```
 
@@ -778,24 +778,24 @@ nap init myrepository -d ~/Dropbox/TeamWorldbuilding
 
 # Point the resolver at a specific path
 nap -d /mnt/nas/repositorys list
-nap -d /mnt/nas/repositorys resolve nap://starwars/character/lukeskywalker
+nap -d /mnt/nas/repositorys resolve nap://toystory/character/lukeskywalker
 ```
 
 ### Output Formats
 
 ```bash
 # JSON for programmatic consumption
-nap resolve nap://starwars/character/lukeskywalker -f json | jq '.properties'
+nap resolve nap://toystory/character/lukeskywalker -f json | jq '.properties'
 
 # YAML for human review and editing
-nap resolve nap://starwars/character/lukeskywalker -f yaml
+nap resolve nap://toystory/character/lukeskywalker -f yaml
 ```
 
 ### Debugging
 
 ```bash
 # Verbose mode shows tracing output
-nap -v resolve nap://starwars/character/lukeskywalker
+nap -v resolve nap://toystory/character/lukeskywalker
 
 # Check server health
 curl http://localhost:3100/health
@@ -827,7 +827,7 @@ While NAP uses Git for version control, all of your data is plain YAML files. Yo
 ## Repository Layout Reference
 
 ```
-starwars/                    ← repository root (Git repo)
+toystory/                    ← repository root (Git repo)
 ├── .nap/
 │   └── config.yaml          ← NAP repository configuration
 ├── repository.yaml            ← world manifest

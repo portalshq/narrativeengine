@@ -6,7 +6,7 @@
 curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash
 ```
 
-The installation script installs both native binaries: `nap` and `nap-mcp-server`. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use NAP through host-side CLI proxy calls.
+The installation script installs both `nap` and `nap-mcp-server`. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use NAP through host-side CLI proxy calls.
 
 ### Skills Install
 
@@ -16,7 +16,7 @@ Install these skills to use NAP with agent workflows, including entity-aware pro
 npx skills add portalshq/narrativeengine
 ```
 
-### CLI & Server (Rust — compile from source)
+<!-- ### CLI & Server (Rust — compile from source)
 
 ```bash
 git clone https://github.com/cinematiccanvas/nap.git
@@ -51,7 +51,7 @@ npm install @portalshq/narrativeengine
 import { createBlock } from "@portalshq/narrativeengine";
 
 const block = createBlock("char-1", "A brave adventurer");
-```
+``` -->
 
 ---
 
@@ -59,10 +59,10 @@ const block = createBlock("char-1", "A brave adventurer");
 
 ```bash
 # Initialize a repository (prompts for provider on first run)
-nap init starwars
+nap init toystory
 
 # Initialize with local provider
-nap init starwars --provider local
+nap init toystory --provider local
 
 # Configure provider only (no repository)
 nap init --provider local
@@ -87,10 +87,10 @@ nap doctor --repair
 
 ```bash
 # Initialize a new repository
-nap init starwars
+nap init toystory
 
 # See what you created
-ls starwars/
+ls toystory/
 # → .nap/  repository.yaml  characters/  locations/  scenes/  props/
 ```
 
@@ -98,45 +98,45 @@ ls starwars/
 
 ```bash
 # Create a character
-nap create character lukeskywalker -u starwars -n "Luke Skywalker"
+nap create character lukeskywalker -u toystory -n "Luke Skywalker"
 
 # Create a location
-nap create location tatooine -u starwars -n "Tatooine"
+nap create location tatooine -u toystory -n "Tatooine"
 
 # Set properties
-nap set nap://starwars/character/lukeskywalker species human
-nap set nap://starwars/character/lukeskywalker homeworld "nap://starwars/location/tatooine"
+nap set nap://toystory/character/lukeskywalker species human
+nap set nap://toystory/character/lukeskywalker homeworld "nap://toystory/location/tatooine"
 
 # Resolve a manifest
-nap resolve nap://starwars/character/lukeskywalker
+nap resolve nap://toystory/character/lukeskywalker
 
 # Query a specific field
-nap resolve nap://starwars/character/lukeskywalker#properties.species
+nap resolve nap://toystory/character/lukeskywalker#properties.species
 # → human
 
 # Query a subtree
-nap query nap://starwars/character/lukeskywalker properties
+nap query nap://toystory/character/lukeskywalker properties
 ```
 
 ### Version Control
 
 ```bash
 # View commit history
-nap history nap://starwars/character/lukeskywalker
+nap history nap://toystory/character/lukeskywalker
 
 # Create branches
-nap branch starwars canon
+nap branch toystory canon
 
 # Sync with remote
-nap sync starwars
+nap sync toystory
 
 # Publish to remote
-nap publish starwars
+nap publish toystory
 ```
 
 ### Output Formats
 
 ```bash
-nap resolve nap://starwars/character/lukeskywalker -f json
-nap resolve nap://starwars/character/lukeskywalker -f yaml
+nap resolve nap://toystory/character/lukeskywalker -f json
+nap resolve nap://toystory/character/lukeskywalker -f yaml
 ```

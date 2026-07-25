@@ -21,7 +21,7 @@ Initialize a repository repository and/or configure the backend provider.
 
 When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
 
-nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
+nap init toystory                     # create repository nap init toystory --provider local    # create repository + configure provider nap init --provider local             # configure provider only
 
 
 ## Arguments
@@ -52,10 +52,10 @@ nap init starwars                     # create repository nap init starwars --pr
 ## Examples
 ```bash
 # Initialize a new repository
-nap init starwars
+nap init toystory
 
 # Initialize with local provider
-nap init starwars --provider local
+nap init toystory --provider local
 
 # Initialize with remote provider
 nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
@@ -64,7 +64,7 @@ nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my
 nap init --provider local
 
 # Initialize with a remote origin
-nap init starwars --remote git@github.com:user/starwars.git
+nap init toystory --remote git@github.com:user/toystory.git
 ```
 
 ## Source

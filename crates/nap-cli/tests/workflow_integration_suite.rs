@@ -78,7 +78,7 @@ fn test_readme_quick_start_workflow() {
     std::fs::create_dir_all(&nap_home).unwrap();
 
     // 1. Initialize a repository
-    init_provider_and_universe(&nap_home, "starwars");
+    init_provider_and_universe(&nap_home, "toystory");
 
     // 2. Create entities
     nap_cmd(&nap_home)
@@ -86,7 +86,7 @@ fn test_readme_quick_start_workflow() {
         .arg("character")
         .arg("lukeskywalker")
         .arg("-u")
-        .arg("starwars")
+        .arg("toystory")
         .arg("-n")
         .arg("Luke Skywalker")
         .assert()
@@ -95,7 +95,7 @@ fn test_readme_quick_start_workflow() {
     // 3. Set properties
     nap_cmd(&nap_home)
         .arg("set")
-        .arg("nap://starwars/character/lukeskywalker")
+        .arg("nap://toystory/character/lukeskywalker")
         .arg("species")
         .arg("human")
         .assert()
@@ -104,7 +104,7 @@ fn test_readme_quick_start_workflow() {
     // 4. Resolve a manifest
     nap_cmd(&nap_home)
         .arg("resolve")
-        .arg("nap://starwars/character/lukeskywalker")
+        .arg("nap://toystory/character/lukeskywalker")
         .assert()
         .success()
         .stdout(predicate::str::contains("Luke Skywalker"));
@@ -112,7 +112,7 @@ fn test_readme_quick_start_workflow() {
     // 5. Query a subtree
     nap_cmd(&nap_home)
         .arg("query")
-        .arg("nap://starwars/character/lukeskywalker")
+        .arg("nap://toystory/character/lukeskywalker")
         .arg("properties")
         .assert()
         .success()

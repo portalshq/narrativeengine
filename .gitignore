@@ -12,7 +12,6 @@ node_modules/
 **/*.pyc
 
 # Test universe directories (created by tests)
-starwars/
 toystory/
 
 # IDE

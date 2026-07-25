@@ -28,7 +28,7 @@ pub fn manifest_schema() -> Value {
                 "pattern": "^nap://[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$",
                 "description": concat!(
                     "Canonical NAP URI. ",
-                    "e.g., nap://starwars/character/lukeskywalker"
+                    "e.g., nap://toystory/character/lukeskywalker"
                 )
             },
             "name": {
@@ -134,7 +134,7 @@ pub fn manifest_schema() -> Value {
                         "type": "string",
                         "description": concat!(
                             "Optional storage URI. ",
-                            "e.g., gs://assets/starwars/luke/ref.png, ",
+                            "e.g., gs://assets/toystory/luke/ref.png, ",
                             "s3://bucket/path/to/file.glb"
                         )
                     },
@@ -182,7 +182,7 @@ pub fn manifest_schema() -> Value {
                         "pattern": "^nap://",
                         "description": concat!(
                             "Parent entity URI this was derived from. ",
-                            "e.g., nap://starwars/character/lukeskywalker/v1"
+                            "e.g., nap://toystory/character/lukeskywalker/v1"
                         )
                     },
                     "created_at": {
@@ -340,7 +340,7 @@ mod tests {
     fn test_validate_valid_manifest() {
         use crate::manifest::Manifest;
         let m = Manifest::new(
-            "starwars",
+            "toystory",
             crate::types::EntityType::new("character"),
             "luke",
             "Luke Skywalker",
@@ -364,7 +364,7 @@ mod tests {
     fn test_validate_manifest_rejects_empty_entity_type() {
         // Build a manifest-like JSON value with an empty entity_type.
         let json = serde_json::json!({
-            "id": "nap://starwars/character/luke",
+            "id": "nap://toystory/character/luke",
             "name": "Luke",
             "entity_type": "",
             "version": 1,

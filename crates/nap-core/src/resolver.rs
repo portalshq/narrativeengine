@@ -2,8 +2,8 @@
 //!
 //! The resolver is the primary interface for reading NAP resources.
 //! It handles:
-//! - Full manifest resolution: `nap://starwars/character/lukeskywalker`
-//! - Fragment queries: `nap://starwars/character/lukeskywalker#references.appears_in`
+//! - Full manifest resolution: `nap://toystory/character/lukeskywalker`
+//! - Fragment queries: `nap://toystory/character/lukeskywalker#references.appears_in`
 //! - Version selectors: branch, commit
 //! - Subtree extraction for efficient AI/application access
 //!
@@ -166,7 +166,7 @@ impl Resolver {
     /// # Example layout
     /// ```text
     /// base_path/
-    /// ├── starwars/    ← repository repo
+    /// ├── toystory/    ← repository repo
     /// ├── toystory/    ← repository repo
     /// └── marvel/      ← repository repo
     /// ```
@@ -204,19 +204,19 @@ impl Resolver {
     /// # Examples
     /// ```text
     /// // Full manifest
-    /// resolver.resolve("nap://starwars/character/lukeskywalker", &Default::default())
+    /// resolver.resolve("nap://toystory/character/lukeskywalker", &Default::default())
     ///
     /// // Without scheme (auto-normalized)
-    /// resolver.resolve("starwars/character/lukeskywalker", &Default::default())
+    /// resolver.resolve("toystory/character/lukeskywalker", &Default::default())
     ///
     /// // With branch
-    /// resolver.resolve("nap://starwars/character/lukeskywalker", &ResolveOptions {
+    /// resolver.resolve("nap://toystory/character/lukeskywalker", &ResolveOptions {
     ///     branch: Some("canon".to_string()),
     ///     ..Default::default()
     /// })
     ///
     /// // With fragment query (via URI)
-    /// resolver.resolve("nap://starwars/character/lukeskywalker#references.appears_in", &Default::default())
+    /// resolver.resolve("nap://toystory/character/lukeskywalker#references.appears_in", &Default::default())
     /// ```
     pub fn resolve(
         &self,
@@ -720,8 +720,8 @@ mod unit_tests {
 
     fn setup() -> (TempDir, Resolver) {
         let tmp = TempDir::new().unwrap();
-        let repo_path = tmp.path().join("starwars");
-        let repo = Repository::init(&repo_path, "starwars", Box::new(MockBackend::new())).unwrap();
+        let repo_path = tmp.path().join("toystory");
+        let repo = Repository::init(&repo_path, "toystory", Box::new(MockBackend::new())).unwrap();
 
         // Create a character
         let (mut manifest, _) = repo
@@ -737,12 +737,12 @@ mod unit_tests {
         manifest.set_property("species", serde_yaml::Value::String("human".to_string()));
         manifest.set_property(
             "homeworld",
-            serde_yaml::Value::String("nap://starwars/location/tatooine".to_string()),
+            serde_yaml::Value::String("nap://toystory/location/tatooine".to_string()),
         );
         manifest.add_reference(
             "appears_in",
             serde_yaml::Value::Sequence(vec![serde_yaml::Value::String(
-                "nap://starwars/scene/cantina".to_string(),
+                "nap://toystory/scene/cantina".to_string(),
             )]),
         );
         manifest.set_representation(
@@ -780,7 +780,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 &Default::default(),
             )
             .unwrap();
@@ -812,7 +812,7 @@ mod unit_tests {
     fn resolve_with_provenance(resolver: &Resolver) -> ResolveEnvelope {
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 &ResolveOptions {
                     provenance: Some(true),
                     ..Default::default()
@@ -828,7 +828,7 @@ mod unit_tests {
     #[test]
     fn test_resolve_with_provenance_returns_manifest_and_direct_file_entries() {
         let (tmp, resolver) = setup();
-        let repo_path = tmp.path().join("starwars");
+        let repo_path = tmp.path().join("toystory");
         write_mock_metadata(
             &repo_path,
             BTreeMap::from([
@@ -882,7 +882,7 @@ mod unit_tests {
     #[test]
     fn test_resolve_with_provenance_records_path_and_revision_metadata_lookups() {
         let (tmp, resolver) = setup();
-        let repo_path = tmp.path().join("starwars");
+        let repo_path = tmp.path().join("toystory");
         let envelope = resolve_with_provenance(&resolver);
 
         let requests: Vec<BTreeMap<String, String>> = serde_json::from_str(
@@ -921,7 +921,7 @@ mod unit_tests {
     #[test]
     fn test_resolve_with_include_blobs_hydrates_known_readable_artifacts() {
         let (tmp, resolver) = setup();
-        let repo_path = tmp.path().join("starwars");
+        let repo_path = tmp.path().join("toystory");
         write_mock_metadata(
             &repo_path,
             BTreeMap::from([(
@@ -945,7 +945,7 @@ mod unit_tests {
 
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 &ResolveOptions {
                     provenance: Some(true),
                     include_blobs: Some(true),
@@ -968,7 +968,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 &ResolveOptions {
                     include_blobs: Some(true),
                     ..Default::default()
@@ -981,7 +981,7 @@ mod unit_tests {
     #[test]
     fn test_resolve_with_include_blobs_truncates_readable_artifacts() {
         let (tmp, resolver) = setup();
-        let repo_path = tmp.path().join("starwars");
+        let repo_path = tmp.path().join("toystory");
         write_mock_metadata(
             &repo_path,
             BTreeMap::from([(
@@ -1002,7 +1002,7 @@ mod unit_tests {
 
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 &ResolveOptions {
                     provenance: Some(true),
                     include_blobs: Some(true),
@@ -1023,8 +1023,8 @@ mod unit_tests {
     #[test]
     fn test_provenance_rejects_unsafe_representation_paths() {
         let tmp = TempDir::new().unwrap();
-        let repo_path = tmp.path().join("starwars");
-        let repo = Repository::init(&repo_path, "starwars", Box::new(MockBackend::new())).unwrap();
+        let repo_path = tmp.path().join("toystory");
+        let repo = Repository::init(&repo_path, "toystory", Box::new(MockBackend::new())).unwrap();
         let (mut manifest, _) = repo
             .create_entity(&EntityType::new("character"), "leia", "Leia Organa", "test")
             .unwrap();
@@ -1060,7 +1060,7 @@ mod unit_tests {
         );
         let err = resolver
             .resolve(
-                "nap://starwars/character/leia",
+                "nap://toystory/character/leia",
                 &ResolveOptions {
                     provenance: Some(true),
                     ..Default::default()
@@ -1075,7 +1075,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker#properties.species",
+                "nap://toystory/character/lukeskywalker#properties.species",
                 &Default::default(),
             )
             .unwrap();
@@ -1092,7 +1092,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 &ResolveOptions {
                     path: Some("properties.homeworld".to_string()),
                     ..Default::default()
@@ -1101,7 +1101,7 @@ mod unit_tests {
             .unwrap();
         match result {
             ResolveResult::Subtree(v) => {
-                assert_eq!(v.as_str(), Some("nap://starwars/location/tatooine"));
+                assert_eq!(v.as_str(), Some("nap://toystory/location/tatooine"));
             }
             _ => panic!("expected subtree"),
         }
@@ -1112,7 +1112,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .query(
-                "nap://starwars/character/lukeskywalker",
+                "nap://toystory/character/lukeskywalker",
                 "properties.species",
             )
             .unwrap();
@@ -1123,13 +1123,13 @@ mod unit_tests {
     fn test_list_repositories() {
         let (_tmp, resolver) = setup();
         let repositories = resolver.list_repositories().unwrap();
-        assert!(repositories.contains(&"starwars".to_string()));
+        assert!(repositories.contains(&"toystory".to_string()));
     }
 
     #[test]
     fn test_resolve_not_found() {
         let (_tmp, resolver) = setup();
-        let result = resolver.resolve("nap://starwars/character/nonexistent", &Default::default());
+        let result = resolver.resolve("nap://toystory/character/nonexistent", &Default::default());
         assert!(result.is_err());
     }
 
@@ -1137,7 +1137,7 @@ mod unit_tests {
     fn test_resolve_without_scheme() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("starwars/character/lukeskywalker", &Default::default())
+            .resolve("toystory/character/lukeskywalker", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
@@ -1153,7 +1153,7 @@ mod unit_tests {
         let (_tmp, resolver) = setup();
         let result = resolver
             .resolve(
-                "starwars/character/lukeskywalker#properties.species",
+                "toystory/character/lukeskywalker#properties.species",
                 &Default::default(),
             )
             .unwrap();
@@ -1169,7 +1169,7 @@ mod unit_tests {
     fn test_resolve_without_leading_slash() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("starwars/character/lukeskywalker", &Default::default())
+            .resolve("toystory/character/lukeskywalker", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {
@@ -1183,7 +1183,7 @@ mod unit_tests {
     fn test_resolve_with_leading_slash_without_scheme() {
         let (_tmp, resolver) = setup();
         let result = resolver
-            .resolve("/starwars/character/lukeskywalker", &Default::default())
+            .resolve("/toystory/character/lukeskywalker", &Default::default())
             .unwrap();
         match result {
             ResolveResult::Full(m) => {

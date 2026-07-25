@@ -4,7 +4,7 @@
 //! Repository structure:
 //!
 //! ```text
-//! starwars/               ← repository root
+//! toystory/               ← repository root
 //! ├── repository.yaml     ← repository metadata (name, description, nap config)
 //! ├── character/          ← entity type (has .entity-type marker)
 //! │   ├── .entity-type    ← marker file

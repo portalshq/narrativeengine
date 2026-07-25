@@ -19,14 +19,14 @@ nap resolve [OPTIONS] <URI>
 ## Description
 Resolve a NAP URI to its manifest or a subtree.
 
-Fragment queries are supported via the URI: nap resolve nap://starwars/character/lukeskywalker#references.appears_in
+Fragment queries are supported via the URI: nap resolve nap://toystory/character/lukeskywalker#references.appears_in
 
 
 ## Arguments
 
 | Name | Description | Required |
 |---|---|---|
-| uri | NAP URI. e.g., "nap://starwars/character/lukeskywalker" | Yes |
+| uri | NAP URI. e.g., "nap://toystory/character/lukeskywalker" | Yes |
 
 
 ## Options
@@ -57,20 +57,20 @@ Fragment queries are supported via the URI: nap resolve nap://starwars/character
 ## Examples
 ```bash
 # Resolve a full manifest
-nap resolve nap://starwars/character/lukeskywalker
+nap resolve nap://toystory/character/lukeskywalker
 
 # Resolve as JSON
-nap resolve nap://starwars/character/lukeskywalker -f json
+nap resolve nap://toystory/character/lukeskywalker -f json
 
 # Resolve at a specific branch
-nap resolve nap://starwars/character/lukeskywalker --branch canon
+nap resolve nap://toystory/character/lukeskywalker --branch canon
 
 # Resolve a subtree via fragment query
-nap resolve nap://starwars/character/lukeskywalker#properties.species
+nap resolve nap://toystory/character/lukeskywalker#properties.species
 # → human
 
 # Resolve a nested subtree
-nap resolve nap://starwars/character/lukeskywalker#references.appears_in
+nap resolve nap://toystory/character/lukeskywalker#references.appears_in
 ```
 
 ## Source

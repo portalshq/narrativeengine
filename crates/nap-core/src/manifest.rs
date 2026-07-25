@@ -29,12 +29,12 @@ use crate::types::EntityType;
 ///
 /// # Example (YAML)
 /// ```yaml
-/// id: "nap://starwars/character/lukeskywalker"
+/// id: "nap://toystory/character/lukeskywalker"
 /// name: "Luke Skywalker"
 /// entity_type: character
 /// version: 17
 /// properties:
-///   homeworld: "nap://starwars/location/tatooine"
+///   homeworld: "nap://toystory/location/tatooine"
 ///   species: human
 /// representations:
 ///   reference_image:
@@ -44,7 +44,7 @@ use crate::types::EntityType;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     /// The canonical NAP URI for this resource.
-    /// e.g., `"nap://starwars/character/lukeskywalker"`
+    /// e.g., `"nap://toystory/character/lukeskywalker"`
     pub id: String,
 
     /// Human-readable name.
@@ -112,7 +112,7 @@ pub struct Representation {
     /// File format. e.g., `"png"`, `"glb"`, `"onnx"`, `"spz"`.
     pub format: String,
 
-    /// Optional storage URI. e.g., `"gs://assets/starwars/luke/ref.png"`.
+    /// Optional storage URI. e.g., `"gs://assets/toystory/luke/ref.png"`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
 
@@ -250,12 +250,12 @@ mod tests {
     #[test]
     fn test_manifest_new() {
         let manifest = Manifest::new(
-            "starwars",
+            "toystory",
             EntityType::new("character"),
             "lukeskywalker",
             "Luke Skywalker",
         );
-        assert_eq!(manifest.id, "nap://starwars/character/lukeskywalker");
+        assert_eq!(manifest.id, "nap://toystory/character/lukeskywalker");
         assert_eq!(manifest.name, "Luke Skywalker");
         assert_eq!(manifest.entity_type.as_str(), "character");
         assert_eq!(manifest.version, 0);
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn test_manifest_yaml_roundtrip() {
         let mut manifest = Manifest::new(
-            "starwars",
+            "toystory",
             EntityType::new("character"),
             "lukeskywalker",
             "Luke Skywalker",
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     fn test_manifest_ignores_legacy_head_on_parse() {
         let yaml = r#"
-id: "nap://starwars/character/lukeskywalker"
+id: "nap://toystory/character/lukeskywalker"
 name: "Luke Skywalker"
 entity_type: character
 version: 1
@@ -303,19 +303,19 @@ head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         let parsed = Manifest::from_yaml(yaml).unwrap();
         let serialized = parsed.to_yaml().unwrap();
 
-        assert_eq!(parsed.id, "nap://starwars/character/lukeskywalker");
+        assert_eq!(parsed.id, "nap://toystory/character/lukeskywalker");
         assert!(!serialized.contains("\nhead:"));
     }
 
     #[test]
     fn test_manifest_world_uri() {
         let manifest = Manifest::new(
-            "starwars",
+            "toystory",
             EntityType::new("world"),
-            "starwars",
+            "toystory",
             "Star Wars Repository",
         );
-        assert_eq!(manifest.id, "nap://starwars/world/starwars");
+        assert_eq!(manifest.id, "nap://toystory/world/toystory");
     }
 
     #[test]
@@ -333,7 +333,7 @@ head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     #[test]
     fn test_manifest_content_hash_deterministic() {
         let manifest = Manifest::new(
-            "starwars",
+            "toystory",
             EntityType::new("character"),
             "lukeskywalker",
             "Luke Skywalker",

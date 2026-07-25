@@ -195,7 +195,7 @@ mod tests {
             vec![Change::set(
                 "properties.homeworld",
                 None,
-                "nap://starwars/location/tatooine".to_string(),
+                "nap://toystory/location/tatooine".to_string(),
             )],
         );
         assert_eq!(child_commit.parent, Some(parent_commit.id));

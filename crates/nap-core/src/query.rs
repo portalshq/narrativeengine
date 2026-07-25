@@ -12,7 +12,7 @@
 //! It enables:
 //! - AI systems to retrieve 500 tokens instead of 40,000
 //! - Applications to fetch 10 KB instead of 5 MB
-//! - CLI queries: `nap resolve nap://starwars/character/luke#references.appears_in`
+//! - CLI queries: `nap resolve nap://toystory/character/luke#references.appears_in`
 
 use serde_yaml::Value;
 
@@ -135,12 +135,12 @@ mod tests {
 
     fn test_manifest() -> Value {
         let yaml = r#"
-id: "nap://starwars/character/lukeskywalker"
+id: "nap://toystory/character/lukeskywalker"
 name: "Luke Skywalker"
 entity_type: character
 version: 17
 properties:
-  homeworld: "nap://starwars/location/tatooine"
+  homeworld: "nap://toystory/location/tatooine"
   species: human
   affiliation: rebel_alliance
 representations:
@@ -149,10 +149,10 @@ representations:
     format: png
 references:
   appears_in:
-    - "nap://starwars/scene/cantina"
-    - "nap://starwars/scene/trench-run"
+    - "nap://toystory/scene/cantina"
+    - "nap://toystory/scene/trench-run"
   relationships:
-    - target: "nap://starwars/character/darthvader"
+    - target: "nap://toystory/character/darthvader"
       type: parent
 "#;
         serde_yaml::from_str(yaml).unwrap()
@@ -195,7 +195,7 @@ references:
         let result = ManifestQuery::query(&root, "references.appears_in.0", "test").unwrap();
         assert_eq!(
             result,
-            Value::String("nap://starwars/scene/cantina".to_string())
+            Value::String("nap://toystory/scene/cantina".to_string())
         );
     }
 

@@ -7,7 +7,7 @@ NAP is built on four primitives:
 A `nap://` URI identifies any narrative resource. Version and branch are **orthogonal selectors** passed alongside the URI — never encoded in the path (mirrors Git, OCI, and package managers).
 
 ```text
-nap://starwars/character/lukeskywalker#references.appears_in
+nap://toystory/character/lukeskywalker#references.appears_in
 ────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
  scheme repository  entity_type entity_id          fragment (query)
 ```
@@ -24,12 +24,12 @@ A YAML manifest is the durable representation of a narrative resource. It is sim
 - **Versionable** — the manifest *is* what gets committed
 
 ```yaml
-id: "nap://starwars/character/lukeskywalker"
+id: "nap://toystory/character/lukeskywalker"
 name: "Luke Skywalker"
 entity_type: character
 version: 17
 properties:
-  homeworld: "nap://starwars/location/tatooine"
+  homeworld: "nap://toystory/location/tatooine"
   species: human
 representations:
   reference_image:
@@ -53,14 +53,14 @@ The resolver turns a `nap://` URI into a manifest (or a subtree of one). With op
 Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it.
 
 ```bash
-nap create scene cantina -u starwars -n "Cantina"
-nap add nap://starwars/scene/cantina clip-01 ./cantina-clip-01.mp4 --format mp4 -m "Add cantina scene clip"
+nap create scene cantina -u toystory -n "Cantina"
+nap add nap://toystory/scene/cantina clip-01 ./cantina-clip-01.mp4 --format mp4 -m "Add cantina scene clip"
 ```
 
 The scene manifest remains simple and durable:
 
 ```yaml
-id: "nap://starwars/scene/cantina"
+id: "nap://toystory/scene/cantina"
 name: "Cantina"
 entity_type: scene
 version: 3
@@ -70,9 +70,9 @@ properties:
   mood: tense
 references:
   characters:
-    - "nap://starwars/character/lukeskywalker"
-    - "nap://starwars/character/obiwankenobi"
-  location: "nap://starwars/location/mos-eisley-cantina"
+    - "nap://toystory/character/lukeskywalker"
+    - "nap://toystory/character/obiwankenobi"
+  location: "nap://toystory/location/mos-eisley-cantina"
 representations:
   clip-01:
     hash: "blake3:af1349b9..."
@@ -83,12 +83,12 @@ representations:
 When resolved with provenance, NAP returns versioned per-file provenance for the manifest and each direct representation. This keeps generation metadata attached to the committed files without requiring users to manage the underlying VCS directly.
 
 ```bash
-nap resolve nap://starwars/scene/cantina --provenance
+nap resolve nap://toystory/scene/cantina --provenance
 ```
 
 ```yaml
 manifest:
-  id: "nap://starwars/scene/cantina"
+  id: "nap://toystory/scene/cantina"
   name: "Cantina"
   entity_type: scene
   version: 3
@@ -123,12 +123,12 @@ provenance:
 
 | Type | Example URI | Description |
 |---|---|---|
-| `character` | `nap://starwars/character/lukeskywalker` | Persistent character with identity across scenes/episodes |
-| `location` | `nap://starwars/location/tatooine` | Spatial location within a fictional repository |
-| `scene` | `nap://starwars/scene/cantina` | Narrative scene — participants, timeline, events |
+| `character` | `nap://toystory/character/lukeskywalker` | Persistent character with identity across scenes/episodes |
+| `location` | `nap://toystory/location/tatooine` | Spatial location within a fictional repository |
+| `scene` | `nap://toystory/scene/cantina` | Narrative scene — participants, timeline, events |
 | `prop` | `nap://toystory/prop/andy-hat` | Physical object with materials, variants, ownership |
 | `group` | `nap://toystory/group/buzz-and-woody-flying` | Mixed-media groups |
-| `world` | `nap://starwars/world/starwars` | The repository itself — rules, canon, top-level metadata |
+| `world` | `nap://toystory/world/toystory` | The repository itself — rules, canon, top-level metadata |
 
 ---
 
@@ -137,7 +137,7 @@ provenance:
 Each repository is a Git repository on disk:
 
 ```text
-starwars/                    ← repository root (Git repo)
+toystory/                    ← repository root (Git repo)
 ├── .nap/
 │   └── config.yaml          ← repository configuration
 ├── repository.yaml            ← world manifest
