@@ -48,43 +48,6 @@ Install these skills to use NAP with agent workflows, including entity-aware pro
 npx skills add portalshq/narrativeengine
 ```
 
-### CLI & Server (Rust — compile from source)
-
-```bash
-git clone https://github.com/cinematiccanvas/nap.git
-cd nap
-cargo build --release
-
-# Binaries land in target/release/
-#   nap          — CLI tool
-#   nap-server   — HTTP resolver server
-```
-
-### Python SDK (prebuilt wheel, no Rust needed)
-
-```bash
-pip install narrativeengine
-```
-
-```python
-from narrativeengine import create_block, generate_candidate, render_lore_summary
-
-block = create_block("char-1", "A brave adventurer")
-candidate = generate_candidate(block)
-```
-
-### TypeScript SDK (prebuilt binary, no Rust needed)
-
-```bash
-npm install @portalshq/narrativeengine
-```
-
-```typescript
-import { createBlock } from "@portalshq/narrativeengine";
-
-const block = createBlock("char-1", "A brave adventurer");
-```
-
 ---
 
 ## Quick Start
