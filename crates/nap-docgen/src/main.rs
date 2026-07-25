@@ -71,7 +71,8 @@ fn main() -> Result<()> {
     // 8. Generate sub-subcommand pages (e.g., remote add, remote ls, remote rm)
     for cmd in &commands {
         for sub in &cmd.subcommands {
-            let example = examples::load_example_snippet(&workspace_root, &sub.name);
+            let example_name = sub.full_path.replace(' ', "-");
+            let example = examples::load_example_snippet(&workspace_root, &example_name);
             let page = markdown::render_command_page(sub, &doc_meta, example.as_deref());
             let filename = format!("{}-{}.md", cmd.name, sub.name);
             let path = workspace_root

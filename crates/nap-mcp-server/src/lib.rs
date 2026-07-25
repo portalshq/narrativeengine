@@ -543,10 +543,7 @@ mod tests {
                 .any(|pair| pair == ["--format", "json"])
         );
 
-        let add_repr = tools
-            .iter()
-            .find(|tool| tool.name == "nap_add_repr")
-            .unwrap();
+        let add_repr = tools.iter().find(|tool| tool.name == "nap_add").unwrap();
         let add_repr_args = build_cli_args(
             add_repr,
             &json!({

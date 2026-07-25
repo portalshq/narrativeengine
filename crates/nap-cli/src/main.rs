@@ -213,7 +213,7 @@ fn main() -> Result<()> {
             message,
             author,
         } => cmd_set(&base_dir, &uri, &key, &value, &message, &author),
-        Commands::AddRepr {
+        Commands::Add {
             uri,
             key,
             file,

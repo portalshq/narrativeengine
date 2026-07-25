@@ -1,6 +1,6 @@
 Add a representation to an entity manifest
 
-Usage: nap add-repr [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>
+Usage: nap add [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>
 
 Arguments:
   <URI>   NAP URI

@@ -78,6 +78,76 @@ Commits are content-addressed (BLAKE3) snapshots with patch metadata. The manife
 
 The resolver turns a `nap://` URI into a manifest (or a subtree of one). With optional selectors for branch or commit hash, it supports versioned resolution and fragment-based queries for efficient data access.
 
+### Scene Clips as Representations
+
+Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it.
+
+```bash
+nap create scene cantina -u starwars -n "Cantina"
+nap add nap://starwars/scene/cantina clip-01 ./cantina-clip-01.mp4 --format mp4 -m "Add cantina scene clip"
+```
+
+The scene manifest remains simple and durable:
+
+```yaml
+id: "nap://starwars/scene/cantina"
+name: "Cantina"
+entity_type: scene
+version: 3
+properties:
+  summary: "Luke and Obi-Wan enter a crowded cantina while searching for passage off Tatooine."
+  time_of_day: night
+  mood: tense
+references:
+  characters:
+    - "nap://starwars/character/lukeskywalker"
+    - "nap://starwars/character/obiwankenobi"
+  location: "nap://starwars/location/mos-eisley-cantina"
+representations:
+  clip-01:
+    hash: "blake3:af1349b9..."
+    format: mp4
+    uri: "clip-01.mp4"
+head: "a72c9f3b..."
+```
+
+When resolved with provenance, NAP returns versioned per-file provenance for the manifest and each direct representation. This keeps generation metadata attached to the committed files without requiring users to manage the underlying VCS directly.
+
+```bash
+nap resolve nap://starwars/scene/cantina --provenance
+```
+
+```yaml
+manifest:
+  id: "nap://starwars/scene/cantina"
+  name: "Cantina"
+  entity_type: scene
+  version: 3
+  representations:
+    clip-01:
+      hash: "blake3:af1349b9..."
+      format: mp4
+      uri: "clip-01.mp4"
+provenance:
+  revision: "a72c9f3b..."
+  files:
+    - role: manifest
+      path: "scene/cantina.yaml"
+      provenance:
+        nap.provenance.kind: edit
+        nap.provenance.author: worldbuilder
+    - role: representation
+      name: clip-01
+      path: "scene/clip-01.mp4"
+      uri: "clip-01.mp4"
+      hash: "blake3:af1349b9..."
+      format: mp4
+      provenance:
+        nap.provenance.kind: generation
+        nap.provenance.model: video-generator
+        nap.provenance.prompt.address: "blake3:b4d2..."
+```
+
 ---
 
 ## Entity Types

@@ -345,7 +345,7 @@ fn test_local_lore_add_image_to_repository() {
 
     // Add the image as a representation
     nap_cmd()
-        .arg("add-repr")
+        .arg("add")
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/imagehero", repository))
@@ -473,7 +473,7 @@ fn test_local_lore_resolve_image_from_manifest() {
     let image_path = create_test_image(tmp.path(), "resolver_test.png");
 
     nap_cmd()
-        .arg("add-repr")
+        .arg("add")
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("nap://{}/character/imageresolver", repository))

@@ -3,12 +3,14 @@
   "version": "0.5.3",
   "commands": [
     {
-      "name": "add-repr",
-      "full_path": "add-repr",
+      "name": "add",
+      "full_path": "add",
       "about": "Add a representation to an entity manifest",
       "long_about": null,
-      "usage": "Usage: add-repr [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>",
-      "aliases": [],
+      "usage": "Usage: add [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>",
+      "aliases": [
+        "add-repr"
+      ],
       "arguments": [
         {
           "name": "uri",

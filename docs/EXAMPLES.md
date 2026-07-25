@@ -29,7 +29,7 @@ nap set nap://lab/paper/cold-fusion-v2 status "peer-reviewed"
 nap set nap://lab/paper/cold-fusion-v2 doi "10.1038/example"
 
 # Add representation (the actual PDF)
-nap add-repr nap://lab/paper/cold-fusion-v2 ./data/manuscript.pdf
+nap add nap://lab/paper/cold-fusion-v2 manuscript ./data/manuscript.pdf --format pdf
 ```
 
 ---
@@ -57,7 +57,7 @@ nap set nap://it/device/macbook-m4-042 serial_number "A123-BC456"
 nap set nap://it/device/macbook-m4-042 assigned_to "jane.doe@company.com"
 
 # Add representation (purchase receipt)
-nap add-repr nap://it/device/macbook-m4-042 ./docs/receipts/mbp-042.pdf
+nap add nap://it/device/macbook-m4-042 purchase_receipt ./docs/receipts/mbp-042.pdf --format pdf
 ```
 
 ---
@@ -85,7 +85,7 @@ nap set nap://fantasy/deity/solaris alignment "Lawful Good"
 nap set nap://fantasy/deity/solaris domain "Light"
 
 # Add representation (character concept art)
-nap add-repr nap://fantasy/deity/solaris ./assets/art/solaris_concept.png
+nap add nap://fantasy/deity/solaris concept_art ./assets/art/solaris_concept.png --format png
 ```
 
 ---
@@ -113,7 +113,7 @@ nap set nap://platform/service/auth-provider language "Rust"
 nap set nap://platform/service/auth-provider owner "platform-team"
 
 # Add representation (architecture diagram)
-nap add-repr nap://platform/service/auth-provider ./docs/diagrams/auth-flow.svg
+nap add nap://platform/service/auth-provider architecture_diagram ./docs/diagrams/auth-flow.svg --format svg
 ```
 
 ***
@@ -123,4 +123,4 @@ Regardless of the domain, the `nap` interaction remains consistent:
 1.  **Define:** Add your types to `repository.yaml`.
 2.  **Create:** Use `nap create <type>/<id>` to initialize an entity.
 3.  **Set:** Use `nap set <uri> <key> <value>` to attach metadata.
-4.  **Represent:** Use `nap add-repr <uri> <file>` to attach files, assets, or documentation.
+4.  **Represent:** Use `nap add <uri> <key> <file> --format <format>` to attach files, assets, or documentation.

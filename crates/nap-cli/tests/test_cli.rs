@@ -67,3 +67,12 @@ fn test_nap_resolve_help_shows_provenance_flags() {
         .stdout(predicate::str::contains("--provenance"))
         .stdout(predicate::str::contains("--include-blobs"));
 }
+
+#[test]
+fn test_nap_add_repr_alias_still_resolves_to_add_command() {
+    let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
+    cmd.arg("add-repr").arg("--help");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Add a representation"));
+}

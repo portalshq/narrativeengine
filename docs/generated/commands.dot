@@ -2,8 +2,8 @@ digraph nap_commands {
     rankdir=LR;
     node [shape=box, style=filled, fillcolor=lightblue];
     
-    "add-repr" [label="nap add-repr"];
-    "nap" -> "add-repr";
+    "add" [label="nap add"];
+    "nap" -> "add";
     "branch" [label="nap branch"];
     "nap" -> "branch";
     "choose" [label="nap choose"];
