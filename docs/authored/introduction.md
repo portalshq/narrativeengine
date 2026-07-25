@@ -62,11 +62,11 @@ properties:
   species: human
 representations:
   reference_image:
-    hash: "sha256:e3b0c44..."
+    hash: "blake3:e3b0c44..."
     format: png
 provenance:
   model: "midjourney-v6"
-  prompt_hash: "sha256:abc123..."
+  prompt_hash: "blake3:abc123..."
 ```
 
 ### 3. Commit — History

@@ -18,7 +18,7 @@ The `nap` command-line interface (v0.5.4) provides tools for creating, resolving
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
 | [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
-| [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the SHA-256 content hash of a file |
+| [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
 | [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
 | [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
 | [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |

@@ -1,14 +1,11 @@
 ---
 name: nap-update
-description: Update entity properties in a workflow and properly store properties and assets back into the entity manifest, ensuring proper provenance.
-metadata:
-  author: portals
-  version: "{{version}}"
+description: Persist changes to existing NAP entities, including narrative property updates and every user-visible creative iteration. Use whenever a user refines, regenerates, selects, rejects, endorses, or promotes an entity whose NAP URI was established earlier in the task, even if the user does not mention NAP again.
 ---
 
-# NAP Skill: Entity Update and Creative Workflow Integration
+# NAP Update
 
-Update entity properties in a workflow and properly store properties and assets back into the entity manifest, ensuring proper provenance.
+Use this skill whenever existing NAP entity content changes, especially during iterative creative work.
 
 ## When to Apply
 
@@ -16,85 +13,111 @@ Reference these guidelines when:
 - Making changes to entity properties in a workflow
 - Generating new assets as part of a workflow
 - Storing assets back into the entity manifest
+- Refining, regenerating, selecting, rejecting, endorsing, or promoting an entity whose NAP URI was established earlier in the task
 
-## Core Commands
+## Continuity Rule
 
-* **Set a Property:** To modify or add a property to an entity's manifest, use `nap set <URI> <property_key> <value>`.
-  * *Example:* `nap set nap://toystory/character/woody toy_type pullstring_cowboy`.
-  * *Example:* `nap set nap://toystory/character/woody location "nap://toystory/location/andysroom"`.
+Once a NAP entity URI is established in a task, carry forward:
 
-## Workflow Pipeline
-When using a tool (like a text model, Midjourney, or video generation platform) to generate assets for a NAP entity, you must follow this exact sequence:
+- the active URI, repository, entity type, and entity ID
+- the active revision branch
+- stable representation keys such as `character_sheet`, `face_sheet`, `portrait`, or `model_sheet`
+- user-approved identity constraints and negative constraints
 
-1. **Resolve/Query:** Fetch the context needed for the requested generation using `nap resolve` or `nap query` (see Entity Access Skill). Include:
-   * Every relevant entity property that affects the requested content, medium, scene, identity, style, behavior, continuity, or exclusions.
-   * Applicable `representations` and `references`, including context from referenced entities when it affects the result.
-   * Negative or exclusion constraints found in entity properties. Because properties are schema-flexible, inspect semantically relevant keys such as `negative_constraints`, `exclusions`, `avoid`, `forbidden`, and domain-specific constraint names instead of relying on one fixed key.
-2. **Generate:** Combine the gathered properties, representations, references, and constraints when generating the text, image, or video.
-   * For visual appearance, treat image and video representations as the source of truth. Textual properties provide supporting details and explicit constraints.
-   * Always provide available negative constraints to the generator. Use its dedicated negative-prompt or exclusion field when available; otherwise express the constraints in the main prompt as explicit "do not" instructions. Missing negative constraints do not block generation.
-   * For scenes with multiple entities, keep each entity's context and negative constraints associated with that entity to prevent attribute or identity bleed.
-3. **Store Representation:** When saving the generated asset back to the entity's manifest, you must track its provenance. Ensure the manifest is updated with the following structured YAML/JSON:
-   * **Hash:** Every piece of content must be strictly indexed by its BLAKE3 hash. Do not use SHA-256.
-   * **Provenance Tracking:** Record the AI generation metadata, including the `model` used (e.g., "midjourney-v6" or the specific LLM), the `prompt_hash`, and any `derived_from` URIs.
+Later turns that keep refining the same entity must still invoke this skill even when the user does not mention NAP again.
 
-*Example of updating a manifest's representations block via CLI/script editing:*
-```yaml
-representations:
-  ai_description:
-    hash: "blake3:abc123def..." 
-    format: text
-    provenance:
-      model: "claude-3-opus"
-      prompt_hash: "blake3:def456..."
-      derived_from: "nap://toystory/character/woody"
+## Revision Branches
+
+Use a revision branch for ordinary iteration:
+
+```text
+revision-<entity-type>-<entity-id>
 ```
 
-## Agent Sandbox Integration
+Example: `revision-character-atlas`.
 
-When running inside a sandboxed environment (e.g., Codex) without outbound network access, use MCP tools instead of shelling out to the `nap` CLI directly. The MCP server runs on the host machine, starts only when the agent/MCP client launches it over stdio, and proxies tool calls to the host `nap` CLI.
+Commit every accepted user-visible iteration to the revision branch in the same turn. In this skill, an accepted iteration means a concrete candidate the agent generated or revised in response to the user's current refinement request, unless the user explicitly said not to save it, asked only to brainstorm, or the generation failed. Multiple tiny corrections in one turn may be grouped into one accepted-revision commit; do not wait across many turns to batch revisions.
 
-Direct `nap` CLI examples in this skill are for humans, host-local shells, and non-sandboxed scripts. In an agent sandbox, use the MCP tools for any operation that may need Lore/cloud/network access.
+Rejected or superseded versions should remain traceable in branch history. Do not delete historical assets or replace history to make a rejected variant disappear.
 
-### Setup
+Promote to `main` only when the user explicitly asks for canonical status, such as "lock it in", "definitive", "canonical", "make this the latest main", or another clear instruction. "Best so far" or "use #2" endorses the revision branch tip but does not automatically promote to `main` unless the user says so.
 
-The standard NAP installer bundles the native `nap-mcp-server` binary with `nap`. If the MCP command is missing or broken, rerun the standard NAP installer from a host shell.
+If the user selects an older variant, restore that content as a new commit at the tip of the revision branch rather than rewriting history. If a reference such as "#2" is ambiguous or stale, resolve the mapping from the visible candidate set or ask a brief clarification before persisting the selection or promoting it.
 
-### Configuration
+## Update Pipeline
 
-Add to your agent's MCP configuration (e.g., `~/.codex/config.json`):
+1. Resolve the entity explicitly from the active revision branch, not from implicit defaults:
 
-```json
-{
-  "mcpServers": {
-    "nap": {
-      "command": "/bin/sh",
-      "args": [
-        "-lc",
-        "NAP_DIR=\"$HOME/.nap\" exec nap-mcp-server"
-      ]
-    }
-  }
-}
+   ```bash
+   nap resolve nap://repo/type/id --branch revision-type-id
+   ```
+
+2. Gather every relevant property, representation, reference, and negative constraint that affects identity, continuity, style, exclusions, or the requested medium.
+3. Generate or edit the requested content using the resolved entity as the source of truth.
+4. Persist the result in the same turn:
+   - use `nap add --format <format> -m "<revision summary>" <URI> <representation_key> <asset>` for asset revisions
+   - use `nap set <URI> <property_key> <value>` for simple property-only updates
+   - when several files/properties must be one logical revision, update the structured manifest and make one `nap commit -m "<revision summary>" <repository>`
+5. Store assets by BLAKE3 content hash. Do not use SHA-256. `nap content-hash` should return a `blake3:` value.
+6. Record generation provenance with the revision:
+   - `model`
+   - `prompt_hash`
+   - `parameters` when relevant
+   - `derived_from` source URIs, commits, or asset hashes
+   - `created_at` when available
+7. Verify branch-specific resolution after the commit. Check that the intended representation key, hash, and latest description match the accepted revision.
+8. In the final response, report persistence in one concise line.
+
+## Data Placement
+
+Use `properties` for narrative facts and durable identity constraints.
+
+Use `representations` for current addressable assets. Keep stable semantic keys, such as updating `character_sheet` across Atlas character-sheet revisions.
+
+Use commit messages for revision notes such as `revision_summary`. Do not create an append-only `revision_log` property; NAP/Lore history is the revision log.
+
+Use `metadata` only for extension data that is not narrative canon, such as per-representation provenance when the manifest format cannot express it directly.
+
+## Branch and Version Truth
+
+Treat branch heads and commit history as VCS state. Do not store or repair VCS head pointers inside entity manifests. If a NAP implementation exposes branch head data in command output, treat it as derived status only, not entity content.
+
+Do not use commit `parent` fields as validation truth unless the current NAP/Lore version documents them as reliable. Count commit IDs/messages and verify branch-specific resolves instead.
+
+Be aware that some NAP commands auto-commit. For example, `nap add` and `nap set` create commits. Do not run a second `nap commit` afterward unless you intentionally made additional uncommitted changes.
+
+## Main Promotion
+
+When promoting to `main`:
+
+1. Resolve the endorsed revision branch at its current tip.
+2. Switch to `main`.
+3. Apply the same content-addressed representations/properties from the endorsed revision.
+4. Commit with a promotion message that names the source revision branch and commit.
+5. Resolve `main` and verify that representation hashes match the endorsed revision.
+
+If promotion cannot be completed without overwriting unrelated dirty content, stop and report that promotion was blocked. Do not reset, revert, or discard user-authored content.
+
+## Sandbox Integration
+
+In sandboxed agents, prefer NAP MCP tools when available for host-local or networked repositories. Direct CLI commands are appropriate for local repositories and test fixtures when the CLI is available in the sandbox.
+
+## Reporting
+
+Successful revision example:
+
+```text
+NAP: Atlas revision saved on revision-character-atlas at a1b2c3d; character_sheet updated; main unchanged.
 ```
 
-### Available MCP Tools
+Successful promotion example:
 
-All nap CLI commands are available as MCP tools with `nap_` prefix. For example:
-- `nap resolve` -> `nap_resolve` tool
-- `nap create` -> `nap_create` tool
-- `nap set` -> `nap_set` tool
+```text
+NAP: Atlas promoted to main at d4e5f6a from revision-character-atlas a1b2c3d.
+```
 
-Prefer MCP tools over shell commands when in a sandbox.
+Failure example:
 
-## CLI Reference
-
-{{include docs/generated/cli.md}}
-
-## Global Options
-
-{{include docs/generated/options.md}}
-
-## Environment Variables
-
-{{include docs/generated/environment.md}}
+```text
+NAP persistence failed: Atlas revision was generated but not committed.
+```

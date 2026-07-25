@@ -398,7 +398,7 @@ pub enum Commands {
         format: String,
     },
 
-    /// Compute the SHA-256 content hash of a file.
+    /// Compute the BLAKE3 content hash of a file.
     ContentHash {
         /// Path to the file to hash.
         file: PathBuf,

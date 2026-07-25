@@ -91,7 +91,7 @@ commands:
         about: "Print help"
   - name: "content-hash"
     full_path: "content-hash"
-    about: "Compute the SHA-256 content hash of a file"
+    about: "Compute the BLAKE3 content hash of a file"
     usage: "Usage: content-hash <FILE>"
     hidden: false
     arguments:

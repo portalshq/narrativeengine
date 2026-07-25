@@ -265,7 +265,7 @@
     {
       "name": "content-hash",
       "full_path": "content-hash",
-      "about": "Compute the SHA-256 content hash of a file",
+      "about": "Compute the BLAKE3 content hash of a file",
       "long_about": null,
       "usage": "Usage: content-hash <FILE>",
       "aliases": [],

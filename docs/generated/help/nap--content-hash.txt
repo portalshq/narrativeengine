@@ -1,4 +1,4 @@
-Compute the SHA-256 content hash of a file
+Compute the BLAKE3 content hash of a file
 
 Usage: nap content-hash [OPTIONS] <FILE>
 

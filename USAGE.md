@@ -262,7 +262,7 @@ Manifests don't store files — they store **BLAKE3 hashes** pointing to assets.
 nap add-repr nap://starwars/character/lukeskywalker reference_image \
   ./assets/luke_ref.png --format png
 # ✓ Added representation 'reference_image' (png)
-#   Hash: sha256:e3b0c44...
+#   Hash: blake3:e3b0c44...
 ```
 
 The manifest now contains:
@@ -270,7 +270,7 @@ The manifest now contains:
 ```yaml
 representations:
   reference_image:
-    hash: "sha256:e3b0c44..."
+    hash: "blake3:e3b0c44..."
     format: png
     uri: "./assets/luke_ref.png"
 ```
@@ -291,7 +291,7 @@ nap add-repr nap://toystory/prop/andy-hat mesh \
 **Use case — asset pipeline integrity:** A VFX pipeline verifies that the asset on the render farm matches the manifest hash:
 
 ```bash
-echo "sha256:e3b0c44...  luke_ref.png" | sha256sum -c
+echo "blake3:e3b0c44...  luke_ref.png" | b3sum --check
 # luke_ref.png: OK
 ```
 
@@ -304,7 +304,7 @@ Record which model, prompt, and seed generated a character design — right in t
 ```bash
 nap set nap://starwars/character/lukeskywalker provenance.model "midjourney-v6"
 nap set nap://starwars/character/lukeskywalker provenance.seed "8675309"
-nap set nap://starwars/character/lukeskywalker provenance.prompt_hash "sha256:abc123..."
+nap set nap://starwars/character/lukeskywalker provenance.prompt_hash "blake3:abc123..."
 nap set nap://starwars/character/lukeskywalker provenance.derived_from \
   "nap://starwars/character/lukeskywalker/v1"
 ```
@@ -314,7 +314,7 @@ The manifest captures full generative lineage:
 ```yaml
 provenance:
   model: "midjourney-v6"
-  prompt_hash: "sha256:abc123..."
+  prompt_hash: "blake3:abc123..."
   seed: "8675309"
   parameters:
     stylize: "1000"
@@ -350,7 +350,7 @@ properties:
   apprentice: "nap://starwars/character/lukeskywalker"
 representations:
   voice_actor:
-    hash: "sha256:f8a2b1..."
+    hash: "blake3:f8a2b1..."
     format: wav
     uri: "gs://assets/starwars/vader/voice.wav"
 head: "f7e3d2c1a..."
@@ -727,7 +727,7 @@ Track every AI-generated asset with full lineage:
 # After generating a character design with Midjourney
 nap set nap://starwars/character/lukeskywalker provenance.model "midjourney-v6"
 nap set nap://starwars/character/lukeskywalker provenance.seed "8675309"
-nap set nap://starwars/character/lukeskywalker provenance.prompt_hash "sha256:abc123..."
+nap set nap://starwars/character/lukeskywalker provenance.prompt_hash "blake3:abc123..."
 nap set nap://starwars/character/lukeskywalker provenance.parameters.stylize "1000"
 
 # After iterating with an LLM
@@ -743,7 +743,7 @@ The provenance block captures complete generative lineage:
 ```yaml
 provenance:
   model: "midjourney-v6"
-  prompt_hash: "sha256:abc123..."
+  prompt_hash: "blake3:abc123..."
   seed: "8675309"
   parameters:
     stylize: "1000"

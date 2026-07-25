@@ -7,7 +7,7 @@ source: clap
 
 
 # nap content-hash
-Compute the SHA-256 content hash of a file
+Compute the BLAKE3 content hash of a file
 
 
 ## Synopsis

@@ -31,7 +31,7 @@ Commands:
   schema        Print a JSON Schema for manifest or commit types
   diff          Show diff between two manifest files or versions
   merge         Three-way merge of JSON/YAML values
-  content-hash  Compute the SHA-256 content hash of a file
+  content-hash  Compute the BLAKE3 content hash of a file
   help          Print this message or the help of the given subcommand(s)
 
 Options:
