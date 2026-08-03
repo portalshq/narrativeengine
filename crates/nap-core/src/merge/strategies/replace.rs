@@ -80,11 +80,16 @@ mod tests {
 
     #[test]
     fn test_replace_conflict() {
-        let result = merge_replace("name", &json!("Woody"), &json!("Woody"), &json!("Sid"));
+        let result = merge_replace(
+            "name",
+            &json!("Woody"),
+            &json!("Sheriff Woody"),
+            &json!("Sid"),
+        );
         assert!(result.is_conflict());
         let conflicts = result.unwrap_conflicts();
         assert_eq!(conflicts.len(), 1);
-        assert_eq!(conflicts[0].current, json!("Woody"));
+        assert_eq!(conflicts[0].current, json!("Sheriff Woody"));
         assert_eq!(conflicts[0].proposed, json!("Sid"));
     }
 

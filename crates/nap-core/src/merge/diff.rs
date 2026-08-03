@@ -202,14 +202,14 @@ schema:
     #[test]
     fn test_diff_modified() {
         let base = json!({"name": "Woody"});
-        let candidate = json!({"name": "Woody"});
+        let candidate = json!({"name": "Sheriff Woody"});
 
         let result = diff(&base, &candidate, &test_sdl());
         assert_eq!(result.len(), 1);
         assert_eq!(result.changes[0].op, ChangeOp::Modified);
         assert_eq!(result.changes[0].path, "root.name");
         assert_eq!(result.changes[0].old_value, Some(json!("Woody")));
-        assert_eq!(result.changes[0].new_value, Some(json!("Woody")));
+        assert_eq!(result.changes[0].new_value, Some(json!("Sheriff Woody")));
     }
 
     #[test]

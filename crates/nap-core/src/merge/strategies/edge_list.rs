@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn test_edge_list_conflict_on_same_edge() {
         let base = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
-        let current = json!([{"id": "e1", "character": "woody", "scene": "pizza-planet"}]);
+        let current = json!([{"id": "e1", "character": "woody", "scene": "andys-room"}]);
         let proposed = json!([{"id": "e1", "character": "woody", "scene": "sunnyside"}]);
 
         let result = merge_edge_list(

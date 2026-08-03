@@ -524,7 +524,7 @@ schema:
         let engine = MergeEngine::new(simple_sdl());
 
         let base = json!({"name": "Woody"});
-        let current = json!({"name": "Woody"});
+        let current = json!({"name": "Sheriff Woody"});
         let proposed = json!({"name": "Sid"});
 
         let result = engine.merge(base, current, proposed);
@@ -640,7 +640,7 @@ schema:
         let engine = MergeEngine::new(simple_sdl());
 
         let base = json!({"characters": [{"id": "buzzlightyear", "name": "Buzz"}]});
-        let current = json!({"characters": [{"id": "buzzlightyear", "name": "Buzz"}]}); // id changed!
+        let current = json!({"characters": [{"id": "buzz", "name": "Buzz"}]}); // id changed!
         let proposed = json!({"characters": [{"id": "buzzlightyear", "name": "Buzz"}]});
 
         let result = engine.merge(base, current, proposed);

@@ -162,7 +162,7 @@ references:
     fn test_query_simple_property() {
         let root = test_manifest();
         let result = ManifestQuery::query(&root, "properties.toy_type", "test").unwrap();
-        assert_eq!(result, Value::String("plush".to_string()));
+        assert_eq!(result, Value::String("human".to_string()));
     }
 
     #[test]
