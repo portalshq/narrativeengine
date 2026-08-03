@@ -422,7 +422,7 @@ Inside sandboxes, use the MCP tools instead of shelling out to `nap` directly fo
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.6) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.7) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
