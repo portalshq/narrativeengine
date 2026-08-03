@@ -304,14 +304,12 @@ impl Resolver {
         // unsatisfiable and produce a ResolutionFailed error.
         // ──────────────────────────────────────────────────────────────
 
-        let unsatisfiable = |what: &str| {
-            NapError::ResolutionFailed {
-                address: uri.to_string(),
-                message: format!(
-                    "cannot resolve {what}: no version-control backend is configured. \
+        let unsatisfiable = |what: &str| NapError::ResolutionFailed {
+            address: uri.to_string(),
+            message: format!(
+                "cannot resolve {what}: no version-control backend is configured. \
                      Configure one with 'nap backend configure' to use branch/commit selectors."
-                ),
-            }
+            ),
         };
 
         let revision: Option<String> = match (options.commit.as_ref(), options.branch.as_ref()) {
@@ -338,9 +336,7 @@ impl Resolver {
                     Some(default_branch) => {
                         debug!(%default_branch, "resolve: rule 3 — using default_branch");
                         let vcs = repo.vcs().ok_or_else(|| {
-                            unsatisfiable(&format!(
-                                "at default branch '{default_branch}'"
-                            ))
+                            unsatisfiable(&format!("at default branch '{default_branch}'"))
                         })?;
                         Some(vcs.resolve_branch_head(&repo.root, default_branch)?)
                     }
@@ -359,7 +355,9 @@ impl Resolver {
         // Read the manifest at the resolved revision, or the current filesystem
         // state when resolving without a revision (unversioned mode).
         let manifest = match &revision {
-            Some(revision) => repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, revision)?,
+            Some(revision) => {
+                repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, revision)?
+            }
             None => repo.read_manifest(&uri.entity_type, &uri.entity_id)?,
         };
 
@@ -373,11 +371,11 @@ impl Resolver {
             }
 
             // Provenance is VCS-backed; it cannot be produced in unversioned mode.
-            let revision = revision.as_deref().ok_or_else(|| {
-                NapError::BackendNotConfigured {
+            let revision = revision
+                .as_deref()
+                .ok_or_else(|| NapError::BackendNotConfigured {
                     operation: "provenance".to_string(),
-                }
-            })?;
+                })?;
 
             let envelope = self.build_provenance_envelope(
                 &repo,
@@ -484,11 +482,9 @@ impl Resolver {
         include_blobs: bool,
     ) -> Result<ResolveProvenanceFile, NapError> {
         // Provenance is VCS-backed; in unversioned mode there is nothing to read.
-        let vcs = repo
-            .vcs()
-            .ok_or_else(|| NapError::BackendNotConfigured {
-                operation: "provenance".to_string(),
-            })?;
+        let vcs = repo.vcs().ok_or_else(|| NapError::BackendNotConfigured {
+            operation: "provenance".to_string(),
+        })?;
 
         let metadata = match path.as_deref() {
             Some(path) => vcs.file_metadata_at_ref(&repo.root, path, revision)?,

@@ -53,7 +53,7 @@ use nap_core::{
     resolver::{ResolveOptions, ResolveResult, Resolver},
     schema,
     types::EntityType,
-    vcs::{VcsBackend},
+    vcs::VcsBackend,
     vcs_lore::LoreBackend,
 };
 
@@ -272,23 +272,22 @@ async fn handle_init(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo = init_repo(&state, &repository)
-        .map_err(|e| {
-            let (status, code) = match &e {
-                nap_core::NapError::RepositoryAlreadyExists(_) => {
-                    (StatusCode::CONFLICT, "ALREADY_EXISTS")
-                }
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, "INIT_FAILED"),
-            };
-            error!(error = %e, repository = %repository, "init failed");
-            (
-                status,
-                Json(ApiError {
-                    error: e.to_string(),
-                    code: code.to_string(),
-                }),
-            )
-        })?;
+    let repo = init_repo(&state, &repository).map_err(|e| {
+        let (status, code) = match &e {
+            nap_core::NapError::RepositoryAlreadyExists(_) => {
+                (StatusCode::CONFLICT, "ALREADY_EXISTS")
+            }
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, "INIT_FAILED"),
+        };
+        error!(error = %e, repository = %repository, "init failed");
+        (
+            status,
+            Json(ApiError {
+                error: e.to_string(),
+                code: code.to_string(),
+            }),
+        )
+    })?;
 
     Ok(Json(serde_json::json!({
         "success": true,

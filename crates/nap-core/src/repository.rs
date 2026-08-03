@@ -58,10 +58,7 @@ impl Repository {
     /// Open an existing NAP repository at the given path.
     ///
     /// `vcs` may be `None` to operate in unversioned mode.
-    pub fn open_optional(
-        path: &Path,
-        vcs: Option<Box<dyn VcsBackend>>,
-    ) -> Result<Self, NapError> {
+    pub fn open_optional(path: &Path, vcs: Option<Box<dyn VcsBackend>>) -> Result<Self, NapError> {
         // Check for repository.yaml or repository.yaml to identify valid repository
         if !path.join("repository.yaml").exists() && !path.join("repository.yaml").exists() {
             return Err(NapError::RepositoryNotFound(path.display().to_string()));
@@ -275,9 +272,11 @@ impl Repository {
     }
 
     fn require_vcs(&self, operation: &str) -> Result<&dyn VcsBackend, NapError> {
-        self.vcs.as_deref().ok_or_else(|| NapError::BackendNotConfigured {
-            operation: operation.to_string(),
-        })
+        self.vcs
+            .as_deref()
+            .ok_or_else(|| NapError::BackendNotConfigured {
+                operation: operation.to_string(),
+            })
     }
 
     /// Get the full filesystem path to an entity's manifest file.
@@ -318,9 +317,11 @@ impl Repository {
             "reading manifest at ref"
         );
 
-        let content = self
-            .require_vcs("read manifest at ref")?
-            .read_file_at_ref(&self.root, &file_path, Some(reference))?;
+        let content = self.require_vcs("read manifest at ref")?.read_file_at_ref(
+            &self.root,
+            &file_path,
+            Some(reference),
+        )?;
         Manifest::from_yaml(&content)
     }
 
@@ -574,8 +575,7 @@ impl Repository {
 
     /// List branches.
     pub fn list_branches(&self) -> Result<Vec<String>, NapError> {
-        self.require_vcs("list branches")?
-            .list_branches(&self.root)
+        self.require_vcs("list branches")?.list_branches(&self.root)
     }
 
     /// Revert a commit by creating a new VCS commit that undoes the specified one.
@@ -608,7 +608,8 @@ impl Repository {
 
     /// Add a remote to the repository.
     pub fn add_remote(&self, name: &str, url: &str) -> Result<(), NapError> {
-        self.require_vcs("add remote")?.add_remote(&self.root, name, url)
+        self.require_vcs("add remote")?
+            .add_remote(&self.root, name, url)
     }
 
     /// Remove a remote from the repository.
@@ -923,8 +924,8 @@ mod tests {
 
         // Attach a backend and bootstrap the current state as the baseline.
         let backend = MockBackend::new();
-        let bootstrapped = Repository::open_optional(&unversioned.root, Some(Box::new(backend)))
-            .unwrap();
+        let bootstrapped =
+            Repository::open_optional(&unversioned.root, Some(Box::new(backend))).unwrap();
 
         let hash = bootstrapped
             .bootstrap_vcs("Initialize existing NAP repository", "nap")
@@ -939,7 +940,9 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let repo = unversioned_repo(&tmp);
 
-        let err = repo.bootstrap_vcs("Initialize existing NAP repository", "nap").unwrap_err();
+        let err = repo
+            .bootstrap_vcs("Initialize existing NAP repository", "nap")
+            .unwrap_err();
         assert!(matches!(err, NapError::BackendNotConfigured { .. }));
         let msg = err.to_string();
         assert!(msg.contains("nap backend configure"));

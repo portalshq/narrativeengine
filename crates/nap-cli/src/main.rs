@@ -604,10 +604,7 @@ fn cmd_backend(base_dir: &Path, cmd: BackendCmd) -> Result<()> {
                 "local" => ProviderType::Local,
                 "remote" => ProviderType::Remote,
                 other => {
-                    anyhow::bail!(
-                        "Unknown backend '{}'. Available: 'local', 'remote'",
-                        other
-                    )
+                    anyhow::bail!("Unknown backend '{}'. Available: 'local', 'remote'", other)
                 }
             };
 
@@ -958,10 +955,7 @@ fn cmd_create(
         .context("failed to create entity")?;
     emit(format!("✓ Created {entity_type} '{name}'."));
     emit(format!("  URI:    {}", manifest.id));
-    emit(format!(
-        "  Commit: {}",
-        &hash[..hash.len().min(12)]
-    ));
+    emit(format!("  Commit: {}", &hash[..hash.len().min(12)]));
     Ok(())
 }
 
