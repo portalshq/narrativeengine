@@ -1,71 +1,33 @@
 ---
 name: nap-repo
-description: Initialize NAP repositories, including creating new repositories, cloning repositories, and branching existing ones.
+description: Initialize NAP repositories, clone/pull repositories, and create branches at the repository level. Use for repository-lifecycle operations (nap init, nap pull, nap branch) — not for creating or revising individual entities; see nap-resolve and nap-update for those.
 metadata:
   author: portals
   version: "0.5.6"
 ---
 
 # NAP Skill: Repository Management
-
-A repository is the top-level repository that contains entities like characters, locations, and assets. 
-
+ 
+A repository is the top-level container that holds entities (characters, locations, assets, etc.) and their NAP/Lore version history.
+ 
 ## When to Apply
-
+ 
 Reference these guidelines when:
 - Initializing a new NAP repository
-- Branching a NAP repository
-
+- Cloning or pulling an existing repository
+- Creating a new branch at the repository level
+For creating or resolving individual entities, use `nap-resolve`. For revising entity content and persisting iterations, use `nap-update`.
+ 
 ## Core Commands
-
-* **Initialize a Repository:** To create a new repository repository in the current directory, use `nap init <universe_name>`.
-  * *Example:* `nap init toystory`.
-  * *Note:* This creates a directory containing a `.nap/` configuration folder, a `repository.yaml` manifest, and subdirectories for entity types (characters, locations, etc.).
-
-* **Branching:** To create a new timeline or snapshot, use `nap branch <universe_name> <branch_name>`.
-  * *Example:* `nap branch toystory classic`.
-
-## Critical Guardrails & Context
-* **No Tagging:** Do not attempt to use `nap tag` or append tags to URIs. The underlying Lore VCS does not natively support tags. Branches are the primary and only way to apply a human-readable name to a specific point in the revision history.
-
-## Agent Sandbox Integration
-
-When running inside a sandboxed environment (e.g., Codex) without outbound network access, use MCP tools instead of shelling out to the `nap` CLI directly. The MCP server runs on the host machine, starts only when the agent/MCP client launches it over stdio, and proxies tool calls to the host `nap` CLI.
-
-Direct `nap` CLI examples in this skill are for humans, host-local shells, and non-sandboxed scripts. In an agent sandbox, use the MCP tools for any operation that may need Lore/cloud/network access.
-
-### Setup
-
-The standard NAP installer bundles the native `nap-mcp-server` binary with `nap`. If the MCP command is missing or broken, rerun the standard NAP installer from a host shell.
-
-### Configuration
-
-Add to your agent's MCP configuration (e.g., `~/.codex/config.json`):
-
-```json
-{
-  "mcpServers": {
-    "nap": {
-      "command": "/bin/sh",
-      "args": [
-        "-lc",
-        "NAP_DIR=\"$HOME/.nap\" exec nap-mcp-server"
-      ]
-    }
-  }
-}
-```
-
-### Available MCP Tools
-
-All nap CLI commands are available as MCP tools with `nap_` prefix. For example:
-- `nap resolve` -> `nap_resolve` tool
-- `nap create` -> `nap_create` tool
-- `nap set` -> `nap_set` tool
-
-Prefer MCP tools over shell commands when in a sandbox.
-
-## CLI Reference
+ 
+* **Initialize:** `nap init <universe_name>` — creates a directory with a `.nap/` config folder, a `repository.yaml` manifest, and subdirectories per entity type.
+  * Example: `nap init toystory`
+* **Branch:** `nap branch <universe_name> <branch_name>` — creates a new timeline/snapshot.
+  * Example: `nap branch toystory classic`
+* **Clone/pull:** `nap pull <remote> <universe_name>` — clones or pulls a repository from a remote.
+## Guardrails
+ 
+* **No tagging.** Do not use `nap tag` or append tags to URIs — Lore VCS has no native tag support. Branches are the only mechanism for human-readable names on a revision point.
 
 
 # NAP CLI Reference
@@ -142,7 +104,28 @@ nap history nap://toystory/character/woody
 
 
 
-## Global Options
+
+## MCP Server
+
+The standard NAP installer bundles the native `nap-mcp-server` binary with `nap`. If the MCP command is missing or broken, rerun the standard NAP installer from a host shell. 
+
+The MCP server is not a daemon; agent clients start it on demand over stdio, and it proxies tool calls to the host `nap` CLI.
+
+## Agent Sandbox Integration
+
+When running inside a sandboxed environment (e.g., Codex) without outbound network access, use MCP tools instead of shelling out to the `nap` CLI directly. The MCP server runs on the host machine, starts only when the agent/MCP client launches it over stdio, and proxies tool calls to the host `nap` CLI.
+
+Direct `nap` CLI examples in this skill are for humans, host-local shells, and non-sandboxed scripts. In an agent sandbox, use the MCP tools for any operation that may need Lore/cloud/network access.
+
+## Available MCP Tools
+
+All nap CLI commands are available as MCP tools with `nap_` prefix. For example:
+- `nap resolve` -> `nap_resolve` tool
+- `nap create` -> `nap_create` tool
+- `nap set` -> `nap_set` tool
+
+Prefer MCP tools over shell commands when in a sandbox.
+
 
 
 # Global Options
@@ -156,7 +139,6 @@ These options are available on all `nap` commands.
 
 
 
-## Environment Variables
 
 
 # Environment Variables

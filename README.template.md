@@ -12,7 +12,9 @@
 
 ---
 
-{{include docs/authored/mcp.md}}
+{{include docs/authored/mcp/overview.md}}
+
+{{include docs/authored/mcp/install.md}}
 
 ---
 

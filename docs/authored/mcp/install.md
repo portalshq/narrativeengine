@@ -1,6 +1,20 @@
-## MCP Server
+## MCP Server Configuration
 
-The NAP installer bundles the native `nap-mcp-server` binary alongside `nap`. The MCP server is not a daemon; agent clients start it on demand over stdio, and it proxies tool calls to the host `nap` CLI.
+Add to your agent's MCP configuration (e.g., `~/.codex/config.json`):
+
+```json
+{
+  "mcpServers": {
+    "nap": {
+      "command": "/bin/sh",
+      "args": [
+        "-lc",
+        "NAP_DIR=\"$HOME/.nap\" exec nap-mcp-server"
+      ]
+    }
+  }
+}
+```
 
 ## Connect with Codex
 
