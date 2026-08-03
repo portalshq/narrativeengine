@@ -33,19 +33,35 @@ use crate::vcs::VcsBackend;
 /// Marker filename for entity type directories.
 pub const ENTITY_TYPE_MARKER: &str = ".entity-type";
 
+/// Sentinel returned as the "commit hash" when a write is performed in
+/// unversioned mode (no version-control backend configured).
+pub const UNVERSIONED_COMMIT: &str = "unversioned";
+
 /// A NAP repository.
 pub struct Repository {
     /// Filesystem path to the repository root.
     pub root: PathBuf,
     /// The repository name (derived from directory name).
     pub repository: String,
-    /// The VCS backend (Lore).
-    vcs: Box<dyn VcsBackend>,
+    /// The VCS backend (Lore), if a version-control backend is configured.
+    /// `None` means the repository operates in unversioned (filesystem-only)
+    /// mode: reads/writes work, but VCS-only operations fail informatively.
+    vcs: Option<Box<dyn VcsBackend>>,
 }
 
 impl Repository {
-    /// Open an existing NAP repository at the given path.
+    /// Open an existing NAP repository at the given path with a VCS backend.
     pub fn open(path: &Path, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
+        Self::open_optional(path, Some(vcs))
+    }
+
+    /// Open an existing NAP repository at the given path.
+    ///
+    /// `vcs` may be `None` to operate in unversioned mode.
+    pub fn open_optional(
+        path: &Path,
+        vcs: Option<Box<dyn VcsBackend>>,
+    ) -> Result<Self, NapError> {
         // Check for repository.yaml or repository.yaml to identify valid repository
         if !path.join("repository.yaml").exists() && !path.join("repository.yaml").exists() {
             return Err(NapError::RepositoryNotFound(path.display().to_string()));
@@ -164,8 +180,21 @@ impl Repository {
         ResolveConfig { default_branch }
     }
 
-    /// Initialize a new NAP repository.
+    /// Initialize a new NAP repository with a VCS backend.
     pub fn init(path: &Path, repository: &str, vcs: Box<dyn VcsBackend>) -> Result<Self, NapError> {
+        Self::init_optional(path, repository, Some(vcs))
+    }
+
+    /// Initialize a new NAP repository.
+    ///
+    /// `vcs` may be `None` to initialize in unversioned mode — the repository
+    /// structure is created and an initial filesystem state is written, but no
+    /// version-control workspace or initial commit is created.
+    pub fn init_optional(
+        path: &Path,
+        repository: &str,
+        vcs: Option<Box<dyn VcsBackend>>,
+    ) -> Result<Self, NapError> {
         let repo_root = path.to_path_buf();
         if repo_root.join("repository.yaml").exists() || repo_root.join("repository.yaml").exists()
         {
@@ -202,15 +231,15 @@ impl Repository {
 
         repo_manifest.to_file(&repo_root.join("repository.yaml"))?;
 
-        // Initialize VCS
-        vcs.init(&repo_root)?;
-
-        // Initial commit
-        vcs.commit(
-            &repo_root,
-            &format!("Initialize {repository} repository"),
-            "nap-init",
-        )?;
+        // Initialize VCS + initial commit when a backend is configured
+        if let Some(vcs) = vcs.as_ref() {
+            vcs.init(&repo_root)?;
+            vcs.commit(
+                &repo_root,
+                &format!("Initialize {repository} repository"),
+                "nap-init",
+            )?;
+        }
 
         info!(
             path = %repo_root.display(),
@@ -222,6 +251,32 @@ impl Repository {
             root: repo_root,
             repository: repository.to_string(),
             vcs,
+        })
+    }
+
+    /// Bootstrap a VCS backend for an already-initialized repository that was
+    /// created in unversioned mode.
+    ///
+    /// Initializes the backend at the repository root and creates an initial
+    /// commit capturing the current filesystem state. Used by
+    /// `nap backend configure` when a backend is configured after the fact.
+    ///
+    /// Errors if no backend is available (unversioned mode).
+    pub fn bootstrap_vcs(&self, message: &str, author: &str) -> Result<String, NapError> {
+        let vcs = self.require_vcs("bootstrap the repository into version control")?;
+        vcs.init(&self.root)?;
+        let hash = vcs.commit(&self.root, message, author)?;
+        info!(
+            repository = %self.repository,
+            commit_hash = %hash,
+            "bootstrapped repository into version control"
+        );
+        Ok(hash)
+    }
+
+    fn require_vcs(&self, operation: &str) -> Result<&dyn VcsBackend, NapError> {
+        self.vcs.as_deref().ok_or_else(|| NapError::BackendNotConfigured {
+            operation: operation.to_string(),
         })
     }
 
@@ -264,7 +319,7 @@ impl Repository {
         );
 
         let content = self
-            .vcs
+            .require_vcs("read manifest at ref")?
             .read_file_at_ref(&self.root, &file_path, Some(reference))?;
         Manifest::from_yaml(&content)
     }
@@ -336,9 +391,15 @@ impl Repository {
         // Write the manifest
         self.write_manifest(&manifest)?;
 
-        // Commit via VCS
-        let commit_message = format!("Create {entity_type} '{name}' ({entity_id})");
-        let commit_hash = self.vcs.commit(&self.root, &commit_message, author)?;
+        // Commit via VCS when a backend is configured; otherwise the write
+        // above is the only durable change (unversioned mode).
+        let commit_hash = match self.vcs.as_ref() {
+            Some(vcs) => {
+                let commit_message = format!("Create {entity_type} '{name}' ({entity_id})");
+                vcs.commit(&self.root, &commit_message, author)?
+            }
+            None => UNVERSIONED_COMMIT.to_string(),
+        };
 
         info!(
             manifest_id = %manifest.id,
@@ -369,10 +430,17 @@ impl Repository {
 
         // Compute manifest hash
         let manifest_hash = manifest.content_hash()?.as_str().to_string();
-        let parent = Some(self.vcs.head_hash(&self.root)?);
 
-        // VCS commit — produces the new HEAD hash
-        let vcs_hash = self.vcs.commit(&self.root, message, author)?;
+        // VCS commit — produces the new HEAD hash. When no backend is
+        // configured (unversioned mode), there is no history to record and the
+        // filesystem write above is the only durable change.
+        let (parent, vcs_hash) = match self.vcs.as_ref() {
+            Some(vcs) => (
+                Some(vcs.head_hash(&self.root)?),
+                vcs.commit(&self.root, message, author)?,
+            ),
+            None => (None, UNVERSIONED_COMMIT.to_string()),
+        };
 
         // Create NAP commit metadata with the previous VCS HEAD as parent.
         let nap_commit = Commit::new(parent, author, message, &manifest_hash, changes);
@@ -397,7 +465,8 @@ impl Repository {
     ) -> Result<Vec<crate::vcs::CommitInfo>, NapError> {
         let uri = NapUri::new(&self.repository, entity_type.clone(), entity_id);
         let file_path = uri.manifest_path();
-        self.vcs.log(&self.root, Some(&file_path), limit)
+        self.require_vcs("view history")?
+            .log(&self.root, Some(&file_path), limit)
     }
 
     /// List all entity IDs of a given type in the repository.
@@ -483,29 +552,36 @@ impl Repository {
         std::fs::remove_file(&path)?;
 
         let message = format!("Delete {entity_type} '{entity_id}'");
-        let hash = self.vcs.commit(&self.root, &message, author)?;
+        let hash = match self.vcs.as_ref() {
+            Some(vcs) => vcs.commit(&self.root, &message, author)?,
+            None => UNVERSIONED_COMMIT.to_string(),
+        };
         info!(entity_type = %entity_type, entity_id = %entity_id, "deleted entity");
         Ok(hash)
     }
 
     /// Create a branch in the underlying VCS.
     pub fn create_branch(&self, name: &str) -> Result<(), NapError> {
-        self.vcs.create_branch(&self.root, name)
+        self.require_vcs("create branch")?
+            .create_branch(&self.root, name)
     }
 
     /// Switch to a branch.
     pub fn switch_branch(&self, name: &str) -> Result<(), NapError> {
-        self.vcs.switch_branch(&self.root, name)
+        self.require_vcs("switch branch")?
+            .switch_branch(&self.root, name)
     }
 
     /// List branches.
     pub fn list_branches(&self) -> Result<Vec<String>, NapError> {
-        self.vcs.list_branches(&self.root)
+        self.require_vcs("list branches")?
+            .list_branches(&self.root)
     }
 
     /// Revert a commit by creating a new VCS commit that undoes the specified one.
     pub fn revert_commit(&self, commit_hash: &str, author: &str) -> Result<String, NapError> {
-        let new_hash = self.vcs.revert(&self.root, commit_hash)?;
+        let vcs = self.require_vcs("revert commit")?;
+        let new_hash = vcs.revert(&self.root, commit_hash)?;
 
         info!(
             commit = %commit_hash,
@@ -519,44 +595,48 @@ impl Repository {
 
     /// Get current HEAD hash.
     pub fn head_hash(&self) -> Result<String, NapError> {
-        self.vcs.head_hash(&self.root)
+        self.require_vcs("read HEAD hash")?.head_hash(&self.root)
     }
 
     /// Resolve the most recent commit hash on a given branch.
     pub fn resolve_branch_head(&self, branch: &str) -> Result<String, NapError> {
-        self.vcs.resolve_branch_head(&self.root, branch)
+        self.require_vcs("resolve branch head")?
+            .resolve_branch_head(&self.root, branch)
     }
 
     // ── Remote operations ─────────────────────────────────────────
 
     /// Add a remote to the repository.
     pub fn add_remote(&self, name: &str, url: &str) -> Result<(), NapError> {
-        self.vcs.add_remote(&self.root, name, url)
+        self.require_vcs("add remote")?.add_remote(&self.root, name, url)
     }
 
     /// Remove a remote from the repository.
     pub fn remove_remote(&self, name: &str) -> Result<(), NapError> {
-        self.vcs.remove_remote(&self.root, name)
+        self.require_vcs("remove remote")?
+            .remove_remote(&self.root, name)
     }
 
     /// List remotes as `(name, url)` pairs.
     pub fn list_remotes(&self) -> Result<Vec<(String, String)>, NapError> {
-        self.vcs.list_remotes(&self.root)
+        self.require_vcs("list remotes")?.list_remotes(&self.root)
     }
 
     /// Push the current branch to a remote.
     pub fn push(&self, remote: Option<&str>, branch: Option<&str>) -> Result<(), NapError> {
-        self.vcs.push(&self.root, remote, branch)
+        self.require_vcs("push")?.push(&self.root, remote, branch)
     }
 
     /// Pull the current branch from a remote.
     pub fn pull(&self, remote: Option<&str>, branch: Option<&str>) -> Result<(), NapError> {
-        self.vcs.pull(&self.root, remote, branch)
+        self.require_vcs("pull")?.pull(&self.root, remote, branch)
     }
 
     /// Access the VCS backend (for the resolver to read files at specific refs).
-    pub fn vcs(&self) -> &dyn VcsBackend {
-        self.vcs.as_ref()
+    ///
+    /// Returns `None` when no version-control backend is configured (unversioned mode).
+    pub fn vcs(&self) -> Option<&dyn VcsBackend> {
+        self.vcs.as_deref()
     }
 }
 
@@ -735,6 +815,134 @@ mod tests {
             .history(&EntityType::new("character"), "hero", 10)
             .unwrap();
         assert!(hist.iter().any(|c| c.id == revert_hash));
+    }
+
+    // ── Unversioned mode ────────────────────────────────────────────────
+
+    fn unversioned_repo(tmp: &TempDir) -> Repository {
+        let repo_path = tmp.path().join("testverse");
+        Repository::init_optional(&repo_path, "testverse", None).unwrap()
+    }
+
+    #[test]
+    fn test_unversioned_init_creates_structure() {
+        let tmp = TempDir::new().unwrap();
+        let repo = unversioned_repo(&tmp);
+
+        assert!(repo.root.join("repository.yaml").exists());
+        // No backend was provided, so VCS is absent.
+        assert!(repo.vcs().is_none());
+    }
+
+    #[test]
+    fn test_unversioned_create_returns_sentinel_commit() {
+        let tmp = TempDir::new().unwrap();
+        let repo = unversioned_repo(&tmp);
+
+        let (manifest, hash) = repo
+            .create_entity(
+                &EntityType::new("character"),
+                "hero",
+                "The Hero",
+                "test-author",
+            )
+            .unwrap();
+
+        assert_eq!(manifest.name, "The Hero");
+        assert_eq!(hash, UNVERSIONED_COMMIT);
+        assert!(repo.root.join("character/hero.yaml").exists());
+
+        // The file is durable even without a backend.
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
+        assert_eq!(read_back.name, "The Hero");
+    }
+
+    #[test]
+    fn test_unversioned_commit_manifest_persists() {
+        let tmp = TempDir::new().unwrap();
+        let repo = unversioned_repo(&tmp);
+
+        let (mut manifest, _) = repo
+            .create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
+            .unwrap();
+
+        manifest.set_property("toy_type", serde_yaml::Value::String("elf".to_string()));
+        let changes = vec![Change::set("properties.toy_type", None, "elf".to_string())];
+        let commit = repo
+            .commit_manifest(&mut manifest, "set toy_type to elf", "author", changes)
+            .unwrap();
+
+        // No VCS history exists, so the commit has no parent.
+        assert!(commit.parent.is_none());
+
+        let read_back = repo
+            .read_manifest(&EntityType::new("character"), "hero")
+            .unwrap();
+        assert_eq!(read_back.properties["toy_type"], "elf");
+    }
+
+    #[test]
+    fn test_unversioned_vcs_operations_error() {
+        let tmp = TempDir::new().unwrap();
+        let repo = unversioned_repo(&tmp);
+
+        repo.create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
+            .unwrap();
+
+        // VCS-only operations fail with a BackendNotConfigured error.
+        let err = repo
+            .history(&EntityType::new("character"), "hero", 10)
+            .unwrap_err();
+        assert!(matches!(err, NapError::BackendNotConfigured { .. }));
+
+        let err = repo.list_branches().unwrap_err();
+        assert!(matches!(err, NapError::BackendNotConfigured { .. }));
+
+        let err = repo.head_hash().unwrap_err();
+        assert!(matches!(err, NapError::BackendNotConfigured { .. }));
+
+        let err = repo.push(Some("origin"), None).unwrap_err();
+        assert!(matches!(err, NapError::BackendNotConfigured { .. }));
+
+        // The error message guides the user toward configuration.
+        let msg = err.to_string();
+        assert!(msg.contains("nap backend configure"));
+    }
+
+    #[test]
+    fn test_bootstrap_vcs_attaches_backend_and_commits() {
+        let tmp = TempDir::new().unwrap();
+        let unversioned = unversioned_repo(&tmp);
+
+        // Seed some filesystem state while unversioned.
+        unversioned
+            .create_entity(&EntityType::new("character"), "hero", "The Hero", "author")
+            .unwrap();
+
+        // Attach a backend and bootstrap the current state as the baseline.
+        let backend = MockBackend::new();
+        let bootstrapped = Repository::open_optional(&unversioned.root, Some(Box::new(backend)))
+            .unwrap();
+
+        let hash = bootstrapped
+            .bootstrap_vcs("Initialize existing NAP repository", "nap")
+            .unwrap();
+
+        assert!(!hash.is_empty());
+        assert!(bootstrapped.head_hash().unwrap() == hash);
+    }
+
+    #[test]
+    fn test_bootstrap_vcs_without_backend_errors() {
+        let tmp = TempDir::new().unwrap();
+        let repo = unversioned_repo(&tmp);
+
+        let err = repo.bootstrap_vcs("Initialize existing NAP repository", "nap").unwrap_err();
+        assert!(matches!(err, NapError::BackendNotConfigured { .. }));
+        let msg = err.to_string();
+        assert!(msg.contains("nap backend configure"));
     }
 }
 

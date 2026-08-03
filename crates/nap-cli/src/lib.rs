@@ -65,6 +65,39 @@ pub enum ChooseCmd {
     },
 }
 
+/// Subcommands for `nap backend`.
+#[derive(Subcommand, Debug)]
+pub enum BackendCmd {
+    /// Configure the version-control backend.
+    ///
+    /// After configuration, existing unversioned repositories in this NAP home
+    /// are offered an initial commit so their current filesystem state becomes
+    /// the repository baseline (unless --no-initial-commit is given).
+    Configure {
+        /// Backend type: local or remote.
+        backend: String,
+
+        /// Remote endpoint URL (required for remote backend).
+        #[arg(long)]
+        endpoint: Option<String>,
+
+        /// Workspace ID (for remote backend).
+        #[arg(long)]
+        workspace_id: Option<String>,
+
+        /// Bootstrap existing repositories with an initial commit without prompting.
+        #[arg(long)]
+        initial_commit: bool,
+
+        /// Skip bootstrapping existing repositories with an initial commit.
+        #[arg(long)]
+        no_initial_commit: bool,
+    },
+
+    /// Show the current version-control backend configuration.
+    Status,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Install required dependencies.
@@ -113,6 +146,13 @@ pub enum Commands {
         /// Subcommand for choose.
         #[command(subcommand)]
         cmd: ChooseCmd,
+    },
+
+    /// Configure or inspect the version-control backend.
+    Backend {
+        /// Subcommand for backend.
+        #[command(subcommand)]
+        cmd: BackendCmd,
     },
 
     /// Run diagnostics and repair.

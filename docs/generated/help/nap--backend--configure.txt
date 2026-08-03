@@ -1,0 +1,33 @@
+Configure the version-control backend.
+
+After configuration, existing unversioned repositories in this NAP home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).
+
+Usage: nap backend configure [OPTIONS] <BACKEND>
+
+Arguments:
+  <BACKEND>
+          Backend type: local or remote
+
+Options:
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+          
+          [env: NAP_DIR=]
+
+      --endpoint <ENDPOINT>
+          Remote endpoint URL (required for remote backend)
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --workspace-id <WORKSPACE_ID>
+          Workspace ID (for remote backend)
+
+      --initial-commit
+          Bootstrap existing repositories with an initial commit without prompting
+
+      --no-initial-commit
+          Skip bootstrapping existing repositories with an initial commit
+
+  -h, --help
+          Print help (see a summary with '-h')

@@ -2,7 +2,7 @@ Initialize a repository repository and/or configure the backend provider.
 
 When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
 
-nap init starwars                     # create repository nap init starwars --provider local    # create repository + configure provider nap init --provider local             # configure provider only
+nap init toystory                     # create repository nap init toystory --provider local    # create repository + configure provider nap init --provider local             # configure provider only
 
 Usage: nap init [OPTIONS] [REPOSITORY]
 

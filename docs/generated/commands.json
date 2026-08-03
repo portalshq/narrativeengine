@@ -84,6 +84,123 @@
       "hidden": false
     },
     {
+      "name": "backend",
+      "full_path": "backend",
+      "about": "Configure or inspect the version-control backend",
+      "long_about": null,
+      "usage": "Usage: backend <COMMAND>",
+      "aliases": [],
+      "arguments": [],
+      "options": [],
+      "flags": [
+        {
+          "name": "help",
+          "about": "Print help",
+          "required": false,
+          "default_value": null,
+          "short": "h",
+          "long": "help",
+          "takes_value": false
+        }
+      ],
+      "subcommands": [
+        {
+          "name": "configure",
+          "full_path": "backend configure",
+          "about": "Configure the version-control backend",
+          "long_about": "Configure the version-control backend.\n\nAfter configuration, existing unversioned repositories in this NAP home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).",
+          "usage": "Usage: configure [OPTIONS] <BACKEND>",
+          "aliases": [],
+          "arguments": [
+            {
+              "name": "backend",
+              "about": "Backend type: local or remote",
+              "required": true,
+              "default_value": null,
+              "short": null,
+              "long": null,
+              "takes_value": true
+            }
+          ],
+          "options": [
+            {
+              "name": "endpoint",
+              "about": "Remote endpoint URL (required for remote backend)",
+              "required": false,
+              "default_value": null,
+              "short": null,
+              "long": "endpoint",
+              "takes_value": true
+            },
+            {
+              "name": "workspace_id",
+              "about": "Workspace ID (for remote backend)",
+              "required": false,
+              "default_value": null,
+              "short": null,
+              "long": "workspace-id",
+              "takes_value": true
+            }
+          ],
+          "flags": [
+            {
+              "name": "initial_commit",
+              "about": "Bootstrap existing repositories with an initial commit without prompting",
+              "required": false,
+              "default_value": "false",
+              "short": null,
+              "long": "initial-commit",
+              "takes_value": false
+            },
+            {
+              "name": "no_initial_commit",
+              "about": "Skip bootstrapping existing repositories with an initial commit",
+              "required": false,
+              "default_value": "false",
+              "short": null,
+              "long": "no-initial-commit",
+              "takes_value": false
+            },
+            {
+              "name": "help",
+              "about": "Print help (see more with '--help')",
+              "required": false,
+              "default_value": null,
+              "short": "h",
+              "long": "help",
+              "takes_value": false
+            }
+          ],
+          "subcommands": [],
+          "hidden": false
+        },
+        {
+          "name": "status",
+          "full_path": "backend status",
+          "about": "Show the current version-control backend configuration",
+          "long_about": null,
+          "usage": "Usage: status",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "flags": [
+            {
+              "name": "help",
+              "about": "Print help",
+              "required": false,
+              "default_value": null,
+              "short": "h",
+              "long": "help",
+              "takes_value": false
+            }
+          ],
+          "subcommands": [],
+          "hidden": false
+        }
+      ],
+      "hidden": false
+    },
+    {
       "name": "branch",
       "full_path": "branch",
       "about": "Create or list branches",

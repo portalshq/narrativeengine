@@ -6,6 +6,7 @@ Commands:
   install       Install required dependencies
   init          Initialize a repository repository and/or configure the backend provider
   choose        Choose backend provider
+  backend       Configure or inspect the version-control backend
   doctor        Run diagnostics and repair
   publish       Publish changes to remote
   status        Show system status

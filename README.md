@@ -395,6 +395,7 @@ The `nap` command-line interface (v0.5.5) provides tools for creating, resolving
 | Command | Description |
 |---|---|
 | [\`nap add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
+| [\`nap backend\`](docs/generated/commands/backend.md) | Configure or inspect the version-control backend |
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
 | [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
@@ -537,6 +538,7 @@ Complete reference for all `nap` CLI commands.
 | Command | Description |
 |---|---|
 | [\`nap add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
+| [\`nap backend\`](docs/generated/commands/backend.md) | Configure or inspect the version-control backend |
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
 | [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |

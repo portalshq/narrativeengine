@@ -1,12 +1,12 @@
 Resolve a NAP URI to its manifest or a subtree.
 
-Fragment queries are supported via the URI: nap resolve nap://starwars/character/lukeskywalker#references.appears_in
+Fragment queries are supported via the URI: nap resolve nap://toystory/character/woody#references.appears_in
 
 Usage: nap resolve [OPTIONS] <URI>
 
 Arguments:
   <URI>
-          NAP URI. e.g., "nap://starwars/character/lukeskywalker"
+          NAP URI. e.g., "nap://toystory/character/woody"
 
 Options:
       --branch <BRANCH>

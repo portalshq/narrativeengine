@@ -4,7 +4,7 @@ Usage: nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE
 
 Arguments:
   <ENTITY_TYPE>  Entity type (any non-empty string, e.g. character, location, custom-type)
-  <ENTITY_ID>    Entity ID (slug). e.g., "lukeskywalker"
+  <ENTITY_ID>    Entity ID (slug). e.g., "woody"
 
 Options:
   -d, --base-dir <BASE_DIR>      Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]

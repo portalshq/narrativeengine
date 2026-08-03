@@ -4,6 +4,12 @@ digraph nap_commands {
     
     "add" [label="nap add"];
     "nap" -> "add";
+    "backend" [label="nap backend"];
+    "nap" -> "backend";
+    "backend_configure" [label="nap backend configure"];
+    "backend" -> "backend_configure";
+    "backend_status" [label="nap backend status"];
+    "backend" -> "backend_status";
     "branch" [label="nap branch"];
     "nap" -> "branch";
     "choose" [label="nap choose"];

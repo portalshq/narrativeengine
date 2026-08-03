@@ -53,12 +53,37 @@ use nap_core::{
     resolver::{ResolveOptions, ResolveResult, Resolver},
     schema,
     types::EntityType,
+    vcs::{VcsBackend},
     vcs_lore::LoreBackend,
 };
 
 /// Application state shared across handlers.
 struct AppState {
     base_path: PathBuf,
+}
+
+/// Build the version-control backend for a repository, honoring unversioned
+/// mode: when no backend is configured, the repository is opened without VCS
+/// and filesystem-only operations work, while VCS-only operations fail with
+/// an informative [`nap_core::NapError::BackendNotConfigured`] error.
+fn repo_vcs(base_path: &std::path::Path) -> Option<Box<dyn VcsBackend>> {
+    if nap_core::provider::version_control_configured(base_path) {
+        Some(Box::new(LoreBackend::from_env()))
+    } else {
+        None
+    }
+}
+
+/// Open a repository in optional-VCS mode.
+fn open_repo(state: &Arc<AppState>, repository: &str) -> Result<Repository, nap_core::NapError> {
+    let repo_path = state.base_path.join(repository);
+    Repository::open_optional(&repo_path, repo_vcs(&state.base_path))
+}
+
+/// Initialize a repository in optional-VCS mode.
+fn init_repo(state: &Arc<AppState>, repository: &str) -> Result<Repository, nap_core::NapError> {
+    let repo_path = state.base_path.join(repository);
+    Repository::init_optional(&repo_path, repository, repo_vcs(&state.base_path))
 }
 
 /// Query parameters for resolution.
@@ -247,8 +272,7 @@ async fn handle_init(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::init(&repo_path, &repository, Box::new(LoreBackend::from_env()))
+    let repo = init_repo(&state, &repository)
         .map_err(|e| {
             let (status, code) = match &e {
                 nap_core::NapError::RepositoryAlreadyExists(_) => {
@@ -281,8 +305,7 @@ async fn handle_create(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -321,8 +344,7 @@ async fn handle_delete(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -357,8 +379,7 @@ async fn handle_switch_branch(
     Path(repository): Path<String>,
     Json(body): Json<SwitchRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -390,8 +411,7 @@ async fn handle_head_hash(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -423,8 +443,7 @@ async fn handle_list_branches(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -457,8 +476,7 @@ async fn handle_create_branch(
     Path(repository): Path<String>,
     Json(body): Json<BranchRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -490,8 +508,7 @@ async fn handle_list_remotes(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -529,8 +546,7 @@ async fn handle_add_remote(
     Path(repository): Path<String>,
     Json(body): Json<RemoteAddRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -563,8 +579,7 @@ async fn handle_remove_remote(
     State(state): State<Arc<AppState>>,
     Path((repository, name)): Path<(String, String)>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -597,8 +612,7 @@ async fn handle_pull(
     Path(repository): Path<String>,
     Json(body): Json<PushPullRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -632,8 +646,7 @@ async fn handle_push(
     Path(repository): Path<String>,
     Json(body): Json<PushPullRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -693,8 +706,7 @@ async fn handle_validate(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -806,8 +818,7 @@ async fn handle_commit(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -870,8 +881,7 @@ async fn handle_revert(
     Path(repository): Path<String>,
     Json(body): Json<RevertRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -907,8 +917,7 @@ async fn handle_sync(
     State(state): State<Arc<AppState>>,
     Path(repository): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -921,7 +930,9 @@ async fn handle_sync(
     // Use the current branch and let the VCS figure out the remote from tracking config.
 
     // Default to pushing "origin" if no tracking branch is set.
-    let branch = repo.vcs().current_branch(&repo.root).ok();
+    let branch = repo
+        .vcs()
+        .and_then(|vcs| vcs.current_branch(&repo.root).ok());
     let branch_str = branch.as_deref().unwrap_or("main");
 
     repo.push(Some("origin"), Some(branch_str)).map_err(|e| {
@@ -950,8 +961,7 @@ async fn handle_history(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let entity_type = EntityType::new(&entity_type_str);
 
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {
@@ -997,8 +1007,7 @@ async fn handle_list_entities(
     Path(repository): Path<String>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
-    let repo_path = state.base_path.join(&repository);
-    let repo = Repository::open(&repo_path, Box::new(LoreBackend::from_env())).map_err(|e| {
+    let repo = open_repo(&state, &repository).map_err(|e| {
         (
             StatusCode::NOT_FOUND,
             Json(ApiError {

@@ -28,6 +28,48 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
+  - name: "backend"
+    full_path: "backend"
+    about: "Configure or inspect the version-control backend"
+    usage: "Usage: backend <COMMAND>"
+    hidden: false
+    flags:
+      - name: "help"
+        about: "Print help"
+    subcommands:
+      - name: "configure"
+        full_path: "backend configure"
+        about: "Configure the version-control backend"
+        long_about: |
+          Configure the version-control backend.
+          
+          After configuration, existing unversioned repositories in this NAP home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).
+        usage: "Usage: configure [OPTIONS] <BACKEND>"
+        hidden: false
+        arguments:
+          - name: "backend"
+            about: "Backend type: local or remote"
+            required: true
+        options:
+          - name: "endpoint"
+            about: "Remote endpoint URL (required for remote backend)"
+          - name: "workspace_id"
+            about: "Workspace ID (for remote backend)"
+        flags:
+          - name: "initial_commit"
+            about: "Bootstrap existing repositories with an initial commit without prompting"
+          - name: "no_initial_commit"
+            about: "Skip bootstrapping existing repositories with an initial commit"
+          - name: "help"
+            about: "Print help (see more with '--help')"
+      - name: "status"
+        full_path: "backend status"
+        about: "Show the current version-control backend configuration"
+        usage: "Usage: status"
+        hidden: false
+        flags:
+          - name: "help"
+            about: "Print help"
   - name: "branch"
     full_path: "branch"
     about: "Create or list branches"

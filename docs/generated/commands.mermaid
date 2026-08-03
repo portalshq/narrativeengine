@@ -1,5 +1,8 @@
 graph LR
     nap["nap"] --> nap_add["nap add"]
+    nap["nap"] --> nap_backend["nap backend"]
+    nap_backend["nap_backend"] --> nap_backend_configure["nap backend configure"]
+    nap_backend["nap_backend"] --> nap_backend_status["nap backend status"]
     nap["nap"] --> nap_branch["nap branch"]
     nap["nap"] --> nap_choose["nap choose"]
     nap_choose["nap_choose"] --> nap_choose_backend["nap choose backend"]

@@ -54,6 +54,27 @@ pub fn is_debug_enabled() -> bool {
     }
 }
 
+/// Whether a version-control backend is configured for a NAP home directory.
+///
+/// A backend is considered configured when `provider.toml` exists and parses
+/// as a known, valid provider type. Absent configuration means NAP operates
+/// in unversioned (filesystem-only) mode. A malformed provider.toml is treated
+/// as *not configured* so callers degrade gracefully instead of blocking all
+/// filesystem operations — configuration errors surface separately via
+/// [`ProviderManager::load_configured_provider`].
+pub fn version_control_configured(nap_home: &Path) -> bool {
+    let config_path = nap_home.join("provider.toml");
+    let content = match std::fs::read_to_string(&config_path) {
+        Ok(content) => content,
+        Err(_) => return false,
+    };
+    let config: ProviderConfig = match toml::from_str(&content) {
+        Ok(config) => config,
+        Err(_) => return false,
+    };
+    config.validate().is_ok()
+}
+
 impl ProviderType {
     /// Parse provider type from string
     pub fn parse_from_str(s: &str) -> Result<Self> {

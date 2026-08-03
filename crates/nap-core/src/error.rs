@@ -57,6 +57,20 @@ pub enum NapError {
     #[error("ref not found: '{0}'")]
     RefNotFound(String),
 
+    // ── Version-control backend errors ──────────────────────────────────
+    #[error(
+        "cannot {operation}: no version-control backend is configured. \
+         Filesystem state is preserved, but history/sync is unavailable. \
+         Configure one with 'nap backend configure'."
+    )]
+    BackendNotConfigured { operation: String },
+
+    #[error("version-control backend is unavailable: {message}")]
+    BackendUnavailable { message: String },
+
+    #[error("version-control backend operation failed ({operation}): {message}")]
+    BackendOperationFailed { operation: String, message: String },
+
     // ── Content Addressing Errors ───────────────────────────────────────
     #[error("content hash mismatch: expected {expected}, got {actual}")]
     ContentHashMismatch { expected: String, actual: String },
@@ -84,6 +98,9 @@ pub enum NapError {
     // ── Resolution Errors ───────────────────────────────────────────────
     #[error("no branch or commit specified and no default_branch configured. ")]
     NoDefaultBranch,
+
+    #[error("unable to resolve resource '{address}': {message}")]
+    ResolutionFailed { address: String, message: String },
 
     // ── Permission ──────────────────────────────────────────────────────
     #[error("permission denied: {0}")]

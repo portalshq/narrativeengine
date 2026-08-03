@@ -24,7 +24,7 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use nap_cli::{ChooseCmd, Cli, Commands, RemoteCmd};
+use nap_cli::{BackendCmd, ChooseCmd, Cli, Commands, RemoteCmd};
 use nap_core::{
     commit::Change,
     error::NapError,
@@ -157,6 +157,7 @@ fn main() -> Result<()> {
         ),
         Commands::Install { target } => cmd_install(&base_dir, &target),
         Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
+        Commands::Backend { cmd } => cmd_backend(&base_dir, cmd),
         Commands::Doctor { repair } => cmd_doctor(&base_dir, repair),
         Commands::Publish { repository } => cmd_publish(&base_dir, &repository),
         Commands::Status => cmd_status(&base_dir),
@@ -259,7 +260,7 @@ fn main() -> Result<()> {
         if is_piped {
             let error_json = serde_json::json!({
                 "level": "error",
-                "error": err.to_string(),
+                "error": format!("{err:#}"),
                 "code": "CLI_ERROR",
             });
             eprintln!("{}", serde_json::to_string(&error_json).unwrap());
@@ -267,9 +268,7 @@ fn main() -> Result<()> {
             if cli.verbose {
                 eprintln!("{:?}", err);
             } else {
-                let err_msg = format!("{}", err);
-                let top_err = err_msg.split("\nCaused by:").next().unwrap_or(&err_msg);
-                eprintln!("Error: {}", top_err);
+                eprintln!("Error: {err:#}");
             }
         }
         std::process::exit(1);
@@ -308,15 +307,40 @@ fn get_lore_backend(_base_dir: &Path) -> LoreBackend {
     LoreBackend::from_env()
 }
 
+/// Open a repository, honoring the optional version-control backend.
+///
+/// When a version-control backend is configured (valid `provider.toml`), the
+/// repository is opened in versioned mode and VCS operations are available.
+/// Otherwise the repository is opened in unversioned mode: filesystem
+/// reads/writes work, but VCS-only operations fail with an informative
+/// [`NapError::BackendNotConfigured`] error.
 fn open_repo(base_dir: &Path, repository: &str) -> Result<Repository> {
     let repo_path = base_dir.join(repository);
-    let lore_backend = get_lore_backend(base_dir);
-    Repository::open(&repo_path, Box::new(lore_backend)).map_err(|e| match e {
+    let vcs: Option<Box<dyn nap_core::vcs::VcsBackend>> =
+        if nap_core::provider::version_control_configured(base_dir) {
+            Some(Box::new(get_lore_backend(base_dir)))
+        } else {
+            None
+        };
+    Repository::open_optional(&repo_path, vcs).map_err(|e| match e {
         NapError::RepositoryNotFound(_) => {
             anyhow::anyhow!("repository not found: '{}'", repository)
         }
         _ => anyhow::anyhow!(e),
     })
+}
+
+/// Return a configured VCS backend for CLI-initiated VCS operations, or a
+/// clear error when none is configured.
+fn require_backend(base_dir: &Path, operation: &str) -> Result<Box<dyn nap_core::vcs::VcsBackend>> {
+    if nap_core::provider::version_control_configured(base_dir) {
+        Ok(Box::new(get_lore_backend(base_dir)))
+    } else {
+        Err(NapError::BackendNotConfigured {
+            operation: operation.to_string(),
+        }
+        .into())
+    }
 }
 
 fn cmd_init(
@@ -443,8 +467,13 @@ fn cmd_init_universe(base_dir: &Path, repository: &str, remote: Option<&str>) ->
 
     // 2. Perform initialization in temporary path
     emit("Creating repository repository...");
-    let lore_backend = LoreBackend::from_env();
-    let result = Repository::init(&tmp_path, repository, Box::new(lore_backend));
+    let vcs: Option<Box<dyn nap_core::vcs::VcsBackend>> =
+        if nap_core::provider::version_control_configured(base_dir) {
+            Some(Box::new(LoreBackend::from_env()))
+        } else {
+            None
+        };
+    let result = Repository::init_optional(&tmp_path, repository, vcs);
 
     match result {
         Ok(repo) => {
@@ -557,6 +586,166 @@ fn cmd_choose(base_dir: &Path, cmd: ChooseCmd) -> Result<()> {
     }
     Ok(())
 }
+
+fn cmd_backend(base_dir: &Path, cmd: BackendCmd) -> Result<()> {
+    match cmd {
+        BackendCmd::Configure {
+            backend,
+            endpoint,
+            workspace_id,
+            initial_commit,
+            no_initial_commit,
+        } => {
+            if initial_commit && no_initial_commit {
+                anyhow::bail!("--initial-commit and --no-initial-commit are mutually exclusive");
+            }
+
+            let provider_type = match backend.as_str() {
+                "local" => ProviderType::Local,
+                "remote" => ProviderType::Remote,
+                other => {
+                    anyhow::bail!(
+                        "Unknown backend '{}'. Available: 'local', 'remote'",
+                        other
+                    )
+                }
+            };
+
+            let factory = ProviderFactory::new(base_dir);
+            let provider = match provider_type {
+                ProviderType::Local => factory.create_provider(ProviderType::Local)?,
+                ProviderType::Remote => {
+                    let url = endpoint
+                        .as_ref()
+                        .context("remote backend requires --endpoint <url>")?;
+                    let ws_id = workspace_id
+                        .clone()
+                        .unwrap_or_else(|| "default".to_string());
+                    factory.create_remote_provider(url, &ws_id)?
+                }
+                ProviderType::PortalsCloud => {
+                    anyhow::bail!("'portals-cloud' is not supported as a `nap backend` backend")
+                }
+            };
+
+            let mut provider_manager = ProviderManager::new(base_dir);
+            provider_manager.set_active_provider(provider.clone());
+            provider_manager
+                .save_provider_config(provider.as_ref())
+                .context("failed to save provider configuration")?;
+
+            let rt = get_tokio_runtime();
+            rt.block_on(provider.initialize())
+                .context("failed to initialize provider")?;
+
+            emit(format!("✓ Configured {} backend.", provider_type.as_str()));
+            if let Some(url) = &endpoint {
+                emit(format!("  Endpoint: {}", url));
+            }
+            if let Some(ws_id) = &workspace_id {
+                emit(format!("  Workspace ID: {}", ws_id));
+            }
+
+            if no_initial_commit {
+                emit("  Skipped initial commit for existing repositories (--no-initial-commit).");
+            } else {
+                bootstrap_repositories(base_dir, initial_commit)?;
+            }
+        }
+        BackendCmd::Status => {
+            if nap_core::provider::version_control_configured(base_dir) {
+                let mut provider_manager = ProviderManager::new(base_dir);
+                if let Some(provider) = provider_manager.load_configured_provider()? {
+                    emit(format!(
+                        "✓ Version-control backend configured: {}",
+                        provider.name()
+                    ));
+                    emit(format!("  Type: {}", provider.provider_type().as_str()));
+                    if let Ok(url) = provider.lore_url_base() {
+                        emit(format!("  Lore URL: {}", url));
+                    }
+                    emit(format!("  Workspace ID: {}", provider.workspace_id()));
+                } else {
+                    emit("Version-control backend configured (no provider details).");
+                }
+            } else {
+                emit("No version-control backend configured. Run 'nap backend configure local'.");
+                std::process::exit(1);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Offer to create an initial commit for repositories that exist on the
+/// filesystem but were created before a version-control backend was configured.
+fn bootstrap_repositories(base_dir: &Path, assume_yes: bool) -> Result<()> {
+    if !nap_core::provider::version_control_configured(base_dir) {
+        return Ok(());
+    }
+
+    let mut candidates = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(base_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() && path.join("repository.yaml").exists() {
+                candidates.push(path);
+            }
+        }
+    }
+    candidates.sort();
+
+    if candidates.is_empty() {
+        emit("  No existing repositories to bootstrap.");
+        return Ok(());
+    }
+
+    for repo_dir in candidates {
+        let name = repo_dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("(unnamed)");
+
+        let vcs: Box<dyn nap_core::vcs::VcsBackend> = Box::new(get_lore_backend(base_dir));
+        let repo = match Repository::open_optional(&repo_dir, Some(vcs)) {
+            Ok(repo) => repo,
+            Err(e) => {
+                emit(format!("  ⚠ Skipping '{}': {}", name, e));
+                continue;
+            }
+        };
+
+        // Skip repos that already have a VCS head.
+        if repo.head_hash().is_ok() {
+            emit(format!("  ✓ '{}' already versioned.", name));
+            continue;
+        }
+
+        let proceed = if assume_yes {
+            true
+        } else {
+            let mut input = String::new();
+            print!("  Bootstrap '{}' with an initial commit? [Y/n] ", name);
+            io::stdout().flush().ok();
+            io::stdin().read_line(&mut input)?;
+            let trimmed = input.trim().to_ascii_lowercase();
+            !(trimmed == "n" || trimmed == "no")
+        };
+
+        if !proceed {
+            emit(format!("  Skipped '{}'.", name));
+            continue;
+        }
+
+        match repo.bootstrap_vcs(INITIAL_COMMIT_MESSAGE, "nap") {
+            Ok(hash) => emit(format!("  ✓ Bootstrapped '{}' at {}.", name, hash)),
+            Err(e) => emit(format!("  ⚠ Failed to bootstrap '{}': {}", name, e)),
+        }
+    }
+    Ok(())
+}
+
+const INITIAL_COMMIT_MESSAGE: &str = "Initialize existing NAP repository";
 
 fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
     let doctor = NapDoctor::new(base_dir);
@@ -769,7 +958,10 @@ fn cmd_create(
         .context("failed to create entity")?;
     emit(format!("✓ Created {entity_type} '{name}'."));
     emit(format!("  URI:    {}", manifest.id));
-    emit(format!("  Commit: {}", &hash[..12]));
+    emit(format!(
+        "  Commit: {}",
+        &hash[..hash.len().min(12)]
+    ));
     Ok(())
 }
 
@@ -837,8 +1029,8 @@ fn cmd_query(base_dir: &Path, uri_str: &str, path: &str, format: &str) -> Result
 
 fn cmd_commit(base_dir: &Path, repository: &str, message: &str, author: &str) -> Result<()> {
     let repo_path = base_dir.join(repository);
-    let vcs = get_lore_backend(base_dir);
-    let hash = nap_core::vcs::VcsBackend::commit(&vcs, &repo_path, message, author)
+    let vcs = require_backend(base_dir, "commit changes")?;
+    let hash = nap_core::vcs::VcsBackend::commit(&*vcs, &repo_path, message, author)
         .context("failed to commit")?;
     emit(format!("✓ Committed: {} ({})", message, &hash[..12]));
     Ok(())
@@ -970,8 +1162,7 @@ fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<(
 fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
     if looks_like_url(url_or_name) {
         // ── Clone from URL ──────────────────────────────────────
-        // ... (existing clone logic)
-        // [I will just copy the existing code here to avoid broken edit]
+        require_backend(base_dir, "clone repository")?;
 
         let tmp_suffix = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -1026,6 +1217,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
             emit(format!("✓ Pulled latest changes for '{url_or_name}'"));
         } else {
             // Doesn't exist locally, construct URL and clone
+            require_backend(base_dir, "clone repository")?;
             let backend_config = LoreBackend::from_env();
             let remote_url = format!("{}/{}", backend_config.remote_url(), url_or_name);
 
@@ -1178,17 +1370,20 @@ fn cmd_add_repr(
         asset_path.display()
     ))?;
 
-    // Stage the asset file in the repository
+    // Stage the asset file in the repository (versioned mode only; the copy
+    // above is the durable change in unversioned mode).
     let asset_path_str = asset_path.display().to_string();
-    let args = vec![
-        "file",
-        "stage",
-        "--scan",
-        &asset_path_str,
-        "--non-interactive",
-    ];
-    nap_core::vcs_lore::LoreProcessRunner::run(&args, Some(&repo.root))
-        .context("failed to stage asset file in repository")?;
+    if nap_core::provider::version_control_configured(base_dir) {
+        let args = vec![
+            "file",
+            "stage",
+            "--scan",
+            &asset_path_str,
+            "--non-interactive",
+        ];
+        nap_core::vcs_lore::LoreProcessRunner::run(&args, Some(&repo.root))
+            .context("failed to stage asset file in repository")?;
+    }
 
     // Store content hash directly (Lore's immutable store is content-addressed)
     let repr = Representation {

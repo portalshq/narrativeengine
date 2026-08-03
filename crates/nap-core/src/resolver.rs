@@ -149,6 +149,10 @@ pub struct Resolver {
     base_path: PathBuf,
     /// VCS backend factory (creates backend per-repo).
     vcs_factory: fn() -> Box<dyn VcsBackend>,
+    /// Whether a version-control backend is configured. When `false`,
+    /// repositories are opened in unversioned mode and resolution reads the
+    /// current filesystem state (no branch/commit selectors available).
+    use_vcs: bool,
     /// Resolution configuration (default branch, etc.).
     config: ResolveConfig,
 }
@@ -156,12 +160,15 @@ pub struct Resolver {
 impl Resolver {
     /// Create a resolver that looks for repository repos under `base_path`.
     ///
-    /// WARNING: Uses [`LoreBackend::from_env()`] by default. For testing,
-    /// use [`Resolver::with_vcs_factory()`] with a mock backend.
+    /// Uses [`LoreBackend::from_env()`] by default **when a version-control
+    /// backend is configured** for `base_path` (i.e. a valid `provider.toml`
+    /// exists). Otherwise repositories are opened in unversioned mode. For
+    /// testing, use [`Resolver::with_vcs_factory()`] with a mock backend.
     ///
     /// Uses [`ResolveConfig::default()`] — meaning `default_branch` is
-    /// `None` and any resolve that omits both `branch` and `commit` will
-    /// fail with [`NapError::NoDefaultBranch`].
+    /// `None`. In versioned mode any resolve that omits both `branch` and
+    /// `commit` will fail with [`NapError::NoDefaultBranch`]; in unversioned
+    /// mode such a resolve reads the current filesystem state.
     ///
     /// # Example layout
     /// ```text
@@ -174,11 +181,14 @@ impl Resolver {
         Self {
             base_path: base_path.to_path_buf(),
             vcs_factory: || Box::new(LoreBackend::from_env()),
+            use_vcs: crate::provider::version_control_configured(base_path),
             config: ResolveConfig::default(),
         }
     }
 
     /// Create a resolver with a custom VCS backend factory and config.
+    ///
+    /// Repositories are always opened in versioned mode.
     pub fn with_vcs_factory(
         base_path: &Path,
         factory: fn() -> Box<dyn VcsBackend>,
@@ -187,6 +197,7 @@ impl Resolver {
         Self {
             base_path: base_path.to_path_buf(),
             vcs_factory: factory,
+            use_vcs: true,
             config,
         }
     }
@@ -194,7 +205,12 @@ impl Resolver {
     /// Open the repository for a given repository and read its resolve config.
     fn open_repo(&self, repository: &str) -> Result<(Repository, ResolveConfig), NapError> {
         let repo_path = self.base_path.join(repository);
-        let repo = Repository::open(&repo_path, (self.vcs_factory)())?;
+        let vcs = if self.use_vcs {
+            Some((self.vcs_factory)())
+        } else {
+            None
+        };
+        let repo = Repository::open_optional(&repo_path, vcs)?;
         let repo_config = repo.read_resolve_config();
         Ok((repo, repo_config))
     }
@@ -282,38 +298,70 @@ impl Resolver {
         // Rule 1: commit provided → use directly (bypass branch logic)
         // Rule 2: branch provided, no commit → resolve branch head
         // Rule 3: both null → use default_branch from repo config (fallback to global)
-        // Rule 4: both null and no default_branch → hard error
+        // Rule 4: both null and no default_branch → hard error (versioned only)
+        // In unversioned mode (no backend), resolving without a revision reads
+        // the current filesystem state; branch/commit selectors are
+        // unsatisfiable and produce a ResolutionFailed error.
         // ──────────────────────────────────────────────────────────────
 
-        let revision = match (options.commit.as_ref(), options.branch.as_ref()) {
+        let unsatisfiable = |what: &str| {
+            NapError::ResolutionFailed {
+                address: uri.to_string(),
+                message: format!(
+                    "cannot resolve {what}: no version-control backend is configured. \
+                     Configure one with 'nap backend configure' to use branch/commit selectors."
+                ),
+            }
+        };
+
+        let revision: Option<String> = match (options.commit.as_ref(), options.branch.as_ref()) {
             (Some(commit), _) => {
                 debug!(%commit, "resolve: rule 1 — commit provided");
-                commit.clone()
+                if repo.vcs().is_none() {
+                    return Err(unsatisfiable(&format!("at commit '{commit}'")));
+                }
+                Some(commit.clone())
             }
             (None, Some(branch)) => {
                 debug!(%branch, "resolve: rule 2 — branch provided");
-                repo.resolve_branch_head(branch)?
+                let vcs = repo
+                    .vcs()
+                    .ok_or_else(|| unsatisfiable(&format!("at branch '{branch}'")))?;
+                Some(vcs.resolve_branch_head(&repo.root, branch)?)
             }
-            (None, None) => match &repo_config.default_branch {
-                Some(default_branch) => {
-                    debug!(%default_branch, "resolve: rule 3 — using repo default_branch");
-                    repo.resolve_branch_head(default_branch)?
-                }
-                None => match &self.config.default_branch {
-                    Some(global_default_branch) => {
-                        debug!(%global_default_branch, "resolve: rule 3 — using global default_branch");
-                        repo.resolve_branch_head(global_default_branch)?
+            (None, None) => {
+                let default_branch = repo_config
+                    .default_branch
+                    .as_ref()
+                    .or(self.config.default_branch.as_ref());
+                match default_branch {
+                    Some(default_branch) => {
+                        debug!(%default_branch, "resolve: rule 3 — using default_branch");
+                        let vcs = repo.vcs().ok_or_else(|| {
+                            unsatisfiable(&format!(
+                                "at default branch '{default_branch}'"
+                            ))
+                        })?;
+                        Some(vcs.resolve_branch_head(&repo.root, default_branch)?)
                     }
-                    None => {
+                    None if repo.vcs().is_some() => {
                         debug!("resolve: rule 4 — no branch, no commit, no default_branch");
                         return Err(NapError::NoDefaultBranch);
                     }
-                },
-            },
+                    None => {
+                        debug!("resolve: unversioned — reading current filesystem state");
+                        None
+                    }
+                }
+            }
         };
 
-        // Read the manifest at the resolved revision
-        let manifest = repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, &revision)?;
+        // Read the manifest at the resolved revision, or the current filesystem
+        // state when resolving without a revision (unversioned mode).
+        let manifest = match &revision {
+            Some(revision) => repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, revision)?,
+            None => repo.read_manifest(&uri.entity_type, &uri.entity_id)?,
+        };
 
         let wants_provenance =
             options.provenance.unwrap_or(false) || options.include_blobs.unwrap_or(false);
@@ -324,11 +372,18 @@ impl Resolver {
                 )));
             }
 
+            // Provenance is VCS-backed; it cannot be produced in unversioned mode.
+            let revision = revision.as_deref().ok_or_else(|| {
+                NapError::BackendNotConfigured {
+                    operation: "provenance".to_string(),
+                }
+            })?;
+
             let envelope = self.build_provenance_envelope(
                 &repo,
                 uri,
                 manifest,
-                &revision,
+                revision,
                 options.include_blobs.unwrap_or(false),
             )?;
             info!(uri = %uri, "resolved NAP URI with provenance");
@@ -428,16 +483,21 @@ impl Resolver {
         format: Option<String>,
         include_blobs: bool,
     ) -> Result<ResolveProvenanceFile, NapError> {
+        // Provenance is VCS-backed; in unversioned mode there is nothing to read.
+        let vcs = repo
+            .vcs()
+            .ok_or_else(|| NapError::BackendNotConfigured {
+                operation: "provenance".to_string(),
+            })?;
+
         let metadata = match path.as_deref() {
-            Some(path) => repo
-                .vcs()
-                .file_metadata_at_ref(&repo.root, path, revision)?,
+            Some(path) => vcs.file_metadata_at_ref(&repo.root, path, revision)?,
             None => None,
         };
 
         let blobs = if include_blobs {
             match metadata.as_ref() {
-                Some(metadata) => Self::hydrate_known_blobs(repo, metadata)?,
+                Some(metadata) => Self::hydrate_known_blobs(vcs, repo, metadata)?,
                 None => BTreeMap::new(),
             }
         } else {
@@ -478,6 +538,7 @@ impl Resolver {
     }
 
     fn hydrate_known_blobs(
+        vcs: &dyn VcsBackend,
         repo: &Repository,
         metadata: &BTreeMap<String, String>,
     ) -> Result<BTreeMap<String, HydratedProvenanceBlob>, NapError> {
@@ -492,7 +553,7 @@ impl Resolver {
             let Some(address) = metadata.get(metadata_key) else {
                 continue;
             };
-            let content = repo.vcs().read_provenance_blob(&repo.root, address)?;
+            let content = vcs.read_provenance_blob(&repo.root, address)?;
             blobs.insert(name.to_string(), Self::truncate_blob(address, &content));
         }
         Ok(blobs)
