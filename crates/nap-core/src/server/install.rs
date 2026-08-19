@@ -451,7 +451,7 @@ mod tests {
     fn test_tag_version_prefix() {
         let temp_dir = TempDir::new().unwrap();
         let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()));
-        assert_eq!(installer.tag_version(), "v0.8.4");
+        assert_eq!(installer.tag_version(), "v0.8.4-portals.5");
 
         // Already prefixed — should not double-prefix
         let installer2 =

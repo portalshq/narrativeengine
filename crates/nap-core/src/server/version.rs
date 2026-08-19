@@ -16,7 +16,7 @@ use std::process::Command;
 ///
 /// During initialization NAP verifies that the installed `lore` and
 /// `loreserver` binaries report **exactly** this version string.
-pub const PINNED_LORE_VERSION: &str = "0.8.4";
+pub const PINNED_LORE_VERSION: &str = "0.8.4-portals.5";
 
 /// Release repository containing the Portals authentication-capable Lore
 /// client. Never fall back to the unaffiliated upstream release at runtime.
@@ -26,14 +26,14 @@ pub const PINNED_LORE_REPOSITORY: &str = "portalshq/lore";
 /// `nap install lore` reject a moved tag or compromised download before
 /// executing it.
 pub const PINNED_LORE_INSTALLER_SHA256: &str =
-    "ed2254daa16fe9eee9ef457b4059ce4c0d953c14c9660697746d796df729b435";
+    "8e7cc96d1b9100610af6c1bd15ec2febbcb48d26cc7f19de3862496897810b74";
 
 /// Digest and Sigstore bundle for the Lore release's binary checksum
 /// manifest. Empty means this Nap source is not eligible for a secure cloud
 /// release even though local development can still use the pinned installer.
-pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = "";
-pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = "";
-pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = "";
+pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = "sha256:6285c50ff490870a8417db442f75ab73d53578f52eacacd31011cd350b957457";
+pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS";
+pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS.sigstore.json";
 
 // ── Detected version info ───────────────────────────────────────────────
 
@@ -310,18 +310,18 @@ mod tests {
     fn test_compatibility_exact_match() {
         let installed = LoreVersionInfo {
             parsed: Version::new(0, 8, 4),
-            raw: "0.8.4".to_string(),
+            raw: PINNED_LORE_VERSION.to_string(),
         };
         assert!(check_lore_compatibility(&installed).unwrap());
     }
 
     #[test]
     fn test_compatibility_ignores_build_metadata() {
-        // "0.8.4+283" must match pinned "0.8.4" — build metadata is
-        // ignored per the semver specification.
+        // "0.8.4-portals.5+283" must match pinned "0.8.4-portals.5" — build
+        // metadata is ignored per the semver specification.
         let installed = LoreVersionInfo {
             parsed: Version::new(0, 8, 4),
-            raw: "0.8.4+283".to_string(),
+            raw: format!("{}+283", PINNED_LORE_VERSION),
         };
         assert!(check_lore_compatibility(&installed).unwrap());
     }
@@ -391,15 +391,15 @@ mod tests {
 
         let message = status.status_message();
         assert!(message.contains("'0.8.4-nightly'"));
-        assert!(message.contains("'0.8.4'"));
+        assert!(message.contains(&format!("'{}'", PINNED_LORE_VERSION)));
         assert!(!status.is_fully_compatible());
     }
 
     #[test]
     fn test_pinned_version_constant() {
         // This test documents the contract: the pinned version must be
-        // "0.8.4".  If you intentionally change it, update this test and
-        // the integration test as well.
-        assert_eq!(PINNED_LORE_VERSION, "0.8.4");
+        // "0.8.4-portals.5".  If you intentionally change it, update this
+        // test and the integration test as well.
+        assert_eq!(PINNED_LORE_VERSION, "0.8.4-portals.5");
     }
 }
