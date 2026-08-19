@@ -31,9 +31,12 @@ pub const PINNED_LORE_INSTALLER_SHA256: &str =
 /// Digest and Sigstore bundle for the Lore release's binary checksum
 /// manifest. Empty means this Nap source is not eligible for a secure cloud
 /// release even though local development can still use the pinned installer.
-pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = "sha256:6285c50ff490870a8417db442f75ab73d53578f52eacacd31011cd350b957457";
-pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS";
-pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS.sigstore.json";
+pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str =
+    "sha256:6285c50ff490870a8417db442f75ab73d53578f52eacacd31011cd350b957457";
+pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str =
+    "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS";
+pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str =
+    "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS.sigstore.json";
 
 // ── Detected version info ───────────────────────────────────────────────
 

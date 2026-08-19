@@ -397,6 +397,15 @@ echo "========================================"
 echo ""
 echo "Updated to Lore version: $LORE_VERSION"
 echo ""
+
+# Run cargo fmt to fix long lines produced by sed
+if command -v cargo &>/dev/null; then
+    echo "Running cargo fmt..."
+    cargo fmt --all
+    echo "✓ cargo fmt completed"
+    echo ""
+fi
+
 echo "Next steps:"
 echo "  1. Review the changes"
 echo "  2. Run tests: cargo test"
