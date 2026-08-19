@@ -5,10 +5,12 @@
 //! Integrates the official Lore installer behind `nap install lore`
 //! to download, install, and verify Lore CLI and server binaries.
 
-use crate::PINNED_LORE_VERSION;
 use crate::server::error_ids;
+use crate::server::{PINNED_LORE_INSTALLER_SHA256, PINNED_LORE_REPOSITORY, PINNED_LORE_VERSION};
 use anyhow::{Context, Result};
-use std::fs;
+use sha2::{Digest, Sha256};
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::process::Command;
 use tracing::{error, info};
 use which;
@@ -18,6 +20,7 @@ pub struct LoreInstaller {
     install_dir: Option<std::path::PathBuf>,
     repo: String,
     version: String,
+    installer_sha256: String,
 }
 
 impl LoreInstaller {
@@ -25,8 +28,9 @@ impl LoreInstaller {
     pub fn new(install_dir: Option<std::path::PathBuf>) -> Self {
         Self {
             install_dir,
-            repo: "EpicGames/lore".to_string(),
+            repo: PINNED_LORE_REPOSITORY.to_string(),
             version: PINNED_LORE_VERSION.to_string(),
+            installer_sha256: PINNED_LORE_INSTALLER_SHA256.to_string(),
         }
     }
 
@@ -39,6 +43,12 @@ impl LoreInstaller {
     /// Set custom version
     pub fn with_version(mut self, version: &str) -> Self {
         self.version = version.to_string();
+        self
+    }
+
+    /// Set the expected checksum when deliberately selecting another release.
+    pub fn with_installer_sha256(mut self, installer_sha256: &str) -> Self {
+        self.installer_sha256 = installer_sha256.to_string();
         self
     }
 
@@ -148,8 +158,9 @@ impl LoreInstaller {
     /// Run the official Lore install script
     fn run_install_script(&self, args: &[&str]) -> Result<()> {
         let script_url = format!(
-            "https://raw.githubusercontent.com/{}/main/scripts/install.sh",
-            self.repo
+            "https://raw.githubusercontent.com/{}/{}/scripts/install.sh",
+            self.repo,
+            self.tag_version(),
         );
 
         // Download script
@@ -160,26 +171,37 @@ impl LoreInstaller {
         {
             use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&script_path)?.permissions();
-            perms.set_mode(0o755);
+            perms.set_mode(0o700);
             fs::set_permissions(&script_path, perms)?;
         }
 
         // Build command with install directory and other args
-        let mut cmd_args = vec![script_path.to_str().unwrap()];
+        let script_arg = script_path
+            .to_str()
+            .context("Lore installer temporary path is not valid UTF-8")?;
+        let mut cmd_args = vec![script_arg];
         if let Some(dir) = &self.install_dir {
             cmd_args.push("--install-dir");
-            cmd_args.push(dir.to_str().unwrap());
+            cmd_args.push(
+                dir.to_str()
+                    .context("Lore installation directory is not valid UTF-8")?,
+            );
         }
+        cmd_args.push("--repo");
+        cmd_args.push(&self.repo);
         cmd_args.extend(args.iter().copied());
 
         // Execute script
-        let output = Command::new("bash")
-            .args(&cmd_args)
-            .output()
-            .context(format!(
-                "[{}] Failed to execute Lore install script",
-                error_ids::ERR_LORE_INSTALL_FAILED
-            ))?;
+        let output_result = Command::new("bash").args(&cmd_args).output();
+
+        // Remove the downloaded program even when process creation fails, and
+        // before examining the exit status, so executable material is never
+        // left in a shared temp directory.
+        fs::remove_file(&script_path).context("Failed to remove Lore installer script")?;
+        let output = output_result.context(format!(
+            "[{}] Failed to execute Lore install script",
+            error_ids::ERR_LORE_INSTALL_FAILED
+        ))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -194,9 +216,6 @@ impl LoreInstaller {
                 output.status
             );
         }
-
-        // Clean up script
-        fs::remove_file(&script_path)?;
 
         Ok(())
     }
@@ -216,15 +235,40 @@ impl LoreInstaller {
             );
         }
 
-        let script_content = response.text().context(format!(
-            "[{}] Failed to read script content",
+        let script_content = response.bytes().context(format!(
+            "[{}] Failed to read installer bytes",
             error_ids::ERR_LORE_DOWNLOAD_FAILED
         ))?;
 
-        // Write to temporary file
-        let temp_dir = std::env::temp_dir();
-        let script_path = temp_dir.join("lore-install.sh");
-        fs::write(&script_path, script_content).context(format!(
+        let actual_sha256 = hex::encode(Sha256::digest(&script_content));
+        if actual_sha256 != self.installer_sha256 {
+            anyhow::bail!(
+                "[{}] Lore installer checksum mismatch for {} {}: expected {}, got {}",
+                error_ids::ERR_LORE_DOWNLOAD_FAILED,
+                self.repo,
+                self.tag_version(),
+                self.installer_sha256,
+                actual_sha256,
+            );
+        }
+
+        // create_new prevents symlink-following and pre-creation attacks. PID
+        // plus a cryptographically random nonce avoids cross-process and
+        // concurrent-use collisions without trusting a predictable filename.
+        let nonce = rand::random::<u64>();
+        let script_path = std::env::temp_dir().join(format!(
+            "nap-lore-install-{}-{nonce:016x}.sh",
+            std::process::id(),
+        ));
+        let mut script_file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&script_path)
+            .context(format!(
+                "[{}] Failed to create installer safely",
+                error_ids::ERR_LORE_DOWNLOAD_FAILED
+            ))?;
+        script_file.write_all(&script_content).context(format!(
             "[{}] Failed to write install script",
             error_ids::ERR_LORE_DOWNLOAD_FAILED
         ))?;
@@ -396,8 +440,9 @@ mod tests {
     fn test_installer_creation() {
         let temp_dir = TempDir::new().unwrap();
         let installer = LoreInstaller::new(Some(temp_dir.path().to_path_buf()));
-        assert_eq!(installer.repo, "EpicGames/lore");
+        assert_eq!(installer.repo, PINNED_LORE_REPOSITORY);
         assert_eq!(installer.version, PINNED_LORE_VERSION);
+        assert_eq!(installer.installer_sha256, PINNED_LORE_INSTALLER_SHA256);
         // Tag version must have the `v` prefix for GitHub release lookups
         assert_eq!(installer.tag_version(), format!("v{}", PINNED_LORE_VERSION));
     }

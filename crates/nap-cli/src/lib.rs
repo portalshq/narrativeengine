@@ -98,8 +98,38 @@ pub enum BackendCmd {
     Status,
 }
 
+/// Interactive authentication commands for Portals Cloud.
+#[derive(Subcommand, Debug)]
+pub enum AuthCmd {
+    /// Sign in through the configured Lore authentication service.
+    Login {
+        /// Exchange a service-account API key instead of opening a browser.
+        #[arg(long)]
+        api_key: bool,
+
+        /// Environment variable containing the API key.
+        #[arg(long, default_value = "PORTALS_CLOUD_API_KEY", requires = "api_key")]
+        api_key_env: String,
+
+        /// Print the login URL without opening a browser.
+        #[arg(long, conflicts_with = "api_key")]
+        no_browser: bool,
+    },
+    /// Show the currently cached Lore identity without printing tokens.
+    Status,
+    /// Remove locally cached Lore credentials.
+    Logout,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Manage secure Portals Cloud authentication.
+    Auth {
+        /// Authentication operation.
+        #[command(subcommand)]
+        cmd: AuthCmd,
+    },
+
     /// Install required dependencies.
     Install {
         /// Target to install (e.g., "lore" or "mcp").

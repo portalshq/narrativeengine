@@ -4,6 +4,14 @@ digraph nap_commands {
     
     "add" [label="nap add"];
     "nap" -> "add";
+    "auth" [label="nap auth"];
+    "nap" -> "auth";
+    "auth_login" [label="nap auth login"];
+    "auth" -> "auth_login";
+    "auth_logout" [label="nap auth logout"];
+    "auth" -> "auth_logout";
+    "auth_status" [label="nap auth status"];
+    "auth" -> "auth_status";
     "backend" [label="nap backend"];
     "nap" -> "backend";
     "backend_configure" [label="nap backend configure"];

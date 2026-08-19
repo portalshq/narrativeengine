@@ -61,9 +61,9 @@ Tests nap functionality against the Portals Cloud lore server.
 - The `lore` binary in PATH
 
 **Environment Variables:**
-- `NAP_LORE_URL_BASE`: Portals Cloud lore server URL (e.g., `lore://cloud.portals.ai`)
+- `NAP_LORE_URL_BASE`: Portals Cloud Lore server URL (`grpcs://lore.portals.sh`)
 - `NAP_WORKSPACE_ID`: Workspace ID for Portals Cloud
-- `PORTALS_CLOUD_AUTH_TOKEN`: Authentication token (if required)
+- `PORTALS_CLOUD_API_KEY`: Revocable service-account API key for CI exchange
 
 **Test Coverage:**
 - Connect to Portals Cloud and initialize nap
@@ -92,9 +92,9 @@ Tests nap functionality against the Portals Cloud lore server.
 **Option 1: Using the provided script (recommended)**
 ```bash
 # Set environment variables
-export NAP_LORE_URL_BASE="lore://cloud.portals.ai"
+export NAP_LORE_URL_BASE="grpcs://lore.portals.sh"
 export NAP_WORKSPACE_ID="your-workspace-id"
-export PORTALS_CLOUD_AUTH_TOKEN="your-auth-token"
+export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 
 # Run the tests
 ./scripts/test-integration-cloud.sh
@@ -104,9 +104,9 @@ export PORTALS_CLOUD_AUTH_TOKEN="your-auth-token"
 ```bash
 # Install just: cargo install just
 # Set environment variables
-export NAP_LORE_URL_BASE="lore://cloud.portals.ai"
+export NAP_LORE_URL_BASE="grpcs://lore.portals.sh"
 export NAP_WORKSPACE_ID="your-workspace-id"
-export PORTALS_CLOUD_AUTH_TOKEN="your-auth-token"
+export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 
 # Run the tests
 just test-integration-cloud
@@ -115,9 +115,9 @@ just test-integration-cloud
 **Option 3: Direct cargo command**
 ```bash
 # Set environment variables
-export NAP_LORE_URL_BASE="lore://cloud.portals.ai"
+export NAP_LORE_URL_BASE="grpcs://lore.portals.sh"
 export NAP_WORKSPACE_ID="your-workspace-id"
-export PORTALS_CLOUD_AUTH_TOKEN="your-auth-token"
+export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 
 # Run the tests
 cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1
@@ -177,7 +177,7 @@ just test-integration-local && just test-integration-cloud
    ```bash
    echo $NAP_LORE_URL_BASE
    echo $NAP_WORKSPACE_ID
-   echo $PORTALS_CLOUD_AUTH_TOKEN
+   test -n "$PORTALS_CLOUD_API_KEY"
    ```
 2. Check authentication credentials are valid
 3. Verify network connectivity to cloud server
@@ -227,7 +227,7 @@ jobs:
         env:
           NAP_LORE_URL_BASE: ${{ secrets.NAP_LORE_URL_BASE }}
           NAP_WORKSPACE_ID: ${{ secrets.NAP_WORKSPACE_ID }}
-          PORTALS_CLOUD_AUTH_TOKEN: ${{ secrets.PORTALS_CLOUD_AUTH_TOKEN }}
+          PORTALS_CLOUD_API_KEY: ${{ secrets.PORTALS_CLOUD_API_KEY }}
         run: cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1
 ```
 

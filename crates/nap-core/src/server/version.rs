@@ -18,6 +18,23 @@ use std::process::Command;
 /// `loreserver` binaries report **exactly** this version string.
 pub const PINNED_LORE_VERSION: &str = "0.8.4";
 
+/// Release repository containing the Portals authentication-capable Lore
+/// client. Never fall back to the unaffiliated upstream release at runtime.
+pub const PINNED_LORE_REPOSITORY: &str = "portalshq/lore";
+
+/// SHA-256 of `scripts/install.sh` at the pinned Lore release tag. This makes
+/// `nap install lore` reject a moved tag or compromised download before
+/// executing it.
+pub const PINNED_LORE_INSTALLER_SHA256: &str =
+    "ed2254daa16fe9eee9ef457b4059ce4c0d953c14c9660697746d796df729b435";
+
+/// Digest and Sigstore bundle for the Lore release's binary checksum
+/// manifest. Empty means this Nap source is not eligible for a secure cloud
+/// release even though local development can still use the pinned installer.
+pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = "";
+pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = "";
+pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = "";
+
 // ── Detected version info ───────────────────────────────────────────────
 
 /// A detected Lore version with both parsed semver and raw string forms.

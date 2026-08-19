@@ -1,5 +1,9 @@
 graph LR
     nap["nap"] --> nap_add["nap add"]
+    nap["nap"] --> nap_auth["nap auth"]
+    nap_auth["nap_auth"] --> nap_auth_login["nap auth login"]
+    nap_auth["nap_auth"] --> nap_auth_logout["nap auth logout"]
+    nap_auth["nap_auth"] --> nap_auth_status["nap auth status"]
     nap["nap"] --> nap_backend["nap backend"]
     nap_backend["nap_backend"] --> nap_backend_configure["nap backend configure"]
     nap_backend["nap_backend"] --> nap_backend_status["nap backend status"]

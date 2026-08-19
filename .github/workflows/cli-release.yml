@@ -123,6 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - run: bash -n scripts/install.sh
@@ -136,6 +137,49 @@ jobs:
       - working-directory: artifacts
         run: |
           sha256sum * > SHA256SUMS
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign checksums and emit release metadata
+        working-directory: artifacts
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
+          VERSION="${RELEASE_TAG#v}"
+          LORE_VERSION="$(sed -n 's/^pub const PINNED_LORE_VERSION: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
+          LORE_REPOSITORY="$(sed -n 's/^pub const PINNED_LORE_REPOSITORY: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
+          LORE_INSTALLER_SHA256="$(sed -n '/^pub const PINNED_LORE_INSTALLER_SHA256:/{n;s/^[[:space:]]*"\([^"]*\)";/\1/p;}' ../crates/nap-core/src/server/version.rs)"
+          LORE_ARTIFACT_MANIFEST_SHA256="$(sed -n 's/^pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
+          LORE_ARTIFACT_MANIFEST_URL="$(sed -n 's/^pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
+          LORE_SIGNATURE_BUNDLE_URL="$(sed -n 's/^pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
+          EXPECTED_LORE_RELEASE_BASE="https://github.com/portalshq/lore/releases/download/v${LORE_VERSION}"
+          [[ "$LORE_INSTALLER_SHA256" =~ ^[a-f0-9]{64}$ ]] || { echo "Lore installer checksum is incomplete" >&2; exit 1; }
+          [[ "$LORE_ARTIFACT_MANIFEST_SHA256" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Lore artifact manifest is not pinned" >&2; exit 1; }
+          [[ "$LORE_ARTIFACT_MANIFEST_URL" == "${EXPECTED_LORE_RELEASE_BASE}/SHA256SUMS" ]] || { echo "Lore artifact manifest URL is not trusted" >&2; exit 1; }
+          [[ "$LORE_SIGNATURE_BUNDLE_URL" == "${EXPECTED_LORE_RELEASE_BASE}/SHA256SUMS.sigstore.json" ]] || { echo "Lore artifact signature bundle is not trusted" >&2; exit 1; }
+          MANIFEST_SHA256="sha256:$(sha256sum SHA256SUMS | cut -d ' ' -f1)"
+          jq -n \
+            --arg version "$VERSION" \
+            --arg release_tag "$RELEASE_TAG" \
+            --arg source_commit "$SOURCE_COMMIT" \
+            --arg security_contract "lore-auth-v1" \
+            --arg artifact_manifest_sha256 "$MANIFEST_SHA256" \
+            --arg lore_client_repository "$LORE_REPOSITORY" \
+            --arg lore_client_version "$LORE_VERSION" \
+            --arg lore_client_installer_sha256 "$LORE_INSTALLER_SHA256" \
+            --arg lore_client_artifact_manifest_url "$LORE_ARTIFACT_MANIFEST_URL" \
+            --arg lore_client_artifact_manifest_sha256 "$LORE_ARTIFACT_MANIFEST_SHA256" \
+            --arg lore_client_signature_bundle_url "$LORE_SIGNATURE_BUNDLE_URL" \
+            '{schema_version: 1, version: $version, release_tag: $release_tag,
+              source_commit: $source_commit, security_contract: $security_contract,
+              artifact_manifest_sha256: $artifact_manifest_sha256,
+              lore_client_repository: $lore_client_repository,
+              lore_client_version: $lore_client_version,
+              lore_client_installer_sha256: $lore_client_installer_sha256,
+              lore_client_artifact_manifest_url: $lore_client_artifact_manifest_url,
+              lore_client_artifact_manifest_sha256: $lore_client_artifact_manifest_sha256,
+              lore_client_signature_bundle_url: $lore_client_signature_bundle_url}' > release-metadata.json
+          cosign sign-blob --yes --bundle release-metadata.sigstore.json release-metadata.json
       - uses: softprops/action-gh-release@v2
         with:
           overwrite_files: true

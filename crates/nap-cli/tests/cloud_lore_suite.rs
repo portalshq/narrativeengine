@@ -7,9 +7,9 @@
 //! - The lore binary in PATH
 //!
 //! Environment variables:
-//! - NAP_LORE_URL_BASE: Portals Cloud lore server URL (e.g., lore://cloud.portals.ai)
+//! - NAP_LORE_URL_BASE: Portals Cloud Lore URL (`grpcs://lore.portals.sh`)
 //! - NAP_WORKSPACE_ID: Workspace ID for Portals Cloud
-//! - PORTALS_CLOUD_AUTH_TOKEN: Authentication token (if required)
+//! - PORTALS_CLOUD_API_KEY: Revocable service-account API key (CI only)
 //!
 //! Run with:
 //!   cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1
@@ -33,16 +33,11 @@ fn nap_cmd() -> Command {
 
     // Configure for Portals Cloud - read from environment or use default
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
-        .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
+        .unwrap_or_else(|_| "grpcs://lore.portals.sh".to_string());
     let workspace_id = std::env::var("NAP_WORKSPACE_ID").unwrap_or_else(|_| "default".to_string());
 
     cmd.env("NAP_LORE_URL_BASE", cloud_url);
     cmd.env("NAP_WORKSPACE_ID", workspace_id);
-
-    // Add auth token if available
-    if let Ok(auth_token) = std::env::var("PORTALS_CLOUD_AUTH_TOKEN") {
-        cmd.env("PORTALS_CLOUD_AUTH_TOKEN", auth_token);
-    }
 
     cmd
 }
@@ -883,6 +878,97 @@ fn test_cloud_lore_content_hash() {
         .assert()
         .success()
         .stdout(predicate::str::contains("blake3:"));
+}
+
+/// Release-gate workflow. Unlike the smaller CLI behavior tests above, this
+/// test deliberately uses the authenticated Portals Cloud backend throughout
+/// and proves a real fragment/branch/lock round trip.
+#[cfg(feature = "lore-e2e")]
+#[test]
+fn test_staging_authenticated_end_to_end() {
+    let source = TempDir::new().expect("source tempdir");
+    let clone = TempDir::new().expect("clone tempdir");
+    let repository = unique_universe_name("security-gate");
+    let cloud_url = std::env::var("NAP_LORE_URL_BASE")
+        .unwrap_or_else(|_| "grpcs://lore.portals.sh".to_string());
+
+    nap_cmd()
+        .args(["init", "--provider", "portals-cloud", "--base-dir"])
+        .arg(source.path())
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(source.path())
+        .args([
+            "--repository",
+            &repository,
+            "character",
+            "security-gate",
+            "--name",
+            "Security Gate",
+        ])
+        .assert()
+        .success();
+
+    nap_cmd()
+        .args(["publish", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["push", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    nap_cmd()
+        .args(["pull", "--base-dir"])
+        .arg(clone.path())
+        .arg(format!("{cloud_url}/{repository}"))
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["sync", "--base-dir"])
+        .arg(clone.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    let repository_path = source.path().join(&repository);
+    let lock_path = "character/security-gate.yaml";
+    for action in ["acquire", "release"] {
+        let status = std::process::Command::new(nap_core::vcs_lore::LoreProcessRunner::binary())
+            .current_dir(&repository_path)
+            .args(["lock", action, lock_path, "--non-interactive"])
+            .status()
+            .expect("run Lore lock command");
+        assert!(status.success(), "Lore lock {action} failed");
+    }
+
+    nap_cmd().args(["auth", "logout"]).assert().success();
+    nap_cmd()
+        .args(["sync", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("nap auth login"));
+
+    // Restore the CI session for any later test process. The key is read by
+    // Nap and passed to Lore through stdin, never argv.
+    nap_cmd()
+        .args(["auth", "login", "--api-key"])
+        .assert()
+        .success();
 }
 
 #[cfg(feature = "lore-e2e")]

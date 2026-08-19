@@ -3,6 +3,7 @@ CLI for the Narrative Addressing Protocol
 Usage: nap [OPTIONS] <COMMAND>
 
 Commands:
+  auth          Manage secure Portals Cloud authentication
   install       Install required dependencies
   init          Initialize a repository repository and/or configure the backend provider
   choose        Choose backend provider

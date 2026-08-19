@@ -13,19 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@just
 
-      - name: Build workspace
-        run: cargo build --workspace
-
-      - name: Generate documentation
-        run: cargo run -p nap-docgen
-
-      - name: Check for stale documentation
-        run: |
-          if ! git diff --exit-code -- docs/generated/ skills/ README.md; then
-            echo "::error::Generated documentation is stale. Run 'cargo run -p nap-docgen' locally and commit the changes."
-            echo ""
-            echo "Diff:"
-            git diff --stat -- docs/generated/ skills/ README.md
-            exit 1
-          fi
+      - name: Verify generated documentation
+        run: just docs-check

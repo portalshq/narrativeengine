@@ -1,0 +1,11 @@
+Sign in through the configured Lore authentication service
+
+Usage: nap auth login [OPTIONS]
+
+Options:
+      --api-key                    Exchange a service-account API key instead of opening a browser
+  -d, --base-dir <BASE_DIR>        Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+      --api-key-env <API_KEY_ENV>  Environment variable containing the API key [default: PORTALS_CLOUD_API_KEY]
+  -v, --verbose                    Enable verbose debug logging
+      --no-browser                 Print the login URL without opening a browser
+  -h, --help                       Print help

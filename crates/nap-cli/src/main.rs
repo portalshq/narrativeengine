@@ -24,7 +24,7 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use nap_cli::{BackendCmd, ChooseCmd, Cli, Commands, RemoteCmd};
+use nap_cli::{AuthCmd, BackendCmd, ChooseCmd, Cli, Commands, RemoteCmd};
 use nap_core::{
     commit::Change,
     error::NapError,
@@ -139,6 +139,7 @@ fn main() -> Result<()> {
         .with_context(|| format!("failed to create base directory '{}'", base_dir.display()))?;
 
     let result = match cli.command {
+        Commands::Auth { cmd } => cmd_auth(cmd),
         Commands::Init {
             repository,
             provider,
@@ -274,6 +275,95 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+/// Delegate authentication to Lore so Nap and Lore share one OS-keyring-backed
+/// credential store. Login deliberately inherits stdio for browser/device-code
+/// interaction; repository commands remain noninteractive.
+fn cmd_auth(cmd: AuthCmd) -> Result<()> {
+    const CLOUD_REMOTE: &str = "grpcs://lore.portals.sh";
+    let cloud_auth_url =
+        std::env::var("NAP_AUTH_URL").unwrap_or_else(|_| "ucs-auth://auth.portals.sh".to_string());
+    let (args, stdin_secret): (Vec<String>, Option<String>) = match cmd {
+        AuthCmd::Login {
+            api_key,
+            api_key_env,
+            no_browser,
+        } => {
+            if api_key {
+                let token = std::env::var(&api_key_env).with_context(|| {
+                    format!(
+                        "{api_key_env} is not set; inject a revocable service-account API key into CI"
+                    )
+                })?;
+                (
+                    vec![
+                        "auth".into(),
+                        "login".into(),
+                        "--token-type".into(),
+                        "api-key".into(),
+                        "--token-stdin".into(),
+                        "--auth-url".into(),
+                        cloud_auth_url.clone(),
+                        CLOUD_REMOTE.into(),
+                    ],
+                    Some(token),
+                )
+            } else {
+                let mut args = vec!["auth".into(), "login".into(), CLOUD_REMOTE.into()];
+                if no_browser {
+                    args.push("--no-browser".into());
+                }
+                (args, None)
+            }
+        }
+        // `list` deliberately omits --with-token.
+        AuthCmd::Status => (vec!["auth".into(), "list".into()], None),
+        AuthCmd::Logout => (
+            vec![
+                "auth".into(),
+                "logout".into(),
+                "--auth-url".into(),
+                cloud_auth_url,
+            ],
+            None,
+        ),
+    };
+    let operation = args.get(1).map(String::as_str).unwrap_or("unknown");
+    let binary = nap_core::vcs_lore::LoreProcessRunner::binary();
+    let mut command = std::process::Command::new(&binary);
+    command.args(&args);
+    if stdin_secret.is_some() {
+        command.stdin(std::process::Stdio::piped());
+    }
+    let mut child = command
+        .spawn()
+        .with_context(|| {
+            format!(
+                "failed to execute `{binary} auth {operation}`; install a compatible Lore CLI and ensure it is on PATH"
+            )
+        })?;
+    if let Some(secret) = stdin_secret {
+        let mut stdin = child
+            .stdin
+            .take()
+            .context("failed to open Lore authentication stdin")?;
+        stdin
+            .write_all(secret.as_bytes())
+            .context("failed to send API key to Lore over stdin")?;
+    }
+    let status = child
+        .wait()
+        .context("failed while waiting for Lore authentication")?;
+
+    if status.success() {
+        return Ok(());
+    }
+
+    anyhow::bail!(
+        "Lore authentication failed (exit {}); run `nap auth login` in an interactive terminal and retry",
+        status.code().unwrap_or(-1)
+    )
 }
 
 /// Prompt the user to select a provider type

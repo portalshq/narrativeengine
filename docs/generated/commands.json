@@ -84,6 +84,127 @@
       "hidden": false
     },
     {
+      "name": "auth",
+      "full_path": "auth",
+      "about": "Manage secure Portals Cloud authentication",
+      "long_about": null,
+      "usage": "Usage: auth <COMMAND>",
+      "aliases": [],
+      "arguments": [],
+      "options": [],
+      "flags": [
+        {
+          "name": "help",
+          "about": "Print help",
+          "required": false,
+          "default_value": null,
+          "short": "h",
+          "long": "help",
+          "takes_value": false
+        }
+      ],
+      "subcommands": [
+        {
+          "name": "login",
+          "full_path": "auth login",
+          "about": "Sign in through the configured Lore authentication service",
+          "long_about": null,
+          "usage": "Usage: login [OPTIONS]",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "name": "api_key_env",
+              "about": "Environment variable containing the API key",
+              "required": false,
+              "default_value": "PORTALS_CLOUD_API_KEY",
+              "short": null,
+              "long": "api-key-env",
+              "takes_value": true
+            }
+          ],
+          "flags": [
+            {
+              "name": "api_key",
+              "about": "Exchange a service-account API key instead of opening a browser",
+              "required": false,
+              "default_value": "false",
+              "short": null,
+              "long": "api-key",
+              "takes_value": false
+            },
+            {
+              "name": "no_browser",
+              "about": "Print the login URL without opening a browser",
+              "required": false,
+              "default_value": "false",
+              "short": null,
+              "long": "no-browser",
+              "takes_value": false
+            },
+            {
+              "name": "help",
+              "about": "Print help",
+              "required": false,
+              "default_value": null,
+              "short": "h",
+              "long": "help",
+              "takes_value": false
+            }
+          ],
+          "subcommands": [],
+          "hidden": false
+        },
+        {
+          "name": "logout",
+          "full_path": "auth logout",
+          "about": "Remove locally cached Lore credentials",
+          "long_about": null,
+          "usage": "Usage: logout",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "flags": [
+            {
+              "name": "help",
+              "about": "Print help",
+              "required": false,
+              "default_value": null,
+              "short": "h",
+              "long": "help",
+              "takes_value": false
+            }
+          ],
+          "subcommands": [],
+          "hidden": false
+        },
+        {
+          "name": "status",
+          "full_path": "auth status",
+          "about": "Show the currently cached Lore identity without printing tokens",
+          "long_about": null,
+          "usage": "Usage: status",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "flags": [
+            {
+              "name": "help",
+              "about": "Print help",
+              "required": false,
+              "default_value": null,
+              "short": "h",
+              "long": "help",
+              "takes_value": false
+            }
+          ],
+          "subcommands": [],
+          "hidden": false
+        }
+      ],
+      "hidden": false
+    },
+    {
       "name": "backend",
       "full_path": "backend",
       "about": "Configure or inspect the version-control backend",

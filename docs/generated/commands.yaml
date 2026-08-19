@@ -28,6 +28,47 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
+  - name: "auth"
+    full_path: "auth"
+    about: "Manage secure Portals Cloud authentication"
+    usage: "Usage: auth <COMMAND>"
+    hidden: false
+    flags:
+      - name: "help"
+        about: "Print help"
+    subcommands:
+      - name: "login"
+        full_path: "auth login"
+        about: "Sign in through the configured Lore authentication service"
+        usage: "Usage: login [OPTIONS]"
+        hidden: false
+        options:
+          - name: "api_key_env"
+            about: "Environment variable containing the API key"
+            default: "PORTALS_CLOUD_API_KEY"
+        flags:
+          - name: "api_key"
+            about: "Exchange a service-account API key instead of opening a browser"
+          - name: "no_browser"
+            about: "Print the login URL without opening a browser"
+          - name: "help"
+            about: "Print help"
+      - name: "logout"
+        full_path: "auth logout"
+        about: "Remove locally cached Lore credentials"
+        usage: "Usage: logout"
+        hidden: false
+        flags:
+          - name: "help"
+            about: "Print help"
+      - name: "status"
+        full_path: "auth status"
+        about: "Show the currently cached Lore identity without printing tokens"
+        usage: "Usage: status"
+        hidden: false
+        flags:
+          - name: "help"
+            about: "Print help"
   - name: "backend"
     full_path: "backend"
     about: "Configure or inspect the version-control backend"

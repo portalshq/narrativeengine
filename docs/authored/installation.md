@@ -71,7 +71,12 @@ nap init --provider local
 nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
 
 # Initialize with Portals Cloud
+nap auth login
 nap init --provider portals-cloud
+
+# Inspect or clear the OS-keyring-backed session
+nap auth status
+nap auth logout
 
 # Check system status
 nap status
@@ -82,6 +87,31 @@ nap doctor
 # Run diagnostics with auto-repair
 nap doctor --repair
 ```
+
+Portals Cloud uses `grpcs://lore.portals.sh` on standard TLS port 443. Login is
+the only interactive VCS step; repository operations remain noninteractive and
+return an actionable `nap auth login` error when credentials are missing or
+expired. Lore automatically exchanges the eight-hour login session for a
+five-minute token scoped to the single repository used by init, clone, push,
+pull, sync, publish, and locking. CI uses a revocable service-account API key
+exchange; do not store long-lived bearer tokens in CI variables.
+
+`nap install lore` installs the exact `portalshq/lore` release compiled into
+that Nap version. It downloads the installer from the same release tag,
+verifies its pinned SHA-256 before execution, and explicitly selects the
+Portals fork. It never executes the mutable `main` installer or silently falls
+back to an upstream Lore binary. Production release metadata binds this Lore
+client version to Nap's signed checksum manifest.
+
+CI reads the API key from its secret store and passes it to Lore over stdin,
+so the secret is absent from process arguments and command logs:
+
+```bash
+export PORTALS_CLOUD_API_KEY="${CI_PORTALS_CLOUD_API_KEY}"
+nap auth login --api-key
+```
+
+Use `--api-key-env NAME` to select a different secret environment variable.
 
 ### Create a Repository
 

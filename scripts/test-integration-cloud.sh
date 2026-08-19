@@ -7,15 +7,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Check required environment variables
-if [ -z "${NAP_LORE_URL_BASE:-}" ]; then
-    echo "Error: NAP_LORE_URL_BASE environment variable not set"
-    echo "Example: export NAP_LORE_URL_BASE='lore://cloud.portals.ai'"
-    exit 1
-fi
+export NAP_LORE_URL_BASE="${NAP_LORE_URL_BASE:-grpcs://lore.portals.sh}"
 
 if [ -z "${NAP_WORKSPACE_ID:-}" ]; then
     echo "Error: NAP_WORKSPACE_ID environment variable not set"
     echo "Example: export NAP_WORKSPACE_ID='your-workspace-id'"
+    exit 1
+fi
+
+if [ -z "${PORTALS_CLOUD_API_KEY:-}" ]; then
+    echo "Error: PORTALS_CLOUD_API_KEY is not set"
+    echo "Inject a revocable service-account API key from the CI secret store"
     exit 1
 fi
 
@@ -25,4 +27,6 @@ echo "NAP_WORKSPACE_ID: $NAP_WORKSPACE_ID"
 echo ""
 
 cd "$ROOT_DIR"
+cargo run -p nap-cli -- auth login --api-key
+trap 'cargo run -p nap-cli -- auth logout >/dev/null 2>&1 || true' EXIT
 cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1 "$@"

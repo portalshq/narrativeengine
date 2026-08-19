@@ -48,7 +48,7 @@ struct ProviderConfigToml {
 }
 
 /// Hardcoded Portals Cloud URL (can be overridden by NAP_LORE_URL_BASE env var)
-const PORTALS_CLOUD_URL: &str = "lore://cloud.portals.sh:41337";
+const PORTALS_CLOUD_URL: &str = "grpcs://lore.portals.sh";
 
 // ---------------------------------------------------------------------------
 // LoreProcessRunner
@@ -127,7 +127,15 @@ impl LoreProcessRunner {
         let nap_err = match exit_code {
             1 => {
                 // Generic error — check for known patterns in stderr.
-                if stderr.contains("not a lore workspace")
+                if stderr.contains("not authenticated")
+                    || stderr.contains("authentication required")
+                    || stderr.contains("Unauthenticated")
+                {
+                    NapError::VcsError(
+                        "Portals Cloud authentication is required; run `nap auth login` in an interactive terminal and retry"
+                            .to_string(),
+                    )
+                } else if stderr.contains("not a lore workspace")
                     || stderr.contains("not an initialised lore workspace")
                 {
                     NapError::VcsError(format!(
@@ -266,7 +274,7 @@ impl LoreBackend {
     ///
     /// | Env var               | Default                   |
     /// |-----------------------|---------------------------|
-    /// | `NAP_LORE_URL_BASE`   | `lore://localhost:41337`  |
+    /// | `NAP_LORE_URL_BASE`   | provider-dependent; local uses `lore://localhost:41337` |
     /// | `NAP_WORKSPACE_ID`    | `default`                 |
     ///
     /// Note: For new code, prefer using the RepositoryApi with Provider architecture

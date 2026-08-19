@@ -15,6 +15,7 @@ The `nap` command-line interface (v0.5.8) provides tools for creating, resolving
 | Command | Description |
 |---|---|
 | [\`nap add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
+| [\`nap auth\`](docs/generated/commands/auth.md) | Manage secure Portals Cloud authentication |
 | [\`nap backend\`](docs/generated/commands/backend.md) | Configure or inspect the version-control backend |
 | [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |

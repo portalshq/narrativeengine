@@ -1,0 +1,8 @@
+Remove locally cached Lore credentials
+
+Usage: nap auth logout [OPTIONS]
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help
