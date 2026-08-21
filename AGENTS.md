@@ -56,6 +56,48 @@ The script handles the entire release:
 - Does not run tests (run `just test-all` before releasing)
 - Does not update CHANGELOG (manual step if needed)
 
+### Release Verification and Security
+
+Nap releases use GitHub OIDC (OpenID Connect) and Sigstore for cryptographic verification. The release workflow (`.github/workflows/cli-release.yml`) generates:
+
+- `SHA256SUMS` - Checksums of all release artifacts
+- `SHA256SUMS.sigstore.json` - Sigstore bundle proving the checksums were signed by GitHub Actions
+- `release-metadata.json` - Metadata including the pinned Lore client version and artifact digests
+- `release-metadata.sigstore.json` - Sigstore bundle proving the metadata was signed by GitHub Actions
+
+#### Cross-Origin Lore Verification
+
+Nap depends on the Lore CLI, which is published in a separate repository (`portalshq/lore`). The release metadata includes:
+
+- Lore version pinned in Nap's source code (`crates/nap-core/src/server/version.rs`)
+- Lore artifact manifest URL (expected to be from `portalshq/lore/releases`)
+- Lore artifact manifest SHA256 digest
+- Lore signature bundle URL (expected to be from `portalshq/lore/releases`)
+
+The parent repository's verification script (`cloud/infra/pulumi/scripts/verify-and-promote-nap-release.sh`) performs **cross-origin verification**:
+
+1. **Verify Nap's authenticity**: Checks that Nap's `SHA256SUMS` and `release-metadata.json` were signed by the `narrativeengine` repository's GitHub OIDC workflow
+2. **Verify Nap's artifacts**: Confirms downloaded binaries match the signed checksums
+3. **Cross-check Lore claims**: Independently fetches Lore's SHA256SUMS from GitHub and verifies its digest matches what Nap's metadata claims
+4. **Verify Lore's authenticity**: Checks that Lore's SHA256SUMS was signed by the `portalshq/lore` repository's GitHub OIDC workflow
+
+This is **not same-origin verification**. Nap's metadata is a *claim* that gets cross-validated against the actual Lore release from an independent source. The security chain:
+
+```
+GitHub OIDC (narrativeengine) → Nap release → Nap's Lore claim
+                                                 ↓
+                                         Independent fetch from GitHub
+                                                 ↓
+GitHub OIDC (lore) → Lore release → Actual Lore artifacts
+```
+
+You cannot forge a Nap release that claims to depend on a malicious Lore version because:
+- The malicious Lore version wouldn't exist at the claimed GitHub URL
+- Even if it existed, its digest wouldn't match Nap's claim
+- Even if the digest matched, it wouldn't be signed by the Lore repo's OIDC
+
+This dual-source-of-trust model requires compromising both repositories independently to break the chain.
+
 ## Git Commit Attribution
 
 All AI-assisted commits must include attribution for the agent app and model used. This ensures transparency and traceability of AI contributions.
