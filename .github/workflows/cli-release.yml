@@ -149,9 +149,9 @@ jobs:
           LORE_VERSION="$(sed -n 's/^pub const PINNED_LORE_VERSION: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
           LORE_REPOSITORY="$(sed -n 's/^pub const PINNED_LORE_REPOSITORY: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
           LORE_INSTALLER_SHA256="$(sed -n '/^pub const PINNED_LORE_INSTALLER_SHA256:/{n;s/^[[:space:]]*"\([^"]*\)";/\1/p;}' ../crates/nap-core/src/server/version.rs)"
-          LORE_ARTIFACT_MANIFEST_SHA256="$(sed -n 's/^pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
-          LORE_ARTIFACT_MANIFEST_URL="$(sed -n 's/^pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
-          LORE_SIGNATURE_BUNDLE_URL="$(sed -n 's/^pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
+          LORE_ARTIFACT_MANIFEST_SHA256="$(sed -n '/^pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str =/,/";$/{s/.*"\(sha256:[a-f0-9]\{64\}\)".*/\1/p;}' ../crates/nap-core/src/server/version.rs)"
+          LORE_ARTIFACT_MANIFEST_URL="$(sed -n '/^pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str =/,/";$/{s/.*"\(https:.*\)".*/\1/p;}' ../crates/nap-core/src/server/version.rs)"
+          LORE_SIGNATURE_BUNDLE_URL="$(sed -n '/^pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str =/,/";$/{s/.*"\(https:.*\)".*/\1/p;}' ../crates/nap-core/src/server/version.rs)"
           EXPECTED_LORE_RELEASE_BASE="https://github.com/portalshq/lore/releases/download/v${LORE_VERSION}"
           [[ "$LORE_INSTALLER_SHA256" =~ ^[a-f0-9]{64}$ ]] || { echo "Lore installer checksum is incomplete" >&2; exit 1; }
           [[ "$LORE_ARTIFACT_MANIFEST_SHA256" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Lore artifact manifest is not pinned" >&2; exit 1; }
