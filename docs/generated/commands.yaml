@@ -1,5 +1,5 @@
 generator: nap-docgen
-version: "0.5.10"
+version: "0.5.11"
 commands:
   - name: "add"
     full_path: "add"
