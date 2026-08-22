@@ -120,7 +120,7 @@ nap doctor
 nap doctor --repair
 ```
 
-Portals Cloud uses `grpcs://lore.portals.sh` on standard TLS port 443. Login is
+Portals Cloud uses `grpcs://lore.portals.works` on standard TLS port 443. Login is
 the only interactive VCS step; repository operations remain noninteractive and
 return an actionable `nap auth login` error when credentials are missing or
 expired. Lore automatically exchanges the eight-hour login session for a

@@ -48,7 +48,7 @@ struct ProviderConfigToml {
 }
 
 /// Hardcoded Portals Cloud URL (can be overridden by NAP_LORE_URL_BASE env var)
-const PORTALS_CLOUD_URL: &str = "grpcs://lore.portals.sh";
+const PORTALS_CLOUD_URL: &str = "grpcs://lore.portals.works";
 
 // ---------------------------------------------------------------------------
 // LoreProcessRunner

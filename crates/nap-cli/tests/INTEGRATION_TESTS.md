@@ -61,7 +61,7 @@ Tests nap functionality against the Portals Cloud lore server.
 - The `lore` binary in PATH
 
 **Environment Variables:**
-- `NAP_LORE_URL_BASE`: Portals Cloud Lore server URL (`grpcs://lore.portals.sh`)
+- `NAP_LORE_URL_BASE`: Portals Cloud Lore server URL (`grpcs://lore.portals.works`)
 - `NAP_WORKSPACE_ID`: Workspace ID for Portals Cloud
 - `PORTALS_CLOUD_API_KEY`: Revocable service-account API key for CI exchange
 
@@ -92,7 +92,7 @@ Tests nap functionality against the Portals Cloud lore server.
 **Option 1: Using the provided script (recommended)**
 ```bash
 # Set environment variables
-export NAP_LORE_URL_BASE="grpcs://lore.portals.sh"
+export NAP_LORE_URL_BASE="grpcs://lore.portals.works"
 export NAP_WORKSPACE_ID="your-workspace-id"
 export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 
@@ -104,7 +104,7 @@ export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 ```bash
 # Install just: cargo install just
 # Set environment variables
-export NAP_LORE_URL_BASE="grpcs://lore.portals.sh"
+export NAP_LORE_URL_BASE="grpcs://lore.portals.works"
 export NAP_WORKSPACE_ID="your-workspace-id"
 export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 
@@ -115,7 +115,7 @@ just test-integration-cloud
 **Option 3: Direct cargo command**
 ```bash
 # Set environment variables
-export NAP_LORE_URL_BASE="grpcs://lore.portals.sh"
+export NAP_LORE_URL_BASE="grpcs://lore.portals.works"
 export NAP_WORKSPACE_ID="your-workspace-id"
 export PORTALS_CLOUD_API_KEY="your-service-account-api-key"
 

@@ -281,9 +281,9 @@ fn main() -> Result<()> {
 /// credential store. Login deliberately inherits stdio for browser/device-code
 /// interaction; repository commands remain noninteractive.
 fn cmd_auth(cmd: AuthCmd) -> Result<()> {
-    const CLOUD_REMOTE: &str = "grpcs://lore.portals.sh";
-    let cloud_auth_url =
-        std::env::var("NAP_AUTH_URL").unwrap_or_else(|_| "ucs-auth://auth.portals.sh".to_string());
+    const CLOUD_REMOTE: &str = "grpcs://lore.portals.works";
+    let cloud_auth_url = std::env::var("NAP_AUTH_URL")
+        .unwrap_or_else(|_| "ucs-auth://auth.portals.works".to_string());
     let (args, stdin_secret): (Vec<String>, Option<String>) = match cmd {
         AuthCmd::Login {
             api_key,

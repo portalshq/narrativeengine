@@ -27,7 +27,7 @@ impl PortalsCloudProvider {
     /// Create a new Portals Cloud provider
     pub fn new() -> Self {
         Self {
-            api_url: "https://api.portals.sh".to_string(),
+            api_url: "https://api.portals.works".to_string(),
             workspace_id: super::get_default_workspace_id(),
             account_id: std::env::var("NAP_PORTALS_ACCOUNT_ID").ok(),
             auth_token: std::env::var("NAP_PORTALS_AUTH_TOKEN").ok(),
@@ -75,7 +75,7 @@ impl PortalsCloudProvider {
         // to get the Lore server URL for the account/workspace
         // For now, return a placeholder
         Ok(format!(
-            "lore://{}.portals.sh",
+            "lore://{}.portals.works",
             self.account_id.as_ref().unwrap()
         ))
     }

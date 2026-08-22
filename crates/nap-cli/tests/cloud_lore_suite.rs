@@ -7,7 +7,7 @@
 //! - The lore binary in PATH
 //!
 //! Environment variables:
-//! - NAP_LORE_URL_BASE: Portals Cloud Lore URL (`grpcs://lore.portals.sh`)
+//! - NAP_LORE_URL_BASE: Portals Cloud Lore URL (`grpcs://lore.portals.works`)
 //! - NAP_WORKSPACE_ID: Workspace ID for Portals Cloud
 //! - PORTALS_CLOUD_API_KEY: Revocable service-account API key (CI only)
 //!
@@ -33,7 +33,7 @@ fn nap_cmd() -> Command {
 
     // Configure for Portals Cloud - read from environment or use default
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
-        .unwrap_or_else(|_| "grpcs://lore.portals.sh".to_string());
+        .unwrap_or_else(|_| "grpcs://lore.portals.works".to_string());
     let workspace_id = std::env::var("NAP_WORKSPACE_ID").unwrap_or_else(|_| "default".to_string());
 
     cmd.env("NAP_LORE_URL_BASE", cloud_url);
@@ -890,7 +890,7 @@ fn test_staging_authenticated_end_to_end() {
     let clone = TempDir::new().expect("clone tempdir");
     let repository = unique_universe_name("security-gate");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
-        .unwrap_or_else(|_| "grpcs://lore.portals.sh".to_string());
+        .unwrap_or_else(|_| "grpcs://lore.portals.works".to_string());
 
     nap_cmd()
         .args(["init", "--provider", "portals-cloud", "--base-dir"])
