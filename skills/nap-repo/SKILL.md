@@ -3,7 +3,7 @@ name: nap-repo
 description: Initialize NAP repositories, clone/pull repositories, and create branches at the repository level. Use for repository-lifecycle operations (nap init, nap pull, nap branch) — not for creating or revising individual entities; see nap-resolve and nap-update for those.
 metadata:
   author: portals
-  version: "0.5.12"
+  version: "0.5.13"
 ---
 
 # NAP Skill: Repository Management
@@ -31,7 +31,7 @@ For creating or resolving individual entities, use `nap-resolve`. For revising e
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.12) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.13) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
