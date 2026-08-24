@@ -6,7 +6,10 @@
 //! to download, install, and verify Lore CLI and server binaries.
 
 use crate::server::error_ids;
-use crate::server::{PINNED_LORE_INSTALLER_SHA256, PINNED_LORE_REPOSITORY, PINNED_LORE_VERSION};
+use crate::server::{
+    PINNED_LORE_ARTIFACT_MANIFEST_SHA256, PINNED_LORE_INSTALLER_SHA256, PINNED_LORE_REPOSITORY,
+    PINNED_LORE_VERSION,
+};
 use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
@@ -21,6 +24,7 @@ pub struct LoreInstaller {
     repo: String,
     version: String,
     installer_sha256: String,
+    manifest_sha256: String,
 }
 
 impl LoreInstaller {
@@ -31,6 +35,7 @@ impl LoreInstaller {
             repo: PINNED_LORE_REPOSITORY.to_string(),
             version: PINNED_LORE_VERSION.to_string(),
             installer_sha256: PINNED_LORE_INSTALLER_SHA256.to_string(),
+            manifest_sha256: PINNED_LORE_ARTIFACT_MANIFEST_SHA256.to_string(),
         }
     }
 
@@ -49,6 +54,11 @@ impl LoreInstaller {
     /// Set the expected checksum when deliberately selecting another release.
     pub fn with_installer_sha256(mut self, installer_sha256: &str) -> Self {
         self.installer_sha256 = installer_sha256.to_string();
+        self
+    }
+
+    pub fn with_manifest_sha256(mut self, manifest_sha256: &str) -> Self {
+        self.manifest_sha256 = manifest_sha256.to_string();
         self
     }
 
@@ -191,6 +201,8 @@ impl LoreInstaller {
         // installer rejects unknown arguments; its default REPO=portalshq/lore
         // already matches PINNED_LORE_REPOSITORY. Custom with_repo() installs
         // are deferred until Lore ships --repo support (follow-up .6).
+        cmd_args.push("--manifest-sha256");
+        cmd_args.push(&self.manifest_sha256);
         cmd_args.extend(args.iter().copied());
 
         // Execute script
