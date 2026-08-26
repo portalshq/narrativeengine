@@ -166,7 +166,7 @@ fn test_cloud_lore_clone_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-clone-repo");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
-        .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
+        .unwrap_or_else(|_| "grpcs://lore.portals.works".to_string());
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -174,7 +174,7 @@ fn test_cloud_lore_clone_repository() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -235,7 +235,7 @@ fn test_cloud_lore_create_entity() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -286,7 +286,7 @@ fn test_cloud_lore_update_repository_file() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -354,7 +354,7 @@ fn test_cloud_lore_add_image_to_repository() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -430,7 +430,7 @@ fn test_cloud_lore_resolve_manifest_uri() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -482,7 +482,7 @@ fn test_cloud_lore_resolve_image_from_manifest() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -551,7 +551,7 @@ fn test_cloud_lore_list_entities() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -616,7 +616,7 @@ fn test_cloud_lore_commit_history() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -679,7 +679,7 @@ fn test_cloud_lore_branch_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -733,7 +733,7 @@ fn test_cloud_lore_status_and_doctor() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -761,7 +761,7 @@ fn test_cloud_lore_remote_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-remote");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
-        .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
+        .unwrap_or_else(|_| "grpcs://lore.portals.works".to_string());
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -769,7 +769,7 @@ fn test_cloud_lore_remote_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -811,7 +811,7 @@ fn test_cloud_lore_sync_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-sync");
     let cloud_url = std::env::var("NAP_LORE_URL_BASE")
-        .unwrap_or_else(|_| "lore://cloud.portals.ai".to_string());
+        .unwrap_or_else(|_| "grpcs://lore.portals.works".to_string());
 
     // Initialize nap with portals-cloud
     nap_cmd()
@@ -819,7 +819,7 @@ fn test_cloud_lore_sync_operations() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -983,7 +983,7 @@ fn test_cloud_lore_query_subtree() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -1048,7 +1048,7 @@ fn test_cloud_lore_resolve_with_branch() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
@@ -1111,7 +1111,7 @@ fn test_cloud_lore_validate_manifest() {
         .arg("--base-dir")
         .arg(tmp.path())
         .arg("--provider")
-        .arg("local")
+        .arg("portals-cloud")
         .assert()
         .success();
 
