@@ -1,13 +1,13 @@
 ---
 generated: "true"
 generator: nap-docgen
-version: 0.5.16
+version: 0.5.17
 source: clap
 ---
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.5.16) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.5.17) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
