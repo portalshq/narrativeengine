@@ -532,7 +532,7 @@ impl VcsBackend for LoreBackend {
                             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
                 });
             from_manifest.unwrap_or_else(|| {
-                let sanitized = raw_id.trim_start_matches(|c| c == '.' || c == '_');
+                let sanitized = raw_id.trim_start_matches(['.', '_']);
                 if sanitized.is_empty()
                     || !sanitized
                         .chars()

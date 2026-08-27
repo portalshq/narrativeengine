@@ -1305,14 +1305,14 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
                 .and_then(|rest| rest.split('/').next().map(|s| s.to_string()))
                 .or_else(|| {
                     // Fallback to URL last segment
-                    url_or_name.split('/').last().map(|s| s.to_string())
+                    url_or_name.rsplit('/').next().map(|s| s.to_string())
                 })
                 .ok_or_else(|| anyhow::anyhow!("cannot determine repository name from clone"))?
         } else {
             // Final fallback: URL last segment
             url_or_name
-                .split('/')
-                .last()
+                .rsplit('/')
+                .next()
                 .map(|s| s.to_string())
                 .ok_or_else(|| anyhow::anyhow!("cannot determine repository name from URL"))?
         };
