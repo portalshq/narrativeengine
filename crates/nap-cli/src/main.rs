@@ -548,18 +548,34 @@ fn cmd_init(
 
 fn cmd_init_universe(base_dir: &Path, repository: &str, remote: Option<&str>) -> Result<()> {
     // 1. Create a temporary path for atomic initialization
+    // Use a non-dot, valid resource_id prefix so LoreBackend::init (which derives
+    // repo_id from path.file_name()) never creates grpcs://…/.__nap_init_… on the
+    // remote — that name is rejected by store.validate_resource (dot-prefix).
+    // The temp is still hidden from `nap list` because it is renamed atomically
+    // to `base_dir/<repository>` on success; the dot was never needed for listing.
     let tmp_suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    let tmp_path = base_dir.join(format!(".__nap_init_{tmp_suffix}"));
-    std::fs::create_dir_all(&tmp_path).context("failed to create temporary directory for init")?;
+    // Use repository name in tmp so LoreBackend::init (which derives repo_id from
+    // path.file_name()) creates the intended remote, not a generic nap_init_… .
+    // Still atomic: tmp is created then renamed to final. Sanitize to valid id.
+    let safe_repo = repository
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .collect::<String>();
+    let tmp_path = base_dir.join(format!("{}_{}", safe_repo, tmp_suffix));
 
     // 2. Perform initialization in temporary path
     emit("Creating repository repository...");
+    // Hint LoreBackend::from_env to read provider.toml from base_dir (not NAP_DIR) for portals-cloud
     let vcs: Option<Box<dyn nap_core::vcs::VcsBackend>> =
         if nap_core::provider::version_control_configured(base_dir) {
-            Some(Box::new(LoreBackend::from_env()))
+            // Set hint for vcs_lore to read the correct provider.toml
+            unsafe { std::env::set_var("NAP_INIT_BASE_DIR", base_dir) };
+            let backend = Box::new(LoreBackend::from_env());
+            unsafe { std::env::remove_var("NAP_INIT_BASE_DIR") };
+            Some(backend)
         } else {
             None
         };
@@ -1258,20 +1274,41 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         emit(format!("  Cloning from {url_or_name} …"));
         LoreBackend::clone_repo(url_or_name, &tmp_path).context("failed to clone repository")?;
 
-        // Read the repository name from .nap/config.yaml
+        // Read the repository name — prefer .nap/config.yaml, fall back to
+        // repository.yaml or URL last segment (lore 0.8.4-portals.8 creates .lore, not .nap).
         let config_path = tmp_path.join(".nap").join("config.yaml");
+        let repo_yaml_path = tmp_path.join("repository.yaml");
         let name = if config_path.exists() {
             let config_content = std::fs::read_to_string(&config_path)
                 .context("cloned repo is missing or corrupt .nap/config.yaml")?;
-            // Parse repository name from YAML front matter
             let config_yaml: serde_yaml::Value = serde_yaml::from_str(&config_content)
                 .context("invalid .nap/config.yaml in cloned repo")?;
             config_yaml["repository"]
                 .as_str()
                 .map(|s| s.to_string())
                 .ok_or_else(|| anyhow::anyhow!("missing 'repository' key in .nap/config.yaml"))?
+        } else if repo_yaml_path.exists() {
+            // Fallback: lore creates repository.yaml with id: nap://<repo>/world/<repo>
+            let content = std::fs::read_to_string(&repo_yaml_path)
+                .context("cloned repo missing repository.yaml")?;
+            let yaml: serde_yaml::Value = serde_yaml::from_str(&content)
+                .context("invalid repository.yaml")?;
+            yaml.get("id")
+                .and_then(|id| id.as_str())
+                .and_then(|id_str| id_str.strip_prefix("nap://"))
+                .and_then(|rest| rest.split('/').next().map(|s| s.to_string()))
+                .or_else(|| {
+                    // Fallback to URL last segment
+                    url_or_name.split('/').last().map(|s| s.to_string())
+                })
+                .ok_or_else(|| anyhow::anyhow!("cannot determine repository name from clone"))?
         } else {
-            anyhow::bail!("not a NAP repository repository: missing .nap/config.yaml");
+            // Final fallback: URL last segment
+            url_or_name
+                .split('/')
+                .last()
+                .map(|s| s.to_string())
+                .ok_or_else(|| anyhow::anyhow!("cannot determine repository name from URL"))?
         };
 
         // Check if the target directory already exists

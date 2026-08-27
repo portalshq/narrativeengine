@@ -308,7 +308,59 @@ impl LoreBackend {
             };
         }
 
-        // Priority 2: Provider configuration
+        // Priority 2: Provider configuration from --base-dir's provider.toml (for cmd_init_universe)
+        // Check base_dir hinted via NAP_INIT_BASE_DIR (set by nap-cli) before falling back to NAP_DIR.
+        // Handles all provider types (local, remote, portals-cloud) for atomic init.
+        if let Ok(base_dir_str) = std::env::var("NAP_INIT_BASE_DIR") {
+            let base_path = PathBuf::from(&base_dir_str);
+            let provider_config_path = base_path.join("provider.toml");
+            if provider_config_path.exists()
+                && let Ok(config_content) = std::fs::read_to_string(&provider_config_path)
+                && let Ok(config) = toml::from_str::<ProviderConfigToml>(&config_content)
+            {
+                match config.provider_type.as_str() {
+                    "local" => {
+                        tracing::debug!(
+                            url_base = "lore://localhost:41337",
+                            workspace_id = "default",
+                            "LoreBackend::from_env using local provider from NAP_INIT_BASE_DIR"
+                        );
+                        return Self {
+                            remote_url: "lore://localhost:41337".to_string(),
+                            workspace_id: "default".to_string(),
+                        };
+                    }
+                    "remote" => {
+                        if let (Some(url), Some(workspace)) = (config.remote_url, config.workspace_id) {
+                            tracing::debug!(
+                                url_base = %url,
+                                workspace_id = %workspace,
+                                "LoreBackend::from_env using remote provider from NAP_INIT_BASE_DIR"
+                            );
+                            return Self {
+                                remote_url: url,
+                                workspace_id: workspace,
+                            };
+                        }
+                    }
+                    "portals-cloud" => {
+                        let workspace_id = config.workspace_id.unwrap_or_else(|| "default".to_string());
+                        tracing::debug!(
+                            url_base = %PORTALS_CLOUD_URL,
+                            workspace_id = %workspace_id,
+                            "LoreBackend::from_env using portals-cloud provider from NAP_INIT_BASE_DIR"
+                        );
+                        return Self {
+                            remote_url: PORTALS_CLOUD_URL.to_string(),
+                            workspace_id,
+                        };
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Priority 2b: Provider configuration from NAP_DIR
         let nap_dir = if let Ok(nap_dir_str) = std::env::var("NAP_DIR") {
             // Expand ~ in NAP_DIR if present (same logic as nap-cli expand_path)
             let path = PathBuf::from(&nap_dir_str);
@@ -438,12 +490,49 @@ impl VcsBackend for LoreBackend {
         // The server-side data is stored at `<parent>/.lore-server/<repo_id>`
         // to avoid collision with the clone destination.
 
-        let repo_id = path
+        let raw_id = path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("nap-repo");
+        // Defensive: `cmd_init_universe` creates a temp dir `base_dir/nap_init_<ts>`
+        // or `base_dir/<repo>_<ts>` and then `Repository::init_optional(&tmp, repo, vcs)`
+        // writes `tmp/repository.yaml` with `id: nap://<repo>/world/<repo>`.
+        // `LoreBackend::init` historically derived `repo_id` from `tmp.file_name()`
+        // (e.g. `.__nap_init_…` or `nap_init_…`) and created `grpcs://…/.__nap_init_…`
+        // on the remote — rejected by `store.validate_resource` → `Not authorized`.
+        // Prefer the canonical repository name from `repository.yaml` (`id` field)
+        // when it exists; fall back to sanitized leaf.
+        let repo_id = {
+            let from_manifest = path
+                .join("repository.yaml")
+                .exists()
+                .then(|| {
+                    std::fs::read_to_string(path.join("repository.yaml"))
+                        .ok()
+                        .and_then(|c| {
+                            serde_yaml::from_str::<serde_yaml::Value>(&c).ok().and_then(|v| {
+                                v.get("id")
+                                    .and_then(|id| id.as_str())
+                                    .and_then(|id_str| {
+                                        // id is "nap://<repository>/world/<repository>" or "nap://<repo>/<type>/<id>"
+                                        id_str.strip_prefix("nap://").and_then(|rest| rest.split('/').next().map(|s| s.to_string()))
+                                    })
+                            })
+                        })
+                })
+                .flatten()
+                .filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'));
+            from_manifest.unwrap_or_else(|| {
+                let sanitized = raw_id.trim_start_matches(|c| c == '.' || c == '_');
+                if sanitized.is_empty() || !sanitized.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+                    "nap-repo".to_string()
+                } else {
+                    sanitized.to_string()
+                }
+            })
+        };
 
-        let url = self.repo_url(repo_id);
+        let url = self.repo_url(&repo_id);
         let path_str = path.to_str().unwrap_or(".");
 
         // Server-side storage lives alongside the repo, not inside it.
@@ -843,62 +932,48 @@ impl VcsBackend for LoreBackend {
     }
 
     // ── remotes ──────────────────────────────────────────────────────
+    // Lore 0.8.4-portals.x has no `lore repository add/remove` — store remotes
+    // locally in `.lore/remotes.toml` (simple, robust, extensible; not via lore CLI).
     fn add_remote(&self, path: &Path, name: &str, url: &str) -> Result<(), NapError> {
-        LoreProcessRunner::run(
-            [
-                "repository",
-                "add",
-                url,
-                "--alias",
-                name,
-                "--non-interactive",
-            ],
-            Some(path),
-        )?;
+        let remotes_path = path.join(".lore").join("remotes.toml");
+        let mut map: std::collections::BTreeMap<String, String> = if remotes_path.exists() {
+            let content = std::fs::read_to_string(&remotes_path).unwrap_or_default();
+            toml::from_str(&content).unwrap_or_default()
+        } else {
+            std::collections::BTreeMap::new()
+        };
+        map.insert(name.to_string(), url.to_string());
+        if let Some(parent) = remotes_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| NapError::VcsError(e.to_string()))?;
+        }
+        let content = toml::to_string(&map).map_err(|e| NapError::VcsError(e.to_string()))?;
+        std::fs::write(&remotes_path, content).map_err(|e| NapError::VcsError(e.to_string()))?;
         Ok(())
     }
 
     fn remove_remote(&self, path: &Path, name: &str) -> Result<(), NapError> {
-        LoreProcessRunner::run(
-            ["repository", "remove", "--alias", name, "--non-interactive"],
-            Some(path),
-        )?;
+        let remotes_path = path.join(".lore").join("remotes.toml");
+        if !remotes_path.exists() {
+            return Ok(());
+        }
+        let content = std::fs::read_to_string(&remotes_path).unwrap_or_default();
+        let mut map: std::collections::BTreeMap<String, String> =
+            toml::from_str(&content).unwrap_or_default();
+        map.remove(name);
+        let new_content = toml::to_string(&map).map_err(|e| NapError::VcsError(e.to_string()))?;
+        std::fs::write(&remotes_path, new_content).map_err(|e| NapError::VcsError(e.to_string()))?;
         Ok(())
     }
 
     fn list_remotes(&self, path: &Path) -> Result<Vec<(String, String)>, NapError> {
-        let stdout = LoreProcessRunner::run(
-            [
-                "repository",
-                "list",
-                "--format",
-                "json",
-                "--non-interactive",
-            ],
-            Some(path),
-        )?;
-
-        if stdout.is_empty() || stdout == "[]" || stdout == "null" {
+        let remotes_path = path.join(".lore").join("remotes.toml");
+        if !remotes_path.exists() {
             return Ok(Vec::new());
         }
-
-        // Expect JSON array of { "name": "...", "url": "lore://..." }
-        #[derive(serde::Deserialize)]
-        struct RemoteEntry {
-            #[allow(dead_code)]
-            name: String,
-            #[allow(dead_code)]
-            url: String,
-        }
-        let entries: Vec<RemoteEntry> = serde_json::from_str(&stdout).map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to parse lore repository list JSON: {}. Raw: {}",
-                e, stdout
-            ))
-        })?;
-
-        let pairs: Vec<(String, String)> = entries.into_iter().map(|e| (e.name, e.url)).collect();
-        Ok(pairs)
+        let content = std::fs::read_to_string(&remotes_path).unwrap_or_default();
+        let map: std::collections::BTreeMap<String, String> =
+            toml::from_str(&content).unwrap_or_default();
+        Ok(map.into_iter().collect())
     }
 
     // ── push / pull ──────────────────────────────────────────────────
