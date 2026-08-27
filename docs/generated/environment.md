@@ -1,7 +1,7 @@
 ---
 generated: "true"
 generator: nap-docgen
-version: 0.5.18
+version: 0.5.19
 source: clap
 ---
 
