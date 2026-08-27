@@ -136,7 +136,7 @@ jobs:
           chmod +x artifacts/install.sh
       - working-directory: artifacts
         run: |
-          sha256sum * > SHA256SUMS
+          find . -maxdepth 1 -type f -exec sha256sum {} + > SHA256SUMS
       - uses: sigstore/cosign-installer@v3
       - name: Sign checksums and emit release metadata
         working-directory: artifacts
