@@ -562,7 +562,13 @@ fn cmd_init_universe(base_dir: &Path, repository: &str, remote: Option<&str>) ->
     // Still atomic: tmp is created then renamed to final. Sanitize to valid id.
     let safe_repo = repository
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>();
     let tmp_path = base_dir.join(format!("{}_{}", safe_repo, tmp_suffix));
 
@@ -1291,8 +1297,8 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
             // Fallback: lore creates repository.yaml with id: nap://<repo>/world/<repo>
             let content = std::fs::read_to_string(&repo_yaml_path)
                 .context("cloned repo missing repository.yaml")?;
-            let yaml: serde_yaml::Value = serde_yaml::from_str(&content)
-                .context("invalid repository.yaml")?;
+            let yaml: serde_yaml::Value =
+                serde_yaml::from_str(&content).context("invalid repository.yaml")?;
             yaml.get("id")
                 .and_then(|id| id.as_str())
                 .and_then(|id_str| id_str.strip_prefix("nap://"))

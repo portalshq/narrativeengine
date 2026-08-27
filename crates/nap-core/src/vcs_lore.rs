@@ -331,7 +331,9 @@ impl LoreBackend {
                         };
                     }
                     "remote" => {
-                        if let (Some(url), Some(workspace)) = (config.remote_url, config.workspace_id) {
+                        if let (Some(url), Some(workspace)) =
+                            (config.remote_url, config.workspace_id)
+                        {
                             tracing::debug!(
                                 url_base = %url,
                                 workspace_id = %workspace,
@@ -344,7 +346,8 @@ impl LoreBackend {
                         }
                     }
                     "portals-cloud" => {
-                        let workspace_id = config.workspace_id.unwrap_or_else(|| "default".to_string());
+                        let workspace_id =
+                            config.workspace_id.unwrap_or_else(|| "default".to_string());
                         tracing::debug!(
                             url_base = %PORTALS_CLOUD_URL,
                             workspace_id = %workspace_id,
@@ -510,21 +513,31 @@ impl VcsBackend for LoreBackend {
                     std::fs::read_to_string(path.join("repository.yaml"))
                         .ok()
                         .and_then(|c| {
-                            serde_yaml::from_str::<serde_yaml::Value>(&c).ok().and_then(|v| {
-                                v.get("id")
-                                    .and_then(|id| id.as_str())
-                                    .and_then(|id_str| {
+                            serde_yaml::from_str::<serde_yaml::Value>(&c)
+                                .ok()
+                                .and_then(|v| {
+                                    v.get("id").and_then(|id| id.as_str()).and_then(|id_str| {
                                         // id is "nap://<repository>/world/<repository>" or "nap://<repo>/<type>/<id>"
-                                        id_str.strip_prefix("nap://").and_then(|rest| rest.split('/').next().map(|s| s.to_string()))
+                                        id_str.strip_prefix("nap://").and_then(|rest| {
+                                            rest.split('/').next().map(|s| s.to_string())
+                                        })
                                     })
-                            })
+                                })
                         })
                 })
                 .flatten()
-                .filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'));
+                .filter(|s| {
+                    !s.is_empty()
+                        && s.chars()
+                            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                });
             from_manifest.unwrap_or_else(|| {
                 let sanitized = raw_id.trim_start_matches(|c| c == '.' || c == '_');
-                if sanitized.is_empty() || !sanitized.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+                if sanitized.is_empty()
+                    || !sanitized
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                {
                     "nap-repo".to_string()
                 } else {
                     sanitized.to_string()
@@ -961,7 +974,8 @@ impl VcsBackend for LoreBackend {
             toml::from_str(&content).unwrap_or_default();
         map.remove(name);
         let new_content = toml::to_string(&map).map_err(|e| NapError::VcsError(e.to_string()))?;
-        std::fs::write(&remotes_path, new_content).map_err(|e| NapError::VcsError(e.to_string()))?;
+        std::fs::write(&remotes_path, new_content)
+            .map_err(|e| NapError::VcsError(e.to_string()))?;
         Ok(())
     }
 
