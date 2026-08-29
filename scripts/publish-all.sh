@@ -116,7 +116,9 @@ fi
 echo "Bumping release version: $CURRENT_VERSION → $NEW_VERSION"
 
 python3 - "$ROOT_DIR" "$CURRENT_VERSION" "$NEW_VERSION" <<'PY'
+import json
 from pathlib import Path
+import re
 import sys
 
 root = Path(sys.argv[1])
@@ -152,6 +154,28 @@ for path, ops in replacements.items():
         text = text.replace(old, replacement, 1)
     path.write_text(text)
 
+for path in [
+    root / "typescript/narrativeengine/package-lock.json",
+    root / "typescript/nap-sdk/package-lock.json",
+]:
+    document = json.loads(path.read_text())
+    if document.get("version") != current or document.get("packages", {}).get("", {}).get("version") != current:
+        raise SystemExit(f"Expected root package version {current} in {path}")
+    document["version"] = new
+    document["packages"][""]["version"] = new
+    path.write_text(json.dumps(document, indent=2) + "\n")
+
+for path, package in [
+    (root / "python/narrativeengine/uv.lock", "narrativeengine"),
+    (root / "python/nap-sdk/uv.lock", "nap-sdk"),
+]:
+    text = path.read_text()
+    pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = "){re.escape(current)}(")'
+    text, count = re.subn(pattern, rf'\g<1>{new}\2', text, count=1)
+    if count != 1:
+        raise SystemExit(f"Expected package/version pair not found in {path}: {package} {current}")
+    path.write_text(text)
+
 cargo_lock = root / "Cargo.lock"
 text = cargo_lock.read_text()
 for package in workspace_packages:
@@ -179,8 +203,12 @@ echo "✓ Release validation passed"
 echo ""
 echo "Committing and tagging $RELEASE_TAG..."
 
-git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-mcp-server/Cargo.toml crates/nap-docgen/Cargo.toml crates/nap-server/Cargo.toml crates/nap-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/nap-sdk/pyproject.toml typescript/narrativeengine/Cargo.toml typescript/narrativeengine/package.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json
-git commit -m "chore(release): cut $RELEASE_TAG"
+git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-mcp-server/Cargo.toml crates/nap-docgen/Cargo.toml crates/nap-server/Cargo.toml crates/nap-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/narrativeengine/uv.lock python/nap-sdk/pyproject.toml python/nap-sdk/uv.lock typescript/narrativeengine/Cargo.toml typescript/narrativeengine/package.json typescript/narrativeengine/package-lock.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json typescript/nap-sdk/package-lock.json
+if [ -n "${RELEASE_COMMIT_COAUTHOR:-}" ]; then
+  git commit -m "chore(release): cut $RELEASE_TAG" -m "Co-Authored-By: ${RELEASE_COMMIT_COAUTHOR}"
+else
+  git commit -m "chore(release): cut $RELEASE_TAG"
+fi
 git tag -a "$RELEASE_TAG" -m "$RELEASE_TAG"
 
 echo ""

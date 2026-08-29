@@ -38,12 +38,28 @@ yaml_value() {
 
 # ── Helper: read current constants from version.rs ─────────────────────
 
+rust_string_constant() {
+    local name="$1"
+    grep -A1 "pub const ${name}" "$VERSION_RS" | grep '"' | head -1 | cut -d'"' -f2
+}
+
+replace_rust_string_constant() {
+    local name="$1" value="$2"
+    RUST_CONSTANT_NAME="$name" RUST_CONSTANT_VALUE="$value" perl -0pi.bak -e '
+        $name = $ENV{RUST_CONSTANT_NAME};
+        $value = $ENV{RUST_CONSTANT_VALUE};
+        $changed = s/(pub const \Q$name\E: &str =\s*)"[^"]*";/$1"$value";/s;
+        die "constant $name not found\n" unless $changed == 1;
+    ' "$VERSION_RS"
+    rm -f "${VERSION_RS}.bak"
+}
+
 read_constants() {
-    CUR_VERSION=$(grep 'pub const PINNED_LORE_VERSION' "$VERSION_RS" | cut -d'"' -f2)
-    CUR_INSTALLER_SHA256=$(grep -A1 'pub const PINNED_LORE_INSTALLER_SHA256' "$VERSION_RS" | grep '"' | cut -d'"' -f2)
-    CUR_MANIFEST_SHA256=$(grep 'pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256' "$VERSION_RS" | cut -d'"' -f2)
-    CUR_MANIFEST_URL=$(grep 'pub const PINNED_LORE_ARTIFACT_MANIFEST_URL' "$VERSION_RS" | cut -d'"' -f2)
-    CUR_SIGNATURE_URL=$(grep 'pub const PINNED_LORE_SIGNATURE_BUNDLE_URL' "$VERSION_RS" | cut -d'"' -f2)
+    CUR_VERSION=$(rust_string_constant PINNED_LORE_VERSION)
+    CUR_INSTALLER_SHA256=$(rust_string_constant PINNED_LORE_INSTALLER_SHA256)
+    CUR_MANIFEST_SHA256=$(rust_string_constant PINNED_LORE_ARTIFACT_MANIFEST_SHA256)
+    CUR_MANIFEST_URL=$(rust_string_constant PINNED_LORE_ARTIFACT_MANIFEST_URL)
+    CUR_SIGNATURE_URL=$(rust_string_constant PINNED_LORE_SIGNATURE_BUNDLE_URL)
 }
 
 # ── Helper: format-only validation (no versions.yaml) ──────────────────
@@ -308,19 +324,19 @@ echo "✓ Backups created"
 echo ""
 echo "Updating version.rs..."
 
-sed -i.bak "s|^pub const PINNED_LORE_VERSION: &str = \".*\";|pub const PINNED_LORE_VERSION: \&str = \"$LORE_VERSION\";|" "$VERSION_RS"
+OLD_LORE_VERSION="$CUR_VERSION"
+replace_rust_string_constant PINNED_LORE_VERSION "$LORE_VERSION"
+replace_rust_string_constant PINNED_LORE_INSTALLER_SHA256 "$LORE_INSTALLER_SHA256"
+replace_rust_string_constant PINNED_LORE_ARTIFACT_MANIFEST_SHA256 "$LORE_ARTIFACT_MANIFEST_SHA256"
+replace_rust_string_constant PINNED_LORE_ARTIFACT_MANIFEST_URL "$LORE_ARTIFACT_MANIFEST_URL"
+replace_rust_string_constant PINNED_LORE_SIGNATURE_BUNDLE_URL "$LORE_SIGNATURE_BUNDLE_URL"
 
-# Installer SHA256 is multi-line: pub const ...\n    "...";
-sed -i.bak "s|^    \"[a-f0-9]*\";$|    \"$LORE_INSTALLER_SHA256\";|" "$VERSION_RS"
-
-sed -i.bak "s|^pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str = \".*\";|pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: \&str = \"$LORE_ARTIFACT_MANIFEST_SHA256\";|" "$VERSION_RS"
-sed -i.bak "s|^pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str = \".*\";|pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: \&str = \"$LORE_ARTIFACT_MANIFEST_URL\";|" "$VERSION_RS"
-sed -i.bak "s|^pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str = \".*\";|pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: \&str = \"$LORE_SIGNATURE_BUNDLE_URL\";|" "$VERSION_RS"
-
-# Update hardcoded test assertion in version.rs
-sed -i.bak "s|assert_eq!(PINNED_LORE_VERSION, \".*\");|assert_eq!(PINNED_LORE_VERSION, \"$LORE_VERSION\");|" "$VERSION_RS"
-
-rm -f "${VERSION_RS}.bak"
+# Keep exact-version fixtures and their comments aligned with the production
+# pin. Mismatch tests use separate nightly/stable/semver values.
+OLD_LORE_VERSION="$OLD_LORE_VERSION" NEW_LORE_VERSION="$LORE_VERSION" perl -pi.bak -e '
+    s/\Q$ENV{OLD_LORE_VERSION}\E/$ENV{NEW_LORE_VERSION}/g
+' "$VERSION_RS" "$INTEGRATION_RS" "$INSTALL_RS"
+rm -f "${VERSION_RS}.bak" "${INTEGRATION_RS}.bak" "${INSTALL_RS}.bak"
 echo "✓ version.rs updated"
 
 # ── Update integration test file ───────────────────────────────────────
@@ -328,12 +344,6 @@ echo "✓ version.rs updated"
 if [[ -f "$INTEGRATION_RS" ]]; then
     echo "Updating $INTEGRATION_RS..."
 
-    sed -i.bak "s|^const EXPECTED_PINNED_VERSION: &str = \".*\";|const EXPECTED_PINNED_VERSION: \&str = \"$LORE_VERSION\";|" "$INTEGRATION_RS"
-
-    # Update exact-match test data to use the pinned version
-    sed -i.bak "s|make_version_info(\"0\.8\.4\", 0, 8, 4)|make_version_info(\"$LORE_VERSION\", 0, 8, 4)|" "$INTEGRATION_RS"
-
-    rm -f "${INTEGRATION_RS}.bak"
     echo "✓ $INTEGRATION_RS updated"
 fi
 
@@ -342,9 +352,6 @@ fi
 if [[ -f "$INSTALL_RS" ]]; then
     echo "Updating $INSTALL_RS..."
 
-    sed -i.bak "s|assert_eq!(installer\.tag_version(), \"v0\.8\.4\");|assert_eq!(installer.tag_version(), \"v$LORE_VERSION\");|" "$INSTALL_RS"
-
-    rm -f "${INSTALL_RS}.bak"
     echo "✓ $INSTALL_RS updated"
 fi
 
@@ -352,11 +359,11 @@ fi
 
 echo ""
 echo "New values in version.rs:"
-echo "  PINNED_LORE_VERSION: $(grep 'pub const PINNED_LORE_VERSION' "$VERSION_RS" | cut -d'"' -f2)"
-echo "  PINNED_LORE_INSTALLER_SHA256: $(grep 'pub const PINNED_LORE_INSTALLER_SHA256' "$VERSION_RS" | tail -1 | cut -d'"' -f2)"
-echo "  PINNED_LORE_ARTIFACT_MANIFEST_SHA256: $(grep 'pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256' "$VERSION_RS" | cut -d'"' -f2)"
-echo "  PINNED_LORE_ARTIFACT_MANIFEST_URL: $(grep 'pub const PINNED_LORE_ARTIFACT_MANIFEST_URL' "$VERSION_RS" | cut -d'"' -f2)"
-echo "  PINNED_LORE_SIGNATURE_BUNDLE_URL: $(grep 'pub const PINNED_LORE_SIGNATURE_BUNDLE_URL' "$VERSION_RS" | cut -d'"' -f2)"
+echo "  PINNED_LORE_VERSION: $(rust_string_constant PINNED_LORE_VERSION)"
+echo "  PINNED_LORE_INSTALLER_SHA256: $(rust_string_constant PINNED_LORE_INSTALLER_SHA256)"
+echo "  PINNED_LORE_ARTIFACT_MANIFEST_SHA256: $(rust_string_constant PINNED_LORE_ARTIFACT_MANIFEST_SHA256)"
+echo "  PINNED_LORE_ARTIFACT_MANIFEST_URL: $(rust_string_constant PINNED_LORE_ARTIFACT_MANIFEST_URL)"
+echo "  PINNED_LORE_SIGNATURE_BUNDLE_URL: $(rust_string_constant PINNED_LORE_SIGNATURE_BUNDLE_URL)"
 echo ""
 
 echo "========================================"

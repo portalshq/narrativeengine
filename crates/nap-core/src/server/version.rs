@@ -16,7 +16,7 @@ use std::process::Command;
 ///
 /// During initialization NAP verifies that the installed `lore` and
 /// `loreserver` binaries report **exactly** this version string.
-pub const PINNED_LORE_VERSION: &str = "0.8.4-portals.5";
+pub const PINNED_LORE_VERSION: &str = "0.8.4-portals.9";
 
 /// Release repository containing the Portals authentication-capable Lore
 /// client. Never fall back to the unaffiliated upstream release at runtime.
@@ -32,11 +32,11 @@ pub const PINNED_LORE_INSTALLER_SHA256: &str =
 /// manifest. Empty means this Nap source is not eligible for a secure cloud
 /// release even though local development can still use the pinned installer.
 pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str =
-    "sha256:6285c50ff490870a8417db442f75ab73d53578f52eacacd31011cd350b957457";
+    "sha256:dc853999309ec32e2c91acb94f7ef2aad4f080ac4a0f7591d9371d5cd57eb089";
 pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str =
-    "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS";
+    "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.9/SHA256SUMS";
 pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str =
-    "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.5/SHA256SUMS.sigstore.json";
+    "https://github.com/portalshq/lore/releases/download/v0.8.4-portals.9/SHA256SUMS.sigstore.json";
 
 // ── Detected version info ───────────────────────────────────────────────
 
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_compatibility_ignores_build_metadata() {
-        // "0.8.4-portals.5+283" must match pinned "0.8.4-portals.5" — build
+        // "0.8.4-portals.9+283" must match pinned "0.8.4-portals.9" — build
         // metadata is ignored per the semver specification.
         let installed = LoreVersionInfo {
             parsed: Version::new(0, 8, 4),
@@ -401,8 +401,8 @@ mod tests {
     #[test]
     fn test_pinned_version_constant() {
         // This test documents the contract: the pinned version must be
-        // "0.8.4-portals.5".  If you intentionally change it, update this
+        // "0.8.4-portals.9".  If you intentionally change it, update this
         // test and the integration test as well.
-        assert_eq!(PINNED_LORE_VERSION, "0.8.4-portals.5");
+        assert_eq!(PINNED_LORE_VERSION, "0.8.4-portals.9");
     }
 }

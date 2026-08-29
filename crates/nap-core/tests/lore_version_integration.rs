@@ -19,7 +19,7 @@ use semver::Version;
 // integration test in this file.  The value **must** agree with the
 // production constant `PINNED_LORE_VERSION` or the contract tests below
 // will fail loudly.
-const EXPECTED_PINNED_VERSION: &str = "0.8.4-portals.5";
+const EXPECTED_PINNED_VERSION: &str = "0.8.4-portals.9";
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -48,10 +48,10 @@ fn pinned_version_constant_matches_expected() {
 /// A lore server that reports the exact pinned version must be accepted.
 #[test]
 fn exact_pinned_version_is_compatible() {
-    let installed = make_version_info("0.8.4-portals.5", 0, 8, 4);
+    let installed = make_version_info("0.8.4-portals.9", 0, 8, 4);
     assert!(
         check_lore_compatibility(&installed).unwrap(),
-        "Version '0.8.4-portals.5' should be compatible with pinned version '{}'",
+        "Version '0.8.4-portals.9' should be compatible with pinned version '{}'",
         PINNED_LORE_VERSION
     );
 }
@@ -140,14 +140,14 @@ fn newer_version_is_incompatible() {
 /// Verify that `LoreVersionInfo` preserves both raw and parsed representations.
 #[test]
 fn version_info_preserves_raw_and_parsed() {
-    let info = make_version_info("0.8.4-portals.5", 0, 8, 4);
-    assert_eq!(info.raw, "0.8.4-portals.5");
+    let info = make_version_info("0.8.4-portals.9", 0, 8, 4);
+    assert_eq!(info.raw, "0.8.4-portals.9");
     assert_eq!(info.parsed, Version::new(0, 8, 4));
 }
 
 /// Verify Display implementation shows the raw version.
 #[test]
 fn version_info_display_shows_raw() {
-    let info = make_version_info("0.8.4-portals.5", 0, 8, 4);
-    assert_eq!(format!("{}", info), "0.8.4-portals.5");
+    let info = make_version_info("0.8.4-portals.9", 0, 8, 4);
+    assert_eq!(format!("{}", info), "0.8.4-portals.9");
 }
