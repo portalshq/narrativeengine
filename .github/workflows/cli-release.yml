@@ -136,7 +136,13 @@ jobs:
           chmod +x artifacts/install.sh
       - working-directory: artifacts
         run: |
-          find . -maxdepth 1 -type f -exec sha256sum {} + > SHA256SUMS
+          # Write through a temporary file outside the artifact directory so
+          # the checksum manifest can never include itself.
+          MANIFEST="$(mktemp)"
+          find . -maxdepth 1 -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > "$MANIFEST"
+          mv "$MANIFEST" SHA256SUMS
       - uses: sigstore/cosign-installer@v3
       - name: Sign checksums and emit release metadata
         working-directory: artifacts
