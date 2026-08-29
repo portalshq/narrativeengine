@@ -1,20 +1,18 @@
 # nap — Narrative Addressing Protocol
 
-**NAP is a protocol that makes narrative resources addressable, resolvable, and interoperable across tools, storage systems, formats, and AI workflows.**
+**NAP is a protocol that makes semantic narrative objects addressable, resolvable, and interoperable across tools, storage systems, formats, and AI workflows.**
 
-Characters, locations, scenes, props, and entire fictional repositories — NAP gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
-
-In the same way that IPFS content-addressed files and OCI container-addressed images, NAP is **narrative-addressed** — a universal namespace for the building blocks of stories.
+For characters, locations, scenes, and entire repositories, NAP gives a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them.
 
 ---
 
 ## Why NAP?
 
 Today, narrative assets live in silos:
-- Worldbuilding docs in Notion or Google Docs
+- Worldbuilding docs in Google Docs
 - Character sheets in spreadsheets
-- Concept art in Dropbox or S3
-- Scene breakdowns in Final Draft or Fade In
+- Concept art in Midjourney
+- Scene breakdowns in Final Draft
 - AI prompts scattered across chat logs
 - 3D assets on Sketchfab or Polycam
 
