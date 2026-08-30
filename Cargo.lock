@@ -1722,6 +1722,7 @@ version = "0.6.0"
 dependencies = [
  "narrativeengine",
  "pyo3",
+ "tokio",
 ]
 
 [[package]]
@@ -1732,6 +1733,7 @@ dependencies = [
  "napi-build",
  "napi-derive",
  "narrativeengine",
+ "tokio",
 ]
 
 [[package]]

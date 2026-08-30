@@ -24,3 +24,29 @@ export function version(): string {
   return native.version();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NarrativeEngine class
+// ─────────────────────────────────────────────────────────────────────────────
+
+export class NarrativeEngine {
+  private engine: any;
+
+  constructor(provider?: any) {
+    // Support both old API (with provider) and new API (no args)
+    this.engine = new native.JsNarrativeEngine();
+  }
+
+  generateContext(channelId: string, query: string): string {
+    return this.engine.generateContext(channelId, query);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backward compatibility function
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function configureLabEngine(engine: NarrativeEngine): void {
+  // Placeholder for backward compatibility - no-op in new architecture
+  // Lab configuration is now handled through internal engine settings
+}
+

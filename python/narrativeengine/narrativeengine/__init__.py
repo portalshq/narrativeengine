@@ -42,6 +42,18 @@ def _coerce[T](model: type[T], data: dict[str, Any]) -> T:
     return cast(T, data)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# NarrativeEngine class
+# ─────────────────────────────────────────────────────────────────────────────
+
+class NarrativeEngine:
+    def __init__(self) -> None:
+        self._engine = _native.PyNarrativeEngine()
+
+    def generate_context(self, channel_id: str, query: str) -> str:
+        return self._engine.generate_context(channel_id, query)
+
+
 __all__ = [
     "HybridCandidate",
     "LabConfig",
@@ -52,5 +64,6 @@ __all__ = [
     "render_lore_summary",
     "schema_bundle",
     "version",
+    "NarrativeEngine",
 ]
 

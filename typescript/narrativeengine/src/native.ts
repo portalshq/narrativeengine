@@ -8,10 +8,23 @@ interface NativeBindings {
   schemaBundleJson(): string;
   version(): string;
 }
+
+interface JsNarrativeEngineConstructor {
+  new (): JsNarrativeEngine;
+}
+
+interface JsNarrativeEngine {
+  generateContext(channelId: string, query: string): string;
+  version(): string;
+}
+
+interface NativeModule extends NativeBindings {
+  JsNarrativeEngine: JsNarrativeEngineConstructor;
+}
 /* eslint-enable no-unused-vars */
 
 const require = createRequire(import.meta.url);
-const native = require("../index.cjs") as NativeBindings;
+const native = require("../index.cjs") as NativeModule;
 
 export default native;
 

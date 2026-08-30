@@ -8,3 +8,8 @@ export declare function generateCandidateJson(loreJson: string, configJson: stri
 export declare function renderLoreSummaryJson(loreJson: string): string
 export declare function schemaBundleJson(): string
 export declare function version(): string
+export declare class JsNarrativeEngine {
+  constructor()
+  generateContext(channelId: string, query: string): string
+  static version(): string
+}

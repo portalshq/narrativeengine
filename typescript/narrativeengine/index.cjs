@@ -310,10 +310,11 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { createBlockJson, generateCandidateJson, renderLoreSummaryJson, schemaBundleJson, version } = nativeBinding
+const { createBlockJson, generateCandidateJson, renderLoreSummaryJson, schemaBundleJson, version, JsNarrativeEngine } = nativeBinding
 
 module.exports.createBlockJson = createBlockJson
 module.exports.generateCandidateJson = generateCandidateJson
 module.exports.renderLoreSummaryJson = renderLoreSummaryJson
 module.exports.schemaBundleJson = schemaBundleJson
 module.exports.version = version
+module.exports.JsNarrativeEngine = JsNarrativeEngine
