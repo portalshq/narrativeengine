@@ -1733,6 +1733,7 @@ dependencies = [
  "napi-build",
  "napi-derive",
  "narrativeengine",
+ "serde_json",
  "tokio",
 ]
 

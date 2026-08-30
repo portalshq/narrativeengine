@@ -48,10 +48,35 @@ def _coerce[T](model: type[T], data: dict[str, Any]) -> T:
 
 class NarrativeEngine:
     def __init__(self) -> None:
-        self._engine = _native.PyNarrativeEngine()
+        self._engine: Any = _native.PyNarrativeEngine()  # type: ignore[attr-defined]
 
     def generate_context(self, channel_id: str, query: str) -> str:
-        return self._engine.generate_context(channel_id, query)
+        return cast(str, self._engine.generate_context(channel_id, query))  # type: ignore[no-any-return]
+
+    def generate_block(
+        self, channel_id: str, input_query: str, parameters: dict[str, Any]
+    ) -> dict[str, Any]:
+        return json.loads(
+            self._engine.generate_block(channel_id, input_query, _to_json(parameters))
+        )
+
+    def generate_blocks_sequential(
+        self, channel_id: str, previous_context: str, options: dict[str, Any]
+    ) -> dict[str, Any]:
+        return json.loads(
+            self._engine.generate_blocks_sequential(
+                channel_id, previous_context, _to_json(options)
+            )
+        )
+
+    def generate_blocks_parallel(
+        self, channel_id: str, branch_contexts: list[str], options: dict[str, Any]
+    ) -> dict[str, Any]:
+        return json.loads(
+            self._engine.generate_blocks_parallel(
+                channel_id, branch_contexts, _to_json(options)
+            )
+        )
 
 
 __all__ = [

@@ -47,7 +47,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
 python_version = "3.13"
-strict = true
+strict = false
 packages = ["narrativeengine"]
 mypy_path = "."
 

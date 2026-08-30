@@ -65,12 +65,103 @@ impl JsNarrativeEngine {
     pub fn generate_context(&self, channel_id: String, query: String) -> napi::Result<String> {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| Error::from_reason(format!("Failed to create runtime: {}", e)))?;
-        
+
         let context = rt.block_on(async {
             self.engine.generate_context(&channel_id, &query).await
         });
-        
+
         Ok(context)
+    }
+
+    #[napi]
+    pub fn generate_block(
+        &self,
+        channel_id: String,
+        input_query: String,
+        parameters_json: String,
+    ) -> napi::Result<String> {
+        use narrativeengine::narrative::v1::GenerationParameters;
+
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| Error::from_reason(format!("Failed to create runtime: {}", e)))?;
+
+        let parameters: GenerationParameters = serde_json::from_str(&parameters_json)
+            .map_err(|e| Error::from_reason(format!("Failed to parse parameters: {}", e)))?;
+
+        let result = rt.block_on(async {
+            self.engine.generate_block(&channel_id, &input_query, parameters).await
+        });
+
+        match result {
+            Ok(envelope) => {
+                let json = serde_json::to_string(&envelope)
+                    .map_err(|e| Error::from_reason(format!("Failed to serialize result: {}", e)))?;
+                Ok(json)
+            }
+            Err(error) => Err(Error::from_reason(format!("Generation failed: {}", error.message))),
+        }
+    }
+
+    #[napi]
+    pub fn generate_blocks_sequential(
+        &self,
+        channel_id: String,
+        previous_context: String,
+        options_json: String,
+    ) -> napi::Result<String> {
+        use narrativeengine::narrative::v1::BatchGenerationOptions;
+
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| Error::from_reason(format!("Failed to create runtime: {}", e)))?;
+
+        let options: BatchGenerationOptions = serde_json::from_str(&options_json)
+            .map_err(|e| Error::from_reason(format!("Failed to parse options: {}", e)))?;
+
+        let result = rt.block_on(async {
+            self.engine
+                .generate_blocks_sequential(&channel_id, &previous_context, options)
+                .await
+        });
+
+        match result {
+            Ok(result) => {
+                let json = serde_json::to_string(&result)
+                    .map_err(|e| Error::from_reason(format!("Failed to serialize result: {}", e)))?;
+                Ok(json)
+            }
+            Err(error) => Err(Error::from_reason(format!("Batch generation failed: {}", error.message))),
+        }
+    }
+
+    #[napi]
+    pub fn generate_blocks_parallel(
+        &self,
+        channel_id: String,
+        branch_contexts: Vec<String>,
+        options_json: String,
+    ) -> napi::Result<String> {
+        use narrativeengine::narrative::v1::BatchGenerationOptions;
+
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| Error::from_reason(format!("Failed to create runtime: {}", e)))?;
+
+        let options: BatchGenerationOptions = serde_json::from_str(&options_json)
+            .map_err(|e| Error::from_reason(format!("Failed to parse options: {}", e)))?;
+
+        let result = rt.block_on(async {
+            self.engine
+                .generate_blocks_parallel(&channel_id, &branch_contexts, options)
+                .await
+        });
+
+        match result {
+            Ok(result) => {
+                let json = serde_json::to_string(&result)
+                    .map_err(|e| Error::from_reason(format!("Failed to serialize result: {}", e)))?;
+                Ok(json)
+            }
+            Err(error) => Err(Error::from_reason(format!("Parallel generation failed: {}", error.message))),
+        }
     }
 
     #[napi]
