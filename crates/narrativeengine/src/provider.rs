@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, NarrativeBlockExt};
 
@@ -87,13 +88,16 @@ where
 
     /// Returns a short identifier for logging / tracing.
     fn get_provider_type(&self) -> &'static str;
+
+    // Clone method for parallel batch generation
+    fn clone_box(&self) -> Box<dyn NarrativeProvider<TBlock, TLore>>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // InMemoryNarrativeProvider
 // ─────────────────────────────────────────────────────────────────────────────
 
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 /// Zero-dependency in-memory provider for testing and local development.
 ///
@@ -129,6 +133,19 @@ impl Default for InMemoryNarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore
     fn default() -> Self {
         use crate::mocks::{MOCK_BLOCKS, MOCK_LORE};
         Self::new(MOCK_BLOCKS.to_vec(), MOCK_LORE.to_vec())
+    }
+}
+
+impl<TBlock, TLore> Clone for InMemoryNarrativeProvider<TBlock, TLore>
+where
+    TBlock: Clone + Send + Sync,
+    TLore: Clone + Send + Sync,
+{
+    fn clone(&self) -> Self {
+        Self {
+            blocks: Arc::clone(&self.blocks),
+            lore: Arc::clone(&self.lore),
+        }
     }
 }
 
@@ -264,6 +281,13 @@ impl NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore>
 
     fn get_provider_type(&self) -> &'static str {
         "in-memory"
+    }
+
+    fn clone_box(&self) -> Box<dyn NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore>> {
+        Box::new(InMemoryNarrativeProvider {
+            blocks: Arc::clone(&self.blocks),
+            lore: Arc::clone(&self.lore),
+        })
     }
 }
 

@@ -3,7 +3,10 @@
 //! Mirrors generated Protobuf structures for wire compatibility,
 //! with extension traits for internal business logic.
 
-pub use crate::narrative::v1::{BaseNarrativeBlock, BaseNarrativeLore};
+pub use crate::narrative::v1::{
+    BaseNarrativeBlock, BaseNarrativeLore, BatchGenerationOptions, BatchGenerationResult,
+    ContextData, Entity, EnvelopeMetadata, GenerationParameters, Representation, ReturnEnvelope,
+};
 use serde::{Deserialize, Serialize};
 
 /// Internal representation of a block or lore entry ID.

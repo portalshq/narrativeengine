@@ -20,6 +20,7 @@ once_cell = { workspace = true }
 chrono = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
+tokio = { workspace = true }
 
 [build-dependencies]
 tonic-build = { version = "0.12" }

@@ -22,3 +22,71 @@ message BaseNarrativeLore {
   int64 happened_at = 3;
   optional bool is_active = 4;
 }
+
+// Enhanced types for nap-sdk integration
+
+message Entity {
+  string id = 1; // nap: "nap://repository/entityType/entityId"
+  string name = 2;
+  string type = 3; // character, location, scene, prop, world
+  string description = 4;
+  repeated Representation representations = 5;
+  map<string, string> properties = 6; // nap-sdk properties
+  map<string, string> references = 7; // nap-sdk references
+}
+
+message Representation {
+  string id = 1;
+  string format = 2; // png, jpg, glb, etc.
+  string cdn_url = 3; // CDN URL (not signed)
+  string tier = 4; // quality tier
+  string hash = 5; // content hash
+  int64 expires_at = 6; // cache expiration
+}
+
+message ReturnEnvelope {
+  BaseNarrativeBlock block = 1;
+  ContextData context = 2;
+  EnvelopeMetadata metadata = 3;
+}
+
+message ContextData {
+  repeated BaseNarrativeBlock chronological_blocks = 1;
+  repeated Entity entities = 2;
+  repeated Representation representations = 3;
+}
+
+message EnvelopeMetadata {
+  int32 total_blocks = 1;
+  int32 retrieved_blocks = 2;
+  int32 entity_count = 3;
+  int32 representation_count = 4;
+  int64 generation_time_ms = 5;
+}
+
+message GenerationParameters {
+  int32 max_unique_entity_representations = 1;
+  string representation_property = 2;
+  int32 chronological_block_count = 3;
+  bool include_inactive_entities = 4;
+  repeated string entity_types = 5;
+  bool enable_entity_extraction = 6;
+  string nap_repository = 7;
+  repeated string nap_entity_types = 8;
+}
+
+message BatchGenerationOptions {
+  int32 block_count = 1;
+  bool dry_run = 2;
+  bool persist_blocks = 3;
+  string persist_channel_id = 4;
+  int32 persist_session_id = 5;
+}
+
+message BatchGenerationResult {
+  int32 blocks_generated = 1;
+  int32 blocks_failed = 2;
+  repeated string errors = 3;
+  int64 total_duration_ms = 4;
+  repeated BaseNarrativeBlock generated_blocks = 5;
+}
