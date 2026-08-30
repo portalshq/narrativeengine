@@ -14,5 +14,7 @@ export declare class JsNarrativeEngine {
   generateBlock(channelId: string, inputQuery: string, parametersJson: string): string
   generateBlocksSequential(channelId: string, previousContext: string, optionsJson: string): string
   generateBlocksParallel(channelId: string, branchContexts: Array<string>, optionsJson: string): string
+  setLabConfig(configJson: string): void
+  getLabConfig(): string
   static version(): string
 }

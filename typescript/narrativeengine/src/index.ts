@@ -39,6 +39,32 @@ export class NarrativeEngine {
   generateContext(channelId: string, query: string): string {
     return this.engine.generateContext(channelId, query);
   }
+
+  generateBlock(channelId: string, inputQuery: string, parameters: any): any {
+    return JSON.parse(
+      this.engine.generateBlock(channelId, inputQuery, JSON.stringify(parameters))
+    );
+  }
+
+  generateBlocksSequential(channelId: string, previousContext: string, options: any): any {
+    return JSON.parse(
+      this.engine.generateBlocksSequential(channelId, previousContext, JSON.stringify(options))
+    );
+  }
+
+  generateBlocksParallel(channelId: string, branchContexts: string[], options: any): any {
+    return JSON.parse(
+      this.engine.generateBlocksParallel(channelId, branchContexts, JSON.stringify(options))
+    );
+  }
+
+  setLabConfig(config: any): void {
+    this.engine.setLabConfig(JSON.stringify(config));
+  }
+
+  getLabConfig(): any {
+    return JSON.parse(this.engine.getLabConfig());
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

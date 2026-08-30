@@ -14,3 +14,4 @@ crate-type = ["cdylib"]
 narrativeengine = { path = "../../crates/narrativeengine" }
 pyo3 = { workspace = true, features = ["extension-module"] }
 tokio = { workspace = true, features = ["rt"] }
+serde_json = { workspace = true }

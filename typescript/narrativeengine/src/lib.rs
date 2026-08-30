@@ -165,6 +165,25 @@ impl JsNarrativeEngine {
     }
 
     #[napi]
+    pub fn set_lab_config(&mut self, config_json: String) -> napi::Result<()> {
+        use narrativeengine::engine::LabConfig;
+
+        let config: LabConfig = serde_json::from_str(&config_json)
+            .map_err(|e| Error::from_reason(format!("Failed to parse config: {}", e)))?;
+
+        self.engine.set_lab_config(config);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn get_lab_config(&self) -> napi::Result<String> {
+        let config = self.engine.get_lab_config();
+        let json = serde_json::to_string(&config)
+            .map_err(|e| Error::from_reason(format!("Failed to serialize config: {}", e)))?;
+        Ok(json)
+    }
+
+    #[napi]
     pub fn version() -> &'static str {
         env!("CARGO_PKG_VERSION")
     }

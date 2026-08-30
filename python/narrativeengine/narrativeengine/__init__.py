@@ -78,6 +78,12 @@ class NarrativeEngine:
             )
         )
 
+    def set_lab_config(self, config: dict[str, Any]) -> None:
+        self._engine.set_lab_config(_to_json(config))
+
+    def get_lab_config(self) -> dict[str, Any]:
+        return json.loads(self._engine.get_lab_config())
+
 
 __all__ = [
     "HybridCandidate",
