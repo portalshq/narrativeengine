@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use crate::narrative::v1::{Entity, GenerationError, Representation};
 use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, NarrativeBlockExt};
 
 /// Type alias for the complex batch hybrid search future return type
@@ -15,6 +16,67 @@ type BatchHybridSearchFuture<'a, TBlock> = Pin<
         dyn std::future::Future<Output = HashMap<String, Vec<HybridCandidate<TBlock>>>> + Send + 'a,
     >,
 >;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Integration Traits for Enhanced API
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Trait for AI-powered content generation.
+/// Applications implement this to provide their AI generation logic.
+pub trait ContentGenerator: Send + Sync {
+    /// Generate content from the given context and query.
+    fn generate_content(
+        &self,
+        context: &str,
+        query: &str,
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send + '_>>;
+}
+
+/// Trait for entity extraction integration.
+/// Applications implement this to integrate with nap-sdk or similar services.
+pub trait EntityExtractor: Send + Sync {
+    /// Extract entities from the given context.
+    fn extract_entities(
+        &self,
+        context: &str,
+        repository: Option<&str>,
+        entity_types: &[String],
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<Vec<Entity>, GenerationError>> + Send + '_>>;
+}
+
+/// Trait for representation retrieval integration.
+/// Applications implement this to fetch entity representations.
+pub trait RepresentationRetriever: Send + Sync {
+    /// Retrieve representations for the given entities.
+    fn get_representations(
+        &self,
+        entities: &[Entity],
+        representation_property: Option<&str>,
+        max_count: i32,
+    ) -> Pin<
+        Box<
+            dyn std::future::Future<Output = Result<Vec<Representation>, GenerationError>>
+                + Send
+                + '_,
+        >,
+    >;
+}
+
+/// Trait for block persistence integration.
+/// Applications implement this to control where/how blocks are stored.
+pub trait BlockPersistence: Send + Sync {
+    /// Persist a generated block.
+    fn persist_block(
+        &self,
+        channel_id: &str,
+        session_id: i32,
+        block: &BaseNarrativeBlock,
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<(), GenerationError>> + Send + '_>>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Core Provider Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 /// A search result candidate pairing a block with its retrieval scores.
 #[derive(Debug, Clone)]
@@ -88,9 +150,6 @@ where
 
     /// Returns a short identifier for logging / tracing.
     fn get_provider_type(&self) -> &'static str;
-
-    // Clone method for parallel batch generation
-    fn clone_box(&self) -> Box<dyn NarrativeProvider<TBlock, TLore>>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -281,13 +340,6 @@ impl NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore>
 
     fn get_provider_type(&self) -> &'static str {
         "in-memory"
-    }
-
-    fn clone_box(&self) -> Box<dyn NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore>> {
-        Box::new(InMemoryNarrativeProvider {
-            blocks: Arc::clone(&self.blocks),
-            lore: Arc::clone(&self.lore),
-        })
     }
 }
 

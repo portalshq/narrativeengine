@@ -9,7 +9,11 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::narrative::v1::{
-    BatchGenerationOptions, BatchGenerationResult, GenerationParameters, ReturnEnvelope,
+    BatchGenerationOptions, BatchGenerationResult, GenerationError, GenerationParameters,
+    ReturnEnvelope,
+};
+use crate::provider::{
+    BlockPersistence, ContentGenerator, EntityExtractor, RepresentationRetriever,
 };
 use crate::provider::{HybridCandidate, InMemoryNarrativeProvider, NarrativeProvider};
 use crate::sequence::{
@@ -104,6 +108,9 @@ pub trait HasNarrativeBlock {
     fn block_content(&self) -> &str;
     fn happened_at(&self) -> i64;
     fn notable(&self) -> bool;
+
+    /// Convert this block to a BaseNarrativeBlock for enhanced API methods.
+    fn to_base_block(&self) -> BaseNarrativeBlock;
 }
 
 /// Methods the engine needs from any lore type.
@@ -127,6 +134,10 @@ impl HasNarrativeBlock for BaseNarrativeBlock {
     }
     fn notable(&self) -> bool {
         self.is_notable()
+    }
+
+    fn to_base_block(&self) -> BaseNarrativeBlock {
+        self.clone()
     }
 }
 
@@ -167,6 +178,11 @@ pub struct NarrativeEngine<
 > {
     provider: Arc<dyn NarrativeProvider<TBlock, TLore>>,
     lab_config: ResolvedLabConfig,
+    // Optional integration traits for enhanced API
+    content_generator: Option<Arc<dyn ContentGenerator>>,
+    entity_extractor: Option<Arc<dyn EntityExtractor>>,
+    representation_retriever: Option<Arc<dyn RepresentationRetriever>>,
+    block_persistence: Option<Arc<dyn BlockPersistence>>,
 }
 
 impl Default for NarrativeEngine {
@@ -175,86 +191,199 @@ impl Default for NarrativeEngine {
     }
 }
 
-// Concrete implementation for enhanced API methods (BaseNarrativeBlock only)
-impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
+impl<TBlock, TLore> NarrativeEngine<TBlock, TLore>
+where
+    TBlock: Clone + Send + Sync + HasNarrativeBlock + 'static,
+    TLore: Clone + Send + Sync + HasNarrativeLore + 'static,
+{
+    pub fn new(provider: Arc<dyn NarrativeProvider<TBlock, TLore>>) -> Self {
+        Self {
+            provider,
+            lab_config: ResolvedLabConfig::default(),
+            content_generator: None,
+            entity_extractor: None,
+            representation_retriever: None,
+            block_persistence: None,
+        }
+    }
+
+    /// Set the content generator for AI-powered content generation.
+    pub fn with_content_generator(mut self, generator: Arc<dyn ContentGenerator>) -> Self {
+        self.content_generator = Some(generator);
+        self
+    }
+
+    /// Set the entity extractor for nap-sdk integration.
+    pub fn with_entity_extractor(mut self, extractor: Arc<dyn EntityExtractor>) -> Self {
+        self.entity_extractor = Some(extractor);
+        self
+    }
+
+    /// Set the representation retriever for entity representations.
+    pub fn with_representation_retriever(
+        mut self,
+        retriever: Arc<dyn RepresentationRetriever>,
+    ) -> Self {
+        self.representation_retriever = Some(retriever);
+        self
+    }
+
+    /// Set the block persistence callback for storage integration.
+    pub fn with_block_persistence(mut self, persistence: Arc<dyn BlockPersistence>) -> Self {
+        self.block_persistence = Some(persistence);
+        self
+    }
+
+    pub fn set_lab_config(&mut self, overrides: LabConfig) {
+        self.lab_config = ResolvedLabConfig::default().apply_overrides(overrides);
+    }
+
+    pub fn get_lab_config(&self) -> ResolvedLabConfig {
+        self.lab_config.clone()
+    }
+
+    // ── Enhanced API methods (generic implementation) ─────────────────────────
+
     /// Enhanced method to generate block with optional entity extraction.
     /// Returns structured envelope with entities and representations.
     ///
-    /// # Arguments
-    /// * `channel_id` - The channel/story identifier
-    /// * `input_query` - The generation query or context
-    /// * `parameters` - Generation parameters including entity extraction settings
-    ///
-    /// # Returns
-    /// A `ReturnEnvelope` containing:
-    /// - The generated block (placeholder - application should generate actual content)
-    /// - Historical context blocks
-    /// - Optional entity context (when enabled)
-    /// - Optional representations (when entities are found)
-    /// - Generation metadata (timing, counts)
-    ///
-    /// # Entity Enrichment
-    /// Entity extraction is controlled by `parameters.enable_entity_extraction` and
-    /// `lab_config.enable_entity_extraction`. When enabled, applications should implement
-    /// nap-sdk integration through the provided extension points.
-    ///
-    /// # Graceful Degradation
-    /// If entity extraction or representation retrieval fails, the method returns
-    /// empty collections rather than failing the entire generation.
+    /// This method requires the engine to be configured with a ContentGenerator
+    /// for actual content generation. Entity extraction and representation retrieval
+    /// are optional and use the configured traits if available.
     pub async fn generate_block(
         &self,
         channel_id: &str,
         input_query: &str,
         parameters: GenerationParameters,
-    ) -> Result<ReturnEnvelope, String> {
+    ) -> Result<ReturnEnvelope, GenerationError> {
         let start_time = std::time::Instant::now();
+
+        // Check for cancellation
+        if !parameters.cancellation_token.is_empty() {
+            Self::check_cancellation(Some(parameters.cancellation_token.as_str()))?;
+        }
 
         // 1. Generate context using existing RAG pipeline
         let context = self
             .generate_context_single(channel_id, input_query)
-            .await?;
+            .await
+            .map_err(|e| GenerationError {
+                error_type: crate::narrative::v1::GenerationErrorType::GenerationFailed as i32,
+                message: format!("Context generation failed: {}", e),
+                timestamp: chrono::Utc::now().timestamp(),
+                is_transient: false,
+            })?;
 
-        // 2. Optional entity extraction (step 2 is optional - extension point)
+        // Check for cancellation after context generation
+        if !parameters.cancellation_token.is_empty() {
+            Self::check_cancellation(Some(parameters.cancellation_token.as_str()))?;
+        }
+
+        // 2. Generate actual content using configured generator
+        let content = if let Some(generator) = &self.content_generator {
+            generator
+                .generate_content(&context, input_query)
+                .await
+                .map_err(|e| GenerationError {
+                    error_type: crate::narrative::v1::GenerationErrorType::GenerationFailed as i32,
+                    message: format!("Content generation failed: {}", e),
+                    timestamp: chrono::Utc::now().timestamp(),
+                    is_transient: false,
+                })?
+        } else {
+            context.clone() // Fallback to context if no generator configured
+        };
+
+        // Check for cancellation after content generation
+        if !parameters.cancellation_token.is_empty() {
+            Self::check_cancellation(Some(parameters.cancellation_token.as_str()))?;
+        }
+
+        // 3. Optional entity extraction
         let entities =
             if parameters.enable_entity_extraction && self.lab_config.enable_entity_extraction {
-                // Extension point for nap-sdk integration
-                // For now, return empty array
-                vec![]
+                if let Some(extractor) = &self.entity_extractor {
+                    match extractor
+                        .extract_entities(
+                            &content,
+                            Some(&parameters.nap_repository),
+                            &parameters.nap_entity_types,
+                        )
+                        .await
+                    {
+                        Ok(entities) => entities,
+                        Err(error) => {
+                            // Log error but continue gracefully
+                            eprintln!(
+                                "[Entity extraction failed: {:?}, continuing without entities",
+                                error
+                            );
+                            vec![]
+                        }
+                    }
+                } else {
+                    vec![]
+                }
             } else {
                 vec![]
             };
 
-        // 3. Get representations for entities (extension point)
+        // 4. Get representations for entities
         let representations: Vec<crate::narrative::v1::Representation> = if !entities.is_empty() {
-            // Extension point for nap-sdk integration
-            // For now, return empty array
-            vec![]
+            if let Some(retriever) = &self.representation_retriever {
+                match retriever
+                    .get_representations(
+                        &entities,
+                        Some(&parameters.representation_property),
+                        parameters.max_unique_entity_representations,
+                    )
+                    .await
+                {
+                    Ok(reps) => reps,
+                    Err(error) => {
+                        // Log error but continue gracefully
+                        eprintln!(
+                            "[Representation retrieval failed: {:?}, continuing without representations",
+                            error
+                        );
+                        vec![]
+                    }
+                }
+            } else {
+                vec![]
+            }
         } else {
             vec![]
         };
 
-        // 4. Get chronological blocks
-        let chronological_blocks = self
+        // 5. Get chronological blocks - use generic version
+        let chronological_blocks_generic = self
             .get_chronological_blocks(channel_id, parameters.chronological_block_count as usize)
             .await;
 
-        // 5. Create placeholder block (application should generate actual block)
-        let placeholder_block = BaseNarrativeBlock {
+        // Convert generic blocks to BaseNarrativeBlock for the envelope
+        let chronological_blocks: Vec<BaseNarrativeBlock> = chronological_blocks_generic
+            .into_iter()
+            .map(|block| block.to_base_block())
+            .collect();
+
+        // 6. Create generated block
+        let generated_block = BaseNarrativeBlock {
             id: None,
             index: 0,
-            content: context.clone(),
+            content,
             happened_at: chrono::Utc::now().timestamp(),
             is_notable: Some(false),
         };
 
-        // 6. Create return envelope
+        // 7. Create return envelope
         let total_blocks = chronological_blocks.len() as i32;
         let entity_count = entities.len() as i32;
         let representation_count = representations.len() as i32;
         let generation_time_ms = start_time.elapsed().as_millis() as i64;
 
         let envelope = ReturnEnvelope {
-            block: Some(placeholder_block),
+            block: Some(generated_block),
             context: Some(crate::narrative::v1::ContextData {
                 chronological_blocks,
                 entities,
@@ -294,16 +423,18 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
     /// - Supports explicit persistence via `options.persist_blocks`
     /// - Continues after recoverable failures
     /// - Aborts on systemic errors (quota, auth)
+    /// - Supports cancellation via `options.cancellation_token`
     ///
     /// # Persistence
-    /// When `options.persist_blocks` is true, blocks should be persisted by the application
-    /// through the provided persistence integration point.
+    /// When `options.persist_blocks` is true, blocks are persisted using the
+    /// configured BlockPersistence trait. If no persistence is configured,
+    /// blocks are returned in the result.
     pub async fn generate_blocks_sequential(
         &self,
         channel_id: &str,
         previous_context: &str,
         options: BatchGenerationOptions,
-    ) -> Result<BatchGenerationResult, String> {
+    ) -> Result<BatchGenerationResult, GenerationError> {
         let start_time = std::time::Instant::now();
         let block_count = options.block_count as usize;
         let mut result = BatchGenerationResult {
@@ -317,11 +448,18 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
         let mut current_context = previous_context.to_string();
 
         for i in 0..block_count {
-            // Check for cancellation (TODO: implement cancellation mechanism)
-            // if self.is_cancelled() {
-            //     result.errors.push(format!("Cancelled at block {}", i + 1));
-            //     break;
-            // }
+            // Check for cancellation
+            if !options.cancellation_token.is_empty()
+                && let Err(cancellation_error) =
+                    Self::check_cancellation(Some(options.cancellation_token.as_str()))
+            {
+                result.errors.push(format!(
+                    "Cancelled at block {}: {}",
+                    i + 1,
+                    cancellation_error.message
+                ));
+                break;
+            }
 
             match self
                 .generate_context_single(channel_id, &current_context)
@@ -336,10 +474,35 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
                         is_notable: Some(false),
                     };
 
-                    // Persist block if requested (TODO: implement persistence)
-                    if options.persist_blocks {
-                        // Persistence integration point
-                        // self.persist_block(channel_id, options.persist_session_id, &block).await
+                    // Persist block if requested
+                    if options.persist_blocks && !options.dry_run {
+                        if let Some(persistence) = &self.block_persistence {
+                            match persistence
+                                .persist_block(channel_id, options.persist_session_id, &block)
+                                .await
+                            {
+                                Ok(_) => {
+                                    // Block persisted successfully
+                                }
+                                Err(error) => {
+                                    result.blocks_failed += 1;
+                                    let error_msg = format!(
+                                        "Block {}: Persistence failed - {}",
+                                        i + 1,
+                                        error.message
+                                    );
+                                    result.errors.push(error_msg.clone());
+
+                                    // Abort on non-transient persistence errors
+                                    if !error.is_transient {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            // No persistence configured, return in result
+                            result.generated_blocks.push(block.clone());
+                        }
                     } else {
                         result.generated_blocks.push(block.clone());
                     }
@@ -350,11 +513,14 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
                 }
                 Err(e) => {
                     result.blocks_failed += 1;
-                    result.errors.push(format!("Block {}: {}", i + 1, e));
+                    let error_msg = format!("Block {}: {}", i + 1, e);
 
-                    // Abort on systemic errors (quota, auth)
+                    // Check for systemic errors that should abort
                     if e.contains("quota") || e.contains("auth") {
+                        result.errors.push(format!("ABORT: {}", error_msg));
                         break;
+                    } else {
+                        result.errors.push(error_msg);
                     }
                 }
             }
@@ -380,21 +546,25 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
     /// - Total generation duration
     ///
     /// # Behavior
-    /// - Branches execute concurrently for performance
+    /// - Branches execute concurrently with bounded concurrency
     /// - One branch failure does not discard successful branches
-    /// - Supports bounded concurrency (limited by available resources)
-    /// - Supports cancellation via tokio task cancellation
+    /// - Supports cancellation via tokio task cancellation and cancellation token
     /// - Supports explicit persistence via `options.persist_blocks`
     ///
     /// # Use Cases
     /// Ideal for generating multiple independent story branches, character paths,
     /// or alternative scene variations simultaneously.
+    ///
+    /// # Concurrency Control
+    /// Uses a sliding window approach to limit concurrent operations without
+    /// cloning the provider. Each branch shares the same provider reference.
+    /// Maximum concurrency is controlled by `options.max_concurrency`.
     pub async fn generate_blocks_parallel(
         &self,
         channel_id: &str,
         branch_contexts: &[String],
         options: BatchGenerationOptions,
-    ) -> Result<BatchGenerationResult, String> {
+    ) -> Result<BatchGenerationResult, GenerationError> {
         let start_time = std::time::Instant::now();
         let mut result = BatchGenerationResult {
             blocks_generated: 0,
@@ -404,45 +574,109 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
             generated_blocks: vec![],
         };
 
-        // Generate blocks in parallel (independent branches)
+        // Use a semaphore for bounded concurrency
+        let max_concurrency = if options.max_concurrency > 0 {
+            options.max_concurrency as usize
+        } else {
+            4 // Default concurrency
+        };
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
         let mut tasks = vec![];
+
         for context in branch_contexts {
             let channel_id = channel_id.to_string();
             let context_clone = context.clone();
-            let provider_clone = Arc::clone(&self.provider);
+            let provider_ref = Arc::clone(&self.provider);
             let lab_config_clone = self.lab_config.clone();
+            let semaphore_clone = Arc::clone(&semaphore);
+            let persist_blocks = options.persist_blocks;
+            let dry_run = options.dry_run;
+            let persist_session_id = options.persist_session_id;
+            let block_persistence = self.block_persistence.clone();
+            let cancellation_token = options.cancellation_token.clone();
 
             tasks.push(tokio::spawn(async move {
-                // Create a temporary engine for this branch
+                // Acquire semaphore permit before starting work
+                let _permit = semaphore_clone.acquire().await.unwrap();
+
+                // Check for cancellation before starting work
+                if !cancellation_token.is_empty()
+                    && let Err(cancellation_error) =
+                        Self::check_cancellation(Some(cancellation_token.as_str()))
+                {
+                    return Err(format!(
+                        "Cancelled before start: {}",
+                        cancellation_error.message
+                    ));
+                }
+
+                // Create a temporary engine for this branch (no provider cloning needed)
                 let engine = NarrativeEngine {
-                    provider: provider_clone,
+                    provider: provider_ref,
                     lab_config: lab_config_clone,
+                    content_generator: None,
+                    entity_extractor: None,
+                    representation_retriever: None,
+                    block_persistence,
                 };
-                engine
+
+                match engine
                     .generate_context_single(&channel_id, &context_clone)
                     .await
+                {
+                    Ok(block_content) => {
+                        // Check for cancellation after generation
+                        if !cancellation_token.is_empty()
+                            && let Err(cancellation_error) =
+                                Self::check_cancellation(Some(cancellation_token.as_str()))
+                        {
+                            return Err(format!(
+                                "Cancelled after generation: {}",
+                                cancellation_error.message
+                            ));
+                        }
+
+                        let block = BaseNarrativeBlock {
+                            id: None,
+                            index: 0, // Parallel branches don't use sequential indexing
+                            content: block_content.clone(),
+                            happened_at: chrono::Utc::now().timestamp(),
+                            is_notable: Some(false),
+                        };
+
+                        // Handle persistence
+                        if persist_blocks && !dry_run {
+                            if let Some(persistence) = &engine.block_persistence {
+                                match persistence
+                                    .persist_block(&channel_id, persist_session_id, &block)
+                                    .await
+                                {
+                                    Ok(_) => Ok(Some(block)),
+                                    Err(error) => {
+                                        Err(format!("Persistence failed: {}", error.message))
+                                    }
+                                }
+                            } else {
+                                Ok(Some(block))
+                            }
+                        } else {
+                            Ok(Some(block))
+                        }
+                    }
+                    Err(e) => Err(format!("Generation failed: {}", e)),
+                }
             }));
         }
 
-        // Collect results
+        // Collect results as they complete
         for task in tasks {
             match task.await {
-                Ok(Ok(block_content)) => {
-                    let block = BaseNarrativeBlock {
-                        id: None,
-                        index: result.blocks_generated as u64 + 1,
-                        content: block_content.clone(),
-                        happened_at: chrono::Utc::now().timestamp(),
-                        is_notable: Some(false),
-                    };
-
-                    if options.persist_blocks {
-                        // Persistence integration point
-                        // self.persist_block(channel_id, options.persist_session_id, &block).await
-                    } else {
-                        result.generated_blocks.push(block);
-                    }
-
+                Ok(Ok(Some(block))) => {
+                    result.blocks_generated += 1;
+                    result.generated_blocks.push(block);
+                }
+                Ok(Ok(None)) => {
+                    // Block was persisted, not returned
                     result.blocks_generated += 1;
                 }
                 Ok(Err(e)) => {
@@ -451,7 +685,7 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
                 }
                 Err(e) => {
                     result.blocks_failed += 1;
-                    result.errors.push(format!("Task failed: {}", e));
+                    result.errors.push(format!("Task panicked: {}", e));
                 }
             }
         }
@@ -460,47 +694,39 @@ impl NarrativeEngine<BaseNarrativeBlock, BaseNarrativeLore> {
         Ok(result)
     }
 
-    // ── Helper: Get chronological blocks (concrete version) ─────────────────────
+    // ── Helper: Get chronological blocks ───────────────────────────────────────
 
-    async fn get_chronological_blocks(
-        &self,
-        channel_id: &str,
-        count: usize,
-    ) -> Vec<BaseNarrativeBlock> {
+    async fn get_chronological_blocks(&self, channel_id: &str, count: usize) -> Vec<TBlock> {
         let total_count = self.provider.get_block_count(channel_id).await;
         if total_count == 0 {
             return vec![];
         }
 
         // Get the most recent `count` blocks
-        let indices: Vec<usize> = (total_count.saturating_sub(count)..=total_count)
-            .map(|i| i as usize)
-            .collect();
+        let indices: Vec<usize> =
+            (total_count.saturating_sub(count)..=total_count as usize).collect();
 
         self.provider
             .get_blocks_by_indices(channel_id, &indices)
             .await
     }
-}
 
-impl<TBlock, TLore> NarrativeEngine<TBlock, TLore>
-where
-    TBlock: Clone + Send + Sync + HasNarrativeBlock + 'static,
-    TLore: Clone + Send + Sync + HasNarrativeLore + 'static,
-{
-    pub fn new(provider: Arc<dyn NarrativeProvider<TBlock, TLore>>) -> Self {
-        Self {
-            provider,
-            lab_config: ResolvedLabConfig::default(),
+    // ── Helper: Check for cancellation ───────────────────────────────────────
+
+    fn check_cancellation(cancellation_token: Option<&str>) -> Result<(), GenerationError> {
+        if let Some(token) = cancellation_token {
+            // In a real implementation, this would check against a shared cancellation registry
+            // For now, we'll use a simple heuristic: "cancelled:" prefix
+            if token.starts_with("cancelled:") {
+                return Err(GenerationError {
+                    error_type: crate::narrative::v1::GenerationErrorType::Cancelled as i32,
+                    message: format!("Operation cancelled with token: {}", token),
+                    timestamp: chrono::Utc::now().timestamp(),
+                    is_transient: false,
+                });
+            }
         }
-    }
-
-    pub fn set_lab_config(&mut self, overrides: LabConfig) {
-        self.lab_config = ResolvedLabConfig::default().apply_overrides(overrides);
-    }
-
-    pub fn get_lab_config(&self) -> ResolvedLabConfig {
-        self.lab_config.clone()
+        Ok(())
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -905,6 +1131,7 @@ mod tests {
             enable_entity_extraction: false,
             nap_repository: "".into(),
             nap_entity_types: vec![],
+            cancellation_token: "".to_string(),
         };
 
         let result = engine.generate_block("test", "query", parameters).await;
@@ -938,6 +1165,8 @@ mod tests {
             persist_session_id: 0,
             dry_run: false,
             persist_channel_id: "".into(),
+            cancellation_token: "".to_string(),
+            max_concurrency: 4,
         };
 
         let result = engine
@@ -975,6 +1204,8 @@ mod tests {
             persist_session_id: 0,
             dry_run: false,
             persist_channel_id: "".into(),
+            cancellation_token: "".to_string(),
+            max_concurrency: 4,
         };
 
         let result = engine
@@ -1123,13 +1354,6 @@ mod tests {
         }
         fn get_provider_type(&self) -> &'static str {
             "test"
-        }
-        fn clone_box(&self) -> Box<dyn NarrativeProvider<BaseNarrativeBlock, BaseNarrativeLore>> {
-            Box::new(StubProvider {
-                candidates: self.candidates.clone(),
-                lore: self.lore.clone(),
-                block_count: self.block_count,
-            })
         }
     }
 
@@ -1309,5 +1533,634 @@ mod tests {
         let result = engine.generate_context_batch("test", &queries).await;
         assert!(result.contains_key("cube"));
         assert!(result.contains_key("ELARA"));
+    }
+
+    // ── Enhanced API tests ─────────────────────────────────────────────────────
+
+    use std::future::Future;
+    use std::pin::Pin;
+
+    // Mock content generator for testing
+    struct MockContentGenerator {
+        generated_content: String,
+    }
+
+    impl ContentGenerator for MockContentGenerator {
+        fn generate_content(
+            &self,
+            _context: &str,
+            _query: &str,
+        ) -> Pin<Box<dyn Future<Output = Result<String, String>> + Send + '_>> {
+            let content = self.generated_content.clone();
+            Box::pin(async move { Ok(content) })
+        }
+    }
+
+    // Mock entity extractor for testing
+    struct MockEntityExtractor {
+        entities: Vec<crate::narrative::v1::Entity>,
+    }
+
+    impl EntityExtractor for MockEntityExtractor {
+        fn extract_entities(
+            &self,
+            _context: &str,
+            _repository: Option<&str>,
+            _entity_types: &[String],
+        ) -> Pin<
+            Box<
+                dyn Future<Output = Result<Vec<crate::narrative::v1::Entity>, GenerationError>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            let entities = self.entities.clone();
+            Box::pin(async move { Ok(entities) })
+        }
+    }
+
+    // Mock representation retriever for testing
+    #[allow(dead_code)]
+    struct MockRepresentationRetriever {
+        representations: Vec<crate::narrative::v1::Representation>,
+    }
+
+    impl RepresentationRetriever for MockRepresentationRetriever {
+        fn get_representations(
+            &self,
+            _entities: &[crate::narrative::v1::Entity],
+            _representation_property: Option<&str>,
+            _max_count: i32,
+        ) -> Pin<
+            Box<
+                dyn Future<
+                        Output = Result<Vec<crate::narrative::v1::Representation>, GenerationError>,
+                    > + Send
+                    + '_,
+            >,
+        > {
+            let representations = self.representations.clone();
+            Box::pin(async move { Ok(representations) })
+        }
+    }
+
+    // Mock block persistence for testing
+    struct MockBlockPersistence {
+        persisted_blocks: Arc<std::sync::Mutex<Vec<BaseNarrativeBlock>>>,
+        should_fail: bool,
+    }
+
+    impl BlockPersistence for MockBlockPersistence {
+        fn persist_block(
+            &self,
+            _channel_id: &str,
+            _session_id: i32,
+            block: &BaseNarrativeBlock,
+        ) -> Pin<Box<dyn Future<Output = Result<(), GenerationError>> + Send + '_>> {
+            let block_clone = block.clone();
+            let should_fail = self.should_fail;
+            let persisted_blocks = Arc::clone(&self.persisted_blocks);
+            Box::pin(async move {
+                if should_fail {
+                    Err(GenerationError {
+                        error_type: crate::narrative::v1::GenerationErrorType::PersistenceFailed
+                            as i32,
+                        message: "Mock persistence failure".to_string(),
+                        timestamp: chrono::Utc::now().timestamp(),
+                        is_transient: false,
+                    })
+                } else {
+                    persisted_blocks.lock().unwrap().push(block_clone);
+                    Ok(())
+                }
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn generate_block_with_content_generator() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let generator = Arc::new(MockContentGenerator {
+            generated_content: "Generated by AI".to_string(),
+        });
+
+        let engine = NarrativeEngine::new(provider).with_content_generator(generator);
+
+        let parameters = GenerationParameters {
+            max_unique_entity_representations: 5,
+            representation_property: "default".to_string(),
+            chronological_block_count: 3,
+            include_inactive_entities: false,
+            entity_types: vec![],
+            enable_entity_extraction: false,
+            nap_repository: "".to_string(),
+            nap_entity_types: vec![],
+            cancellation_token: "".to_string(),
+        };
+
+        let result = engine.generate_block("test", "query", parameters).await;
+
+        assert!(result.is_ok());
+        let envelope = result.unwrap();
+        assert!(envelope.block.is_some());
+        let block = envelope.block.unwrap();
+        assert_eq!(block.content, "Generated by AI");
+    }
+
+    #[tokio::test]
+    async fn generate_block_with_entity_extraction() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let generator = Arc::new(MockContentGenerator {
+            generated_content: "Story with characters".to_string(),
+        });
+        let extractor = Arc::new(MockEntityExtractor {
+            entities: vec![crate::narrative::v1::Entity {
+                id: "nap://test/character/hero".to_string(),
+                name: "Hero".to_string(),
+                r#type: "character".to_string(),
+                description: "The protagonist".to_string(),
+                representations: vec![],
+                properties: std::collections::HashMap::new(),
+                references: std::collections::HashMap::new(),
+            }],
+        });
+
+        let engine = NarrativeEngine::new(provider)
+            .with_content_generator(generator)
+            .with_entity_extractor(extractor);
+
+        let parameters = GenerationParameters {
+            max_unique_entity_representations: 5,
+            representation_property: "default".to_string(),
+            chronological_block_count: 3,
+            include_inactive_entities: false,
+            entity_types: vec!["character".to_string()],
+            enable_entity_extraction: true,
+            nap_repository: "test".to_string(),
+            nap_entity_types: vec!["character".to_string()],
+            cancellation_token: "".to_string(),
+        };
+
+        let result = engine.generate_block("test", "query", parameters).await;
+
+        assert!(result.is_ok());
+        let envelope = result.unwrap();
+        assert!(envelope.context.is_some());
+        let context = envelope.context.unwrap();
+        assert_eq!(context.entities.len(), 1);
+        assert_eq!(context.entities[0].name, "Hero");
+    }
+
+    #[tokio::test]
+    async fn generate_blocks_sequential_with_persistence() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let persisted_blocks = Arc::new(std::sync::Mutex::new(vec![]));
+        let persistence = Arc::new(MockBlockPersistence {
+            persisted_blocks: Arc::clone(&persisted_blocks),
+            should_fail: false,
+        });
+
+        let engine = NarrativeEngine::new(provider).with_block_persistence(persistence);
+
+        let options = BatchGenerationOptions {
+            block_count: 3,
+            dry_run: false,
+            persist_blocks: true,
+            persist_channel_id: "test".to_string(),
+            persist_session_id: 1,
+            cancellation_token: "".to_string(),
+            max_concurrency: 4,
+        };
+
+        let result = engine
+            .generate_blocks_sequential("test", "initial context", options)
+            .await;
+
+        assert!(result.is_ok());
+        let batch_result = result.unwrap();
+        assert_eq!(batch_result.blocks_generated, 3);
+        assert_eq!(batch_result.blocks_failed, 0);
+
+        // Verify blocks were persisted
+        let persisted = persisted_blocks.lock().unwrap();
+        assert_eq!(persisted.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn generate_blocks_sequential_dry_run() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let persisted_blocks = Arc::new(std::sync::Mutex::new(vec![]));
+        let persistence = Arc::new(MockBlockPersistence {
+            persisted_blocks: Arc::clone(&persisted_blocks),
+            should_fail: false,
+        });
+
+        let engine = NarrativeEngine::new(provider).with_block_persistence(persistence);
+
+        let options = BatchGenerationOptions {
+            block_count: 2,
+            dry_run: true,
+            persist_blocks: true,
+            persist_channel_id: "test".to_string(),
+            persist_session_id: 1,
+            cancellation_token: "".to_string(),
+            max_concurrency: 4,
+        };
+
+        let result = engine
+            .generate_blocks_sequential("test", "initial context", options)
+            .await;
+
+        assert!(result.is_ok());
+        let batch_result = result.unwrap();
+        assert_eq!(batch_result.blocks_generated, 2);
+        assert_eq!(batch_result.blocks_failed, 0);
+        assert_eq!(batch_result.generated_blocks.len(), 2); // Blocks returned in result
+
+        // Verify blocks were NOT persisted (dry run)
+        let persisted = persisted_blocks.lock().unwrap();
+        assert_eq!(persisted.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn generate_blocks_parallel_bounded_concurrency() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let engine = NarrativeEngine::new(provider);
+
+        let branch_contexts = vec![
+            "Branch 1 context".to_string(),
+            "Branch 2 context".to_string(),
+            "Branch 3 context".to_string(),
+            "Branch 4 context".to_string(),
+            "Branch 5 context".to_string(),
+        ];
+
+        let options = BatchGenerationOptions {
+            block_count: 1,
+            dry_run: false,
+            persist_blocks: false,
+            persist_channel_id: "test".to_string(),
+            persist_session_id: 1,
+            cancellation_token: "".to_string(),
+            max_concurrency: 2, // Limit to 2 concurrent operations
+        };
+
+        let result = engine
+            .generate_blocks_parallel("test", &branch_contexts, options)
+            .await;
+
+        assert!(result.is_ok());
+        let batch_result = result.unwrap();
+        assert_eq!(batch_result.blocks_generated, 5);
+        assert_eq!(batch_result.blocks_failed, 0);
+    }
+
+    #[tokio::test]
+    async fn generate_blocks_cancellation() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let engine = NarrativeEngine::new(provider);
+
+        let options = BatchGenerationOptions {
+            block_count: 5,
+            dry_run: false,
+            persist_blocks: false,
+            persist_channel_id: "test".to_string(),
+            persist_session_id: 1,
+            cancellation_token: "cancelled:test123".to_string(), // Trigger cancellation
+            max_concurrency: 4,
+        };
+
+        let result = engine
+            .generate_blocks_sequential("test", "initial context", options)
+            .await;
+
+        assert!(result.is_ok());
+        let batch_result = result.unwrap();
+        // Should have stopped early due to cancellation
+        assert!(batch_result.blocks_generated < 5);
+        assert!(batch_result.errors.iter().any(|e| e.contains("Cancelled")));
+    }
+
+    #[tokio::test]
+    async fn generate_block_without_content_generator_fallback() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let engine = NarrativeEngine::new(provider); // No content generator configured
+
+        let parameters = GenerationParameters {
+            max_unique_entity_representations: 5,
+            representation_property: "default".to_string(),
+            chronological_block_count: 3,
+            include_inactive_entities: false,
+            entity_types: vec![],
+            enable_entity_extraction: false,
+            nap_repository: "".to_string(),
+            nap_entity_types: vec![],
+            cancellation_token: "".to_string(),
+        };
+
+        let result = engine.generate_block("test", "query", parameters).await;
+
+        assert!(result.is_ok());
+        let envelope = result.unwrap();
+        assert!(envelope.block.is_some());
+        // Should fall back to context as content
+        let block = envelope.block.unwrap();
+        assert!(!block.content.is_empty());
+    }
+
+    // ── Comprehensive enrichment pipeline tests ───────────────────────────────
+
+    #[tokio::test]
+    async fn full_enrichment_pipeline_with_entities_and_representations() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let generator = Arc::new(MockContentGenerator {
+            generated_content: "The hero entered the ancient temple".to_string(),
+        });
+        let extractor = Arc::new(MockEntityExtractor {
+            entities: vec![
+                crate::narrative::v1::Entity {
+                    id: "nap://test/character/hero".to_string(),
+                    name: "Hero".to_string(),
+                    r#type: "character".to_string(),
+                    description: "The protagonist".to_string(),
+                    representations: vec![],
+                    properties: std::collections::HashMap::new(),
+                    references: std::collections::HashMap::new(),
+                },
+                crate::narrative::v1::Entity {
+                    id: "nap://test/location/temple".to_string(),
+                    name: "Ancient Temple".to_string(),
+                    r#type: "location".to_string(),
+                    description: "Sacred location".to_string(),
+                    representations: vec![],
+                    properties: std::collections::HashMap::new(),
+                    references: std::collections::HashMap::new(),
+                },
+            ],
+        });
+        let retriever = Arc::new(MockRepresentationRetriever {
+            representations: vec![crate::narrative::v1::Representation {
+                id: "rep1".to_string(),
+                format: "png".to_string(),
+                cdn_url: "https://cdn.example.com/hero.png".to_string(),
+                tier: "high".to_string(),
+                hash: "abc123".to_string(),
+                expires_at: 0,
+            }],
+        });
+
+        let engine = NarrativeEngine::new(provider)
+            .with_content_generator(generator)
+            .with_entity_extractor(extractor)
+            .with_representation_retriever(retriever);
+
+        let parameters = GenerationParameters {
+            max_unique_entity_representations: 5,
+            representation_property: "default".to_string(),
+            chronological_block_count: 3,
+            include_inactive_entities: false,
+            entity_types: vec!["character".to_string(), "location".to_string()],
+            enable_entity_extraction: true,
+            nap_repository: "test".to_string(),
+            nap_entity_types: vec!["character".to_string(), "location".to_string()],
+            cancellation_token: "".to_string(),
+        };
+
+        let result = engine.generate_block("test", "query", parameters).await;
+
+        assert!(result.is_ok());
+        let envelope = result.unwrap();
+
+        // Verify content was generated
+        assert!(envelope.block.is_some());
+        let block = envelope.block.unwrap();
+        assert_eq!(block.content, "The hero entered the ancient temple");
+
+        // Verify entities were extracted
+        assert!(envelope.context.is_some());
+        let context = envelope.context.unwrap();
+        assert_eq!(context.entities.len(), 2);
+        assert_eq!(context.entities[0].name, "Hero");
+        assert_eq!(context.entities[1].name, "Ancient Temple");
+
+        // Verify representations were retrieved
+        assert_eq!(context.representations.len(), 1);
+        assert_eq!(context.representations[0].format, "png");
+
+        // Verify metadata
+        assert!(envelope.metadata.is_some());
+        let metadata = envelope.metadata.unwrap();
+        assert_eq!(metadata.entity_count, 2);
+        assert_eq!(metadata.representation_count, 1);
+    }
+
+    #[tokio::test]
+    async fn enrichment_pipeline_graceful_degradation_on_entity_failure() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let generator = Arc::new(MockContentGenerator {
+            generated_content: "Story content".to_string(),
+        });
+
+        // Create an extractor that always fails
+        struct FailingEntityExtractor;
+        impl EntityExtractor for FailingEntityExtractor {
+            fn extract_entities(
+                &self,
+                _context: &str,
+                _repository: Option<&str>,
+                _entity_types: &[String],
+            ) -> Pin<
+                Box<
+                    dyn Future<Output = Result<Vec<crate::narrative::v1::Entity>, GenerationError>>
+                        + Send
+                        + '_,
+                >,
+            > {
+                Box::pin(async move {
+                    Err(GenerationError {
+                        error_type:
+                            crate::narrative::v1::GenerationErrorType::EntityExtractionFailed as i32,
+                        message: "Simulated entity extraction failure".to_string(),
+                        timestamp: chrono::Utc::now().timestamp(),
+                        is_transient: true,
+                    })
+                })
+            }
+        }
+
+        let extractor = Arc::new(FailingEntityExtractor);
+
+        let engine = NarrativeEngine::new(provider)
+            .with_content_generator(generator)
+            .with_entity_extractor(extractor);
+
+        let parameters = GenerationParameters {
+            max_unique_entity_representations: 5,
+            representation_property: "default".to_string(),
+            chronological_block_count: 3,
+            include_inactive_entities: false,
+            entity_types: vec!["character".to_string()],
+            enable_entity_extraction: true,
+            nap_repository: "test".to_string(),
+            nap_entity_types: vec!["character".to_string()],
+            cancellation_token: "".to_string(),
+        };
+
+        let result = engine.generate_block("test", "query", parameters).await;
+
+        // Should still succeed despite entity extraction failure
+        assert!(result.is_ok());
+        let envelope = result.unwrap();
+
+        // Content should still be generated
+        assert!(envelope.block.is_some());
+        let block = envelope.block.unwrap();
+        assert_eq!(block.content, "Story content");
+
+        // Entities should be empty (graceful degradation)
+        assert!(envelope.context.is_some());
+        let context = envelope.context.unwrap();
+        assert_eq!(context.entities.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn enrichment_pipeline_graceful_degradation_on_representation_failure() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let generator = Arc::new(MockContentGenerator {
+            generated_content: "Story with character".to_string(),
+        });
+        let extractor = Arc::new(MockEntityExtractor {
+            entities: vec![crate::narrative::v1::Entity {
+                id: "nap://test/character/hero".to_string(),
+                name: "Hero".to_string(),
+                r#type: "character".to_string(),
+                description: "The protagonist".to_string(),
+                representations: vec![],
+                properties: std::collections::HashMap::new(),
+                references: std::collections::HashMap::new(),
+            }],
+        });
+
+        // Create a retriever that always fails
+        struct FailingRepresentationRetriever;
+        impl RepresentationRetriever for FailingRepresentationRetriever {
+            fn get_representations(
+                &self,
+                _entities: &[crate::narrative::v1::Entity],
+                _representation_property: Option<&str>,
+                _max_count: i32,
+            ) -> Pin<
+                Box<
+                    dyn Future<
+                            Output = Result<
+                                Vec<crate::narrative::v1::Representation>,
+                                GenerationError,
+                            >,
+                        > + Send
+                        + '_,
+                >,
+            > {
+                Box::pin(async move {
+                    Err(GenerationError {
+                        error_type:
+                            crate::narrative::v1::GenerationErrorType::RepresentationRetrievalFailed
+                                as i32,
+                        message: "Simulated representation retrieval failure".to_string(),
+                        timestamp: chrono::Utc::now().timestamp(),
+                        is_transient: true,
+                    })
+                })
+            }
+        }
+
+        let retriever = Arc::new(FailingRepresentationRetriever);
+
+        let engine = NarrativeEngine::new(provider)
+            .with_content_generator(generator)
+            .with_entity_extractor(extractor)
+            .with_representation_retriever(retriever);
+
+        let parameters = GenerationParameters {
+            max_unique_entity_representations: 5,
+            representation_property: "default".to_string(),
+            chronological_block_count: 3,
+            include_inactive_entities: false,
+            entity_types: vec!["character".to_string()],
+            enable_entity_extraction: true,
+            nap_repository: "test".to_string(),
+            nap_entity_types: vec!["character".to_string()],
+            cancellation_token: "".to_string(),
+        };
+
+        let result = engine.generate_block("test", "query", parameters).await;
+
+        // Should still succeed despite representation retrieval failure
+        assert!(result.is_ok());
+        let envelope = result.unwrap();
+
+        // Content should still be generated
+        assert!(envelope.block.is_some());
+        let block = envelope.block.unwrap();
+        assert_eq!(block.content, "Story with character");
+
+        // Entities should still be present
+        assert!(envelope.context.is_some());
+        let context = envelope.context.unwrap();
+        assert_eq!(context.entities.len(), 1);
+
+        // Representations should be empty (graceful degradation)
+        assert_eq!(context.representations.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn batch_generation_with_persistence_and_enrichment() {
+        let provider = Arc::new(InMemoryNarrativeProvider::default());
+        let persisted_blocks = Arc::new(std::sync::Mutex::new(vec![]));
+        let persistence = Arc::new(MockBlockPersistence {
+            persisted_blocks: Arc::clone(&persisted_blocks),
+            should_fail: false,
+        });
+        let generator = Arc::new(MockContentGenerator {
+            generated_content: "Generated content".to_string(),
+        });
+        let extractor = Arc::new(MockEntityExtractor {
+            entities: vec![crate::narrative::v1::Entity {
+                id: "nap://test/character/hero".to_string(),
+                name: "Hero".to_string(),
+                r#type: "character".to_string(),
+                description: "The protagonist".to_string(),
+                representations: vec![],
+                properties: std::collections::HashMap::new(),
+                references: std::collections::HashMap::new(),
+            }],
+        });
+
+        let engine = NarrativeEngine::new(provider)
+            .with_content_generator(generator)
+            .with_entity_extractor(extractor)
+            .with_block_persistence(persistence);
+
+        let options = BatchGenerationOptions {
+            block_count: 2,
+            dry_run: false,
+            persist_blocks: true,
+            persist_channel_id: "test".to_string(),
+            persist_session_id: 1,
+            cancellation_token: "".to_string(),
+            max_concurrency: 4,
+        };
+
+        let result = engine
+            .generate_blocks_sequential("test", "initial context", options)
+            .await;
+
+        assert!(result.is_ok());
+        let batch_result = result.unwrap();
+        assert_eq!(batch_result.blocks_generated, 2);
+        assert_eq!(batch_result.blocks_failed, 0);
+
+        // Verify blocks were persisted
+        let persisted = persisted_blocks.lock().unwrap();
+        assert_eq!(persisted.len(), 2);
     }
 }

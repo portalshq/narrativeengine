@@ -73,6 +73,7 @@ message GenerationParameters {
   bool enable_entity_extraction = 6;
   string nap_repository = 7;
   repeated string nap_entity_types = 8;
+  string cancellation_token = 9; // Cross-language cancellation token
 }
 
 message BatchGenerationOptions {
@@ -81,6 +82,8 @@ message BatchGenerationOptions {
   bool persist_blocks = 3;
   string persist_channel_id = 4;
   int32 persist_session_id = 5;
+  string cancellation_token = 6; // Cross-language cancellation token
+  int32 max_concurrency = 7; // Maximum concurrent operations for parallel generation
 }
 
 message BatchGenerationResult {
@@ -89,4 +92,33 @@ message BatchGenerationResult {
   repeated string errors = 3;
   int64 total_duration_ms = 4;
   repeated BaseNarrativeBlock generated_blocks = 5;
+}
+
+// Error types for graceful degradation
+enum GenerationErrorType {
+  UNKNOWN = 0;
+  QUOTA_EXCEEDED = 1;
+  AUTHENTICATION_FAILED = 2;
+  NETWORK_ERROR = 3;
+  TIMEOUT = 4;
+  INVALID_INPUT = 5;
+  ENTITY_EXTRACTION_FAILED = 6;
+  REPRESENTATION_RETRIEVAL_FAILED = 7;
+  GENERATION_FAILED = 8;
+  CANCELLED = 9; // Operation was cancelled via cancellation token
+  PERSISTENCE_FAILED = 10; // Block persistence failed
+}
+
+// Cancellation context for cross-language cancellation
+message CancellationContext {
+  string token = 1; // Unique cancellation token/ID
+  bool is_cancelled = 2; // Whether cancellation has been requested
+  int64 cancelled_at = 3; // Timestamp when cancellation was requested
+}
+
+message GenerationError {
+  GenerationErrorType error_type = 1;
+  string message = 2;
+  int64 timestamp = 3;
+  bool is_transient = 4;
 }
