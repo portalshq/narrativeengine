@@ -21,7 +21,7 @@
     "dist",
     "index.cjs",
     "index.d.ts",
-    "*.node"
+    "narrativeengine.darwin-arm64.node"
   ],
   "scripts": {
     "generate": "node ../../scripts/generate-types.mjs",
