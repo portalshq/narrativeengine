@@ -3,6 +3,9 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 
 export default [
+  {
+    ignores: ["dist/**", "coverage/**", "src/generated/**"]
+  },
   js.configs.recommended,
   {
     files: ["src/**/*.ts", "tests/**/*.ts"],
@@ -15,15 +18,16 @@ export default [
       globals: {
         Buffer: "readonly",
         console: "readonly",
-        process: "readonly"
+        process: "readonly",
+        queueMicrotask: "readonly"
       }
     },
     plugins: {
       "@typescript-eslint": tseslint
     },
     rules: {
-      "@typescript-eslint/no-unused-vars": "error"
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
     }
   }
 ];
-

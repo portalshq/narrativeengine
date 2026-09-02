@@ -7,7 +7,7 @@ import { dirname, resolve } from "path";
 import { randomUUID } from "crypto";
 import cors from "cors";
 import { createServer } from "node:http";
-import { LabConfig, NarrativeEngine, InMemoryNarrativeProvider, GLOBAL_KEY, LAB_TOKEN, SESSION_SECRET } from "narrative-engine";
+import { type NarrativeEngineConfig as LabConfig, NarrativeEngine, InMemoryNarrativeProvider, GLOBAL_KEY, LAB_TOKEN, SESSION_SECRET } from "narrative-engine";
 import { ledgerPath, verboseLog } from "./logger";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,10 +47,7 @@ export function getActiveEngine(): NarrativeEngine {
   console.log("[getActiveEngine] global[GLOBAL_KEY] is:", (global as any)[ GLOBAL_KEY ]);
   verboseLog.lab("No engine in registry, creating new InMemoryNarrativeProvider with browser storage");
   const channelId = process.env.LAB_CHANNEL_ID || "lab-default";
-  const provider = new InMemoryNarrativeProvider(undefined, undefined, {
-    useBrowserStorage: true,
-    channelId
-  });
+  const provider = new InMemoryNarrativeProvider({ channelId });
   return new NarrativeEngine(provider);
 }
 
@@ -101,7 +98,7 @@ export async function startLabServer(port: number = 5002): Promise<void> {
       let blockSaved = false;
       if (newBlock && newBlock.content) {
         const provider = engine[ 'provider' ];
-        if (provider && typeof provider.addBlock === 'function') {
+        if (provider && typeof provider.insertBlock === 'function') {
           const currentBlockCount = await provider.getBlockCount(channelId || "lab-default");
           const block = {
             id: currentBlockCount + 1,
@@ -110,7 +107,7 @@ export async function startLabServer(port: number = 5002): Promise<void> {
             happenedAt: Date.now(),
             isNotable: newBlock.isNotable ?? false,
           };
-          await provider.addBlock(channelId || "lab-default", block);
+          await provider.insertBlock(channelId || "lab-default", block);
           verboseLog.lab("Block added to storage", { blockId: block.id, content: block.content.substring(0, 30) });
           blockSaved = true;
         } else {

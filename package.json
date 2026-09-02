@@ -36,6 +36,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@portalshq/narrativeengine": "file:./typescript/narrativeengine",
     "cors": "^2.8.6",
     "express": "^5.0.1"
   },

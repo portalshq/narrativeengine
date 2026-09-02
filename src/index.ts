@@ -1,14 +1,8 @@
-export { NarrativeEngine } from "./engine";
-
-export type { LabConfig } from "./engine";
-export type { NarrativeProvider, HybridCandidate } from "./provider";
-export { InMemoryNarrativeProvider } from "./provider";
-
-export type {
-    BaseNarrativeBlock,
-    BaseNarrativeLore,
-} from "./types";
-
-export * from './utils';
-
-export { configureLabEngine, getActiveEngine, GLOBAL_KEY, LAB_TOKEN, SESSION_SECRET } from "./lab";
+export * from "@portalshq/narrativeengine";
+export {
+  GLOBAL_KEY,
+  LAB_TOKEN,
+  SESSION_SECRET,
+  configureLabEngine,
+  getActiveEngine,
+} from "./lab.js";

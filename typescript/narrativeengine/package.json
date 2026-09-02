@@ -1,7 +1,7 @@
 {
   "name": "@portalshq/narrativeengine",
   "version": "0.7.0",
-  "description": "TypeScript SDK for NarrativeEngine, powered by Rust and NAPI-RS.",
+  "description": "Provider-driven TypeScript context and generation middleware for sequential narratives.",
   "publishConfig": {
     "access": "public"
   },
@@ -15,42 +15,42 @@
     "url": "https://github.com/DigitalCreationsCo/narrativeengine/issues"
   },
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./generated": {
+      "types": "./dist/generated/narrative/v1/narrative.d.ts",
+      "default": "./dist/generated/narrative/v1/narrative.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "dist",
-    "index.cjs",
-    "index.d.ts",
-    "narrativeengine.darwin-arm64.node"
+    "dist"
   ],
   "scripts": {
-    "generate": "node ../../scripts/generate-types.mjs",
-    "build:native": "napi build --cargo-cwd . --platform --release && node -e \"require('fs').renameSync('index.js', 'index.cjs')\"",
+    "generate": "protoc -I ../../proto --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/generated --ts_proto_opt=onlyTypes=true,outputServices=none,esModuleInterop=true,useOptionals=messages ../../proto/narrative/v1/narrative.proto",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build:types": "tsc -p tsconfig.json",
-    "build": "npm run generate && npm run build:native && npm run build:types",
+    "build": "npm run clean && npm run build:types",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src tests --ext .ts",
-    "test": "vitest run"
-  },
-  "napi": {
-    "name": "narrativeengine",
-    "binaryName": "narrativeengine",
-    "triples": {
-      "defaults": true
-    }
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=20.19.0"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.4",
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9.17.0",
+    "ts-proto": "^2.12.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
-  },
-  "dependencies": {
-    "ts-proto": "^2.12.0"
   }
 }

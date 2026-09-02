@@ -50,7 +50,6 @@ jobs:
           --exclude narrativeengine-py
           --exclude nap-sdk-py
           --exclude nap-sdk-ts
-          --exclude narrativeengine-ts
 
   build:
     needs: test

@@ -1,4 +1,4 @@
-import type { NarrativeEngine } from "./engine";
+import type { NarrativeEngine } from "@portalshq/narrativeengine";
 import { randomUUID } from "node:crypto";
 
 export const GLOBAL_KEY = Symbol.for("narrative.engine.registry");

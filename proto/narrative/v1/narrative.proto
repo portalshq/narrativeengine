@@ -122,3 +122,77 @@ message GenerationError {
   int64 timestamp = 3;
   bool is_transient = 4;
 }
+
+// Language-neutral DTOs for the provider-driven TypeScript and Python APIs.
+// Operational provider interfaces remain native async interfaces in each language.
+
+message NarrativeRepresentationDto {
+  string format = 1;
+  string uri = 2;
+  string name = 3;
+  string entity_name = 4;
+  string id = 5;
+  optional string description = 6;
+  optional string property = 7;
+}
+
+message NarrativeEntityDto {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  optional string description = 4;
+  map<string, string> properties = 5;
+}
+
+message NarrativeReferenceDto {
+  string source_id = 1;
+  string target_id = 2;
+  optional string name = 3;
+  optional string uri = 4;
+  optional string description = 5;
+}
+
+message NarrativeRelationshipDto {
+  string source_id = 1;
+  string target_id = 2;
+  string type = 3;
+  optional string description = 4;
+}
+
+message NarrativeEventDto {
+  string id = 1;
+  string name = 2;
+  optional int64 happened_at = 3;
+  optional string description = 4;
+  repeated string entity_ids = 5;
+}
+
+message RetrievalMetadataDto {
+  string provider_type = 1;
+  uint64 total_block_count = 2;
+  repeated uint64 historical_indices = 3;
+  uint64 hybrid_candidate_count = 4;
+  uint64 hybrid_survivor_count = 5;
+  uint64 notable_event_count = 6;
+  uint64 retrieved_block_count = 7;
+}
+
+message NarrativeContextDto {
+  string channel_id = 1;
+  string input_query = 2;
+  repeated BaseNarrativeBlock chronological_blocks = 3;
+  repeated BaseNarrativeLore lore_atoms = 4;
+  repeated NarrativeEntityDto entities = 5;
+  repeated NarrativeRepresentationDto representations = 6;
+  repeated NarrativeReferenceDto references = 7;
+  repeated NarrativeRelationshipDto relationships = 8;
+  repeated NarrativeEventDto event_history = 9;
+  RetrievalMetadataDto metadata = 10;
+  repeated string warnings = 11;
+  string prompt = 12;
+}
+
+message NarrativeResultDto {
+  BaseNarrativeBlock block = 1;
+  NarrativeContextDto context = 2;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { NarrativeEngine } from "./engine";
+import { NarrativeEngine } from "@portalshq/narrativeengine";
 import { configureLabEngine, getActiveEngine, GLOBAL_KEY, LAB_TOKEN } from "./lab";
 
 describe("Lab Engine Registry", () => {
@@ -105,6 +105,9 @@ describe("Lab Integration", () => {
       async getNotableEvents() {
         return [];
       }
+      async insertBlock(_channelId: string, block: any) {
+        return block;
+      }
     }
 
     const customProvider = new CustomProvider();
@@ -113,6 +116,6 @@ describe("Lab Integration", () => {
 
     const retrieved = getActiveEngine();
     expect(retrieved).toBe(engine);
-    expect((engine as any).provider).toBe(customProvider);
+    expect(engine.provider).toBe(customProvider);
   });
 });

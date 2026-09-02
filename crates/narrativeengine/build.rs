@@ -1,7 +1,7 @@
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let proto_dir = Path::new("proto");
+    let proto_dir = Path::new("../../proto");
     let narrative_proto = proto_dir.join("narrative/v1/narrative.proto");
 
     let protoc_path = protoc_bin_vendored::protoc_bin_path()

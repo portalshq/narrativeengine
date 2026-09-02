@@ -14,7 +14,6 @@ WORKSPACE_PACKAGES=(
   "nap-test-utils"
   "narrativeengine"
   "narrativeengine-py"
-  "narrativeengine-ts"
   "nap-sdk-py"
   "nap-sdk-ts"
 )
@@ -133,7 +132,6 @@ workspace_packages = [
     "nap-test-utils",
     "narrativeengine",
     "narrativeengine-py",
-    "narrativeengine-ts",
     "nap-sdk-py",
     "nap-sdk-ts",
     ]
@@ -203,7 +201,7 @@ echo "✓ Release validation passed"
 echo ""
 echo "Committing and tagging $RELEASE_TAG..."
 
-git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-mcp-server/Cargo.toml crates/nap-docgen/Cargo.toml crates/nap-server/Cargo.toml crates/nap-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/narrativeengine/uv.lock python/nap-sdk/pyproject.toml python/nap-sdk/uv.lock typescript/narrativeengine/Cargo.toml typescript/narrativeengine/package.json typescript/narrativeengine/package-lock.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json typescript/nap-sdk/package-lock.json
+git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-mcp-server/Cargo.toml crates/nap-docgen/Cargo.toml crates/nap-server/Cargo.toml crates/nap-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/narrativeengine/uv.lock python/nap-sdk/pyproject.toml python/nap-sdk/uv.lock typescript/narrativeengine/package.json typescript/narrativeengine/package-lock.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json typescript/nap-sdk/package-lock.json
 if [ -n "${RELEASE_COMMIT_COAUTHOR:-}" ]; then
   git commit -m "chore(release): cut $RELEASE_TAG" -m "Co-Authored-By: ${RELEASE_COMMIT_COAUTHOR}"
 else

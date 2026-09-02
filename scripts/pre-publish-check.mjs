@@ -8,8 +8,7 @@
  *      all declare the same version.
  *   2. Release tag consistency — when running from a GitHub tag like v1.2.3,
  *      the tag version matches the package version being published.
- *   3. Type freshness — generated SDK type definitions match the current
- *      Rust models (runs `generate-types.mjs` and diffs the result).
+ *   3. Type freshness — generated TypeScript DTOs match the canonical protobuf schema.
  *
  * Exits with code 1 if any check fails.
  */
@@ -126,9 +125,7 @@ try {
 // unrelated working-tree changes (e.g. the CI files we just edited) don't
 // trigger a false positive.
 const generatedPaths = [
-  "typescript/narrativeengine/src/models.ts",
-  "python/narrativeengine/models.py",
-  "generated/",
+  "typescript/narrativeengine/src/generated/",
 ];
 
 try {

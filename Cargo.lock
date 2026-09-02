@@ -1727,19 +1727,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "narrativeengine-ts"
-version = "0.7.0"
-dependencies = [
- "napi",
- "napi-build",
- "napi-derive",
- "narrativeengine",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "native-tls"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

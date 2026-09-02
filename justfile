@@ -79,9 +79,9 @@ install:
 generate-types:
     @./scripts/generate-types.sh
 
-# Generate protobufs for narrativeengine (no-op: gen/ was dead code, Rust uses tonic-build in build.rs)
+# Generate TypeScript DTOs from the canonical NarrativeEngine protobuf schema
 generate-protos:
-    @echo "Proto codegen handled by tonic-build in build.rs. Nothing to generate."
+    @node scripts/generate-types.mjs
 
 # Watch for changes and rebuild (requires cargo-watch)
 watch:

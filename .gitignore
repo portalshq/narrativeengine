@@ -32,6 +32,7 @@ toystory/
 # TypeScript build artifacts
 /typescript/**/node_modules/
 /typescript/**/dist/
+/typescript/**/coverage/
 /typescript/**/*.node
 /typescript/**/npm/
 /typescript/**/.npmrc
