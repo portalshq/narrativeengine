@@ -14,6 +14,7 @@ narrativeengine = { path = "../../crates/narrativeengine" }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }
+serde = { workspace = true }
 serde_json = { workspace = true }
 
 [build-dependencies]

@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use crate::narrative::v1::{Entity, GenerationError, Representation};
 use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, NarrativeBlockExt};
+use serde::{Deserialize, Serialize};
 
 /// Type alias for the complex batch hybrid search future return type
 type BatchHybridSearchFuture<'a, TBlock> = Pin<
@@ -79,7 +80,7 @@ pub trait BlockPersistence: Send + Sync {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// A search result candidate pairing a block with its retrieval scores.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HybridCandidate<TBlock> {
     pub block: TBlock,
     /// Dense vector (embedding) similarity score — `[0, 1]`.

@@ -1,18 +1,38 @@
 import native from "./native.js";
-export type { HybridCandidate, LabConfig, NarrativeBlock, NarrativeLore } from "./models.js";
-import type { HybridCandidate, LabConfig, NarrativeBlock, NarrativeLore } from "./models.js";
+export type { LabConfig } from "./models.js";
+export type {
+  HybridCandidate,
+  NarrativeBlock,
+  NarrativeLore,
+  NarrativeProvider,
+} from "./provider.js";
+export { InMemoryNarrativeProvider } from "./provider.js";
+import type {
+  HybridCandidate as GeneratedHybridCandidate,
+  LabConfig,
+  NarrativeBlock as GeneratedNarrativeBlock,
+  NarrativeLore as GeneratedNarrativeLore,
+} from "./models.js";
+import type {
+  NarrativeBlock,
+  NarrativeLore,
+  NarrativeProvider,
+} from "./provider.js";
 
-export function createBlock(id: string, content: string): NarrativeBlock {
-  return JSON.parse(native.createBlockJson(id, content)) as NarrativeBlock;
+export function createBlock(id: string, content: string): GeneratedNarrativeBlock {
+  return JSON.parse(native.createBlockJson(id, content)) as GeneratedNarrativeBlock;
 }
 
-export function generateCandidate(lore: NarrativeLore, config: LabConfig): HybridCandidate {
+export function generateCandidate(
+  lore: GeneratedNarrativeLore,
+  config: LabConfig,
+): GeneratedHybridCandidate {
   return JSON.parse(
     native.generateCandidateJson(JSON.stringify(lore), JSON.stringify(config)),
-  ) as HybridCandidate;
+  ) as GeneratedHybridCandidate;
 }
 
-export function renderLoreSummary(lore: NarrativeLore): string {
+export function renderLoreSummary(lore: GeneratedNarrativeLore): string {
   return native.renderLoreSummaryJson(JSON.stringify(lore));
 }
 
@@ -28,16 +48,48 @@ export function version(): string {
 // NarrativeEngine class
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class NarrativeEngine {
-  private engine: any;
+interface ContextPlan {
+  historicalIndices: number[];
+  candidateLimit: number;
+}
 
-  constructor(provider?: any) {
-    // Support both old API (with provider) and new API (no args)
+export class NarrativeEngine<
+  TBlock extends NarrativeBlock = NarrativeBlock,
+  TLore extends NarrativeLore = NarrativeLore,
+> {
+  private readonly engine: InstanceType<typeof native.JsNarrativeEngine>;
+  private readonly provider?: NarrativeProvider<TBlock, TLore>;
+
+  constructor(provider?: NarrativeProvider<TBlock, TLore>) {
     this.engine = new native.JsNarrativeEngine();
+    this.provider = provider;
   }
 
-  generateContext(channelId: string, query: string): string {
-    return this.engine.generateContext(channelId, query);
+  async generateContext(channelId: string, query: string): Promise<string> {
+    if (!this.provider) {
+      return this.engine.generateContext(channelId, query);
+    }
+
+    const totalBlockCount = await this.provider.getBlockCount(channelId);
+    const plan = JSON.parse(this.engine.planContext(totalBlockCount)) as ContextPlan;
+    const [loreAtoms, candidatesHybrid, blocksHistorical] = await Promise.all([
+      this.provider.getLoreAtoms(channelId),
+      this.provider.getHybridSearchCandidates(channelId, query, plan.candidateLimit),
+      plan.historicalIndices.length > 0
+        ? this.provider.getBlocksByIndices(channelId, plan.historicalIndices)
+        : Promise.resolve([] as TBlock[]),
+    ]);
+
+    return this.engine.generateContextFromData(JSON.stringify({
+      channelId,
+      inputQuery: query,
+      totalBlockCount,
+      loreAtoms,
+      candidatesHybrid,
+      blocksHistorical,
+      providerType: this.provider.getProviderType?.() ?? "custom",
+      blockSequenceIntervals: plan.historicalIndices,
+    }));
   }
 
   generateBlock(channelId: string, inputQuery: string, parameters: any): any {
@@ -72,7 +124,7 @@ export class NarrativeEngine {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function configureLabEngine(engine: NarrativeEngine): void {
+  void engine;
   // Placeholder for backward compatibility - no-op in new architecture
   // Lab configuration is now handled through internal engine settings
 }
-

@@ -59,7 +59,7 @@ pub mod narrative {
 }
 
 // Convenience re-exports
-pub use engine::{LabConfig, NarrativeEngine, ResolvedLabConfig};
+pub use engine::{ContextPlan, LabConfig, NarrativeEngine, PreparedContext, ResolvedLabConfig};
 pub use narrative::v1::{
     BaseNarrativeBlock, BaseNarrativeLore, BatchGenerationOptions, BatchGenerationResult,
     ContextData, Entity, EnvelopeMetadata, GenerationParameters, Representation, ReturnEnvelope,

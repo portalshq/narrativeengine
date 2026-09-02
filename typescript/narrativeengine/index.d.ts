@@ -11,6 +11,8 @@ export declare function version(): string
 export declare class JsNarrativeEngine {
   constructor()
   generateContext(channelId: string, query: string): string
+  planContext(totalBlockCount: number): string
+  generateContextFromData(inputJson: string): string
   generateBlock(channelId: string, inputQuery: string, parametersJson: string): string
   generateBlocksSequential(channelId: string, previousContext: string, optionsJson: string): string
   generateBlocksParallel(channelId: string, branchContexts: Array<string>, optionsJson: string): string

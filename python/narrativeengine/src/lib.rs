@@ -4,13 +4,15 @@
 // boundary.  A future PyO3 release will fix this upstream.
 #![allow(clippy::useless_conversion, unsafe_op_in_unsafe_fn)]
 
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
 use narrativeengine::{
     engine::{LabConfig, NarrativeEngine},
-    narrative::v1::{BaseNarrativeBlock, BaseNarrativeLore, BatchGenerationOptions, GenerationParameters},
+    narrative::v1::{
+        BaseNarrativeBlock, BaseNarrativeLore, BatchGenerationOptions, GenerationParameters,
+    },
     provider::InMemoryNarrativeProvider,
 };
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Basic utility functions (legacy compatibility - simplified versions)
@@ -63,7 +65,7 @@ impl PyNarrativeEngine {
     fn new() -> PyResult<Self> {
         let provider = InMemoryNarrativeProvider::new(vec![], vec![]);
         let engine = NarrativeEngine::new(std::sync::Arc::new(provider));
-        
+
         Ok(PyNarrativeEngine { engine })
     }
 
@@ -71,9 +73,8 @@ impl PyNarrativeEngine {
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| PyValueError::new_err(format!("Failed to create runtime: {}", e)))?;
 
-        let context = rt.block_on(async {
-            self.engine.generate_context(&channel_id, &query).await
-        });
+        let context =
+            rt.block_on(async { self.engine.generate_context(&channel_id, &query).await });
 
         Ok(context)
     }
@@ -106,16 +107,22 @@ impl PyNarrativeEngine {
             .map_err(|e| PyValueError::new_err(format!("Failed to parse parameters: {}", e)))?;
 
         let result = rt.block_on(async {
-            self.engine.generate_block(&channel_id, &input_query, parameters).await
+            self.engine
+                .generate_block(&channel_id, &input_query, parameters)
+                .await
         });
 
         match result {
             Ok(envelope) => {
-                let json = serde_json::to_string(&envelope)
-                    .map_err(|e| PyValueError::new_err(format!("Failed to serialize result: {}", e)))?;
+                let json = serde_json::to_string(&envelope).map_err(|e| {
+                    PyValueError::new_err(format!("Failed to serialize result: {}", e))
+                })?;
                 Ok(json)
             }
-            Err(error) => Err(PyValueError::new_err(format!("Generation failed: {}", error.message))),
+            Err(error) => Err(PyValueError::new_err(format!(
+                "Generation failed: {}",
+                error.message
+            ))),
         }
     }
 
@@ -139,11 +146,15 @@ impl PyNarrativeEngine {
 
         match result {
             Ok(result) => {
-                let json = serde_json::to_string(&result)
-                    .map_err(|e| PyValueError::new_err(format!("Failed to serialize result: {}", e)))?;
+                let json = serde_json::to_string(&result).map_err(|e| {
+                    PyValueError::new_err(format!("Failed to serialize result: {}", e))
+                })?;
                 Ok(json)
             }
-            Err(error) => Err(PyValueError::new_err(format!("Batch generation failed: {}", error.message))),
+            Err(error) => Err(PyValueError::new_err(format!(
+                "Batch generation failed: {}",
+                error.message
+            ))),
         }
     }
 
@@ -167,11 +178,15 @@ impl PyNarrativeEngine {
 
         match result {
             Ok(result) => {
-                let json = serde_json::to_string(&result)
-                    .map_err(|e| PyValueError::new_err(format!("Failed to serialize result: {}", e)))?;
+                let json = serde_json::to_string(&result).map_err(|e| {
+                    PyValueError::new_err(format!("Failed to serialize result: {}", e))
+                })?;
                 Ok(json)
             }
-            Err(error) => Err(PyValueError::new_err(format!("Parallel generation failed: {}", error.message))),
+            Err(error) => Err(PyValueError::new_err(format!(
+                "Parallel generation failed: {}",
+                error.message
+            ))),
         }
     }
 }

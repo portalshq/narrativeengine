@@ -53,4 +53,21 @@ describe('InMemoryNarrativeProvider', () => {
       expect(b.isNotable).toBe(true);
     });
   });
+
+  it('should append blocks and identify itself', async () => {
+    const provider = new InMemoryNarrativeProvider([], []);
+    const block = {
+      id: 99,
+      index: 99,
+      content: 'A newly remembered event',
+      happenedAt: 1_700_000_000_000,
+      isNotable: false,
+    };
+
+    await provider.addBlock('test', block);
+
+    expect(provider.getProviderType()).toBe('in-memory');
+    await expect(provider.getBlockCount('test')).resolves.toBe(1);
+    await expect(provider.getBlocksByIndices('test', [99])).resolves.toEqual([block]);
+  });
 });

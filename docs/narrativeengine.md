@@ -81,14 +81,32 @@ candidate = generate_candidate(lore, LabConfig(temperature=0.7, max_candidates=4
 TypeScript:
 
 ```ts
-import { createBlock, generateCandidate } from "@portalshq/narrativeengine";
+import {
+  InMemoryNarrativeProvider,
+  NarrativeEngine,
+  createBlock,
+  generateCandidate,
+} from "@portalshq/narrativeengine";
 
 const block = createBlock("intro", "A signal appears in the archive.");
 const candidate = generateCandidate(
   { id: "lore-1", title: "Archive Signal", blocks: [block] },
   { temperature: 0.7, max_candidates: 4, seed: 7 },
 );
+
+const provider = new InMemoryNarrativeProvider(
+  [{ id: "intro", index: 1, content: "A signal appears in the archive.", happenedAt: Date.now() }],
+  [{ id: "rule", content: "The archive records every signal.", happenedAt: Date.now() }],
+);
+const engine = new NarrativeEngine(provider);
+const context = await engine.generateContext("archive", "Investigate the signal.");
 ```
+
+`NarrativeEngine` asks the provider for the block count, lore, hybrid-search
+candidates, and planned historical blocks. The Rust core owns the deterministic
+retrieval plan, saliency scoring, timeline ordering, and prompt composition.
+Custom providers implement the exported `NarrativeProvider` interface and may
+perform asynchronous database or network access.
 
 ## Development
 

@@ -25,6 +25,26 @@ use crate::types::{BaseNarrativeBlock, BaseNarrativeLore, NarrativeBlockExt};
 /// Maximum hybrid-search survivors kept after the saliency gate.
 const LIMIT_HYBRID_TOP: usize = 3;
 
+/// Retrieval instructions produced by the deterministic Rust core.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextPlan {
+    pub historical_indices: Vec<usize>,
+    pub candidate_limit: usize,
+}
+
+/// Provider data prepared by a language binding before Rust finalizes context.
+pub struct PreparedContext<TBlock, TLore> {
+    pub channel_id: String,
+    pub input_query: String,
+    pub total_block_count: usize,
+    pub lore_atoms: Vec<TLore>,
+    pub candidates_hybrid: Vec<HybridCandidate<TBlock>>,
+    pub blocks_historical: Vec<TBlock>,
+    pub provider_type: String,
+    pub block_sequence_intervals: Vec<usize>,
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LabConfig
 // ─────────────────────────────────────────────────────────────────────────────
@@ -240,6 +260,90 @@ where
 
     pub fn get_lab_config(&self) -> ResolvedLabConfig {
         self.lab_config.clone()
+    }
+
+    /// Build a deterministic retrieval plan without performing any I/O.
+    pub fn plan_context(&self, total_block_count: usize) -> ContextPlan {
+        let historical_indices = if total_block_count >= RAG_MIN_BLOCKS {
+            let sequence = generate_reciprocal_sequence(total_block_count, RAG_DIVISIONS);
+            sequence_to_block_indices(&sequence)
+        } else {
+            Vec::new()
+        };
+
+        ContextPlan {
+            historical_indices,
+            candidate_limit: 20,
+        }
+    }
+
+    /// Finalize context from provider data that was retrieved by a language binding.
+    pub fn generate_context_from_data(
+        &self,
+        mut prepared: PreparedContext<TBlock, TLore>,
+    ) -> String {
+        prepared
+            .lore_atoms
+            .sort_by_key(|lore| std::cmp::Reverse(lore.happened_at()));
+        prepared.lore_atoms.truncate(self.lab_config.max_lore_atoms);
+
+        let evicted_ids = self.evicted_candidate_ids(&prepared.candidates_hybrid);
+        let survivors = self.score_and_filter(prepared.candidates_hybrid);
+        let blocks_chrono =
+            self.merge_and_sort_chronologically(&prepared.blocks_historical, &survivors);
+        let current_block_count = blocks_chrono
+            .last()
+            .map(|block| block.block_index() + 1)
+            .unwrap_or(0);
+        let finalized_prompt = self.compose_prose(
+            &blocks_chrono,
+            &prepared.lore_atoms,
+            &prepared.input_query,
+            current_block_count,
+        );
+
+        let trace = TraceObject {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            channel_id: prepared.channel_id,
+            input_query: prepared.input_query,
+            provider_type: Some(prepared.provider_type),
+            lab_config: Some(LabConfig {
+                saliency_threshold: Some(self.lab_config.saliency_threshold),
+                weight_dense: Some(self.lab_config.weight_dense),
+                significance_coef: Some(self.lab_config.significance_coef),
+                temporal_phrasing: Some(self.lab_config.temporal_phrasing),
+                max_lore_atoms: Some(self.lab_config.max_lore_atoms),
+                timestamp: self.lab_config.timestamp.clone(),
+                enable_entity_extraction: Some(self.lab_config.enable_entity_extraction),
+                max_entity_representations: Some(self.lab_config.max_entity_representations),
+                default_nap_repository: self.lab_config.default_nap_repository.clone(),
+            }),
+            phases: TracePhases {
+                harvest: Some(serde_json::json!({
+                    "totalBlockCount": prepared.total_block_count,
+                    "loreCount": prepared.lore_atoms.len(),
+                    "intervals": prepared.block_sequence_intervals,
+                })),
+                saliency: Some(serde_json::json!({
+                    "threshold": self.lab_config.saliency_threshold,
+                    "evicted": evicted_ids,
+                    "survivorCount": survivors.len(),
+                })),
+                timeline: Some(serde_json::json!({ "blockCount": blocks_chrono.len() })),
+                prose: Some(serde_json::json!({
+                    "promptLength": finalized_prompt.len(),
+                    "loreAtoms": prepared.lore_atoms.len(),
+                    "blockCount": blocks_chrono.len(),
+                })),
+                fusion: None,
+            },
+            finalized_prompt: Some(finalized_prompt.clone()),
+            discarded_candidates: None,
+            error: None,
+        };
+        logger_narrative_trace(&trace);
+
+        finalized_prompt
     }
 
     // ── Enhanced API methods (generic implementation) ─────────────────────────
@@ -834,6 +938,7 @@ where
     ) -> Result<String, String> {
         // ── PHASE 1: HARVEST ─────────────────────────────────────────────────
         let total_block_count = self.provider.get_block_count(channel_id).await;
+        let plan = self.plan_context(total_block_count);
 
         let mut lore_atoms = self.provider.get_lore_atoms(channel_id).await;
         lore_atoms.sort_by_key(|b| std::cmp::Reverse(b.happened_at()));
@@ -841,131 +946,29 @@ where
 
         let candidates_hybrid = self
             .provider
-            .get_hybrid_search_candidates(channel_id, input_query, 20)
+            .get_hybrid_search_candidates(channel_id, input_query, plan.candidate_limit)
             .await;
 
         let mut blocks_historical: Vec<TBlock> = Vec::new();
-        let mut block_sequence_intervals: Vec<usize> = Vec::new();
+        let block_sequence_intervals = plan.historical_indices;
 
-        if total_block_count >= RAG_MIN_BLOCKS {
-            let seq = generate_reciprocal_sequence(total_block_count, RAG_DIVISIONS);
-            let indices = sequence_to_block_indices(&seq);
-            block_sequence_intervals = indices.clone();
+        if !block_sequence_intervals.is_empty() {
             blocks_historical = self
                 .provider
-                .get_blocks_by_indices(channel_id, &indices)
+                .get_blocks_by_indices(channel_id, &block_sequence_intervals)
                 .await;
         }
 
-        // ── PHASE 2 + 3: FUSION, SCORING, SALIENCY GATE, TIE-BREAKER ────────
-        let evicted_ids: Vec<String>;
-        let survivors: Vec<HybridCandidate<TBlock>>;
-
-        {
-            let weight_sparse = 1.0 - self.lab_config.weight_dense;
-            let mut scored: Vec<ScoredCandidate<TBlock>> = candidates_hybrid
-                .into_iter()
-                .map(|c| {
-                    let score_raw = c.score_vector_dense * self.lab_config.weight_dense
-                        + c.score_keyword_sparse * weight_sparse;
-                    let score_final = if c.block.notable() {
-                        score_raw * self.lab_config.significance_coef
-                    } else {
-                        score_raw
-                    };
-                    ScoredCandidate {
-                        block: c.block,
-                        score_raw_fused: score_raw,
-                        score_final_fused: score_final,
-                    }
-                })
-                .collect();
-
-            evicted_ids = scored
-                .iter()
-                .filter(|c| c.score_final_fused < self.lab_config.saliency_threshold)
-                .map(|c| c.block.block_id_str())
-                .collect();
-
-            scored.retain(|c| c.score_final_fused >= self.lab_config.saliency_threshold);
-
-            // Sort: score DESC, then happened_at DESC (Tie-Breaker: Recency wins)
-            scored.sort_by(|a, b| {
-                b.score_final_fused
-                    .partial_cmp(&a.score_final_fused)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .then_with(|| b.block.happened_at().cmp(&a.block.happened_at()))
-            });
-            scored.truncate(LIMIT_HYBRID_TOP);
-
-            survivors = scored
-                .into_iter()
-                .map(|s| HybridCandidate {
-                    block: s.block,
-                    score_vector_dense: s.score_raw_fused,
-                    score_keyword_sparse: 0.0,
-                })
-                .collect();
-        }
-
-        // ── PHASE 4: TIMELINE ALIGNMENT ──────────────────────────────────────
-        let blocks_chrono = self.merge_and_sort_chronologically(&blocks_historical, &survivors);
-
-        // ── PHASE 5: PROSE GENERATION ─────────────────────────────────────────
-        let current_block_count = blocks_chrono
-            .last()
-            .map(|b| b.block_index() + 1)
-            .unwrap_or(0);
-        let finalized_prompt = self.compose_prose(
-            &blocks_chrono,
-            &lore_atoms,
-            input_query,
-            current_block_count,
-        );
-
-        // ── TRACE ─────────────────────────────────────────────────────────────
-        let trace = TraceObject {
-            timestamp: chrono::Utc::now().to_rfc3339(),
+        Ok(self.generate_context_from_data(PreparedContext {
             channel_id: channel_id.to_string(),
             input_query: input_query.to_string(),
-            provider_type: Some(self.provider.get_provider_type().to_string()),
-            lab_config: Some(LabConfig {
-                saliency_threshold: Some(self.lab_config.saliency_threshold),
-                weight_dense: Some(self.lab_config.weight_dense),
-                significance_coef: Some(self.lab_config.significance_coef),
-                temporal_phrasing: Some(self.lab_config.temporal_phrasing),
-                max_lore_atoms: Some(self.lab_config.max_lore_atoms),
-                timestamp: self.lab_config.timestamp.clone(),
-                enable_entity_extraction: Some(self.lab_config.enable_entity_extraction),
-                max_entity_representations: Some(self.lab_config.max_entity_representations),
-                default_nap_repository: self.lab_config.default_nap_repository.clone(),
-            }),
-            phases: TracePhases {
-                harvest: Some(serde_json::json!({
-                    "totalBlockCount": total_block_count,
-                    "loreCount":       lore_atoms.len(),
-                    "intervals":       block_sequence_intervals,
-                })),
-                saliency: Some(serde_json::json!({
-                    "threshold":     self.lab_config.saliency_threshold,
-                    "evicted":       evicted_ids,
-                    "survivorCount": survivors.len(),
-                })),
-                timeline: Some(serde_json::json!({ "blockCount": blocks_chrono.len() })),
-                prose: Some(serde_json::json!({
-                    "promptLength": finalized_prompt.len(),
-                    "loreAtoms":    lore_atoms.len(),
-                    "blockCount":   blocks_chrono.len(),
-                })),
-                fusion: None,
-            },
-            finalized_prompt: Some(finalized_prompt.clone()),
-            discarded_candidates: None,
-            error: None,
-        };
-        logger_narrative_trace(&trace);
-
-        Ok(finalized_prompt)
+            total_block_count,
+            lore_atoms,
+            candidates_hybrid,
+            blocks_historical,
+            provider_type: self.provider.get_provider_type().to_string(),
+            block_sequence_intervals,
+        }))
     }
 
     // ── Shared scoring helper (used by batch path) ────────────────────────────
@@ -1008,6 +1011,26 @@ where
                 block: s.block,
                 score_vector_dense: s.score_raw_fused,
                 score_keyword_sparse: 0.0,
+            })
+            .collect()
+    }
+
+    fn evicted_candidate_ids(&self, candidates: &[HybridCandidate<TBlock>]) -> Vec<String> {
+        let weight_sparse = 1.0 - self.lab_config.weight_dense;
+
+        candidates
+            .iter()
+            .filter_map(|candidate| {
+                let score_raw = candidate.score_vector_dense * self.lab_config.weight_dense
+                    + candidate.score_keyword_sparse * weight_sparse;
+                let score_final = if candidate.block.notable() {
+                    score_raw * self.lab_config.significance_coef
+                } else {
+                    score_raw
+                };
+
+                (score_final < self.lab_config.saliency_threshold)
+                    .then(|| candidate.block.block_id_str())
             })
             .collect()
     }
@@ -1371,6 +1394,54 @@ mod tests {
             happened_at,
             is_notable: Some(notable),
         }
+    }
+
+    #[test]
+    fn context_plan_skips_history_below_minimum_and_plans_it_above_minimum() {
+        let engine = NarrativeEngine::new(Arc::new(InMemoryNarrativeProvider::new(vec![], vec![])));
+
+        assert!(
+            engine
+                .plan_context(RAG_MIN_BLOCKS - 1)
+                .historical_indices
+                .is_empty()
+        );
+
+        let plan = engine.plan_context(100);
+        assert_eq!(plan.candidate_limit, 20);
+        assert_eq!(plan.historical_indices.first(), Some(&1));
+        assert_eq!(plan.historical_indices.last(), Some(&100));
+    }
+
+    #[test]
+    fn prepared_context_uses_external_provider_data() {
+        let engine = NarrativeEngine::new(Arc::new(InMemoryNarrativeProvider::new(vec![], vec![])));
+        let lore = BaseNarrativeLore {
+            id: Some(BlockId::Str("lore".into()).into()),
+            content: "The observatory is forbidden.".into(),
+            happened_at: 300,
+            is_active: Some(true),
+        };
+
+        let result = engine.generate_context_from_data(PreparedContext {
+            channel_id: "alpha".into(),
+            input_query: "The council returns.".into(),
+            total_block_count: 10,
+            lore_atoms: vec![lore],
+            candidates_hybrid: vec![HybridCandidate {
+                block: block("candidate", 8, "A hidden vote was discovered.", 200, true),
+                score_vector_dense: 0.5,
+                score_keyword_sparse: 0.5,
+            }],
+            blocks_historical: vec![block("history", 1, "The council formed.", 100, false)],
+            provider_type: "external-test".into(),
+            block_sequence_intervals: vec![1, 8],
+        });
+
+        assert!(result.contains("The observatory is forbidden."));
+        assert!(result.contains("The council formed."));
+        assert!(result.contains("A hidden vote was discovered."));
+        assert!(result.ends_with("The council returns."));
     }
 
     // ── Tie-Breaker Paradox: Recency wins ────────────────────────────────────
