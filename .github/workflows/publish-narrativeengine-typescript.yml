@@ -1,6 +1,7 @@
 name: publish-narrativeengine-typescript
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -22,7 +23,7 @@ jobs:
           cache-dependency-path: typescript/narrativeengine/package-lock.json
       - uses: arduino/setup-protoc@v3
         with:
-          version: "29.x"
+          version: "34.1"
       - run: npm ci
         working-directory: typescript/narrativeengine
       - run: npm run generate
