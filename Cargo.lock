@@ -1495,7 +1495,7 @@ checksum = "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084"
 
 [[package]]
 name = "nap-cli"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1515,7 +1515,7 @@ dependencies = [
 
 [[package]]
 name = "nap-core"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1556,7 +1556,7 @@ dependencies = [
 
 [[package]]
 name = "nap-docgen"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "camino",
@@ -1573,7 +1573,7 @@ dependencies = [
 
 [[package]]
 name = "nap-mcp-server"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -1584,7 +1584,7 @@ dependencies = [
 
 [[package]]
 name = "nap-sdk-py"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nap-core",
  "pyo3",
@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "nap-sdk-ts"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nap-core",
  "napi",
@@ -1609,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "nap-server"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "axum 0.8.9",
@@ -1628,7 +1628,7 @@ dependencies = [
 
 [[package]]
 name = "nap-test-utils"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "chrono",
  "nap-core",
@@ -1696,7 +1696,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "chrono",
  "nap-core",
@@ -1718,7 +1718,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-py"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "narrativeengine",
  "pyo3",
