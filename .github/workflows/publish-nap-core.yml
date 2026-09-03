@@ -18,6 +18,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - run: cargo publish -p nap-core --dry-run
+      # Publish via crates.io Trusted Publishing (OIDC): no API token.
+      # Requires a trusted publisher on crates.io for crate `nap-core`
+      # pointing at portalshq/narrativeengine + this workflow file (+ production env).
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
       - run: cargo publish -p nap-core
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

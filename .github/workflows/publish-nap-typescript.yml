@@ -58,8 +58,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: '24'
           registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing requires npm >= 11.5.1; the npm bundled with
+      # Node may be older, so upgrade explicitly (see npm/cli#9088).
+      - run: npm install -g npm@^11
 
       - run: npm ci
         working-directory: typescript/nap-sdk
@@ -75,7 +79,8 @@ jobs:
 
       - run: ls -la typescript/nap-sdk/*.node
 
+      # Publish via npm Trusted Publishing (OIDC): no NODE_AUTH_TOKEN.
+      # Requires a trusted publisher on npmjs.com for @portalshq/nap-sdk
+      # pointing at portalshq/narrativeengine + this workflow file (+ production env).
       - run: npm publish --access public
         working-directory: typescript/nap-sdk
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

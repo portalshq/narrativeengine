@@ -8,11 +8,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DigitalCreationsCo/nap"
+    "url": "https://github.com/portalshq/narrativeengine"
   },
-  "homepage": "https://github.com/DigitalCreationsCo/nap#readme",
+  "homepage": "https://github.com/portalshq/narrativeengine#readme",
   "bugs": {
-    "url": "https://github.com/DigitalCreationsCo/nap/issues"
+    "url": "https://github.com/portalshq/narrativeengine/issues"
   },
   "type": "module",
   "main": "dist/index.js",

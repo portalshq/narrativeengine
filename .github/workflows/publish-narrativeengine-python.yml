@@ -53,11 +53,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install twine
       - uses: actions/download-artifact@v4
         with:
           pattern: wheel-narrativeengine-*
           path: target/wheels/
           merge-multiple: true
       - run: ls -la target/wheels/
-      - run: twine upload --skip-existing --username __token__ --password "${{ secrets.MATURIN_PYPI_TOKEN }}" target/wheels/*.whl
+      # Publish via PyPI Trusted Publishing (OIDC): no API token.
+      # Requires a trusted publisher on pypi.org for project `narrativeengine`
+      # pointing at portalshq/narrativeengine + this workflow file (+ production env).
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: target/wheels/
+          skip-existing: true

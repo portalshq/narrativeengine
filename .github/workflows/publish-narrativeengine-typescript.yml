@@ -17,13 +17,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: "https://registry.npmjs.org"
           cache: npm
           cache-dependency-path: typescript/narrativeengine/package-lock.json
+      # Trusted publishing requires npm >= 11.5.1; the npm bundled with
+      # Node may be older, so upgrade explicitly (see npm/cli#9088).
+      - run: npm install -g npm@^11
       - uses: arduino/setup-protoc@v3
         with:
           version: "34.1"
+          # The action queries api.github.com for release data; without a
+          # token those calls are anonymous and hit IP-based rate limits.
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: npm ci
         working-directory: typescript/narrativeengine
       - run: npm run generate
@@ -37,7 +43,9 @@ jobs:
         working-directory: typescript/narrativeengine
       - run: npm run build
         working-directory: typescript/narrativeengine
+      # Publish via npm Trusted Publishing (OIDC): no NODE_AUTH_TOKEN.
+      # Requires a trusted publisher on npmjs.com for @portalshq/narrativeengine
+      # pointing at portalshq/narrativeengine + this workflow file (+ production env).
+      # Provenance attestations are generated automatically.
       - run: npm publish --provenance --access public
         working-directory: typescript/narrativeengine
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

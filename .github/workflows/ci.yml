@@ -28,6 +28,8 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           version: "29.x"
+          # Authenticate api.github.com calls to avoid IP-based rate limits.
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: pip install ruff mypy pydantic

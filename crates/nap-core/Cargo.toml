@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Core library for the Narrative Addressing Protocol"
-repository = "https://github.com/DigitalCreationsCo/narrativeengine"
+repository = "https://github.com/portalshq/narrativeengine"
 homepage = "https://nap.sh"
 
 [features]
