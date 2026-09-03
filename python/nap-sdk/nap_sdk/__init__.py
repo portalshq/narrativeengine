@@ -924,6 +924,37 @@ def resolve(
     return cast(dict[str, Any], json.loads(result))
 
 
+def presign_representation(
+    uri: str,
+    representation: str,
+    *,
+    repo_path: str | None = None,
+    branch: str | None = None,
+    commit: str | None = None,
+    ttl_seconds: int | None = None,
+    http_url: str | None = None,
+    bearer_token: str | None = None,
+) -> dict[str, Any]:
+    """Create a time-limited public URL for a committed representation.
+
+    The returned URL is a bearer capability. Do not log or retain it beyond
+    ``expires_at``. Portals Cloud HTTP ingress is currently not enabled; pass
+    ``http_url`` only for a Lore deployment whose presign endpoint is exposed.
+    """
+    rp = _resolve_repo_path(repo_path)
+    result = _native.presign_representation(
+        uri,
+        representation,
+        rp,
+        branch,
+        commit,
+        ttl_seconds,
+        http_url,
+        bearer_token,
+    )
+    return cast(dict[str, Any], json.loads(result))
+
+
 def resolve_query(uri: str, path: str, repo_path: str | None = None) -> Any:
     """Query a specific subtree path from a manifest.
 
@@ -1129,7 +1160,7 @@ def version() -> str:
 # Module exports
 # ═══════════════════════════════════════════════════════════════════════
 
-__all__ = [
+__all__ = [  # noqa: RUF022 — grouped by section, not globally sorted
     # URI
     "parse_uri",
     "uri_new",
@@ -1185,6 +1216,7 @@ __all__ = [
     "repo_pull",
     # Resolver
     "resolve",
+    "presign_representation",
     "resolve_query",
     "list_repositories",
     # Schema

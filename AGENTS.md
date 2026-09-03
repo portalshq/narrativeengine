@@ -21,7 +21,7 @@ just docs-check
 
 `just docs-check` reruns doc generation and verifies that generated outputs are current. If it reports stale documentation, inspect the generated diff and commit the intended generated files with the source changes.
 
-## Releasing
+## Releases
 
 **Always use `./scripts/publish-all.sh` to publish a new version.** Do not manually bump versions, commit release tags, or push release commits.
 

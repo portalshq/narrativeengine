@@ -136,6 +136,27 @@ export interface DiffEntry {
   new_value?: unknown;
 }
 
+/** Options for creating a bearer URL for a committed representation. */
+export interface PresignOptions {
+  repoPath?: string;
+  branch?: string;
+  commit?: string;
+  ttlSeconds?: number;
+  httpUrl?: string;
+  bearerToken?: string;
+}
+
+/** A time-limited public URL for an immutable representation. */
+export interface PresignedRepresentation {
+  url: string;
+  expires_at: number;
+  revision: string;
+  repository_id: string;
+  address: string;
+  representation: string;
+  format: string;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /** Resolve the NAP base directory from env or default. */
@@ -893,6 +914,30 @@ export function resolve(
     return JSON.parse(native.resolveWithOptions(uri, rp, branch, commit, path)) as Record<string, unknown>;
   }
   return JSON.parse(native.resolve(uri, rp)) as Record<string, unknown>;
+}
+
+/**
+ * Create a time-limited public URL for a committed representation.
+ *
+ * The URL is a bearer capability. Do not log it or retain it beyond
+ * `expires_at`. Portals Cloud HTTP ingress is currently not enabled.
+ */
+export async function presignRepresentation(
+  uri: string,
+  representation: string,
+  options: PresignOptions = {},
+): Promise<PresignedRepresentation> {
+  const result = await native.presignRepresentation(
+    uri,
+    representation,
+    resolveRepoPath(options.repoPath),
+    options.branch,
+    options.commit,
+    options.ttlSeconds,
+    options.httpUrl,
+    options.bearerToken,
+  );
+  return JSON.parse(result) as PresignedRepresentation;
 }
 
 /**

@@ -14,6 +14,7 @@ Commands:
   sync          Sync with remote
   create        Create a new entity manifest
   resolve       Resolve a NAP URI to its manifest or a subtree
+  presign       Create a time-limited public URL for a committed representation
   query         Query a subtree from a manifest
   commit        Commit changes to a repository repository
   history       View commit history for an entity

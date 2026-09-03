@@ -17,7 +17,7 @@ use nap_core::{
     manifest::{Manifest, Representation},
     query::ManifestQuery,
     repository::Repository,
-    resolver::{ResolveOptions, ResolveResult, Resolver},
+    resolver::{PresignOptions, ResolveOptions, ResolveResult, Resolver},
     schema,
     types::EntityType,
     uri::NapUri,
@@ -619,6 +619,40 @@ fn resolve_query(uri_str: String, repo_base_path: String, path: String) -> PyRes
 }
 
 #[pyfunction]
+#[pyo3(signature = (uri, representation, repo_base_path, branch=None, commit=None, ttl_seconds=None, http_url=None, bearer_token=None))]
+#[allow(clippy::too_many_arguments)]
+fn presign_representation(
+    py: Python<'_>,
+    uri: String,
+    representation: String,
+    repo_base_path: String,
+    branch: Option<String>,
+    commit: Option<String>,
+    ttl_seconds: Option<u64>,
+    http_url: Option<String>,
+    bearer_token: Option<String>,
+) -> PyResult<String> {
+    let options = PresignOptions {
+        branch,
+        commit,
+        ttl_seconds,
+        lore_http_url: http_url,
+        bearer_token,
+    };
+    let result = py.allow_threads(|| {
+        get_runtime().block_on(
+            Resolver::new(Path::new(&repo_base_path)).presign_representation(
+                &uri,
+                &representation,
+                &options,
+            ),
+        )
+    });
+    serde_json::to_string(&result.map_err(map_error)?)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
+}
+
+#[pyfunction]
 fn list_repositories(repo_base_path: String) -> PyResult<String> {
     let resolver = Resolver::new(Path::new(&repo_base_path));
     let repositories = resolver.list_repositories().map_err(map_error)?;
@@ -843,6 +877,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(resolve, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_with_options, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_query, module)?)?;
+    module.add_function(wrap_pyfunction!(presign_representation, module)?)?;
     module.add_function(wrap_pyfunction!(list_repositories, module)?)?;
 
     // Schema

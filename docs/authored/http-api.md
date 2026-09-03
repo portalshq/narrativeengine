@@ -40,6 +40,12 @@ NAP core uses environment variables for configuration. All variables serve speci
 | `NAP_LORE_GRPC_TOKEN` | JWT bearer token for gRPC auth | — | No (optional) |
 | `NAP_LORE_GRPC_RID` | Repository ID (hex-encoded) for gRPC | — | No (optional) |
 | `NAP_LORE_GRPC_INSECURE` | Skip TLS verification (`1`/`true`/`yes`) | `0` | No (optional) |
+| `NAP_LORE_HTTP_URL` | Explicit Lore HTTP origin for presigned URLs | `http://127.0.0.1:41339` for local Lore | No |
+| `NAP_LORE_HTTP_TOKEN` | Repository-scoped bearer token for Lore HTTP presign requests | Falls back to `NAP_LORE_GRPC_TOKEN` | No (local); normally yes (remote) |
+
+Portals Cloud presign/redeem HTTP ingress is currently WIP and intentionally
+unavailable. Setting an HTTP URL is appropriate only when that Lore deployment
+has explicitly enabled and exposed its presign endpoint.
 
 ### Constants
 

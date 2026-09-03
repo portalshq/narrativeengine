@@ -27,6 +27,14 @@ For creating or resolving individual entities, use `nap-resolve`. For revising e
 * **Clone/pull:** `nap pull <remote> <universe_name>` — clones or pulls a repository from a remote.
 ## Guardrails
  
+ Unless the user explicitly requests a different provider or storage location:
+- Run nap init <repository> with no --provider and no --base-dir.
+- Preserve the configured provider and default NAP directory.
+- Never infer --provider local from an example.
+- Never choose a workspace-local --base-dir merely to isolate a repository.
+Use --provider only when the user explicitly requests a provider change.
+Use --base-dir only when the user explicitly names a storage location.
+
 * **No tagging.** Do not use `nap tag` or append tags to URIs — Lore VCS has no native tag support. Branches are the only mechanism for human-readable names on a revision point.
 
 {{include docs/generated/cli.md}}

@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::error::NapError;
-use crate::vcs::{CommitInfo, VcsBackend};
+use crate::vcs::{CommitInfo, VcsBackend, VcsContentAddress, VcsRepositoryDescriptor};
 
 /// A VcsBackend that simulates VCS operations on the filesystem.
 pub struct MockBackend {
@@ -173,6 +173,28 @@ impl VcsBackend for MockBackend {
             .last()
             .map(|c| c.id.clone())
             .ok_or_else(|| NapError::VcsError("no commits on branch".to_string()))
+    }
+
+    fn repository_descriptor(
+        &self,
+        _repo_path: &Path,
+    ) -> Result<VcsRepositoryDescriptor, NapError> {
+        Ok(VcsRepositoryDescriptor {
+            id: "0123456789abcdef0123456789abcdef".to_string(),
+            remote_url: "lore://localhost:41337/mock".to_string(),
+        })
+    }
+
+    fn file_content_address_at_ref(
+        &self,
+        _repo_path: &Path,
+        _file_path: &str,
+        _reference: &str,
+    ) -> Result<VcsContentAddress, NapError> {
+        Ok(VcsContentAddress {
+            hash: "9753abf79e5aef60bd95ab76c1e5a14d01239beb37ff9897b6af8e040eb2413a".to_string(),
+            context: "fedcba9876543210fedcba9876543210".to_string(),
+        })
     }
 
     fn revert(&self, repo_path: &Path, commit_hash: &str) -> Result<String, NapError> {

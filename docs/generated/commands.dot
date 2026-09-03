@@ -46,6 +46,8 @@ digraph nap_commands {
     "nap" -> "list";
     "merge" [label="nap merge"];
     "nap" -> "merge";
+    "presign" [label="nap presign"];
+    "nap" -> "presign";
     "publish" [label="nap publish"];
     "nap" -> "publish";
     "pull" [label="nap pull"];

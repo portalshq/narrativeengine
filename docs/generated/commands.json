@@ -980,6 +980,94 @@
       "hidden": false
     },
     {
+      "name": "presign",
+      "full_path": "presign",
+      "about": "Create a time-limited public URL for a committed representation",
+      "long_about": null,
+      "usage": "Usage: presign [OPTIONS] <URI> <REPRESENTATION>",
+      "aliases": [],
+      "arguments": [
+        {
+          "name": "uri",
+          "about": "NAP URI. Fragments are not supported",
+          "required": true,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        },
+        {
+          "name": "representation",
+          "about": "Representation key. e.g., \"reference_image\"",
+          "required": true,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        }
+      ],
+      "options": [
+        {
+          "name": "branch",
+          "about": "Resolve at a specific branch",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "branch",
+          "takes_value": true
+        },
+        {
+          "name": "commit",
+          "about": "Resolve at a specific commit hash",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "commit",
+          "takes_value": true
+        },
+        {
+          "name": "ttl_seconds",
+          "about": "Requested lifetime in seconds; Lore enforces its configured bounds",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "ttl-seconds",
+          "takes_value": true
+        },
+        {
+          "name": "http_url",
+          "about": "Explicit Lore HTTP origin, such as http://127.0.0.1:41339",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "http-url",
+          "takes_value": true
+        },
+        {
+          "name": "token_env",
+          "about": "Environment variable containing a repository-scoped bearer token",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "token-env",
+          "takes_value": true
+        }
+      ],
+      "flags": [
+        {
+          "name": "help",
+          "about": "Print help",
+          "required": false,
+          "default_value": null,
+          "short": "h",
+          "long": "help",
+          "takes_value": false
+        }
+      ],
+      "subcommands": [],
+      "hidden": false
+    },
+    {
       "name": "publish",
       "full_path": "publish",
       "about": "Publish changes to remote",

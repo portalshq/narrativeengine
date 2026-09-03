@@ -30,6 +30,7 @@ The `nap` command-line interface (v0.8.0) provides tools for creating, resolving
 | [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
 | [\`nap list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
 | [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
+| [\`nap presign\`](docs/generated/commands/presign.md) | Create a time-limited public URL for a committed representation |
 | [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
 | [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
 | [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |

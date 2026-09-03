@@ -304,6 +304,83 @@ fn test_local_lore_update_repository_file() {
 
 #[cfg(feature = "local-e2e")]
 #[test]
+fn test_local_lore_presign_redeems_binary_representation() {
+    let tmp = TempDir::new().expect("Failed to create temp dir");
+    let repository = unique_universe_name("test-presign");
+
+    nap_cmd()
+        .args(["init", "--provider", "local", "--base-dir"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(tmp.path())
+        .args([
+            "--repository",
+            &repository,
+            "character",
+            "testhero",
+            "--name",
+            "Test Hero",
+        ])
+        .assert()
+        .success();
+
+    let asset = create_test_image(tmp.path(), "presigned.png");
+    let uri = format!("nap://{repository}/character/testhero");
+    nap_cmd()
+        .args(["add", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&uri)
+        .arg("reference_image")
+        .arg(&asset)
+        .args(["--format", "png"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["push", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    let output = nap_cmd()
+        .args(["presign", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&uri)
+        .arg("reference_image")
+        .args(["--branch", "main", "--ttl-seconds", "60"])
+        .output()
+        .expect("Failed to run nap presign");
+    assert!(
+        output.status.success(),
+        "nap presign failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let response: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .expect("presign output should be JSON when captured");
+    let url = response["url"].as_str().expect("presign output URL");
+    let redeemed = std::process::Command::new("curl")
+        .args(["--fail", "--silent", "--show-error", url])
+        .output()
+        .expect("curl is required for the local presign integration test");
+    assert!(
+        redeemed.status.success(),
+        "presigned URL redemption failed: {}",
+        String::from_utf8_lossy(&redeemed.stderr)
+    );
+    assert_eq!(redeemed.stdout, fs::read(asset).unwrap());
+}
+
+#[cfg(feature = "local-e2e")]
+#[test]
 fn test_local_lore_add_image_to_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-add-image");

@@ -1,0 +1,17 @@
+Create a time-limited public URL for a committed representation
+
+Usage: nap presign [OPTIONS] <URI> <REPRESENTATION>
+
+Arguments:
+  <URI>             NAP URI. Fragments are not supported
+  <REPRESENTATION>  Representation key. e.g., "reference_image"
+
+Options:
+      --branch <BRANCH>            Resolve at a specific branch
+  -d, --base-dir <BASE_DIR>        Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
+      --commit <COMMIT>            Resolve at a specific commit hash
+  -v, --verbose                    Enable verbose debug logging
+      --ttl-seconds <TTL_SECONDS>  Requested lifetime in seconds; Lore enforces its configured bounds
+      --http-url <HTTP_URL>        Explicit Lore HTTP origin, such as http://127.0.0.1:41339
+      --token-env <TOKEN_ENV>      Environment variable containing a repository-scoped bearer token
+  -h, --help                       Print help

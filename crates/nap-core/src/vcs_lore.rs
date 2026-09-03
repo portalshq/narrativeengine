@@ -33,11 +33,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use crate::error::NapError;
-use crate::vcs::{CommitInfo, VcsBackend};
+use crate::vcs::{CommitInfo, VcsBackend, VcsContentAddress, VcsRepositoryDescriptor};
 
 /// Minimal TOML structure for parsing provider.toml
 #[derive(serde::Deserialize)]
@@ -168,15 +167,62 @@ impl LoreProcessRunner {
     }
 }
 
-static TEMP_BLOB_COUNTER: AtomicU64 = AtomicU64::new(0);
+fn parse_lore_event_data(stdout: &str, tag: &str) -> Result<serde_json::Value, String> {
+    let mut match_data = None;
+    for line in stdout.lines().filter(|line| !line.trim().is_empty()) {
+        let event: serde_json::Value =
+            serde_json::from_str(line).map_err(|e| format!("invalid Lore JSON event: {e}"))?;
+        if event.get("tagName").and_then(serde_json::Value::as_str) == Some(tag) {
+            if match_data.is_some() {
+                return Err(format!("Lore returned multiple {tag} events"));
+            }
+            match_data = event.get("data").cloned();
+        }
+    }
+    match_data.ok_or_else(|| format!("Lore returned no {tag} event"))
+}
 
-fn temp_lore_output_path(prefix: &str) -> PathBuf {
-    let unique = TEMP_BLOB_COUNTER.fetch_add(1, Ordering::SeqCst);
-    std::env::temp_dir().join(format!(
-        "nap-{prefix}-{}-{}.tmp",
-        std::process::id(),
-        unique
-    ))
+fn event_string(data: &serde_json::Value, field: &str) -> Result<String, String> {
+    data.get(field)
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| format!("Lore {field} is missing or is not a string"))
+}
+
+fn validate_lower_hex(value: &str, bytes: usize, label: &str) -> Result<(), String> {
+    if value.len() != bytes * 2 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(format!("Lore returned an invalid {label}"));
+    }
+    Ok(())
+}
+
+fn hydrate_lore_file(
+    repo_path: &Path,
+    args: impl IntoIterator<Item = String>,
+    prefix: &str,
+) -> Result<Vec<u8>, NapError> {
+    // A private directory prevents another local user from replacing the
+    // predictable output path with a symlink while Lore is writing it.
+    let temp_dir = tempfile::Builder::new()
+        .prefix(&format!("nap-{prefix}-"))
+        .tempdir()
+        .map_err(|e| NapError::VcsError(format!("failed to create private temp directory: {e}")))?;
+    let output_path = temp_dir.path().join("content");
+    let output = output_path.to_string_lossy().into_owned();
+    let mut command_args: Vec<String> = args.into_iter().collect();
+    command_args.extend([
+        "--output".to_string(),
+        output,
+        "--non-interactive".to_string(),
+    ]);
+    LoreProcessRunner::run(command_args, Some(repo_path))?;
+    std::fs::read(&output_path).map_err(|e| {
+        NapError::VcsError(format!(
+            "failed to read Lore output {}: {e}",
+            output_path.display()
+        ))
+    })
 }
 
 fn parse_metadata_output(stdout: &str) -> Result<BTreeMap<String, String>, String> {
@@ -637,41 +683,97 @@ impl VcsBackend for LoreBackend {
         file_path: &str,
         reference: Option<&str>,
     ) -> Result<String, NapError> {
+        let bytes = self.read_file_bytes_at_ref(repo_path, file_path, reference)?;
+        String::from_utf8(bytes).map_err(|e| {
+            NapError::VcsError(format!(
+                "{} is not valid UTF-8; use read_file_bytes_at_ref for binary content: {e}",
+                file_path
+            ))
+        })
+    }
+
+    fn read_file_bytes_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: Option<&str>,
+    ) -> Result<Vec<u8>, NapError> {
         let Some(reference) = reference else {
             let full_path = repo_path.join(file_path);
-            return std::fs::read_to_string(&full_path).map_err(|e| {
-                NapError::VcsError(format!("failed to read {}: {}", full_path.display(), e))
+            return std::fs::read(&full_path).map_err(|e| {
+                NapError::VcsError(format!("failed to read {}: {e}", full_path.display()))
             });
         };
 
-        let output_path = temp_lore_output_path("file-at-ref");
-        let output = output_path.to_string_lossy().into_owned();
-        LoreProcessRunner::run(
+        hydrate_lore_file(
+            repo_path,
+            [
+                "file".to_string(),
+                "write".to_string(),
+                "--path".to_string(),
+                file_path.to_string(),
+                "--revision".to_string(),
+                reference.to_string(),
+            ],
+            "file-at-ref",
+        )
+    }
+
+    fn repository_descriptor(&self, repo_path: &Path) -> Result<VcsRepositoryDescriptor, NapError> {
+        let stdout = LoreProcessRunner::run(
+            ["repository", "info", "--json", "--non-interactive"],
+            Some(repo_path),
+        )?;
+        let data = parse_lore_event_data(&stdout, "repositoryData").map_err(|e| {
+            NapError::VcsError(format!("failed to parse Lore repository info: {e}"))
+        })?;
+        let id = event_string(&data, "id").map_err(|e| {
+            NapError::VcsError(format!("failed to parse Lore repository info: {e}"))
+        })?;
+        validate_lower_hex(&id, 16, "repository ID").map_err(|e| {
+            NapError::VcsError(format!("failed to parse Lore repository info: {e}"))
+        })?;
+        let remote_url = data
+            .get("remoteUrl")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        Ok(VcsRepositoryDescriptor { id, remote_url })
+    }
+
+    fn file_content_address_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: &str,
+    ) -> Result<VcsContentAddress, NapError> {
+        let stdout = LoreProcessRunner::run(
             [
                 "file",
-                "write",
-                "--path",
+                "info",
                 file_path,
                 "--revision",
                 reference,
-                "--output",
-                &output,
+                "--json",
                 "--non-interactive",
             ],
             Some(repo_path),
         )?;
-
-        let content = std::fs::read_to_string(&output_path).map_err(|e| {
-            NapError::VcsError(format!(
-                "failed to read {} at revision {} from {}: {}",
-                file_path,
-                reference,
-                output_path.display(),
-                e
-            ))
-        })?;
-        let _ = std::fs::remove_file(&output_path);
-        Ok(content)
+        let data = parse_lore_event_data(&stdout, "fileInfo")
+            .map_err(|e| NapError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        if data.get("isFile").and_then(serde_json::Value::as_bool) != Some(true) {
+            return Err(NapError::VcsError(format!(
+                "representation path '{file_path}' is not a file at revision '{reference}'"
+            )));
+        }
+        let hash = event_string(&data, "hash")
+            .map_err(|e| NapError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        let context = event_string(&data, "context")
+            .map_err(|e| NapError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        validate_lower_hex(&hash, 32, "file hash")
+            .and_then(|_| validate_lower_hex(&context, 16, "file context"))
+            .map_err(|e| NapError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        Ok(VcsContentAddress { hash, context })
     }
 
     // ── file metadata ───────────────────────────────────────────────
@@ -704,32 +806,21 @@ impl VcsBackend for LoreBackend {
     }
 
     fn read_provenance_blob(&self, repo_path: &Path, address: &str) -> Result<String, NapError> {
-        let output_path = temp_lore_output_path("provenance-blob");
-        let output = output_path.to_string_lossy().into_owned();
-
-        LoreProcessRunner::run(
+        let bytes = hydrate_lore_file(
+            repo_path,
             [
-                "file",
-                "write",
-                "--address",
-                address,
-                "--output",
-                &output,
-                "--non-interactive",
+                "file".to_string(),
+                "write".to_string(),
+                "--address".to_string(),
+                address.to_string(),
             ],
-            Some(repo_path),
+            "provenance-blob",
         )?;
-
-        let content = std::fs::read_to_string(&output_path).map_err(|e| {
+        String::from_utf8(bytes).map_err(|e| {
             NapError::VcsError(format!(
-                "failed to read hydrated provenance blob {} from {}: {}",
-                address,
-                output_path.display(),
-                e
+                "hydrated provenance blob {address} is not valid UTF-8: {e}"
             ))
-        })?;
-        let _ = std::fs::remove_file(&output_path);
-        Ok(content)
+        })
     }
 
     // ── log ──────────────────────────────────────────────────────────
@@ -1036,6 +1127,66 @@ impl VcsBackend for LoreBackend {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod structured_output_tests {
+    use super::*;
+
+    #[test]
+    fn parses_repository_and_file_events_independently() {
+        let repository = concat!(
+            "{\"tagName\":\"repositoryData\",\"data\":{",
+            "\"id\":\"0123456789abcdef0123456789abcdef\",",
+            "\"remoteUrl\":\"lore://localhost:41337/repo\"}}\n",
+            "{\"tagName\":\"complete\",\"data\":{}}"
+        );
+        let file = concat!(
+            "{\"tagName\":\"fileInfo\",\"data\":{",
+            "\"hash\":\"9753abf79e5aef60bd95ab76c1e5a14d01239beb37ff9897b6af8e040eb2413a\",",
+            "\"context\":\"fedcba9876543210fedcba9876543210\",\"isFile\":true}}"
+        );
+        let repository_data = parse_lore_event_data(repository, "repositoryData").unwrap();
+        let file_data = parse_lore_event_data(file, "fileInfo").unwrap();
+        assert_eq!(
+            event_string(&repository_data, "id").unwrap(),
+            "0123456789abcdef0123456789abcdef"
+        );
+        assert_eq!(
+            event_string(&file_data, "context").unwrap(),
+            "fedcba9876543210fedcba9876543210"
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_or_malformed_events() {
+        let duplicate =
+            "{\"tagName\":\"fileInfo\",\"data\":{}}\n{\"tagName\":\"fileInfo\",\"data\":{}}";
+        assert!(parse_lore_event_data(duplicate, "fileInfo").is_err());
+        assert!(parse_lore_event_data("not-json", "fileInfo").is_err());
+        assert!(validate_lower_hex("abc", 16, "context").is_err());
+    }
+
+    #[test]
+    fn working_tree_binary_reads_are_lossless() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let bytes = [0_u8, 0xff, 0x42];
+        std::fs::write(temp.path().join("asset.bin"), bytes).unwrap();
+        let backend = LoreBackend::from_env();
+        assert_eq!(
+            backend
+                .read_file_bytes_at_ref(temp.path(), "asset.bin", None)
+                .unwrap(),
+            bytes
+        );
+        assert!(
+            backend
+                .read_file_at_ref(temp.path(), "asset.bin", None)
+                .unwrap_err()
+                .to_string()
+                .contains("read_file_bytes_at_ref")
+        );
+    }
+}
 
 #[cfg(all(test, feature = "lore-integration"))]
 mod tests {

@@ -13,8 +13,12 @@
 //! ```
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::path::{Component, Path, PathBuf};
+use std::sync::OnceLock;
+use std::time::Duration;
 
+use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
@@ -76,6 +80,140 @@ pub struct ResolveOptions {
     /// Hydrate known readable provenance artifacts such as prompts and run records.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub include_blobs: Option<bool>,
+}
+
+/// Options for creating a bearer URL for a committed representation.
+#[derive(Clone, Default)]
+pub struct PresignOptions {
+    pub branch: Option<String>,
+    pub commit: Option<String>,
+    pub ttl_seconds: Option<u64>,
+    pub lore_http_url: Option<String>,
+    pub bearer_token: Option<String>,
+}
+
+impl fmt::Debug for PresignOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PresignOptions")
+            .field("branch", &self.branch)
+            .field("commit", &self.commit)
+            .field("ttl_seconds", &self.ttl_seconds)
+            .field("lore_http_url", &self.lore_http_url)
+            .field(
+                "bearer_token",
+                &self.bearer_token.as_ref().map(|_| "<redacted>"),
+            )
+            .finish()
+    }
+}
+
+/// A time-limited public URL for one immutable representation.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PresignedRepresentation {
+    pub url: String,
+    pub expires_at: u64,
+    pub revision: String,
+    pub repository_id: String,
+    pub address: String,
+    pub representation: String,
+    pub format: String,
+}
+
+impl fmt::Debug for PresignedRepresentation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PresignedRepresentation")
+            .field("url", &"<redacted>")
+            .field("expires_at", &self.expires_at)
+            .field("revision", &self.revision)
+            .field("repository_id", &self.repository_id)
+            .field("address", &self.address)
+            .field("representation", &self.representation)
+            .field("format", &self.format)
+            .finish()
+    }
+}
+
+#[derive(Serialize)]
+struct LorePresignRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ttl_seconds: Option<u64>,
+}
+
+#[derive(Deserialize)]
+struct LorePresignResponse {
+    url_suffix: String,
+    expires_at: u64,
+}
+
+fn presign_http_client() -> Result<&'static reqwest::Client, NapError> {
+    static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
+    CLIENT
+        .get_or_init(|| {
+            reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(5))
+                .timeout(Duration::from_secs(30))
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .map_err(|e| e.to_string())
+        })
+        .as_ref()
+        .map_err(|e| NapError::Other(format!("failed to initialize presign HTTP client: {e}")))
+}
+
+async fn read_bounded_response(
+    mut response: reqwest::Response,
+    limit: usize,
+) -> Result<(reqwest::StatusCode, Vec<u8>), NapError> {
+    let status = response.status();
+    if response
+        .content_length()
+        .is_some_and(|length| length > limit as u64)
+    {
+        return Err(NapError::Other(format!(
+            "Lore presign response exceeded {limit} bytes"
+        )));
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| NapError::Other(format!("failed to read Lore presign response: {e}")))?
+    {
+        if body.len().saturating_add(chunk.len()) > limit {
+            return Err(NapError::Other(format!(
+                "Lore presign response exceeded {limit} bytes"
+            )));
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok((status, body))
+}
+
+fn validate_presigned_url(
+    base_url: &reqwest::Url,
+    suffix: &str,
+    expected_path: &str,
+) -> Result<reqwest::Url, NapError> {
+    if suffix.starts_with("//") || !suffix.starts_with('/') {
+        return Err(NapError::Other(
+            "Lore returned an unexpected presigned URL path".to_string(),
+        ));
+    }
+    let url = base_url
+        .join(suffix)
+        .map_err(|e| NapError::Other(format!("invalid Lore presigned URL: {e}")))?;
+    let query: Vec<_> = url.query_pairs().collect();
+    if url.origin() != base_url.origin()
+        || url.path() != expected_path
+        || query.len() != 1
+        || query[0].0 != "token"
+        || query[0].1.is_empty()
+    {
+        return Err(NapError::Other(
+            "Lore returned a cross-origin or malformed presigned URL".to_string(),
+        ));
+    }
+    Ok(url)
 }
 
 impl ResolveOptions {
@@ -254,6 +392,204 @@ impl Resolver {
 
         let uri: NapUri = normalized_uri_str.parse()?;
         self.resolve_uri(&uri, options)
+    }
+
+    /// Create a time-limited public URL for a direct, committed representation.
+    ///
+    /// The returned URL is a bearer capability. Callers must not log it or
+    /// persist it beyond `expires_at`.
+    pub async fn presign_representation(
+        &self,
+        uri_str: &str,
+        representation_name: &str,
+        options: &PresignOptions,
+    ) -> Result<PresignedRepresentation, NapError> {
+        if options.branch.is_some() && options.commit.is_some() {
+            return Err(NapError::Other(
+                "presign accepts either branch or commit, not both".to_string(),
+            ));
+        }
+
+        let normalized = if uri_str.starts_with("nap://") {
+            uri_str.to_string()
+        } else {
+            format!("nap://{}", uri_str.trim_start_matches('/'))
+        };
+        let uri: NapUri = normalized.parse()?;
+        if uri.fragment.is_some() {
+            return Err(NapError::InvalidUri {
+                uri: uri_str.to_string(),
+                reason: "fragments are not supported when presigning a representation".to_string(),
+            });
+        }
+
+        let (repo, repo_config) = self.open_repo(&uri.repository)?;
+        let vcs = repo.vcs().ok_or_else(|| NapError::BackendNotConfigured {
+            operation: "presign a representation".to_string(),
+        })?;
+        let revision = match (&options.commit, &options.branch) {
+            (Some(commit), None) => commit.clone(),
+            (None, Some(branch)) => vcs.resolve_branch_head(&repo.root, branch)?,
+            (None, None) => {
+                let branch = repo_config
+                    .default_branch
+                    .as_ref()
+                    .or(self.config.default_branch.as_ref())
+                    .ok_or(NapError::NoDefaultBranch)?;
+                vcs.resolve_branch_head(&repo.root, branch)?
+            }
+            (Some(_), Some(_)) => unreachable!("validated above"),
+        };
+
+        let manifest = repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, &revision)?;
+        let representation = manifest
+            .representations
+            .get(representation_name)
+            .ok_or_else(|| {
+                NapError::Other(format!(
+                    "representation '{representation_name}' does not exist on {}",
+                    manifest.id
+                ))
+            })?;
+        let representation_uri = representation.uri.as_deref().ok_or_else(|| {
+            NapError::Other(format!(
+                "representation '{representation_name}' has no repository-relative URI"
+            ))
+        })?;
+        let file_path = Self::resolve_representation_path(&uri.manifest_path(), representation_uri)?
+            .ok_or_else(|| {
+                NapError::Other(format!(
+                    "representation '{representation_name}' is external; only direct repository files can be presigned"
+                ))
+            })?;
+
+        let repository = vcs.repository_descriptor(&repo.root)?;
+        let content = vcs.file_content_address_at_ref(&repo.root, &file_path, &revision)?;
+        if let Some(expected_hash) = representation.hash.strip_prefix("blake3:")
+            && expected_hash != content.hash
+        {
+            return Err(NapError::ContentHashMismatch {
+                expected: representation.hash.clone(),
+                actual: format!("blake3:{}", content.hash),
+            });
+        }
+        let address = content.as_lore_address();
+
+        let configured_http_url = options
+            .lore_http_url
+            .clone()
+            .or_else(|| std::env::var("NAP_LORE_HTTP_URL").ok());
+        let http_url = match configured_http_url {
+            Some(url) => url,
+            None if repository.remote_url.contains("lore.portals.works") => {
+                // TODO(PORTALS-CLOUD-PRESIGN): Do not infer an HTTP origin from
+                // the production gRPC hostname until the separately reviewed
+                // 41339 target group, HMAC secret, and narrow path routes exist.
+                return Err(NapError::Other(
+                    "Portals Cloud presigned URLs are not enabled yet; production HTTP ingress is WIP. Supply --http-url or NAP_LORE_HTTP_URL only for an explicitly configured Lore HTTP endpoint."
+                        .to_string(),
+                ));
+            }
+            None if repository.remote_url.is_empty()
+                || repository.remote_url.contains("localhost")
+                || repository.remote_url.contains("127.0.0.1") =>
+            {
+                "http://127.0.0.1:41339".to_string()
+            }
+            None => {
+                return Err(NapError::Other(
+                    "Lore HTTP endpoint is not configured; set NAP_LORE_HTTP_URL or pass --http-url"
+                        .to_string(),
+                ));
+            }
+        };
+        let base_url = reqwest::Url::parse(&http_url)
+            .map_err(|e| NapError::Other(format!("invalid Lore HTTP URL: {e}")))?;
+        if !matches!(base_url.scheme(), "http" | "https")
+            || base_url.host_str().is_none()
+            || !base_url.username().is_empty()
+            || base_url.password().is_some()
+            || base_url.query().is_some()
+            || base_url.fragment().is_some()
+            || !matches!(base_url.path(), "" | "/")
+        {
+            return Err(NapError::Other(
+                "Lore HTTP URL must be an http(s) origin without credentials, path, query, or fragment"
+                    .to_string(),
+            ));
+        }
+
+        let endpoint_path = format!(
+            "/v1/repository/{}/content/{}/presign",
+            repository.id, address
+        );
+        let endpoint = base_url
+            .join(&endpoint_path)
+            .map_err(|e| NapError::Other(format!("failed to construct Lore presign URL: {e}")))?;
+        let bearer_token = options
+            .bearer_token
+            .clone()
+            .or_else(|| std::env::var("NAP_LORE_HTTP_TOKEN").ok())
+            .or_else(|| std::env::var("NAP_LORE_GRPC_TOKEN").ok());
+        let mut request = presign_http_client()?
+            .post(endpoint)
+            .json(&LorePresignRequest {
+                ttl_seconds: options.ttl_seconds,
+            });
+        if let Some(token) = bearer_token.filter(|token| !token.is_empty()) {
+            let mut value = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
+                .map_err(|_| {
+                    NapError::Other("bearer token is not a valid HTTP header value".to_string())
+                })?;
+            value.set_sensitive(true);
+            request = request.header(AUTHORIZATION, value);
+        }
+
+        let response = request
+            .send()
+            .await
+            .map_err(|e| NapError::Other(format!("Lore presign request failed: {e}")))?;
+        let (status, body) = read_bounded_response(response, 64 * 1024).await?;
+        if !status.is_success() {
+            let detail = String::from_utf8_lossy(&body);
+            let message = match status {
+                reqwest::StatusCode::UNAUTHORIZED => {
+                    "Lore rejected the request as unauthenticated; set NAP_LORE_HTTP_TOKEN (or NAP_LORE_GRPC_TOKEN) to a repository-scoped bearer token".to_string()
+                }
+                reqwest::StatusCode::FORBIDDEN => {
+                    "Lore denied permission to presign this repository representation".to_string()
+                }
+                reqwest::StatusCode::NOT_FOUND if detail.contains("not enabled") => {
+                    "Lore presigned URLs are disabled; configure server.http.presigned_url_hmac_key and restart Lore".to_string()
+                }
+                reqwest::StatusCode::NOT_FOUND => {
+                    "representation content is not available in the Lore remote; push the pinned revision before presigning".to_string()
+                }
+                _ => format!("Lore presign failed with HTTP {status}: {}", detail.trim()),
+            };
+            return Err(NapError::Other(message));
+        }
+        let response: LorePresignResponse = serde_json::from_slice(&body)
+            .map_err(|e| NapError::Other(format!("invalid Lore presign response: {e}")))?;
+        let expected_redeem_path = format!("/v1/presigned/{}/{}", repository.id, address);
+        let url = validate_presigned_url(&base_url, &response.url_suffix, &expected_redeem_path)?;
+
+        info!(
+            repository_id = %repository.id,
+            revision = %revision,
+            representation = %representation_name,
+            expires_at = response.expires_at,
+            "created Lore presigned representation URL"
+        );
+        Ok(PresignedRepresentation {
+            url: url.to_string(),
+            expires_at: response.expires_at,
+            revision,
+            repository_id: repository.id,
+            address,
+            representation: representation_name.to_string(),
+            format: representation.format.clone(),
+        })
     }
 
     /// Resolve a parsed NAP URI with options.
@@ -1235,6 +1571,127 @@ mod unit_tests {
             }
             _ => panic!("expected full manifest"),
         }
+    }
+
+    #[test]
+    fn presign_debug_output_redacts_secrets() {
+        let options = PresignOptions {
+            bearer_token: Some("secret-token".to_string()),
+            ..Default::default()
+        };
+        let rendered = format!("{options:?}");
+        assert!(rendered.contains("<redacted>"));
+        assert!(!rendered.contains("secret-token"));
+
+        let result = PresignedRepresentation {
+            url: "https://example.test/v1/presigned/x?token=secret".to_string(),
+            expires_at: 1,
+            revision: "revision".to_string(),
+            repository_id: "repository".to_string(),
+            address: "address".to_string(),
+            representation: "face_image".to_string(),
+            format: "png".to_string(),
+        };
+        assert!(!format!("{result:?}").contains("token=secret"));
+    }
+
+    #[test]
+    fn presigned_url_validation_rejects_cross_origin_and_extra_query_data() {
+        let base = reqwest::Url::parse("https://lore.example.test").unwrap();
+        let path = "/v1/presigned/repository/address";
+        assert!(validate_presigned_url(&base, "//evil.test/x?token=x", path).is_err());
+        assert!(
+            validate_presigned_url(
+                &base,
+                "/v1/presigned/repository/address?token=x&redirect=https://evil.test",
+                path,
+            )
+            .is_err()
+        );
+        assert!(
+            validate_presigned_url(&base, "/v1/presigned/repository/address?token=opaque", path,)
+                .is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn presign_uses_repository_id_and_file_context_separately() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let (_tmp, resolver) = setup();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = vec![0_u8; 8192];
+            let read = stream.read(&mut request).await.unwrap();
+            let request = String::from_utf8_lossy(&request[..read]);
+            assert!(request.contains(
+                "POST /v1/repository/0123456789abcdef0123456789abcdef/content/9753abf79e5aef60bd95ab76c1e5a14d01239beb37ff9897b6af8e040eb2413a-fedcba9876543210fedcba9876543210/presign"
+            ));
+            assert!(request.contains("authorization: Bearer test-token"));
+            assert!(request.contains("\"ttl_seconds\":90"));
+            let body = concat!(
+                "{\"url_suffix\":\"/v1/presigned/0123456789abcdef0123456789abcdef/",
+                "9753abf79e5aef60bd95ab76c1e5a14d01239beb37ff9897b6af8e040eb2413a-",
+                "fedcba9876543210fedcba9876543210?token=opaque\",\"expires_at\":12345}"
+            );
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let result = resolver
+            .presign_representation(
+                "nap://toystory/character/woody",
+                "face_image",
+                &PresignOptions {
+                    ttl_seconds: Some(90),
+                    lore_http_url: Some(format!("http://{address}")),
+                    bearer_token: Some("test-token".to_string()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        server.await.unwrap();
+        assert_eq!(result.expires_at, 12345);
+        assert_eq!(result.repository_id, "0123456789abcdef0123456789abcdef");
+        assert!(result.url.ends_with("?token=opaque"));
+    }
+
+    #[tokio::test]
+    async fn presign_rejects_fragment_and_conflicting_revision_selectors() {
+        let (_tmp, resolver) = setup();
+        assert!(
+            resolver
+                .presign_representation(
+                    "nap://toystory/character/woody#properties",
+                    "face_image",
+                    &PresignOptions::default(),
+                )
+                .await
+                .is_err()
+        );
+        assert!(
+            resolver
+                .presign_representation(
+                    "nap://toystory/character/woody",
+                    "face_image",
+                    &PresignOptions {
+                        branch: Some("main".to_string()),
+                        commit: Some("abc".to_string()),
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap_err()
+                .to_string()
+                .contains("either branch or commit")
+        );
     }
 }
 

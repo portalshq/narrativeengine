@@ -8,7 +8,7 @@ use nap_core::{
     content::ContentHash,
     manifest::{Manifest, Representation},
     repository::Repository,
-    resolver::{ResolveOptions, ResolveResult, Resolver},
+    resolver::{PresignOptions, ResolveOptions, ResolveResult, Resolver},
     schema,
     types::EntityType,
     uri::NapUri,
@@ -607,6 +607,32 @@ pub fn resolve_query(
     let resolver = Resolver::new(Path::new(&repo_base_path));
     let result = resolver.query(&uri_str, &path).map_err(map_error)?;
     Ok(result.to_string())
+}
+
+#[napi(js_name = "presignRepresentation")]
+#[allow(clippy::too_many_arguments)]
+pub async fn presign_representation(
+    uri: String,
+    representation: String,
+    repo_base_path: String,
+    branch: Option<String>,
+    commit: Option<String>,
+    ttl_seconds: Option<u32>,
+    http_url: Option<String>,
+    bearer_token: Option<String>,
+) -> napi::Result<String> {
+    let options = PresignOptions {
+        branch,
+        commit,
+        ttl_seconds: ttl_seconds.map(u64::from),
+        lore_http_url: http_url,
+        bearer_token,
+    };
+    let result = Resolver::new(Path::new(&repo_base_path))
+        .presign_representation(&uri, &representation, &options)
+        .await
+        .map_err(map_error)?;
+    serde_json::to_string(&result).map_err(|e| Error::from_reason(e.to_string()))
 }
 
 #[napi(js_name = "listRepositories")]

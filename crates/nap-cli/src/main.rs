@@ -31,7 +31,7 @@ use nap_core::{
     manifest::Representation,
     provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
-    resolver::{ResolveOptions, ResolveResult, Resolver},
+    resolver::{PresignOptions, ResolveOptions, ResolveResult, Resolver},
     server::{LoreInstaller, NapDoctor, ServerManager},
     types::EntityType,
     uri::NapUri,
@@ -193,6 +193,24 @@ fn main() -> Result<()> {
             &format,
             provenance,
             include_blobs,
+        ),
+        Commands::Presign {
+            uri,
+            representation,
+            branch,
+            commit,
+            ttl_seconds,
+            http_url,
+            token_env,
+        } => cmd_presign(
+            &base_dir,
+            &uri,
+            &representation,
+            branch,
+            commit,
+            ttl_seconds,
+            http_url,
+            token_env,
         ),
         Commands::Query { uri, path, format } => cmd_query(&base_dir, &uri, &path, &format),
         Commands::Commit {
@@ -1112,6 +1130,45 @@ fn cmd_resolve(
             }
             _ => println!("{}", serde_json::to_string_pretty(&value)?),
         },
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_presign(
+    base_dir: &Path,
+    uri: &str,
+    representation: &str,
+    branch: Option<String>,
+    commit: Option<String>,
+    ttl_seconds: Option<u64>,
+    http_url: Option<String>,
+    token_env: Option<String>,
+) -> Result<()> {
+    let bearer_token = token_env
+        .as_deref()
+        .map(|name| {
+            std::env::var(name)
+                .with_context(|| format!("token environment variable '{name}' is not set"))
+        })
+        .transpose()?;
+    let options = PresignOptions {
+        branch,
+        commit,
+        ttl_seconds,
+        lore_http_url: http_url,
+        bearer_token,
+    };
+    let result = get_tokio_runtime()
+        .block_on(Resolver::new(base_dir).presign_representation(uri, representation, &options))
+        .with_context(|| format!("failed to presign '{uri}' representation '{representation}'"))?;
+
+    if std::io::stdout().is_terminal() {
+        println!("URL: {}", result.url);
+        println!("Expires at: {}", result.expires_at);
+        println!("Revision: {}", result.revision);
+    } else {
+        println!("{}", serde_json::to_string_pretty(&result)?);
     }
     Ok(())
 }

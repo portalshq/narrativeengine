@@ -41,6 +41,11 @@ chisel client --auth loredev:hunter2 remote-host:8080 \
 
 This binds local ports 41337 (TCP+UDP) and 41339 (TCP) and forwards them through the tunnel to the remote lore server.
 
+Port forwarding alone does not enable presigned URLs. The remote Lore server
+must also configure a unique `[server.http] presigned_url_hmac_key`. Point NAP
+at the forwarded HTTP endpoint with `NAP_LORE_HTTP_URL=http://127.0.0.1:41339`.
+Treat every returned presigned URL as a bearer secret until its expiry.
+
 ### 3. Configure NAP (local machine)
 
 ```bash

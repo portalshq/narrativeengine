@@ -257,6 +257,35 @@ pub enum Commands {
         include_blobs: bool,
     },
 
+    /// Create a time-limited public URL for a committed representation.
+    Presign {
+        /// NAP URI. Fragments are not supported.
+        uri: String,
+
+        /// Representation key. e.g., "reference_image".
+        representation: String,
+
+        /// Resolve at a specific branch.
+        #[arg(long, conflicts_with = "commit")]
+        branch: Option<String>,
+
+        /// Resolve at a specific commit hash.
+        #[arg(long, conflicts_with = "branch")]
+        commit: Option<String>,
+
+        /// Requested lifetime in seconds; Lore enforces its configured bounds.
+        #[arg(long)]
+        ttl_seconds: Option<u64>,
+
+        /// Explicit Lore HTTP origin, such as http://127.0.0.1:41339.
+        #[arg(long)]
+        http_url: Option<String>,
+
+        /// Environment variable containing a repository-scoped bearer token.
+        #[arg(long)]
+        token_env: Option<String>,
+    },
+
     /// Query a subtree from a manifest.
     Query {
         /// NAP URI.

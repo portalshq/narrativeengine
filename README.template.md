@@ -12,6 +12,10 @@
 
 ---
 
+{{include docs/authored/presigned-urls.md}}
+
+---
+
 {{include docs/authored/mcp/overview.md}}
 
 {{include docs/authored/mcp/install.md}}

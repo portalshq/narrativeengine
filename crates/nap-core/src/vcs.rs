@@ -142,6 +142,26 @@ pub struct CommitInfo {
     pub timestamp: String,
 }
 
+/// Stable identity and configured remote for a version-control repository.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VcsRepositoryDescriptor {
+    pub id: String,
+    pub remote_url: String,
+}
+
+/// Immutable content address for one file at one revision.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VcsContentAddress {
+    pub hash: String,
+    pub context: String,
+}
+
+impl VcsContentAddress {
+    pub fn as_lore_address(&self) -> String {
+        format!("{}-{}", self.hash, self.context)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // VcsBackend trait — low-level VCS abstraction
 // ---------------------------------------------------------------------------
@@ -168,6 +188,20 @@ pub trait VcsBackend: Send + Sync {
         file_path: &str,
         reference: Option<&str>,
     ) -> Result<String, NapError>;
+
+    /// Read arbitrary file bytes at a specific ref.
+    ///
+    /// Backends should override this when their storage is binary-safe. The
+    /// default preserves compatibility for text-only backends.
+    fn read_file_bytes_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: Option<&str>,
+    ) -> Result<Vec<u8>, NapError> {
+        self.read_file_at_ref(repo_path, file_path, reference)
+            .map(String::into_bytes)
+    }
 
     /// Get the commit log for the repository, optionally filtered to a specific file.
     fn log(
@@ -207,6 +241,25 @@ pub trait VcsBackend: Send + Sync {
         let _ = (path, branch);
         Err(NapError::VcsError(
             "resolve_branch_head not supported by this VCS backend".to_string(),
+        ))
+    }
+
+    /// Return the repository ID separately from any file-address context.
+    fn repository_descriptor(&self, _path: &Path) -> Result<VcsRepositoryDescriptor, NapError> {
+        Err(NapError::VcsError(
+            "repository_descriptor not supported by this VCS backend".to_string(),
+        ))
+    }
+
+    /// Return the immutable content address of a file at a pinned revision.
+    fn file_content_address_at_ref(
+        &self,
+        _repo_path: &Path,
+        _file_path: &str,
+        _reference: &str,
+    ) -> Result<VcsContentAddress, NapError> {
+        Err(NapError::VcsError(
+            "file_content_address_at_ref not supported by this VCS backend".to_string(),
         ))
     }
 

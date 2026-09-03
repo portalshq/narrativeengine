@@ -342,6 +342,32 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
+  - name: "presign"
+    full_path: "presign"
+    about: "Create a time-limited public URL for a committed representation"
+    usage: "Usage: presign [OPTIONS] <URI> <REPRESENTATION>"
+    hidden: false
+    arguments:
+      - name: "uri"
+        about: "NAP URI. Fragments are not supported"
+        required: true
+      - name: "representation"
+        about: "Representation key. e.g., \"reference_image\""
+        required: true
+    options:
+      - name: "branch"
+        about: "Resolve at a specific branch"
+      - name: "commit"
+        about: "Resolve at a specific commit hash"
+      - name: "ttl_seconds"
+        about: "Requested lifetime in seconds; Lore enforces its configured bounds"
+      - name: "http_url"
+        about: "Explicit Lore HTTP origin, such as http://127.0.0.1:41339"
+      - name: "token_env"
+        about: "Environment variable containing a repository-scoped bearer token"
+    flags:
+      - name: "help"
+        about: "Print help"
   - name: "publish"
     full_path: "publish"
     about: "Publish changes to remote"

@@ -57,7 +57,9 @@ pub use query::ManifestQuery;
 pub use repo_service::RepoService;
 pub use repository::Repository;
 pub use repository_api::{RepositoryApi, RepositoryHandle};
-pub use resolver::{ResolveConfig, ResolveOptions, Resolver};
+pub use resolver::{
+    PresignOptions, PresignedRepresentation, ResolveConfig, ResolveOptions, Resolver,
+};
 pub use server::PINNED_LORE_VERSION;
 pub use server::{
     LoreInstaller, LoreProcessManager, LoreVersionInfo, NapDoctor, ServerManager,
@@ -66,5 +68,8 @@ pub use server::{
 pub use storage::{StorageBackend, StorageConfig, StorageEngine, StorageError, get_engine};
 pub use types::EntityType;
 pub use uri::NapUri;
-pub use vcs::{AccessLevel, CommitInfo, ContextDocument, Permission, Revision, VcsBackend};
+pub use vcs::{
+    AccessLevel, CommitInfo, ContextDocument, Permission, Revision, VcsBackend, VcsContentAddress,
+    VcsRepositoryDescriptor,
+};
 pub use vcs_lore::LoreBackend;

@@ -65,6 +65,7 @@ interface NativeBindings {
   resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, path?: string): string;
   resolveQuery(uri: string, repoPath: string, path: string): string;
   listRepositories(repoPath: string): string;
+  presignRepresentation(uri: string, representation: string, repoPath: string, branch?: string, commit?: string, ttlSeconds?: number, httpUrl?: string, bearerToken?: string): Promise<string>;
 
   // Schema
   manifestSchema(): string;

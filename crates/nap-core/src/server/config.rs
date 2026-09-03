@@ -6,7 +6,9 @@
 //! and recommended persistent defaults for NAP-managed deployments.
 
 use anyhow::{Context, Result};
+use rand::RngCore;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 
 /// Generate Lore server configuration for local deployment
@@ -33,7 +35,18 @@ pub fn generate_local_config(nap_home: &Path) -> Result<ConfigFiles> {
     tracing::info!("Generating Lore server configuration");
 
     let config = generate_config_toml(nap_home);
-    fs::write(&local_toml_path, config).context("Failed to write Lore configuration file")?;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options
+        .open(&local_toml_path)
+        .context("Failed to create Lore configuration file")?;
+    file.write_all(config.as_bytes())
+        .context("Failed to write Lore configuration file")?;
 
     tracing::info!("Lore configuration generated at {:?}", local_toml_path);
 
@@ -49,6 +62,9 @@ fn generate_config_toml(nap_home: &Path) -> String {
     let mutable_path = nap_home.join("lore").join("store").join("mutable");
     let _cert_path = nap_home.join("lore").join("certs").join("cert.pem");
     let _key_path = nap_home.join("lore").join("certs").join("key.pem");
+    let mut presign_key = [0_u8; 32];
+    rand::rng().fill_bytes(&mut presign_key);
+    let presign_key = hex::encode(presign_key);
 
     format!(
         r#"
@@ -95,6 +111,7 @@ request_body_timeout_seconds = 3600
 available_interval_seconds = 30
 available_timeout_seconds = 5
 store_health_check = false
+presigned_url_hmac_key = "{}"
 
 # =============================================================================
 # Store Configuration
@@ -155,6 +172,7 @@ mode = "local"
 [feature]
 history_step_size = 100
 "#,
+        presign_key,
         immutable_path.display(),
         mutable_path.display()
     )
@@ -188,6 +206,12 @@ mod tests {
         assert!(content.contains("port = 41337"));
         assert!(content.contains("[immutable_store.local]"));
         assert!(content.contains("[mutable_store.local]"));
+        let metadata = fs::metadata(&files.config_path).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+        }
 
         // Verify we can regenerate without error (should skip if exists)
         let files2 = generate_local_config(nap_home).unwrap();
@@ -207,6 +231,15 @@ mod tests {
         assert!(config.contains("[server.grpc]"));
         assert!(config.contains("[server.http]"));
         assert!(config.contains("port = 41339"));
+        let key = config
+            .lines()
+            .find_map(|line| {
+                line.strip_prefix("presigned_url_hmac_key = \"")?
+                    .strip_suffix('"')
+            })
+            .unwrap();
+        assert_eq!(key.len(), 64);
+        assert!(key.bytes().all(|byte| byte.is_ascii_hexdigit()));
         assert!(config.contains("[immutable_store]"));
         assert!(config.contains("mode = \"local\""));
         assert!(config.contains("[mutable_store]"));
