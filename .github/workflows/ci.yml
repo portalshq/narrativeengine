@@ -27,7 +27,10 @@ jobs:
             typescript/nap-sdk/package-lock.json
       - uses: arduino/setup-protoc@v3
         with:
-          version: "29.x"
+          # Must match publish-narrativeengine-typescript.yml AND the protoc
+          # that produced the committed generated types: the diff gate below
+          # fails on any compiler-version skew (even header-only).
+          version: "34.1"
           # Authenticate api.github.com calls to avoid IP-based rate limits.
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo fmt --all -- --check
