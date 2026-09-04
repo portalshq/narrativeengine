@@ -29,11 +29,12 @@ Usage: $0 <version>
 
 This script will:
   1. Verify you're on a clean main branch
-  2. Bump all release versions (Cargo, Cargo.lock, Python, TypeScript)
-  3. Run pre-publish validation
-  4. Commit the release
-  5. Create an annotated tag (vX.Y.Z)
-  6. Push main and tags to origin
+  2. Run the required local Lore resolver integration test
+  3. Bump all release versions (Cargo, Cargo.lock, Python, TypeScript)
+  4. Run pre-publish validation
+  5. Commit the release
+  6. Create an annotated tag (vX.Y.Z)
+  7. Push main and tags to origin
 
 After the push, GitHub Actions will start the publish workflow.
 If the 'production' environment requires approval, approve it in GitHub.
@@ -111,6 +112,12 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
   echo "Error: local main is missing changes from origin/main — pull/rebase first" >&2
   exit 1
 fi
+
+echo ""
+echo "Running required local Lore resolver integration test..."
+"$ROOT_DIR/scripts/test-integration-local.sh" \
+  test_local_lore_remote_resolve_reads_manifest_from_parent_tree --exact
+echo "✓ Local Lore resolver integration test passed"
 
 echo "Bumping release version: $CURRENT_VERSION → $NEW_VERSION"
 

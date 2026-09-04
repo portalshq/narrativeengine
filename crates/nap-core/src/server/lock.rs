@@ -103,12 +103,16 @@ impl ProcessLock {
     ///
     /// Call this after spawning the Lore daemon process to replace
     /// the placeholder PID with the real daemon PID.
-    pub fn write_daemon_pid(&self, daemon_pid: u32) -> Result<()> {
+    pub fn write_daemon_pid(&mut self, daemon_pid: u32) -> Result<()> {
         fs::write(&self.lock_file, daemon_pid.to_string()).context(format!(
             "Failed to write daemon PID {} to lock file at {}",
             daemon_pid,
             self.lock_file.display()
         ))?;
+        // The detached daemon now owns the PID file. Do not remove it when
+        // this short-lived startup guard drops; ServerManager::stop removes
+        // the file after terminating the daemon.
+        self.acquired = false;
         tracing::info!(
             daemon_pid,
             lock_file = %self.lock_file.display(),
@@ -136,11 +140,11 @@ impl ProcessLock {
 
     /// Release the lock
     pub fn release(&mut self) -> Result<()> {
-        if self.acquired && self.lock_file.exists() {
+        if self.lock_file.exists() {
             fs::remove_file(&self.lock_file).context("Failed to remove lock file")?;
-            self.acquired = false;
             tracing::info!("Released process lock");
         }
+        self.acquired = false;
         Ok(())
     }
 
@@ -173,8 +177,12 @@ impl ProcessLock {
 
 impl Drop for ProcessLock {
     fn drop(&mut self) {
-        // Best-effort cleanup on drop
-        let _ = self.release();
+        // Best-effort cleanup only while this guard owns the placeholder
+        // lock. After `write_daemon_pid`, the detached daemon owns the PID
+        // file until ServerManager::stop removes it.
+        if self.acquired {
+            let _ = self.release();
+        }
     }
 }
 
@@ -242,7 +250,7 @@ mod tests {
         // Create parent directory
         std::fs::create_dir_all(temp_dir.path().join("lore")).unwrap();
 
-        let lock = ProcessLock::new(temp_dir.path());
+        let mut lock = ProcessLock::new(temp_dir.path());
         lock.write_daemon_pid(12345).unwrap();
 
         assert!(lock_file.exists());
@@ -252,6 +260,20 @@ mod tests {
         // Read it back
         let read_pid = lock.read_daemon_pid().unwrap();
         assert_eq!(read_pid, Some(12345));
+    }
+
+    #[test]
+    fn daemon_pid_survives_startup_guard_drop() {
+        let temp_dir = TempDir::new().unwrap();
+        let lock_file = temp_dir.path().join("lore").join("pid");
+
+        {
+            let mut lock = ProcessLock::new(temp_dir.path());
+            lock.try_acquire().unwrap();
+            lock.write_daemon_pid(12345).unwrap();
+        }
+
+        assert_eq!(std::fs::read_to_string(lock_file).unwrap(), "12345");
     }
 
     #[test]

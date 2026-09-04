@@ -48,7 +48,7 @@ test-integration-cloud:
 
 # Run local integration tests directly via cargo
 test-local:
-    cargo test -p nap-cli --test local_lore_suite --features lore-e2e -- --test-threads=1
+    cargo test -p nap-cli --test local_lore_suite --features local-e2e -- --test-threads=1
 
 # Run cloud integration tests directly via cargo
 test-cloud:

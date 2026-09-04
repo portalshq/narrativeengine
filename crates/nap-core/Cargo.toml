@@ -41,6 +41,7 @@ tonic = { version = "0.12", features = ["prost", "tls", "tls-native-roots", "cod
 prost = "0.13"
 bytes = "1"
 object_store = { version = "0.11", features = ["aws"] }
+zstd-sys = { workspace = true }
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 tempfile = { workspace = true }

@@ -82,6 +82,7 @@ pub use proto_gen::lore::revision::v1::revision_service_client::RevisionServiceC
 pub use proto_gen::lore::revision::v1::{BranchGetRequest, BranchPushRequest};
 pub use proto_gen::lore::revision::v1::{BranchListRequest, RevisionListRequest};
 pub use proto_gen::lore::storage::v1::storage_service_client::StorageServiceClient;
+use proto_gen::lore::thin_client::v1::revision_tree_request::Query as RevisionTreeQuery;
 pub use proto_gen::lore::thin_client::v1::thin_client_service_client::ThinClientServiceClient;
 pub use proto_gen::lore::thin_client::v1::{RevisionInfoRequest, RevisionTreeRequest};
 
@@ -334,6 +335,155 @@ impl LoreGrpcClient {
         )
     }
 
+    /// Construct a directory-scoped `RevisionTree` request for one file.
+    ///
+    /// Lore's `RevisionTree` API cannot use a file as `path_prefix`; it walks
+    /// from a directory root. File readers must therefore request the parent
+    /// directory and inspect its direct children for the exact path.
+    fn revision_tree_for_file(query: RevisionTreeQuery, path: &str) -> RevisionTreeRequest {
+        RevisionTreeRequest {
+            query: Some(query),
+            path_prefix: Some(parent_tree_path(path)),
+            max_depth: Some(1),
+        }
+    }
+
+    /// Read a complete Lore storage object, reassembling its fragment tree.
+    ///
+    /// `StorageService.Get` returns the raw payload of an object. Large files
+    /// are represented by a root payload containing 40-byte fragment
+    /// references (32-byte hash plus an LE content offset), so callers must
+    /// recursively fetch those leaves before parsing a manifest.
+    async fn read_storage_content(
+        &self,
+        address: proto_gen::lore::model::v1::Address,
+    ) -> Result<Vec<u8>, NapError> {
+        let mut pending = vec![(address, 0_u64)];
+        let mut content = None;
+        let mut ranges = Vec::<std::ops::Range<usize>>::new();
+        let mut fragments_seen = 0_usize;
+
+        while let Some((address, base_offset)) = pending.pop() {
+            fragments_seen += 1;
+            if fragments_seen > 100_000 {
+                return Err(storage_protocol_error(
+                    "fragment tree exceeds 100,000 nodes",
+                ));
+            }
+
+            let (fragment, payload) = self.read_storage_fragment(address.clone()).await?;
+            let size_content = usize::try_from(fragment.size_content).map_err(|_| {
+                storage_protocol_error("fragment content size exceeds platform limits")
+            })?;
+
+            if content.is_none() {
+                content = Some(vec![0; size_content]);
+            }
+            let root_size = content.as_ref().expect("content initialized").len();
+            let fragment_end = base_offset
+                .checked_add(fragment.size_content)
+                .and_then(|end| usize::try_from(end).ok())
+                .ok_or_else(|| storage_protocol_error("fragment offset overflows"))?;
+            if fragment_end > root_size {
+                return Err(storage_protocol_error(
+                    "fragment extends beyond root content",
+                ));
+            }
+
+            if fragment.flags & FRAGMENT_PAYLOAD_FRAGMENTED != 0 {
+                for reference in decode_fragment_references(&payload)? {
+                    let child_offset =
+                        base_offset.checked_add(reference.offset).ok_or_else(|| {
+                            storage_protocol_error("fragment reference offset overflows")
+                        })?;
+                    pending.push((
+                        proto_gen::lore::model::v1::Address {
+                            hash: reference.hash.into(),
+                            context: address.context.clone(),
+                        },
+                        child_offset,
+                    ));
+                }
+            } else {
+                let decoded = decode_fragment_payload(&fragment, &payload)?;
+                let end = base_offset
+                    .checked_add(decoded.len() as u64)
+                    .and_then(|end| usize::try_from(end).ok())
+                    .ok_or_else(|| storage_protocol_error("fragment payload offset overflows"))?;
+                if end > root_size || decoded.len() != size_content {
+                    return Err(storage_protocol_error(
+                        "leaf payload has an invalid content size",
+                    ));
+                }
+                let start = base_offset as usize;
+                if ranges
+                    .iter()
+                    .any(|range| start < range.end && end > range.start)
+                {
+                    return Err(storage_protocol_error("fragment leaves overlap"));
+                }
+                content.as_mut().expect("content initialized")[start..end]
+                    .copy_from_slice(&decoded);
+                ranges.push(start..end);
+            }
+        }
+
+        let content =
+            content.ok_or_else(|| storage_protocol_error("storage returned no fragments"))?;
+        ranges.sort_unstable_by_key(|range| range.start);
+        let mut cursor = 0;
+        for range in ranges {
+            if range.start != cursor {
+                return Err(storage_protocol_error(
+                    "fragment leaves do not cover root content",
+                ));
+            }
+            cursor = range.end;
+        }
+        if cursor != content.len() {
+            return Err(storage_protocol_error(
+                "fragment leaves do not cover root content",
+            ));
+        }
+        Ok(content)
+    }
+
+    async fn read_storage_fragment(
+        &self,
+        address: proto_gen::lore::model::v1::Address,
+    ) -> Result<(proto_gen::lore::model::v1::Fragment, Vec<u8>), NapError> {
+        let mut storage = self.make_storage_client();
+        let mut stream = storage
+            .get(tokio_stream::iter([address]))
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+            .into_inner();
+        let response = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+            .ok_or_else(|| storage_protocol_error("storage returned no response"))?;
+        if stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+            .is_some()
+        {
+            return Err(storage_protocol_error(
+                "storage returned multiple responses for one address",
+            ));
+        }
+        let fragment = response.fragment.ok_or_else(|| {
+            storage_protocol_error("storage response is missing fragment metadata")
+        })?;
+        if response.payload.len() != fragment.size_payload as usize {
+            return Err(storage_protocol_error(
+                "storage payload length does not match fragment metadata",
+            ));
+        }
+        Ok((fragment, response.payload.to_vec()))
+    }
+
     /// Look up a repository before constructing a repository-scoped client.
     pub async fn get_repository_by_name(
         &self,
@@ -387,15 +537,10 @@ impl LoreGrpcClient {
     ) -> Result<(Vec<u8>, Vec<u8>), NapError> {
         let mut tree = self.make_thin_client();
         let mut stream = tree
-            .revision_tree(RevisionTreeRequest {
-                query: Some(
-                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Identifier(
-                        identifier,
-                    ),
-                ),
-                path_prefix: Some(path.clone()),
-                max_depth: Some(1),
-            })
+            .revision_tree(Self::revision_tree_for_file(
+                RevisionTreeQuery::Identifier(identifier),
+                &path,
+            ))
             .await
             .map_err(|status| map_grpc_status("RevisionTree", status))?
             .into_inner();
@@ -419,21 +564,7 @@ impl LoreGrpcClient {
             }
         }
         let address = address.ok_or_else(|| NapError::ManifestNotFound(path.clone()))?;
-        let mut storage = self.make_storage_client();
-        let outgoing = tokio_stream::iter([address]);
-        let mut bytes = Vec::new();
-        let mut content = storage
-            .get(outgoing)
-            .await
-            .map_err(|status| map_grpc_status("StorageGet", status))?
-            .into_inner();
-        while let Some(chunk) = content
-            .message()
-            .await
-            .map_err(|status| map_grpc_status("StorageGet", status))?
-        {
-            bytes.extend_from_slice(&chunk.payload);
-        }
+        let bytes = self.read_storage_content(address).await?;
         Ok((bytes, signature))
     }
 
@@ -445,15 +576,10 @@ impl LoreGrpcClient {
     ) -> Result<(Vec<u8>, Vec<u8>), NapError> {
         let mut tree = self.make_thin_client();
         let mut stream = tree
-            .revision_tree(RevisionTreeRequest {
-                query: Some(
-                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Signature(
-                        signature.into(),
-                    ),
-                ),
-                path_prefix: Some(path.clone()),
-                max_depth: Some(1),
-            })
+            .revision_tree(Self::revision_tree_for_file(
+                RevisionTreeQuery::Signature(signature.into()),
+                &path,
+            ))
             .await
             .map_err(|status| map_grpc_status("RevisionTree", status))?
             .into_inner();
@@ -477,20 +603,7 @@ impl LoreGrpcClient {
             }
         }
         let address = address.ok_or(NapError::ManifestNotFound(path))?;
-        let mut storage = self.make_storage_client();
-        let mut bytes = Vec::new();
-        let mut content = storage
-            .get(tokio_stream::iter([address]))
-            .await
-            .map_err(|status| map_grpc_status("StorageGet", status))?
-            .into_inner();
-        while let Some(chunk) = content
-            .message()
-            .await
-            .map_err(|status| map_grpc_status("StorageGet", status))?
-        {
-            bytes.extend_from_slice(&chunk.payload);
-        }
+        let bytes = self.read_storage_content(address).await?;
         Ok((bytes, resolved_signature))
     }
 
@@ -551,15 +664,10 @@ impl LoreGrpcClient {
     ) -> Result<(proto_gen::lore::model::v1::Address, Vec<u8>), NapError> {
         let mut tree = self.make_thin_client();
         let mut stream = tree
-            .revision_tree(RevisionTreeRequest {
-                query: Some(
-                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Identifier(
-                        identifier,
-                    ),
-                ),
-                path_prefix: Some(path.clone()),
-                max_depth: Some(1),
-            })
+            .revision_tree(Self::revision_tree_for_file(
+                RevisionTreeQuery::Identifier(identifier),
+                &path,
+            ))
             .await
             .map_err(|status| map_grpc_status("RevisionTree", status))?
             .into_inner();
@@ -605,6 +713,136 @@ impl LoreGrpcClient {
             .into_inner()
             .revision
             .ok_or_else(|| NapError::GrpcError("RevisionInfo returned no revision".to_string()))
+    }
+}
+
+/// Return the directory that contains a repository-relative file path.
+///
+/// Lore's `RevisionTree` RPC accepts directory prefixes, including the empty
+/// repository root, but rejects a file path as a prefix.
+fn parent_tree_path(path: &str) -> String {
+    path.rsplit_once('/')
+        .map_or_else(String::new, |(parent, _)| parent.to_string())
+}
+
+const FRAGMENT_PAYLOAD_FRAGMENTED: u32 = 1;
+const FRAGMENT_PAYLOAD_COMPRESSED_LZ4: u32 = 1 << 1;
+const FRAGMENT_PAYLOAD_COMPRESSED_OODLE: u32 = 1 << 2;
+const FRAGMENT_PAYLOAD_COMPRESSED_ZSTD: u32 = 1 << 3;
+const FRAGMENT_PAYLOAD_COMPRESSED: u32 = 0b1111_1110;
+const FRAGMENT_REFERENCE_SIZE: usize = 40;
+
+#[derive(Debug, PartialEq, Eq)]
+struct FragmentReference {
+    hash: Vec<u8>,
+    offset: u64,
+}
+
+fn storage_protocol_error(message: impl Into<String>) -> NapError {
+    NapError::GrpcError(format!(
+        "StorageGet (invalid Lore fragment): {}",
+        message.into()
+    ))
+}
+
+fn decode_fragment_references(payload: &[u8]) -> Result<Vec<FragmentReference>, NapError> {
+    if payload.is_empty() || !payload.len().is_multiple_of(FRAGMENT_REFERENCE_SIZE) {
+        return Err(storage_protocol_error(
+            "fragmented payload is not a list of references",
+        ));
+    }
+    Ok(payload
+        .chunks_exact(FRAGMENT_REFERENCE_SIZE)
+        .map(|chunk| FragmentReference {
+            hash: chunk[..32].to_vec(),
+            offset: u64::from_le_bytes(chunk[32..].try_into().expect("fixed-size offset")),
+        })
+        .collect())
+}
+
+fn decode_fragment_payload(
+    fragment: &proto_gen::lore::model::v1::Fragment,
+    payload: &[u8],
+) -> Result<Vec<u8>, NapError> {
+    let expected_size = usize::try_from(fragment.size_content)
+        .map_err(|_| storage_protocol_error("fragment content size exceeds platform limits"))?;
+    let compression = fragment.flags & FRAGMENT_PAYLOAD_COMPRESSED;
+    if compression == 0 {
+        return Ok(payload.to_vec());
+    }
+    if compression.count_ones() != 1 {
+        return Err(storage_protocol_error(
+            "fragment has incompatible compression flags",
+        ));
+    }
+    if compression == FRAGMENT_PAYLOAD_COMPRESSED_ZSTD {
+        let mut decoded = vec![0; expected_size];
+        // The allocated output buffer is exactly `expected_size` bytes and
+        // the input pointer/length come from the gRPC payload slice.
+        let decoded_size = unsafe {
+            zstd_sys::ZSTD_decompress(
+                decoded.as_mut_ptr().cast(),
+                decoded.len(),
+                payload.as_ptr().cast(),
+                payload.len(),
+            )
+        };
+        // `ZSTD_isError` only inspects the return value from Zstd.
+        if unsafe { zstd_sys::ZSTD_isError(decoded_size) } != 0 || decoded_size != expected_size {
+            return Err(storage_protocol_error("Zstd decompression failed"));
+        }
+        return Ok(decoded);
+    }
+    let codec = match compression {
+        FRAGMENT_PAYLOAD_COMPRESSED_LZ4 => "LZ4",
+        FRAGMENT_PAYLOAD_COMPRESSED_OODLE => "Oodle",
+        _ => "an unknown",
+    };
+    Err(storage_protocol_error(format!(
+        "encountered {codec}-compressed content, which this client cannot decode"
+    )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        FRAGMENT_PAYLOAD_FRAGMENTED, FragmentReference, LoreGrpcClient, RevisionTreeQuery,
+        decode_fragment_references, parent_tree_path,
+    };
+    use crate::grpc_client::proto_gen::lore::model::v1::RevisionIdentifier;
+
+    #[test]
+    fn revision_tree_for_file_uses_a_parent_directory_and_one_level_walk() {
+        let request = LoreGrpcClient::revision_tree_for_file(
+            RevisionTreeQuery::Identifier(RevisionIdentifier {
+                branch_id: vec![1, 2, 3].into(),
+                number: 0,
+            }),
+            "character/nathan-gunn.yaml",
+        );
+        assert_eq!(request.path_prefix.as_deref(), Some("character"));
+        assert_eq!(request.max_depth, Some(1));
+        assert_eq!(parent_tree_path("character/nathan-gunn.yaml"), "character");
+        assert_eq!(
+            parent_tree_path("assets/portraits/nathan.png"),
+            "assets/portraits"
+        );
+        assert_eq!(parent_tree_path("repository.yaml"), "");
+    }
+
+    #[test]
+    fn fragmented_storage_payload_decodes_lore_reference_layout() {
+        let mut payload = vec![7; 32];
+        payload.extend_from_slice(&512_u64.to_le_bytes());
+        let references = decode_fragment_references(&payload).expect("valid reference payload");
+        assert_eq!(
+            references,
+            vec![FragmentReference {
+                hash: vec![7; 32],
+                offset: 512
+            }]
+        );
+        assert_ne!(FRAGMENT_PAYLOAD_FRAGMENTED, 0);
     }
 }
 

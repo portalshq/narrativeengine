@@ -400,6 +400,65 @@ fn test_local_lore_remote_read_command_suite() {
         .stdout(predicate::str::contains("hash"));
 }
 
+/// A manifest is a file, while Lore's RevisionTree RPC accepts directory
+/// prefixes only. This exercises NAP's remote resolver against a real Lore
+/// service, proving it reads the manifest through its parent directory.
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_remote_resolve_reads_manifest_from_parent_tree() {
+    let source = TempDir::new().expect("Failed to create source temp dir");
+    let repository = unique_universe_name("test-resolve-parent-tree");
+
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(source.path())
+        .args(["--repository", &repository, "character", "nathan-gunn"])
+        .args(["--name", "Nathan Gunn"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["remote", "add", "--base-dir"])
+        .arg(source.path())
+        .args([&repository, "origin"])
+        .arg(format!("lore://localhost:41337/{repository}"))
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["push", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    let reader = TempDir::new().expect("Failed to create reader temp dir");
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(reader.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+
+    nap_cmd()
+        .args(["--remote", "resolve", "--base-dir"])
+        .arg(reader.path())
+        .arg(format!("nap://{repository}/character/nathan-gunn"))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Nathan Gunn"));
+}
+
 #[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_create_entity() {

@@ -60,6 +60,7 @@ tracing-appender = "0.2"
 # Bytes and object storage
 bytes = "1"
 object_store = "0.11"
+zstd-sys = "2"
 
 # Async traits
 async-trait = "0.1"
