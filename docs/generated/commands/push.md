@@ -28,14 +28,14 @@ nap push [OPTIONS] <REPOSITORY>
 | Flag | Description | Default |
 |---|---|---|
 |     --branch | Branch to push (default: current branch) |  |
-|     --remote | Remote name (default: tracking branch's remote, or "origin") | origin |
+|     --remote-name | Remote name (default: tracking branch's remote, or "origin") | origin |
 
 
 ## Flags
 
 | Flag | Description |
 |---|---|
-| -h, --help | Print help |
+| -h, --help | Print help (see more with '--help') |
 
 
 ## Source

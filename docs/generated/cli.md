@@ -52,10 +52,10 @@ The `nap` command-line interface (v0.8.10) provides tools for creating, resolvin
 
 | Flag | Description | Default |
 |---|---|---|
-|     --local <LOCAL> | Resolve repository reads from an explicitly checked-out local working tree |  |
-|     --remote <REMOTE> | Resolve repository reads through the configured Lore server (the default) |  |
-| -d, --base-dir <BASE\_DIR> | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
-| -v, --verbose <VERBOSE> | Enable verbose debug logging |  |
+|     --local | Resolve repository reads from an explicitly checked-out local working tree |  |
+|     --remote | Resolve repository reads through the configured Lore server (the default) |  |
+| -d, --base-dir | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -v, --verbose | Enable verbose debug logging |  |
 
 
 ## Output Formats

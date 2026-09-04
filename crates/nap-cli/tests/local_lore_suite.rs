@@ -7,7 +7,7 @@
 //! - Environment: NAP_LORE_URL_BASE=lore://localhost:41337
 //!
 //! Run with:
-//!   cargo test -p nap-cli --test local_lore_suite --features lore-e2e -- --test-threads=1
+//!   cargo test -p nap-cli --test local_lore_suite --features local-e2e -- --test-threads=1
 
 #[cfg(feature = "local-e2e")]
 use assert_cmd::Command;
@@ -61,7 +61,7 @@ fn unique_universe_name(prefix: &str) -> String {
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
-        .as_secs();
+        .as_nanos();
     format!("{}-{}", prefix, timestamp)
 }
 
@@ -123,7 +123,6 @@ fn test_local_lore_create_repository() {
 
 #[cfg(feature = "local-e2e")]
 #[test]
-#[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_clone_repository() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-clone-repo");
@@ -305,6 +304,100 @@ fn test_local_lore_list_remote_repository_and_entities() {
         .assert()
         .success()
         .stdout(predicate::str::contains("claire-cole"));
+}
+
+/// Exercises every server-backed read command against one pushed repository.
+/// These commands default to the configured Lore server and must never depend
+/// on a local checkout in the reader NAP home.
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_remote_read_command_suite() {
+    let source = TempDir::new().expect("Failed to create source temp dir");
+    let repository = unique_universe_name("test-remote-reads");
+    let uri = format!("{repository}/character/claire-cole");
+
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(source.path())
+        .args(["--repository", &repository, "character", "claire-cole"])
+        .args(["--name", "Claire Cole"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["remote", "add", "--base-dir"])
+        .arg(source.path())
+        .args([&repository, "origin"])
+        .arg(format!("lore://localhost:41337/{repository}"))
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["push", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    let reader = TempDir::new().expect("Failed to create reader temp dir");
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(reader.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+
+    nap_cmd()
+        .args(["resolve", "--base-dir"])
+        .arg(reader.path())
+        .arg(&uri)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Claire Cole"));
+    nap_cmd()
+        .args(["query", "--base-dir"])
+        .arg(reader.path())
+        .args([&uri, "name"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Claire Cole"));
+    nap_cmd()
+        .args(["list", "--base-dir"])
+        .arg(reader.path())
+        .arg(&repository)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("claire-cole"));
+    nap_cmd()
+        .args(["history", "--base-dir"])
+        .arg(reader.path())
+        .arg(&uri)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["branch", "--base-dir"])
+        .arg(reader.path())
+        .arg(&repository)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("main"));
+    nap_cmd()
+        .args(["head-hash", "--base-dir"])
+        .arg(reader.path())
+        .arg(&repository)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hash"));
 }
 
 #[cfg(feature = "local-e2e")]
@@ -829,6 +922,92 @@ fn test_local_lore_commit_history() {
         .success();
 }
 
+/// `create` and `set` commit automatically, but users can also edit a
+/// working-tree manifest and use the explicit `commit`/`revert` commands.
+/// Keep that lower-level workflow covered independently.
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_explicit_commit_and_revert() {
+    let tmp = TempDir::new().expect("Failed to create temp dir");
+    let repository = unique_universe_name("test-explicit-commit");
+
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(tmp.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(tmp.path())
+        .args([
+            "--repository",
+            &repository,
+            "character",
+            "reverthero",
+            "--name",
+            "Revert Hero",
+        ])
+        .assert()
+        .success();
+
+    let manifest = tmp
+        .path()
+        .join(&repository)
+        .join("character")
+        .join("reverthero.yaml");
+    let original = fs::read_to_string(&manifest).expect("read entity manifest");
+    fs::write(
+        &manifest,
+        original.replace("Revert Hero", "Changed Revert Hero"),
+    )
+    .expect("update entity manifest");
+
+    nap_cmd()
+        .args(["commit", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .args(["--message", "change revert hero"])
+        .assert()
+        .success();
+
+    let commit_output = nap_cmd()
+        .args(["--local", "head-hash", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .output()
+        .expect("run head-hash");
+    assert!(
+        commit_output.status.success(),
+        "head-hash failed: {commit_output:?}"
+    );
+    let commit = String::from_utf8(commit_output.stdout)
+        .expect("head-hash is utf-8")
+        .trim()
+        .to_string();
+    assert!(!commit.is_empty(), "head-hash must return a commit hash");
+
+    nap_cmd()
+        .args(["revert", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .args(["--commit", &commit])
+        .assert()
+        .success();
+
+    assert_eq!(
+        fs::read_to_string(manifest).expect("read reverted entity manifest"),
+        original,
+        "revert must restore the prior manifest contents"
+    );
+}
+
 #[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_branch_operations() {
@@ -919,7 +1098,6 @@ fn test_local_lore_status_and_doctor() {
 
 #[cfg(feature = "local-e2e")]
 #[test]
-#[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_remote_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-remote");
@@ -964,11 +1142,32 @@ fn test_local_lore_remote_operations() {
         .assert()
         .success()
         .stdout(predicate::str::contains("origin"));
+
+    // Remotes are NAP worktree metadata.  Verify removal as well, rather
+    // than only proving that the add path did not error.
+    nap_cmd()
+        .arg("remote")
+        .arg("rm")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg(&repository)
+        .arg("origin")
+        .assert()
+        .success();
+
+    nap_cmd()
+        .arg("remote")
+        .arg("ls")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("origin").not());
 }
 
 #[cfg(feature = "local-e2e")]
 #[test]
-#[ignore = "lore 0.8.x removed 'lore repository add/remove/list' — remote operations need backend rework"]
 fn test_local_lore_sync_operations() {
     let tmp = TempDir::new().expect("Failed to create temp dir");
     let repository = unique_universe_name("test-sync");
@@ -1003,12 +1202,23 @@ fn test_local_lore_sync_operations() {
         .assert()
         .success();
 
-    // Push (publish)
+    // `publish` is the default-origin convenience command; `push` exposes
+    // the explicit remote/branch variant.  Exercise both paths.
+    nap_cmd()
+        .arg("publish")
+        .arg("--base-dir")
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
     nap_cmd()
         .arg("push")
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(&repository)
+        .arg("--branch")
+        .arg("main")
         .assert()
         .success();
 

@@ -1,5 +1,84 @@
 use assert_cmd::Command;
+use clap::CommandFactory;
+use nap_cli::Cli;
 use predicates::prelude::*;
+use std::fs;
+use tempfile::TempDir;
+
+/// Every public command and subcommand must remain invocable through the
+/// compiled binary. Functional Lore-backed coverage lives in
+/// `local_lore_suite`; this catches command-surface regressions such as a
+/// removed subcommand, changed dispatch name, or broken Clap definition.
+#[test]
+fn test_all_public_commands_expose_help() {
+    fn collect_paths(command: &clap::Command, parent: &[String], paths: &mut Vec<Vec<String>>) {
+        for subcommand in command.get_subcommands().filter(|cmd| !cmd.is_hide_set()) {
+            let mut path = parent.to_vec();
+            path.push(subcommand.get_name().to_owned());
+            paths.push(path.clone());
+            collect_paths(subcommand, &path, paths);
+        }
+    }
+
+    let root = Cli::command();
+    let mut commands = vec![Vec::new()];
+    collect_paths(&root, &[], &mut commands);
+
+    for args in commands {
+        let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
+        cmd.args(args)
+            .arg("--help")
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("Usage:"));
+    }
+}
+
+/// Exercise commands that operate entirely on supplied files and the two v0
+/// stubs. Lore-backed stateful commands are covered in local_lore_suite.
+#[test]
+fn test_local_file_command_workflow() {
+    let temp = TempDir::new().expect("failed to create temp dir");
+    let base = temp.path().join("base.yaml");
+    let current = temp.path().join("current.yaml");
+    let proposed = temp.path().join("proposed.yaml");
+    let asset = temp.path().join("asset.txt");
+    fs::write(&base, "name: Base\ncount: 1\n").unwrap();
+    fs::write(&current, "name: Current\ncount: 1\n").unwrap();
+    fs::write(&proposed, "name: Base\ncount: 2\n").unwrap();
+    fs::write(&asset, "Narrative Addressing Protocol").unwrap();
+
+    let run = |args: &[&str]| {
+        let mut cmd = Command::cargo_bin("nap").expect("Failed to find nap binary");
+        cmd.args(args).assert().success();
+    };
+    run(&["schema", "manifest", "--format", "json"]);
+    run(&["diff", base.to_str().unwrap(), current.to_str().unwrap()]);
+    run(&[
+        "merge",
+        base.to_str().unwrap(),
+        current.to_str().unwrap(),
+        proposed.to_str().unwrap(),
+    ]);
+    run(&["content-hash", asset.to_str().unwrap()]);
+    run(&["sign", "test-repository/character/testhero"]);
+    run(&["verify", "test-repository/character/testhero"]);
+
+    // Commands with intentionally unavailable external prerequisites must
+    // fail descriptively rather than panic or mutate a user environment.
+    let mut install = Command::cargo_bin("nap").expect("Failed to find nap binary");
+    install
+        .args(["install", "not-a-supported-target"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Unknown target"));
+    let mut validate = Command::cargo_bin("nap").expect("Failed to find nap binary");
+    validate
+        .arg("validate")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Provide either a NAP URI"));
+}
 
 #[test]
 fn test_nap_resolve_accepts_uri_with_nap_scheme() {
@@ -101,6 +180,31 @@ fn test_nap_presign_rejects_branch_and_commit_together() {
         "abc",
     ]);
     cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+}
+
+/// The global read-source selector and the push destination name must remain
+/// distinct so ordinary commands never panic while parsing.
+#[test]
+fn test_remote_source_and_push_remote_name_flags_coexist() {
+    let mut source = Command::cargo_bin("nap").expect("Failed to find nap binary");
+    source
+        .args(["--remote", "list", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("List repositories"));
+
+    let mut push = Command::cargo_bin("nap").expect("Failed to find nap binary");
+    push.args(["push", "example", "--remote-name", "origin", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Remote name"));
+
+    let mut conflict = Command::cargo_bin("nap").expect("Failed to find nap binary");
+    conflict
+        .args(["--remote", "--local", "schema", "manifest"])
+        .assert()
         .failure()
         .stderr(predicate::str::contains("cannot be used with"));
 }

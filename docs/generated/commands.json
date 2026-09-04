@@ -815,7 +815,7 @@
           "required": false,
           "default_value": null,
           "short": null,
-          "long": "remote",
+          "long": "origin",
           "takes_value": true
         }
       ],
@@ -1158,7 +1158,7 @@
           "required": false,
           "default_value": "origin",
           "short": null,
-          "long": "remote",
+          "long": "remote-name",
           "takes_value": true
         },
         {
@@ -1174,7 +1174,7 @@
       "flags": [
         {
           "name": "help",
-          "about": "Print help",
+          "about": "Print help (see more with '--help')",
           "required": false,
           "default_value": null,
           "short": "h",

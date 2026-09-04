@@ -3,12 +3,33 @@ Push the current branch to its configured upstream remote
 Usage: nap push [OPTIONS] <REPOSITORY>
 
 Arguments:
-  <REPOSITORY>  Repository name
+  <REPOSITORY>
+          Repository name
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset [env: NAP_DIR=]
-      --remote <REMOTE>      Remote name (default: tracking branch's remote, or "origin") [default: origin]
-      --branch <BRANCH>      Branch to push (default: current branch)
-  -v, --verbose              Enable verbose debug logging
-      --local                Resolve repository reads from an explicitly checked-out local working tree
-  -h, --help                 Print help
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset
+
+          [env: NAP_DIR=]
+
+      --remote-name <REMOTE>
+          Remote name (default: tracking branch's remote, or "origin").
+
+          `--remote` selects server-backed reads globally; use this distinct spelling to name the push destination.
+
+          [default: origin]
+
+      --branch <BRANCH>
+          Branch to push (default: current branch)
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
+  -h, --help
+          Print help (see a summary with '-h')

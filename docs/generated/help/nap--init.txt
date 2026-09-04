@@ -25,14 +25,19 @@ Options:
   -v, --verbose
           Enable verbose debug logging
 
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
       --workspace-id <WORKSPACE_ID>
           Workspace ID (for remote provider)
 
       --local
           Resolve repository reads from an explicitly checked-out local working tree
 
-      --remote <REMOTE>
-          Remote URL to add as origin after init
+      --origin <REMOTE>
+          Remote URL to add as origin after init.
+
+          This is deliberately `--origin`: `--remote` selects server-backed reads globally and must remain unambiguous on every command.
 
       --reset
           Reset the provider configuration file

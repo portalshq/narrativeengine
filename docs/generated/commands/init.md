@@ -35,8 +35,8 @@ nap init toystory                     # create repository nap init toystory --pr
 
 | Flag | Description | Default |
 |---|---|---|
+|     --origin | Remote URL to add as origin after init |  |
 |     --provider | Provider type: local, portals-cloud, or remote |  |
-|     --remote | Remote URL to add as origin after init |  |
 |     --remote-url | Remote URL (required for remote provider) |  |
 |     --workspace-id | Workspace ID (for remote provider) |  |
 
@@ -64,7 +64,7 @@ nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my
 nap init --provider local
 
 # Initialize with a remote origin
-nap init toystory --remote git@github.com:user/toystory.git
+nap init toystory --origin lore://localhost:41337/toystory
 ```
 
 ## Source

@@ -412,9 +412,9 @@ pub fn render_cli_summary(
                 (None, None) => o.name.clone(),
             };
             let value = o
-                .value_name
-                .as_ref()
-                .map(|v| format!(" <{v}>"))
+                .takes_value
+                .then(|| o.value_name.as_ref().map(|v| format!(" <{v}>")))
+                .flatten()
                 .unwrap_or_default();
             vec![
                 format!("{flag}{value}"),
@@ -460,9 +460,9 @@ pub fn render_global_options(options: &[ArgModel], meta: &DocMeta) -> String {
                 (None, None) => o.name.clone(),
             };
             let value = o
-                .value_name
-                .as_ref()
-                .map(|v| format!(" <{v}>"))
+                .takes_value
+                .then(|| o.value_name.as_ref().map(|v| format!(" <{v}>")))
+                .flatten()
                 .unwrap_or_default();
             vec![
                 format!("{flag}{value}"),

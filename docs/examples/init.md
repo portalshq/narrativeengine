@@ -12,5 +12,5 @@ nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my
 nap init --provider local
 
 # Initialize with a remote origin
-nap init toystory --remote git@github.com:user/toystory.git
+nap init toystory --origin lore://localhost:41337/toystory
 ```

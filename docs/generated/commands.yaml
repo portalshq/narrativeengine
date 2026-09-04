@@ -558,7 +558,7 @@ commands:
         about: "Branch to push (default: current branch)"
     flags:
       - name: "help"
-        about: "Print help"
+        about: "Print help (see more with '--help')"
   - name: "query"
     full_path: "query"
     about: "Query a subtree from a manifest"

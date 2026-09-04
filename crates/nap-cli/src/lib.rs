@@ -14,11 +14,18 @@ pub struct Cli {
     pub verbose: bool,
 
     /// Resolve repository reads through the configured Lore server (the default).
-    #[arg(long, global = true, conflicts_with = "local")]
+    // Keep a stable, explicit Clap id.  `push --remote-name <name>` names a
+    // Git/Lore destination, while this flag selects server-backed reads.
+    #[arg(
+        id = "read_remote",
+        long = "remote",
+        global = true,
+        conflicts_with = "local"
+    )]
     pub remote: bool,
 
     /// Resolve repository reads from an explicitly checked-out local working tree.
-    #[arg(long, global = true, conflicts_with = "remote")]
+    #[arg(long, global = true, conflicts_with = "read_remote")]
     pub local: bool,
 
     #[command(subcommand)]
@@ -171,7 +178,10 @@ pub enum Commands {
         workspace_id: Option<String>,
 
         /// Remote URL to add as origin after init.
-        #[arg(long)]
+        ///
+        /// This is deliberately `--origin`: `--remote` selects server-backed
+        /// reads globally and must remain unambiguous on every command.
+        #[arg(long = "origin")]
         remote: Option<String>,
 
         /// Reset the provider configuration file.
@@ -573,7 +583,10 @@ The SDKs return the same fields as the CLI JSON output.
         repository: String,
 
         /// Remote name (default: tracking branch's remote, or "origin").
-        #[arg(long, default_value = "origin")]
+        ///
+        /// `--remote` selects server-backed reads globally; use this distinct
+        /// spelling to name the push destination.
+        #[arg(long = "remote-name", default_value = "origin")]
         remote: String,
 
         /// Branch to push (default: current branch).
