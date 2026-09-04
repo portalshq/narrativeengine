@@ -1378,8 +1378,8 @@ fn validate_pulled_manifests(path: &Path, required: &[String]) -> Result<()> {
         let manifest = path.join(file);
         if !manifest.is_file() {
             anyhow::bail!(
-                "Lore clone did not materialize required NAP manifest '{}'; the remote repository is not a usable NAP repository",
-                file
+                "remote repository is missing required NAP manifest '{}'; commit and push it before running nap pull",
+                file,
             );
         }
         serde_yaml::from_str::<serde_yaml::Value>(

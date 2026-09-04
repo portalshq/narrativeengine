@@ -183,6 +183,66 @@ fn test_local_lore_clone_repository() {
     assert!(clone_path.exists(), "Cloned repository should exist");
 }
 
+/// A sparse entity pull must retrieve both NAP markers from one remote
+/// revision: the repository manifest and the requested entity manifest.
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_pull_entity_materializes_manifests() {
+    let source = TempDir::new().expect("Failed to create source temp dir");
+    let repository = unique_universe_name("test-pull-entity");
+
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(source.path())
+        .args(["--repository", &repository, "character", "claire-cole"])
+        .args(["--name", "Claire Cole"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["remote", "add", "--base-dir"])
+        .arg(source.path())
+        .args([&repository, "origin"])
+        .arg(format!("lore://localhost:41337/{repository}"))
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["push", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    let destination = TempDir::new().expect("Failed to create destination temp dir");
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(destination.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["pull", "--base-dir"])
+        .arg(destination.path())
+        .arg(format!("{repository}/character/claire-cole"))
+        .assert()
+        .success();
+
+    let pulled = destination.path().join(&repository);
+    assert!(pulled.join("repository.yaml").is_file());
+    assert!(pulled.join("character/claire-cole.yaml").is_file());
+}
+
 #[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_create_entity() {
