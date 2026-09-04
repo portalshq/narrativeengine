@@ -8,7 +8,7 @@ use nap_core::{
     content::ContentHash,
     manifest::{Manifest, Representation},
     repository::Repository,
-    resolver::{PresignOptions, ResolveOptions, ResolveResult, Resolver},
+    resolver::{PresignOptions, ResolveOptions, ResolveResult, ResolveSource, Resolver},
     schema,
     types::EntityType,
     uri::NapUri,
@@ -577,9 +577,20 @@ pub fn resolve_with_options(
     branch: Option<String>,
     commit: Option<String>,
     path: Option<String>,
+    source: Option<String>,
 ) -> napi::Result<String> {
     let resolver = Resolver::new(Path::new(&repo_base_path));
     let options = ResolveOptions {
+        source: match source.as_deref() {
+            None | Some("auto") => None,
+            Some("remote") => Some(ResolveSource::Remote),
+            Some("local") => Some(ResolveSource::Local),
+            Some(value) => {
+                return Err(Error::from_reason(format!(
+                    "invalid resolve source '{value}': expected 'remote' or 'local'"
+                )));
+            }
+        },
         branch,
         commit,
         path,

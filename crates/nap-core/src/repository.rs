@@ -61,7 +61,13 @@ impl Repository {
     pub fn open_optional(path: &Path, vcs: Option<Box<dyn VcsBackend>>) -> Result<Self, NapError> {
         // Check for repository.yaml or repository.yaml to identify valid repository
         if !path.join("repository.yaml").exists() && !path.join("repository.yaml").exists() {
-            return Err(NapError::RepositoryNotFound(path.display().to_string()));
+            return Err(NapError::LocalWorkingTreeRequired {
+                repository: path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("repository")
+                    .to_string(),
+            });
         }
 
         let repository = path

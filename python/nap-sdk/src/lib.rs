@@ -17,7 +17,7 @@ use nap_core::{
     manifest::{Manifest, Representation},
     query::ManifestQuery,
     repository::Repository,
-    resolver::{PresignOptions, ResolveOptions, ResolveResult, Resolver},
+    resolver::{PresignOptions, ResolveOptions, ResolveResult, ResolveSource, Resolver},
     schema,
     types::EntityType,
     uri::NapUri,
@@ -590,9 +590,20 @@ fn resolve_with_options(
     branch: Option<String>,
     commit: Option<String>,
     path: Option<String>,
+    source: Option<String>,
 ) -> PyResult<String> {
     let resolver = Resolver::new(Path::new(&repo_base_path));
     let options = ResolveOptions {
+        source: match source.as_deref() {
+            None | Some("auto") => None,
+            Some("remote") => Some(ResolveSource::Remote),
+            Some("local") => Some(ResolveSource::Local),
+            Some(value) => {
+                return Err(PyValueError::new_err(format!(
+                    "invalid resolve source '{value}': expected 'remote' or 'local'"
+                )));
+            }
+        },
         branch,
         commit,
         path,

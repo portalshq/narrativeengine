@@ -9,6 +9,9 @@ use std::path::Path;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_dir = Path::new("proto");
     let revision_proto = proto_dir.join("lore/revision/v1/revision.proto");
+    let repository_proto = proto_dir.join("lore/repository/v1/repository.proto");
+    let storage_proto = proto_dir.join("lore/storage/v1/storage.proto");
+    let thin_client_proto = proto_dir.join("lore/thin_client/v1/thin_client.proto");
 
     // ── Ensure protoc is available ────────────────────────────────────
     // Use vendored protoc so the build works on CI (no system protoc
@@ -22,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-env-changed=PROTOC");
     walk_protos(proto_dir);
 
-    // ── compile the revision proto (transitively compiles model.proto) ─
+    // ── compile the remote-read protos (all share model.proto) ──────────
     //
     // NOTE: `bytes(["."])` must match the lore-server's own prost config so
     // that all `bytes` protobuf fields are generated as `bytes::Bytes`
@@ -34,7 +37,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_client(true)
         .build_server(false)
-        .compile_protos_with_config(prost_config, &[&revision_proto], &[proto_dir])?;
+        .compile_protos_with_config(
+            prost_config,
+            &[
+                &revision_proto,
+                &repository_proto,
+                &storage_proto,
+                &thin_client_proto,
+            ],
+            &[proto_dir],
+        )?;
 
     Ok(())
 }

@@ -251,6 +251,17 @@ pub trait VcsBackend: Send + Sync {
         ))
     }
 
+    /// Reuse the active Lore login's unexpired repository token for an authorized HTTP recipient.
+    /// Implementations must not log tokens or return an unscoped authentication token.
+    fn http_bearer_token(
+        &self,
+        _repo_path: &Path,
+        _repository_id: &str,
+        _http_origin: &str,
+    ) -> Result<Option<String>, NapError> {
+        Ok(None)
+    }
+
     /// Return the immutable content address of a file at a pinned revision.
     fn file_content_address_at_ref(
         &self,

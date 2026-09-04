@@ -185,6 +185,20 @@ impl VcsBackend for MockBackend {
         })
     }
 
+    fn http_bearer_token(
+        &self,
+        repo_path: &Path,
+        _repository_id: &str,
+        _http_origin: &str,
+    ) -> Result<Option<String>, NapError> {
+        let path = repo_path.join(".mock_http_token");
+        if path.exists() {
+            Ok(Some(std::fs::read_to_string(path)?))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn file_content_address_at_ref(
         &self,
         _repo_path: &Path,

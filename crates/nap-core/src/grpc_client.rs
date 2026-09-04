@@ -55,14 +55,35 @@ pub mod proto_gen {
                 tonic::include_proto!("lore.revision.v1");
             }
         }
+        pub mod repository {
+            pub mod v1 {
+                tonic::include_proto!("lore.repository.v1");
+            }
+        }
+        pub mod storage {
+            pub mod v1 {
+                tonic::include_proto!("lore.storage.v1");
+            }
+        }
+        pub mod thin_client {
+            pub mod v1 {
+                tonic::include_proto!("lore.thin_client.v1");
+            }
+        }
     }
 }
 
 // Re-export the types callers need most frequently.
 pub use proto_gen::lore::model::v1::Branch;
+pub use proto_gen::lore::repository::v1::repository_service_client::RepositoryServiceClient;
+pub use proto_gen::lore::repository::v1::{RepositoryGetRequest, RepositoryListRequest};
 pub use proto_gen::lore::revision::v1::branch_get_request;
 pub use proto_gen::lore::revision::v1::revision_service_client::RevisionServiceClient;
 pub use proto_gen::lore::revision::v1::{BranchGetRequest, BranchPushRequest};
+pub use proto_gen::lore::revision::v1::{BranchListRequest, RevisionListRequest};
+pub use proto_gen::lore::storage::v1::storage_service_client::StorageServiceClient;
+pub use proto_gen::lore::thin_client::v1::thin_client_service_client::ThinClientServiceClient;
+pub use proto_gen::lore::thin_client::v1::{RevisionInfoRequest, RevisionTreeRequest};
 
 use std::future::Future;
 use std::sync::LazyLock;
@@ -154,6 +175,15 @@ impl LoreGrpcClient {
         Builder::default()
     }
 
+    /// Return a clone scoped to a repository returned by `RepositoryGet`.
+    pub fn for_repository_id(&self, id: impl Into<Vec<u8>>) -> Self {
+        Self {
+            channel: self.channel.clone(),
+            token: self.token.clone(),
+            repository_id_bytes: id.into(),
+        }
+    }
+
     // ── Public RPC methods ───────────────────────────────────────────
 
     /// Look up a branch by its human-readable name.
@@ -172,6 +202,48 @@ impl LoreGrpcClient {
         response.into_inner().branch.ok_or_else(|| {
             NapError::GrpcError(format!("BranchGet({name}) returned empty branch record"))
         })
+    }
+
+    pub async fn list_branches(&self) -> Result<Vec<Branch>, NapError> {
+        let mut client = self.make_client();
+        let mut stream = client
+            .branch_list(BranchListRequest {
+                creator: None,
+                include_deleted: false,
+            })
+            .await
+            .map_err(|status| map_grpc_status("BranchList", status))?
+            .into_inner();
+        let mut branches = Vec::new();
+        while let Some(item) = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("BranchList", status))?
+        {
+            if let Some(branch) = item.branch {
+                branches.push(branch);
+            }
+        }
+        Ok(branches)
+    }
+
+    pub async fn list_revisions(
+        &self,
+        identifier: proto_gen::lore::model::v1::RevisionIdentifier,
+    ) -> Result<Vec<proto_gen::lore::model::v1::RevisionItem>, NapError> {
+        let mut client = self.make_client();
+        Ok(client
+            .revision_list(RevisionListRequest {
+                start: Some(
+                    proto_gen::lore::revision::v1::revision_list_request::Start::Identifier(
+                        identifier,
+                    ),
+                ),
+            })
+            .await
+            .map_err(|status| map_grpc_status("RevisionList", status))?
+            .into_inner()
+            .items)
     }
 
     /// Push a revision as the new tip of a branch.
@@ -224,6 +296,303 @@ impl LoreGrpcClient {
                 repository_id_bytes: self.repository_id_bytes.clone(),
             },
         )
+    }
+
+    fn make_repository_client(
+        &self,
+    ) -> RepositoryServiceClient<InterceptedService<Channel, GrpcAuthInterceptor>> {
+        RepositoryServiceClient::with_interceptor(
+            self.channel.clone(),
+            GrpcAuthInterceptor {
+                token: self.token.clone(),
+                repository_id_bytes: Vec::new(),
+            },
+        )
+    }
+
+    fn make_storage_client(
+        &self,
+    ) -> StorageServiceClient<InterceptedService<Channel, GrpcAuthInterceptor>> {
+        StorageServiceClient::with_interceptor(
+            self.channel.clone(),
+            GrpcAuthInterceptor {
+                token: self.token.clone(),
+                repository_id_bytes: self.repository_id_bytes.clone(),
+            },
+        )
+    }
+
+    fn make_thin_client(
+        &self,
+    ) -> ThinClientServiceClient<InterceptedService<Channel, GrpcAuthInterceptor>> {
+        ThinClientServiceClient::with_interceptor(
+            self.channel.clone(),
+            GrpcAuthInterceptor {
+                token: self.token.clone(),
+                repository_id_bytes: self.repository_id_bytes.clone(),
+            },
+        )
+    }
+
+    /// Look up a repository before constructing a repository-scoped client.
+    pub async fn get_repository_by_name(
+        &self,
+        name: &str,
+    ) -> Result<proto_gen::lore::model::v1::Repository, NapError> {
+        let mut client = self.make_repository_client();
+        client
+            .repository_get(RepositoryGetRequest {
+                query: Some(
+                    proto_gen::lore::repository::v1::repository_get_request::Query::Name(
+                        name.to_string(),
+                    ),
+                ),
+            })
+            .await
+            .map_err(|status| map_grpc_status("RepositoryGet", status))?
+            .into_inner()
+            .repository
+            .ok_or_else(|| {
+                NapError::GrpcError(format!("RepositoryGet({name}) returned no repository"))
+            })
+    }
+
+    /// Return names of repositories visible to the current identity.
+    pub async fn list_repositories(&self) -> Result<Vec<String>, NapError> {
+        let mut client = self.make_repository_client();
+        let mut stream = client
+            .repository_list(RepositoryListRequest { creator: None })
+            .await
+            .map_err(|status| map_grpc_status("RepositoryList", status))?
+            .into_inner();
+        let mut names = Vec::new();
+        while let Some(item) = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("RepositoryList", status))?
+        {
+            if let Some(repository) = item.repository {
+                names.push(repository.name);
+            }
+        }
+        Ok(names)
+    }
+
+    /// Read a single file at a revision tree path. The caller must scope this
+    /// client with the repository id returned by `RepositoryGet`.
+    pub async fn read_file_at_revision(
+        &self,
+        identifier: proto_gen::lore::model::v1::RevisionIdentifier,
+        path: String,
+    ) -> Result<(Vec<u8>, Vec<u8>), NapError> {
+        let mut tree = self.make_thin_client();
+        let mut stream = tree
+            .revision_tree(RevisionTreeRequest {
+                query: Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Identifier(
+                        identifier,
+                    ),
+                ),
+                path_prefix: Some(path.clone()),
+                max_depth: Some(1),
+            })
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+            .into_inner();
+        let mut signature = Vec::new();
+        let mut address = None;
+        while let Some(item) = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+        {
+            match item.payload {
+                Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Header(
+                        header,
+                    ),
+                ) => signature = header.signature.to_vec(),
+                Some(proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Node(
+                    node,
+                )) if node.path == path => address = node.address,
+                _ => {}
+            }
+        }
+        let address = address.ok_or_else(|| NapError::ManifestNotFound(path.clone()))?;
+        let mut storage = self.make_storage_client();
+        let outgoing = tokio_stream::iter([address]);
+        let mut bytes = Vec::new();
+        let mut content = storage
+            .get(outgoing)
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+            .into_inner();
+        while let Some(chunk) = content
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+        {
+            bytes.extend_from_slice(&chunk.payload);
+        }
+        Ok((bytes, signature))
+    }
+
+    /// Read a file selected by its immutable Lore revision signature.
+    pub async fn read_file_at_signature(
+        &self,
+        signature: Vec<u8>,
+        path: String,
+    ) -> Result<(Vec<u8>, Vec<u8>), NapError> {
+        let mut tree = self.make_thin_client();
+        let mut stream = tree
+            .revision_tree(RevisionTreeRequest {
+                query: Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Signature(
+                        signature.into(),
+                    ),
+                ),
+                path_prefix: Some(path.clone()),
+                max_depth: Some(1),
+            })
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+            .into_inner();
+        let mut resolved_signature = Vec::new();
+        let mut address = None;
+        while let Some(item) = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+        {
+            match item.payload {
+                Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Header(
+                        header,
+                    ),
+                ) => resolved_signature = header.signature.to_vec(),
+                Some(proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Node(
+                    node,
+                )) if node.path == path => address = node.address,
+                _ => {}
+            }
+        }
+        let address = address.ok_or(NapError::ManifestNotFound(path))?;
+        let mut storage = self.make_storage_client();
+        let mut bytes = Vec::new();
+        let mut content = storage
+            .get(tokio_stream::iter([address]))
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+            .into_inner();
+        while let Some(chunk) = content
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("StorageGet", status))?
+        {
+            bytes.extend_from_slice(&chunk.payload);
+        }
+        Ok((bytes, resolved_signature))
+    }
+
+    /// List file paths below a revision tree prefix without downloading them.
+    pub async fn list_paths_at_revision(
+        &self,
+        identifier: proto_gen::lore::model::v1::RevisionIdentifier,
+        prefix: String,
+    ) -> Result<Vec<String>, NapError> {
+        let mut tree = self.make_thin_client();
+        let mut stream = tree
+            .revision_tree(RevisionTreeRequest {
+                query: Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Identifier(
+                        identifier,
+                    ),
+                ),
+                path_prefix: Some(prefix),
+                max_depth: None,
+            })
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+            .into_inner();
+        let mut paths = Vec::new();
+        while let Some(item) = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+        {
+            if let Some(proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Node(
+                node,
+            )) = item.payload
+                && node.node_type == proto_gen::lore::thin_client::v1::NodeType::File as i32
+            {
+                paths.push(node.path);
+            }
+        }
+        Ok(paths)
+    }
+
+    /// Look up a file's content address without downloading its payload.
+    pub async fn file_address_at_revision(
+        &self,
+        identifier: proto_gen::lore::model::v1::RevisionIdentifier,
+        path: String,
+    ) -> Result<(proto_gen::lore::model::v1::Address, Vec<u8>), NapError> {
+        let mut tree = self.make_thin_client();
+        let mut stream = tree
+            .revision_tree(RevisionTreeRequest {
+                query: Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_request::Query::Identifier(
+                        identifier,
+                    ),
+                ),
+                path_prefix: Some(path.clone()),
+                max_depth: Some(1),
+            })
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+            .into_inner();
+        let mut signature = Vec::new();
+        let mut address = None;
+        while let Some(item) = stream
+            .message()
+            .await
+            .map_err(|status| map_grpc_status("RevisionTree", status))?
+        {
+            match item.payload {
+                Some(
+                    proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Header(
+                        header,
+                    ),
+                ) => signature = header.signature.to_vec(),
+                Some(proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Node(
+                    node,
+                )) if node.path == path => address = node.address,
+                _ => {}
+            }
+        }
+        address
+            .map(|address| (address, signature))
+            .ok_or(NapError::ManifestNotFound(path))
+    }
+
+    pub async fn revision_info_at_signature(
+        &self,
+        signature: Vec<u8>,
+    ) -> Result<proto_gen::lore::thin_client::v1::Revision, NapError> {
+        let mut client = self.make_thin_client();
+        client
+            .revision_info(RevisionInfoRequest {
+                query: Some(
+                    proto_gen::lore::thin_client::v1::revision_info_request::Query::Signature(
+                        signature.into(),
+                    ),
+                ),
+            })
+            .await
+            .map_err(|status| map_grpc_status("RevisionInfo", status))?
+            .into_inner()
+            .revision
+            .ok_or_else(|| NapError::GrpcError("RevisionInfo returned no revision".to_string()))
     }
 }
 

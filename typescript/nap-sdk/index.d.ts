@@ -51,7 +51,7 @@ export declare function repoListRemotes(basePath: string, repository: string): s
 export declare function repoPush(basePath: string, repository: string, remote?: string | undefined | null, branch?: string | undefined | null): string
 export declare function repoPull(basePath: string, repository: string, remote?: string | undefined | null, branch?: string | undefined | null): string
 export declare function resolve(uriStr: string, repoBasePath: string): string
-export declare function resolveWithOptions(uriStr: string, repoBasePath: string, branch?: string | undefined | null, commit?: string | undefined | null, path?: string | undefined | null): string
+export declare function resolveWithOptions(uriStr: string, repoBasePath: string, branch?: string | undefined | null, commit?: string | undefined | null, path?: string | undefined | null, source?: "remote" | "local" | undefined | null): string
 export declare function resolveQuery(uriStr: string, repoBasePath: string, path: string): string
 export declare function presignRepresentation(uri: string, representation: string, repoBasePath: string, branch?: string | undefined | null, commit?: string | undefined | null, ttlSeconds?: number | undefined | null, httpUrl?: string | undefined | null, bearerToken?: string | undefined | null): Promise<string>
 export declare function listRepositories(repoBasePath: string): string

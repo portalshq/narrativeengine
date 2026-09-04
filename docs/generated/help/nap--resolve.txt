@@ -14,7 +14,7 @@ Options:
 
   -d, --base-dir <BASE_DIR>
           Base directory for repository repositories. Defaults to $NAP_DIR, or ~/.nap if unset
-          
+
           [env: NAP_DIR=]
 
       --commit <COMMIT>
@@ -25,7 +25,7 @@ Options:
 
   -f, --format <FORMAT>
           Output format: yaml, json
-          
+
           [env: NAP_OUTPUT=]
           [default: yaml]
 

@@ -25,6 +25,20 @@ pub fn generate_local_config(nap_home: &Path) -> Result<ConfigFiles> {
 
     // Only regenerate if missing
     if local_toml_path.exists() {
+        let content = fs::read_to_string(&local_toml_path)?;
+        let mut config: toml::Value = toml::from_str(&content)?;
+        if let Some(http) = config
+            .get_mut("server")
+            .and_then(|v| v.get_mut("http"))
+            .and_then(toml::Value::as_table_mut)
+            && http.get("enabled").and_then(toml::Value::as_bool) != Some(false)
+            && !http.contains_key("presigned_url_hmac_key")
+        {
+            http.insert("presigned_url_hmac_key".into(), new_presign_key().into());
+            let mut file = tempfile::NamedTempFile::new_in(&lore_config_dir)?;
+            file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
+            file.persist(&local_toml_path)?;
+        }
         tracing::info!("Lore config already exists at {:?}", local_toml_path);
         return Ok(ConfigFiles {
             config_path: local_toml_path,
@@ -56,15 +70,19 @@ pub fn generate_local_config(nap_home: &Path) -> Result<ConfigFiles> {
     })
 }
 
+fn new_presign_key() -> String {
+    let mut key = [0u8; 32];
+    rand::rng().fill_bytes(&mut key);
+    hex::encode(key)
+}
+
 /// Generate the TOML configuration content
 fn generate_config_toml(nap_home: &Path) -> String {
     let immutable_path = nap_home.join("lore").join("store").join("immutable");
     let mutable_path = nap_home.join("lore").join("store").join("mutable");
     let _cert_path = nap_home.join("lore").join("certs").join("cert.pem");
     let _key_path = nap_home.join("lore").join("certs").join("key.pem");
-    let mut presign_key = [0_u8; 32];
-    rand::rng().fill_bytes(&mut presign_key);
-    let presign_key = hex::encode(presign_key);
+    let presign_key = new_presign_key();
 
     format!(
         r#"
@@ -81,7 +99,7 @@ runtime_shutdown_timeout_seconds = 25
 # Public facing QUIC server settings
 [server.quic]
 enabled = true
-host = "0.0.0.0"
+host = "127.0.0.1"
 port = 41337
 verify_client_certs = false
 idle_timeout = 30_000
@@ -95,7 +113,7 @@ handler_timeout_seconds = 50
 # gRPC server settings
 [server.grpc]
 enabled = true
-host = "0.0.0.0"
+host = "127.0.0.1"
 port = 41337
 request_handler_timeout_seconds = 50
 verify_client_certs = false
@@ -103,7 +121,7 @@ verify_client_certs = false
 # HTTP server settings
 [server.http]
 enabled = true
-host = "0.0.0.0"
+host = "127.0.0.1"
 port = 41339
 max_file_size = 10_485_760  # 10MB
 request_timeout_seconds = 300
@@ -189,6 +207,33 @@ pub struct ConfigFiles {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+
+    #[test]
+    fn upgrade_adds_one_stable_key_and_preserves_existing_settings() {
+        let dir = TempDir::new().unwrap();
+        let config = dir.path().join("lore/config");
+        fs::create_dir_all(&config).unwrap();
+        let path = config.join("local.toml");
+        fs::write(
+            &path,
+            "[server.http]\nenabled = true\nport = 4242\n[custom]\nvalue = 7\n",
+        )
+        .unwrap();
+        generate_local_config(dir.path()).unwrap();
+        let first = fs::read_to_string(&path).unwrap();
+        generate_local_config(dir.path()).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), first);
+        assert!(first.contains("port = 4242"));
+        assert!(first.contains("value = 7"));
+        let doc: toml::Value = toml::from_str(&first).unwrap();
+        assert_eq!(
+            doc["server"]["http"]["presigned_url_hmac_key"]
+                .as_str()
+                .unwrap()
+                .len(),
+            64
+        );
+    }
 
     #[test]
     fn test_generate_local_config() {

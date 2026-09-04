@@ -56,7 +56,13 @@ fn generate_help_snapshot(help_dir: &Path, subcommand_args: &[&str]) -> Result<(
         };
 
         let path = help_dir.join(&filename);
-        let content = util::ensure_trailing_newline(&String::from_utf8_lossy(&output.stdout));
+        let help = String::from_utf8_lossy(&output.stdout);
+        let help = help
+            .lines()
+            .map(|line| if line.trim().is_empty() { "" } else { line })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let content = util::ensure_trailing_newline(&help);
         crate::filesystem::atomic_write(&path, &content)?;
     }
 

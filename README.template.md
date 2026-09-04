@@ -12,7 +12,12 @@
 
 ---
 
-{{include docs/authored/presigned-urls.md}}
+## Representation downloads and presigned URLs
+
+Create a temporary download URL with
+`nap presign 25th-chapter/character/nathan-gunn item`.
+See the [nap presign reference](docs/generated/commands/presign.md) for entity
+and representation arguments, file lookup, configuration, and SDK examples.
 
 ---
 

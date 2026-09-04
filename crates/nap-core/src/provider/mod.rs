@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::sync::Arc;
 
+pub mod http;
 pub mod local;
 pub mod portals_cloud;
 pub mod remote;
@@ -171,7 +172,8 @@ impl ProviderFactory {
         url_base: &str,
         workspace_id: &str,
     ) -> Result<Arc<dyn Provider>> {
-        let provider: RemoteProvider = RemoteProvider::new(url_base, workspace_id);
+        let provider: RemoteProvider = RemoteProvider::new(url_base, workspace_id)
+            .with_http_url(&http::configured_origin(&self.nap_home, url_base)?)?;
         Ok(Arc::new(provider) as Arc<dyn Provider>)
     }
 }
@@ -262,6 +264,7 @@ impl ProviderManager {
         };
 
         if let Some(ref provider) = provider {
+            http::configured_origin(&self.nap_home, &provider.lore_url_base()?)?;
             self.active_provider = Some(provider.clone());
             if is_debug_enabled() {
                 tracing::debug!("NAP debug mode: Loaded provider: {}", provider.name());
@@ -298,7 +301,14 @@ impl ProviderManager {
             workspace_id: Some(provider.workspace_id().to_string()),
         };
 
-        let config_content = toml::to_string_pretty(&config)
+        let mut document = toml::Value::try_from(&config)?;
+        let remote = config.remote_url.as_deref().unwrap_or("");
+        let origin = http::configured_origin(&self.nap_home, remote)?;
+        document
+            .as_table_mut()
+            .unwrap()
+            .insert("http_url".into(), origin.into());
+        let config_content = toml::to_string_pretty(&document)
             .context("Failed to serialize provider configuration")?;
 
         let config_path = self.nap_home.join("provider.toml");
@@ -366,10 +376,13 @@ impl ProviderConfig {
                 }
                 // Validate URL format
                 let url = self.remote_url.as_ref().unwrap();
-                if !url.starts_with("lore://") && !url.starts_with("lores://") {
+                if !["lore://", "lores://", "grpc://", "grpcs://"]
+                    .iter()
+                    .any(|scheme| url.starts_with(scheme))
+                {
                     anyhow::bail!(
                         "Invalid remote_url '{}' in provider.toml. \
-                         URL must start with 'lore://' or 'lores://'. \
+                         URL must start with 'lore://', 'lores://', 'grpc://', or 'grpcs://'. \
                          Example: lore://localhost:41337",
                         url
                     );
@@ -380,8 +393,8 @@ impl ProviderConfig {
                 tracing::debug!("Local provider config validated (no additional fields required)");
             }
             ProviderType::PortalsCloud => {
-                // Cloud provider reads auth from environment variables
-                tracing::debug!("Portals Cloud provider config validated (auth from environment)");
+                // Repository operations use Lore's shared login.
+                tracing::debug!("Portals Cloud provider config validated");
             }
         }
 

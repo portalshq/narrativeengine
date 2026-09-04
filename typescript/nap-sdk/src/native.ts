@@ -62,7 +62,7 @@ interface NativeBindings {
 
   // Resolver
   resolve(uri: string, repoPath: string): string;
-  resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, path?: string): string;
+  resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, path?: string, source?: "remote" | "local"): string;
   resolveQuery(uri: string, repoPath: string, path: string): string;
   listRepositories(repoPath: string): string;
   presignRepresentation(uri: string, representation: string, repoPath: string, branch?: string, commit?: string, ttlSeconds?: number, httpUrl?: string, bearerToken?: string): Promise<string>;

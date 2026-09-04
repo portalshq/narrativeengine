@@ -47,7 +47,7 @@ struct ProviderConfigToml {
 }
 
 /// Hardcoded Portals Cloud URL (can be overridden by NAP_LORE_URL_BASE env var)
-const PORTALS_CLOUD_URL: &str = "grpcs://lore.portals.works";
+use crate::provider::portals_cloud::PORTALS_CLOUD_URL;
 
 // ---------------------------------------------------------------------------
 // LoreProcessRunner
@@ -182,6 +182,59 @@ fn parse_lore_event_data(stdout: &str, tag: &str) -> Result<serde_json::Value, S
     match_data.ok_or_else(|| format!("Lore returned no {tag} event"))
 }
 
+fn select_http_token(
+    events: &str,
+    repository: &str,
+    user: &str,
+    origin: &str,
+    now_ms: u64,
+) -> Result<Option<String>, NapError> {
+    let url = crate::provider::http::validate_origin(origin)
+        .map_err(|e| NapError::Other(e.to_string()))?;
+    let host = url.host_str().unwrap();
+    let mut selected = None;
+    for line in events.lines().filter(|line| !line.trim().is_empty()) {
+        // Never include the event or token in parse errors.
+        let event: serde_json::Value = serde_json::from_str(line)
+            .map_err(|_| NapError::VcsError("invalid Lore identity response".into()))?;
+        if event["tagName"] != "authIdentity" {
+            continue;
+        }
+        let data = &event["data"];
+        if data["resource"].as_str() != Some(repository)
+            || data["userId"].as_str() != Some(user)
+            || data["expires"].as_u64().unwrap_or(0) <= now_ms
+        {
+            continue;
+        }
+        let authorized = data["authorizedDomains"]
+            .as_str()
+            .unwrap_or("")
+            .split(',')
+            .any(|domain| {
+                let domain = domain.trim().to_ascii_lowercase();
+                !domain.is_empty()
+                    && (host.eq_ignore_ascii_case(&domain)
+                        || host.to_ascii_lowercase().ends_with(&format!(".{domain}")))
+            });
+        if !authorized {
+            continue;
+        }
+        if let Some(token) = data["token"].as_str().filter(|s| !s.is_empty()) {
+            if selected
+                .as_deref()
+                .is_some_and(|previous| previous != token)
+            {
+                return Err(NapError::VcsError(
+                    "ambiguous Lore repository credentials; run nap auth login".into(),
+                ));
+            }
+            selected = Some(token.to_string());
+        }
+    }
+    Ok(selected)
+}
+
 fn event_string(data: &serde_json::Value, field: &str) -> Result<String, String> {
     data.get(field)
         .and_then(serde_json::Value::as_str)
@@ -280,6 +333,43 @@ pub struct LoreBackend {
 }
 
 impl LoreBackend {
+    /// Construct a backend using a specific NAP home rather than whichever
+    /// directory happens to be in `NAP_DIR`.
+    pub fn from_nap_home(nap_home: &Path) -> Self {
+        if std::env::var("NAP_LORE_URL_BASE").is_ok() || std::env::var("NAP_WORKSPACE_ID").is_ok() {
+            return Self::from_env();
+        }
+        let workspace_id = std::fs::read_to_string(nap_home.join("provider.toml"))
+            .ok()
+            .and_then(|content| toml::from_str::<ProviderConfigToml>(&content).ok())
+            .and_then(|config| config.workspace_id)
+            .unwrap_or_else(|| "default".to_string());
+        Self::from_provider(&Self::configured_server_url(nap_home), &workspace_id)
+    }
+    /// Resolve the configured Lore server for a NAP home. This is shared by
+    /// remote readers so `--base-dir` is respected instead of silently
+    /// consulting a different `NAP_DIR`.
+    pub fn configured_server_url(nap_home: &Path) -> String {
+        if let Ok(url) = std::env::var("NAP_LORE_URL_BASE") {
+            return url;
+        }
+        let config_path = nap_home.join("provider.toml");
+        if let Ok(content) = std::fs::read_to_string(config_path)
+            && let Ok(config) = toml::from_str::<ProviderConfigToml>(&content)
+        {
+            match config.provider_type.as_str() {
+                "remote" => {
+                    if let Some(url) = config.remote_url {
+                        return url;
+                    }
+                }
+                "portals-cloud" => return PORTALS_CLOUD_URL.to_string(),
+                "local" => return "lore://localhost:41337".to_string(),
+                _ => {}
+            }
+        }
+        "lore://localhost:41337".to_string()
+    }
     /// Create a new Lore backend.
     ///
     /// `remote_url` should be a `lore://host/repository` URL.
@@ -310,6 +400,39 @@ impl LoreBackend {
             ],
             None,
         )?;
+        Ok(())
+    }
+
+    /// Clone only the requested repository-root files and their dependencies.
+    /// Lore keeps the resulting checkout sparse while still materialising the
+    /// NAP manifests needed by an entity pull.
+    pub fn clone_repo_with_root_files(
+        url: &str,
+        dest: &Path,
+        root_files: &[String],
+    ) -> Result<(), NapError> {
+        let mut args = vec![
+            "clone".to_string(),
+            url.to_string(),
+            dest.to_string_lossy().to_string(),
+            "--non-interactive".to_string(),
+        ];
+        for root_file in root_files {
+            args.push("--root-file".to_string());
+            args.push(root_file.clone());
+        }
+        LoreProcessRunner::run(args.iter().map(String::as_str), None)?;
+        Ok(())
+    }
+
+    /// Synchronize selected root files in an existing Lore working tree.
+    pub fn sync_root_files(dest: &Path, root_files: &[String]) -> Result<(), NapError> {
+        let mut args = vec!["revision".to_string(), "sync".to_string()];
+        for root_file in root_files {
+            args.push("--root-file".to_string());
+            args.push(root_file.clone());
+        }
+        LoreProcessRunner::run(args.iter().map(String::as_str), Some(dest))?;
         Ok(())
     }
 
@@ -741,6 +864,47 @@ impl VcsBackend for LoreBackend {
         Ok(VcsRepositoryDescriptor { id, remote_url })
     }
 
+    fn http_bearer_token(
+        &self,
+        repo_path: &Path,
+        repository_id: &str,
+        http_origin: &str,
+    ) -> Result<Option<String>, NapError> {
+        // repository_descriptor and manifest hydration already exercised Lore's
+        // authenticated transport, which refreshes repository-scoped credentials.
+        let identity = LoreProcessRunner::run(
+            ["auth", "info", "--json", "--non-interactive"],
+            Some(repo_path),
+        )?;
+        let user = parse_lore_event_data(&identity, "authUserInfo")
+            .and_then(|data| event_string(&data, "id"))
+            .map_err(|_| {
+                NapError::VcsError("No active Lore identity; run nap auth login".into())
+            })?;
+        let tokens = LoreProcessRunner::run(
+            [
+                "auth",
+                "list",
+                "--with-token",
+                "--json",
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )
+        .map_err(|_| {
+            NapError::VcsError(
+                "Could not read Lore repository credentials; run nap auth login".into(),
+            )
+        })?;
+        select_http_token(
+            &tokens,
+            repository_id,
+            &user,
+            http_origin,
+            chrono::Utc::now().timestamp_millis().max(0) as u64,
+        )
+    }
+
     fn file_content_address_at_ref(
         &self,
         repo_path: &Path,
@@ -1131,6 +1295,55 @@ impl VcsBackend for LoreBackend {
 #[cfg(test)]
 mod structured_output_tests {
     use super::*;
+
+    #[test]
+    fn http_credentials_are_scoped_to_identity_repository_domain_and_expiry() {
+        let token = |repo: &str, user: &str, domain: &str, expires: u64| {
+            serde_json::json!({
+                "tagName": "authIdentity", "data": { "resource": repo, "userId": user,
+                    "authorizedDomains": domain, "expires": expires, "token": "test-secret" }
+            })
+            .to_string()
+        };
+        let origin = "https://lore.portals.works";
+        assert_eq!(
+            select_http_token(
+                &token("repo", "alice", "portals.works", 2000),
+                "repo",
+                "alice",
+                origin,
+                1000
+            )
+            .unwrap()
+            .as_deref(),
+            Some("test-secret")
+        );
+        for event in [
+            token("", "alice", "portals.works", 2000),
+            token("other", "alice", "portals.works", 2000),
+            token("repo", "bob", "portals.works", 2000),
+            token("repo", "alice", "", 2000),
+            token("repo", "alice", "other.test", 2000),
+            token("repo", "alice", "portals.works", 500),
+        ] {
+            assert!(
+                select_http_token(&event, "repo", "alice", origin, 1000)
+                    .unwrap()
+                    .is_none()
+            );
+        }
+        assert!(
+            select_http_token(
+                &token("repo", "alice", "portals.works", 2000),
+                "repo",
+                "alice",
+                "https://evilportals.works",
+                1000
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
 
     #[test]
     fn parses_repository_and_file_events_independently() {

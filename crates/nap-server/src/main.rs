@@ -747,6 +747,7 @@ async fn handle_resolve(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
     let uri_str = format!("nap://{repository}/{entity_type}/{entity_id}");
     let options = ResolveOptions {
+        source: Some(nap_core::resolver::ResolveSource::Local),
         branch: query.branch,
         commit: query.commit,
         path: query.path,

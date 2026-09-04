@@ -23,12 +23,27 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use crate::error::NapError;
+use crate::grpc_client::{LoreGrpcClient, block_on_grpc};
 use crate::manifest::Manifest;
 use crate::query::ManifestQuery;
 use crate::repository::Repository;
 use crate::uri::NapUri;
 use crate::vcs::VcsBackend;
 use crate::vcs_lore::LoreBackend;
+
+/// Where repository-backed reads are performed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResolveSource {
+    /// Use the configured Lore server, falling back to local Lore when no
+    /// provider configuration exists.
+    #[default]
+    Auto,
+    /// Require the configured (or default local) Lore server.
+    Remote,
+    /// Read a checked-out NAP working tree under `base_path`.
+    Local,
+}
 
 /// Resolver configuration — set at construction time.
 ///
@@ -48,6 +63,9 @@ pub struct ResolveConfig {
 /// configured) or fail with [`NapError::NoDefaultBranch`].
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResolveOptions {
+    /// Select server-backed or explicit working-tree resolution.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<ResolveSource>,
     /// Resolve at a specific branch. e.g., `"canon"`.
     /// Takes precedence over [`ResolveConfig::default_branch`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -216,6 +234,22 @@ fn validate_presigned_url(
     Ok(url)
 }
 
+fn format_lore_repository_id(bytes: &[u8]) -> String {
+    if bytes.len() == 16 {
+        let value = hex::encode(bytes);
+        format!(
+            "{}-{}-{}-{}-{}",
+            &value[..8],
+            &value[8..12],
+            &value[12..16],
+            &value[16..20],
+            &value[20..]
+        )
+    } else {
+        hex::encode(bytes)
+    }
+}
+
 impl ResolveOptions {
     /// Returns the query path (from options or URI fragment).
     fn query_path(&self, uri: &NapUri) -> Option<String> {
@@ -293,6 +327,7 @@ pub struct Resolver {
     use_vcs: bool,
     /// Resolution configuration (default branch, etc.).
     config: ResolveConfig,
+    source: ResolveSource,
 }
 
 impl Resolver {
@@ -316,11 +351,19 @@ impl Resolver {
     /// └── marvel/      ← repository repo
     /// ```
     pub fn new(base_path: &Path) -> Self {
+        let source = match std::env::var("NAP_RESOLVE_SOURCE").ok().as_deref() {
+            Some("local") => ResolveSource::Local,
+            Some("remote") => ResolveSource::Remote,
+            _ => ResolveSource::Auto,
+        };
         Self {
             base_path: base_path.to_path_buf(),
             vcs_factory: || Box::new(LoreBackend::from_env()),
-            use_vcs: crate::provider::version_control_configured(base_path),
+            // Even without provider.toml, NAP's established local Lore server
+            // is the default server for explicit working-tree reads.
+            use_vcs: true,
             config: ResolveConfig::default(),
+            source,
         }
     }
 
@@ -337,7 +380,250 @@ impl Resolver {
             vcs_factory: factory,
             use_vcs: true,
             config,
+            source: ResolveSource::Local,
         }
+    }
+
+    /// Override the resolver's default source. Primarily useful to callers
+    /// that need an explicit local working-tree read.
+    pub fn with_source(mut self, source: ResolveSource) -> Self {
+        self.source = source;
+        self
+    }
+
+    fn effective_source(&self, options: &ResolveOptions) -> ResolveSource {
+        options.source.unwrap_or(self.source)
+    }
+
+    fn remote_client(&self) -> Result<LoreGrpcClient, NapError> {
+        let server = LoreBackend::configured_server_url(&self.base_path);
+        let endpoint = server
+            .strip_prefix("lore://")
+            .map(|rest| format!("http://{rest}"))
+            .or_else(|| {
+                server
+                    .strip_prefix("grpc://")
+                    .map(|rest| format!("http://{rest}"))
+            })
+            .or_else(|| {
+                server
+                    .strip_prefix("lores://")
+                    .map(|rest| format!("https://{rest}"))
+            })
+            .or_else(|| {
+                server
+                    .strip_prefix("grpcs://")
+                    .map(|rest| format!("https://{rest}"))
+            })
+            .unwrap_or(server);
+        let mut builder = LoreGrpcClient::builder().endpoint(endpoint);
+        if let Ok(token) = std::env::var("NAP_LORE_GRPC_TOKEN") {
+            builder = builder.token(token);
+        } else if let Ok(token) = std::env::var("NAP_REMOTE_AUTH_TOKEN") {
+            builder = builder.token(token);
+        }
+        builder.build()
+    }
+
+    fn remote_manifest(
+        &self,
+        uri: &NapUri,
+        options: &ResolveOptions,
+    ) -> Result<Manifest, NapError> {
+        if options.provenance.unwrap_or(false) || options.include_blobs.unwrap_or(false) {
+            return Err(NapError::Other(
+                "remote provenance is not supported yet".to_string(),
+            ));
+        }
+        let client = self.remote_client()?;
+        let repository = uri.repository.clone();
+        let path = uri.manifest_path();
+        let branch = options.branch.clone();
+        let commit = options.commit.clone();
+        let bytes = block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository).await?;
+            let scoped = client.for_repository_id(repo.id.clone());
+            if let Some(commit) = commit {
+                let signature = hex::decode(commit.trim_start_matches("blake3:")).map_err(|e| {
+                    NapError::InvalidUri {
+                        uri: commit,
+                        reason: format!("invalid revision signature: {e}"),
+                    }
+                })?;
+                scoped
+                    .read_file_at_signature(signature, path)
+                    .await
+                    .map(|(bytes, _)| bytes)
+            } else {
+                let branch_id = match branch {
+                    Some(name) => scoped.get_branch_by_name(&name).await?.id.to_vec(),
+                    None => repo.default_branch_id.to_vec(),
+                };
+                scoped
+                    .read_file_at_revision(
+                        crate::grpc_client::proto_gen::lore::model::v1::RevisionIdentifier {
+                            branch_id: branch_id.into(),
+                            number: 0,
+                        },
+                        path,
+                    )
+                    .await
+                    .map(|(bytes, _)| bytes)
+            }
+        })?;
+        serde_yaml::from_slice(&bytes).map_err(|source| NapError::ManifestParseError {
+            path: uri.manifest_path(),
+            source,
+        })
+    }
+
+    fn remote_representation_address(
+        &self,
+        uri: &NapUri,
+        options: &PresignOptions,
+        path: String,
+    ) -> Result<
+        (
+            Vec<u8>,
+            crate::grpc_client::proto_gen::lore::model::v1::Address,
+            String,
+        ),
+        NapError,
+    > {
+        let client = self.remote_client()?;
+        let repository_name = uri.repository.clone();
+        let branch = options.branch.clone();
+        let commit = options.commit.clone();
+        block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository_name).await?;
+            let scoped = client.for_repository_id(repo.id.clone());
+            let identifier = if let Some(commit) = commit {
+                let signature = hex::decode(commit.trim_start_matches("blake3:"))
+                    .map_err(|e| NapError::Other(format!("invalid revision signature: {e}")))?;
+                scoped
+                    .revision_info_at_signature(signature)
+                    .await?
+                    .identifier
+                    .ok_or_else(|| {
+                        NapError::GrpcError("RevisionInfo returned no identifier".to_string())
+                    })?
+            } else {
+                let branch_id = match branch {
+                    Some(name) => scoped.get_branch_by_name(&name).await?.id,
+                    None => repo.default_branch_id.clone(),
+                };
+                crate::grpc_client::proto_gen::lore::model::v1::RevisionIdentifier {
+                    branch_id,
+                    number: 0,
+                }
+            };
+            let (address, signature) = scoped.file_address_at_revision(identifier, path).await?;
+            Ok((repo.id.to_vec(), address, hex::encode(signature)))
+        })
+    }
+
+    async fn presign_remote_representation(
+        &self,
+        uri: &NapUri,
+        representation_name: &str,
+        options: &PresignOptions,
+    ) -> Result<PresignedRepresentation, NapError> {
+        let manifest = self.remote_manifest(
+            uri,
+            &ResolveOptions {
+                branch: options.branch.clone(),
+                commit: options.commit.clone(),
+                source: Some(ResolveSource::Remote),
+                ..Default::default()
+            },
+        )?;
+        let representation = manifest
+            .representations
+            .get(representation_name)
+            .ok_or_else(|| {
+                NapError::Other(format!(
+                    "representation '{representation_name}' does not exist on {}",
+                    manifest.id
+                ))
+            })?;
+        let representation_uri = representation.uri.as_deref().ok_or_else(|| {
+            NapError::Other(format!(
+                "representation '{representation_name}' has no repository-relative URI"
+            ))
+        })?;
+        let file_path = Self::resolve_representation_path(uri, representation_uri)?
+            .ok_or_else(|| NapError::Other(format!("representation '{representation_name}' is external; only direct repository files can be presigned")))?;
+        let (repository_id_bytes, address, revision) =
+            self.remote_representation_address(uri, options, file_path)?;
+        let hash = hex::encode(&address.hash);
+        if let Some(expected) = representation.hash.strip_prefix("blake3:")
+            && expected != hash
+        {
+            return Err(NapError::ContentHashMismatch {
+                expected: representation.hash.clone(),
+                actual: format!("blake3:{hash}"),
+            });
+        }
+        let repository_id = format_lore_repository_id(&repository_id_bytes);
+        let address_string = format!("{}-{}", hash, hex::encode(&address.context));
+        let http_url = options
+            .lore_http_url
+            .clone()
+            .or_else(|| std::env::var("NAP_LORE_HTTP_URL").ok())
+            .unwrap_or(
+                crate::provider::http::configured_origin(
+                    &self.base_path,
+                    &LoreBackend::configured_server_url(&self.base_path),
+                )
+                .map_err(|e| NapError::Other(e.to_string()))?,
+            );
+        let base_url = crate::provider::http::validate_origin(&http_url)
+            .map_err(|e| NapError::Other(e.to_string()))?;
+        let endpoint = base_url
+            .join(&format!(
+                "/v1/repository/{repository_id}/content/{address_string}/presign"
+            ))
+            .map_err(|e| NapError::Other(format!("failed to construct Lore presign URL: {e}")))?;
+        let token = options
+            .bearer_token
+            .clone()
+            .or_else(|| std::env::var("NAP_LORE_HTTP_TOKEN").ok())
+            .or_else(|| std::env::var("NAP_LORE_GRPC_TOKEN").ok());
+        let mut request = presign_http_client()?
+            .post(endpoint)
+            .json(&LorePresignRequest {
+                ttl_seconds: options.ttl_seconds,
+            });
+        if let Some(token) = token.filter(|token| !token.is_empty()) {
+            request = request.bearer_auth(token);
+        }
+        let (status, body) = read_bounded_response(
+            request
+                .send()
+                .await
+                .map_err(|e| NapError::Other(format!("Lore presign request failed: {e}")))?,
+            64 * 1024,
+        )
+        .await?;
+        if !status.is_success() {
+            return Err(NapError::Other(format!(
+                "Lore presign failed with HTTP {status}: {}",
+                String::from_utf8_lossy(&body).trim()
+            )));
+        }
+        let response: LorePresignResponse = serde_json::from_slice(&body)
+            .map_err(|e| NapError::Other(format!("invalid Lore presign response: {e}")))?;
+        let expected_path = format!("/v1/presigned/{repository_id}/{address_string}");
+        let url = validate_presigned_url(&base_url, &response.url_suffix, &expected_path)?;
+        Ok(PresignedRepresentation {
+            url: url.to_string(),
+            expires_at: response.expires_at,
+            revision,
+            repository_id,
+            address: address_string,
+            representation: representation_name.to_string(),
+            format: representation.format.clone(),
+        })
     }
 
     /// Open the repository for a given repository and read its resolve config.
@@ -396,6 +682,11 @@ impl Resolver {
 
     /// Create a time-limited public URL for a direct, committed representation.
     ///
+    /// `uri_str` identifies the entity (for example,
+    /// `25th-chapter/character/nathan-gunn`, with an optional `nap://` prefix).
+    /// `representation_name` is its manifest representation key, such as `item`.
+    /// The representation URI is relative to the entity's asset directory.
+    ///
     /// The returned URL is a bearer capability. Callers must not log it or
     /// persist it beyond `expires_at`.
     pub async fn presign_representation(
@@ -421,6 +712,12 @@ impl Resolver {
                 uri: uri_str.to_string(),
                 reason: "fragments are not supported when presigning a representation".to_string(),
             });
+        }
+
+        if self.source != ResolveSource::Local {
+            return self
+                .presign_remote_representation(&uri, representation_name, options)
+                .await;
         }
 
         let (repo, repo_config) = self.open_repo(&uri.repository)?;
@@ -481,43 +778,13 @@ impl Resolver {
             .or_else(|| std::env::var("NAP_LORE_HTTP_URL").ok());
         let http_url = match configured_http_url {
             Some(url) => url,
-            None if repository.remote_url.contains("lore.portals.works") => {
-                // TODO(PORTALS-CLOUD-PRESIGN): Do not infer an HTTP origin from
-                // the production gRPC hostname until the separately reviewed
-                // 41339 target group, HMAC secret, and narrow path routes exist.
-                return Err(NapError::Other(
-                    "Portals Cloud presigned URLs are not enabled yet; production HTTP ingress is WIP. Supply --http-url or NAP_LORE_HTTP_URL only for an explicitly configured Lore HTTP endpoint."
-                        .to_string(),
-                ));
-            }
-            None if repository.remote_url.is_empty()
-                || repository.remote_url.contains("localhost")
-                || repository.remote_url.contains("127.0.0.1") =>
-            {
-                "http://127.0.0.1:41339".to_string()
-            }
             None => {
-                return Err(NapError::Other(
-                    "Lore HTTP endpoint is not configured; set NAP_LORE_HTTP_URL or pass --http-url"
-                        .to_string(),
-                ));
+                crate::provider::http::configured_origin(&self.base_path, &repository.remote_url)
+                    .map_err(|e| NapError::Other(e.to_string()))?
             }
         };
-        let base_url = reqwest::Url::parse(&http_url)
-            .map_err(|e| NapError::Other(format!("invalid Lore HTTP URL: {e}")))?;
-        if !matches!(base_url.scheme(), "http" | "https")
-            || base_url.host_str().is_none()
-            || !base_url.username().is_empty()
-            || base_url.password().is_some()
-            || base_url.query().is_some()
-            || base_url.fragment().is_some()
-            || !matches!(base_url.path(), "" | "/")
-        {
-            return Err(NapError::Other(
-                "Lore HTTP URL must be an http(s) origin without credentials, path, query, or fragment"
-                    .to_string(),
-            ));
-        }
+        let base_url = crate::provider::http::validate_origin(&http_url)
+            .map_err(|e| NapError::Other(e.to_string()))?;
 
         let endpoint_path = format!(
             "/v1/repository/{}/content/{}/presign",
@@ -536,6 +803,7 @@ impl Resolver {
             .json(&LorePresignRequest {
                 ttl_seconds: options.ttl_seconds,
             });
+        let explicit_token = bearer_token.as_ref().is_some_and(|token| !token.is_empty());
         if let Some(token) = bearer_token.filter(|token| !token.is_empty()) {
             let mut value = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
                 .map_err(|_| {
@@ -545,16 +813,42 @@ impl Resolver {
             request = request.header(AUTHORIZATION, value);
         }
 
-        let response = request
+        let retry = request.try_clone();
+        let mut response = request
             .send()
             .await
             .map_err(|e| NapError::Other(format!("Lore presign request failed: {e}")))?;
+        if response.status() == reqwest::StatusCode::UNAUTHORIZED && !explicit_token {
+            let loopback = base_url.host_str().is_some_and(|host| {
+                host == "localhost"
+                    || host
+                        .trim_matches(['[', ']'])
+                        .parse::<std::net::IpAddr>()
+                        .is_ok_and(|ip| ip.is_loopback())
+            });
+            if base_url.scheme() != "https" && !loopback {
+                return Err(NapError::Other(
+                    "automatic Lore authentication requires HTTPS for remote HTTP endpoints".into(),
+                ));
+            }
+            if let Some(token) = vcs.http_bearer_token(&repo.root, &repository.id, &http_url)? {
+                let mut value = reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))
+                    .map_err(|_| NapError::Other("invalid Lore bearer token".into()))?;
+                value.set_sensitive(true);
+                response = retry
+                    .ok_or_else(|| NapError::Other("cannot retry Lore presign request".into()))?
+                    .header(AUTHORIZATION, value)
+                    .send()
+                    .await
+                    .map_err(|e| NapError::Other(format!("Lore presign request failed: {e}")))?;
+            }
+        }
         let (status, body) = read_bounded_response(response, 64 * 1024).await?;
         if !status.is_success() {
             let detail = String::from_utf8_lossy(&body);
             let message = match status {
                 reqwest::StatusCode::UNAUTHORIZED => {
-                    "Lore rejected the request as unauthenticated; set NAP_LORE_HTTP_TOKEN (or NAP_LORE_GRPC_TOKEN) to a repository-scoped bearer token".to_string()
+                    "Lore requires an authenticated repository identity; run nap auth login and retry".to_string()
                 }
                 reqwest::StatusCode::FORBIDDEN => {
                     "Lore denied permission to presign this repository representation".to_string()
@@ -627,6 +921,18 @@ impl Resolver {
         uri: &NapUri,
         options: &ResolveOptions,
     ) -> Result<ResolveResult, NapError> {
+        if self.effective_source(options) != ResolveSource::Local {
+            let manifest = self.remote_manifest(uri, options)?;
+            return match options.query_path(uri) {
+                Some(path) => {
+                    let value = ManifestQuery::query(&manifest.to_value()?, &path, &manifest.id)?;
+                    Ok(ResolveResult::Subtree(
+                        serde_json::to_value(value).map_err(|e| NapError::Other(e.to_string()))?,
+                    ))
+                }
+                None => Ok(ResolveResult::Full(Box::new(manifest))),
+            };
+        }
         let (repo, repo_config) = self.open_repo(&uri.repository)?;
         let query_path = options.query_path(uri);
 
@@ -1088,6 +1394,10 @@ impl Resolver {
 
     /// List all repositories available.
     pub fn list_repositories(&self) -> Result<Vec<String>, NapError> {
+        if self.source != ResolveSource::Local {
+            let client = self.remote_client()?;
+            return block_on_grpc(async move { client.list_repositories().await });
+        }
         let mut repositories = Vec::new();
         for entry in std::fs::read_dir(&self.base_path)? {
             let entry = entry?;
@@ -1102,6 +1412,176 @@ impl Resolver {
         }
         repositories.sort();
         Ok(repositories)
+    }
+
+    /// List entity YAMLs from the default branch of the configured Lore server.
+    pub fn list_remote_entities(
+        &self,
+        repository: &str,
+        entity_type: &crate::types::EntityType,
+    ) -> Result<Vec<String>, NapError> {
+        let client = self.remote_client()?;
+        let repository_name = repository.to_string();
+        let prefix = format!("{}/", entity_type.directory_name());
+        let paths = block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository_name).await?;
+            client
+                .for_repository_id(repo.id.clone())
+                .list_paths_at_revision(
+                    crate::grpc_client::proto_gen::lore::model::v1::RevisionIdentifier {
+                        branch_id: repo.default_branch_id,
+                        number: 0,
+                    },
+                    prefix,
+                )
+                .await
+        })?;
+        let mut entities = paths
+            .into_iter()
+            .filter_map(|path| {
+                path.strip_prefix(&format!("{}/", entity_type.directory_name()))
+                    .map(str::to_string)
+            })
+            .filter(|path| !path.contains('/'))
+            .filter_map(|path| path.strip_suffix(".yaml").map(str::to_string))
+            .collect::<Vec<_>>();
+        entities.sort();
+        Ok(entities)
+    }
+
+    /// List repository-relative entity manifest paths from the default branch.
+    pub fn list_remote_manifest_paths(&self, repository: &str) -> Result<Vec<String>, NapError> {
+        let client = self.remote_client()?;
+        let repository_name = repository.to_string();
+        block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository_name).await?;
+            let mut paths = client
+                .for_repository_id(repo.id.clone())
+                .list_paths_at_revision(
+                    crate::grpc_client::proto_gen::lore::model::v1::RevisionIdentifier {
+                        branch_id: repo.default_branch_id,
+                        number: 0,
+                    },
+                    String::new(),
+                )
+                .await?;
+            paths.retain(|path| {
+                path != "repository.yaml"
+                    && path.ends_with(".yaml")
+                    && path.matches('/').count() == 1
+            });
+            paths.sort();
+            Ok(paths)
+        })
+    }
+
+    pub fn list_remote_branches(&self, repository: &str) -> Result<Vec<String>, NapError> {
+        let client = self.remote_client()?;
+        let repository_name = repository.to_string();
+        block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository_name).await?;
+            let mut branches = client
+                .for_repository_id(repo.id)
+                .list_branches()
+                .await?
+                .into_iter()
+                .map(|branch| branch.name)
+                .collect::<Vec<_>>();
+            branches.sort();
+            Ok(branches)
+        })
+    }
+
+    pub fn remote_head_hash(&self, repository: &str) -> Result<String, NapError> {
+        let client = self.remote_client()?;
+        let repository_name = repository.to_string();
+        block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository_name).await?;
+            let branch = client
+                .for_repository_id(repo.id)
+                .get_branch_by_name(&repo.default_branch_name)
+                .await?;
+            Ok(hex::encode(branch.latest))
+        })
+    }
+
+    pub fn remote_history(
+        &self,
+        uri: &NapUri,
+        limit: usize,
+    ) -> Result<Vec<crate::vcs::CommitInfo>, NapError> {
+        let client = self.remote_client()?;
+        let repository_name = uri.repository.clone();
+        let manifest_path = uri.manifest_path();
+        block_on_grpc(async move {
+            let repo = client.get_repository_by_name(&repository_name).await?;
+            let scoped = client.for_repository_id(repo.id.clone());
+            let items = scoped
+                .list_revisions(
+                    crate::grpc_client::proto_gen::lore::model::v1::RevisionIdentifier {
+                        branch_id: repo.default_branch_id,
+                        number: 0,
+                    },
+                )
+                .await?;
+            let mut history = Vec::new();
+            for item in items {
+                let revision = scoped
+                    .revision_info_at_signature(item.signature.to_vec())
+                    .await?;
+                let identifier = revision.identifier.clone().ok_or_else(|| {
+                    NapError::GrpcError("RevisionInfo returned no identifier".to_string())
+                })?;
+                let current = match scoped
+                    .file_address_at_revision(identifier, manifest_path.clone())
+                    .await
+                {
+                    Ok(value) => Some(value),
+                    Err(NapError::ManifestNotFound(_)) => None,
+                    Err(error) => return Err(error),
+                };
+                let parent = revision.parent_self.as_ref();
+                let previous = match parent.and_then(|parent| parent.identifier.clone()) {
+                    Some(identifier) => match scoped
+                        .file_address_at_revision(identifier, manifest_path.clone())
+                        .await
+                    {
+                        Ok(value) => Some(value),
+                        Err(NapError::ManifestNotFound(_)) => None,
+                        Err(error) => return Err(error),
+                    },
+                    None => None,
+                };
+                let current_address = current
+                    .as_ref()
+                    .map(|(address, _)| (&address.hash, &address.context));
+                let previous_address = previous
+                    .as_ref()
+                    .map(|(address, _)| (&address.hash, &address.context));
+                if current_address == previous_address {
+                    continue;
+                }
+                let parent = revision
+                    .parent_self
+                    .as_ref()
+                    .map(|parent| hex::encode(&parent.signature));
+                let timestamp =
+                    chrono::DateTime::<chrono::Utc>::from_timestamp(revision.timestamp as i64, 0)
+                        .map(|time| time.to_rfc3339())
+                        .unwrap_or_default();
+                history.push(crate::vcs::CommitInfo::from_lore_revision(
+                    &hex::encode(revision.signature),
+                    parent.as_deref(),
+                    &revision.committed_by,
+                    &revision.commit_message,
+                    &timestamp,
+                ));
+                if history.len() == limit {
+                    break;
+                }
+            }
+            Ok(history)
+        })
     }
 }
 
@@ -1666,6 +2146,53 @@ mod unit_tests {
         assert_eq!(result.expires_at, 12345);
         assert_eq!(result.repository_id, "0123456789abcdef0123456789abcdef");
         assert!(result.url.ends_with("?token=opaque"));
+    }
+
+    #[tokio::test]
+    async fn presign_reuses_existing_login_after_http_challenge() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let (tmp, resolver) = setup();
+        std::fs::write(
+            tmp.path().join("toystory/.mock_http_token"),
+            "cached-repository-token",
+        )
+        .unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            for authenticated in [false, true] {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = vec![0; 8192];
+                let read = stream.read(&mut request).await.unwrap();
+                let request = String::from_utf8_lossy(&request[..read]);
+                assert_eq!(
+                    request.contains("authorization: Bearer cached-repository-token"),
+                    authenticated
+                );
+                let (status, body) = if authenticated {
+                    (
+                        "200 OK",
+                        r#"{"url_suffix":"/v1/presigned/0123456789abcdef0123456789abcdef/9753abf79e5aef60bd95ab76c1e5a14d01239beb37ff9897b6af8e040eb2413a-fedcba9876543210fedcba9876543210?token=opaque","expires_at":12345}"#,
+                    )
+                } else {
+                    ("401 Unauthorized", "unauthenticated")
+                };
+                stream.write_all(format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+            }
+        });
+        let result = resolver
+            .presign_representation(
+                "toystory/character/woody",
+                "face_image",
+                &PresignOptions {
+                    lore_http_url: Some(origin),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.expires_at, 12345);
+        server.await.unwrap();
     }
 
     #[test]

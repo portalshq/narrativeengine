@@ -14,6 +14,7 @@ pub struct RemoteProvider {
     url_base: String,
     workspace_id: String,
     auth_token: Option<String>,
+    http_url: Option<String>,
 }
 
 impl RemoteProvider {
@@ -23,6 +24,7 @@ impl RemoteProvider {
             url_base: url_base.to_string(),
             workspace_id: workspace_id.to_string(),
             auth_token: std::env::var("NAP_REMOTE_AUTH_TOKEN").ok(),
+            http_url: None,
         }
     }
 
@@ -32,7 +34,14 @@ impl RemoteProvider {
             url_base: url_base.to_string(),
             workspace_id: super::get_default_workspace_id(),
             auth_token: std::env::var("NAP_REMOTE_AUTH_TOKEN").ok(),
+            http_url: None,
         }
+    }
+
+    pub fn with_http_url(mut self, url: &str) -> Result<Self> {
+        super::http::validate_origin(url)?;
+        self.http_url = Some(url.trim_end_matches('/').to_string());
+        Ok(self)
     }
 
     /// Set custom auth token
@@ -41,32 +50,45 @@ impl RemoteProvider {
         self
     }
 
+    async fn probe(&self) -> Result<()> {
+        let rpc = reqwest::Url::parse(&self.url_base)?;
+        let tls_edge = rpc.host_str() == Some("lore.portals.works")
+            || (matches!(rpc.scheme(), "grpcs" | "lores" | "https")
+                && matches!(rpc.port(), None | Some(443)));
+        if tls_edge {
+            // TLS edges may expose only selected HTTP routes, while gRPC remains
+            // available on the origin. Connectivity does not require repository auth.
+            tonic::transport::Endpoint::from_shared(super::http::default_origin(&self.url_base)?)?
+                .connect_timeout(std::time::Duration::from_secs(10))
+                .connect()
+                .await
+                .context("Failed to connect to Lore TLS endpoint")?;
+        } else {
+            reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()?
+                .get(self.http_health_url()?)
+                .send()
+                .await
+                .context("Failed to connect to remote Lore server")?
+                .error_for_status()
+                .context("Remote Lore server health check failed")?;
+        }
+        Ok(())
+    }
+
     /// Parse URL to extract HTTP health check endpoint
     ///
     /// Lore server uses port 41337 for gRPC/QUIC (lore:// URLs) and port 41339 for HTTP.
     /// This function converts lore://host:41337 to http://host:41339/health_check
     fn http_health_url(&self) -> Result<String> {
-        // Parse the lore:// URL to extract host and optionally port
-        let (scheme, rest) = if self.url_base.starts_with("lore://") {
-            ("http", &self.url_base[7..]) // "lore://" is 7 characters
-        } else if self.url_base.starts_with("lores://") {
-            ("https", &self.url_base[8..]) // "lores://" is 8 characters
-        } else {
-            anyhow::bail!("Invalid Lore URL format: {}", self.url_base);
-        };
-
-        // Split host and port if present
-        let host = if rest.contains(':') {
-            // Extract host part, ignore the lore port (typically 41337)
-            rest.split(':').next().unwrap()
-        } else {
-            rest
-        };
-
-        // Lore server uses port 41339 for HTTP health checks
-        let http_port = 41339;
-
-        Ok(format!("{}://{}:{}/health_check", scheme, host, http_port))
+        Ok(format!(
+            "{}/health_check",
+            self.http_url
+                .clone()
+                .map(Ok)
+                .unwrap_or_else(|| super::http::default_origin(&self.url_base))?
+        ))
     }
 }
 
@@ -91,18 +113,7 @@ impl Provider for RemoteProvider {
 
         self.initialize().await?;
 
-        // Check connectivity to remote server
-        let health_url = self.http_health_url()?;
-        let response = reqwest::get(&health_url)
-            .await
-            .context("Failed to connect to remote Lore server")?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Remote Lore server health check failed: {}",
-                response.status()
-            );
-        }
+        self.probe().await?;
 
         info!("Remote provider is ready");
         Ok(())
@@ -117,11 +128,7 @@ impl Provider for RemoteProvider {
     }
 
     async fn health_check(&self) -> Result<bool> {
-        let health_url = self.http_health_url()?;
-        match reqwest::get(&health_url).await {
-            Ok(response) => Ok(response.status().is_success()),
-            Err(_) => Ok(false),
-        }
+        Ok(self.probe().await.is_ok())
     }
 
     async fn status(&self) -> Result<ProviderStatus> {

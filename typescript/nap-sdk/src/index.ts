@@ -146,6 +146,9 @@ export interface PresignOptions {
   bearerToken?: string;
 }
 
+/** Select the configured Lore server or an explicit local working tree. */
+export type ResolveSource = "remote" | "local";
+
 /** A time-limited public URL for an immutable representation. */
 export interface PresignedRepresentation {
   url: string;
@@ -908,10 +911,11 @@ export function resolve(
   branch?: string,
   commit?: string,
   path?: string,
+  source?: ResolveSource,
 ): Record<string, unknown> {
   const rp = resolveRepoPath(repoPath);
-  if (branch !== undefined || commit !== undefined || path !== undefined) {
-    return JSON.parse(native.resolveWithOptions(uri, rp, branch, commit, path)) as Record<string, unknown>;
+  if (branch !== undefined || commit !== undefined || path !== undefined || source !== undefined) {
+    return JSON.parse(native.resolveWithOptions(uri, rp, branch, commit, path, source)) as Record<string, unknown>;
   }
   return JSON.parse(native.resolve(uri, rp)) as Record<string, unknown>;
 }
@@ -920,7 +924,12 @@ export function resolve(
  * Create a time-limited public URL for a committed representation.
  *
  * The URL is a bearer capability. Do not log it or retain it beyond
- * `expires_at`. Portals Cloud HTTP ingress is currently not enabled.
+ * `expires_at`. Provider configuration selects the HTTP origin; authenticated
+ * requests reuse the active Lore login.
+ *
+ * @param uri Entity ID, such as `25th-chapter/character/nathan-gunn`; `nap://` is optional.
+ * @param representation Manifest representation key, such as `item`. Its URI is relative to the entity's asset directory.
+ * @param options Revision, lifetime, repository location, and Lore HTTP configuration.
  */
 export async function presignRepresentation(
   uri: string,

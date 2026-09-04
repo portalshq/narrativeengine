@@ -42,6 +42,7 @@ prost = "0.13"
 bytes = "1"
 object_store = { version = "0.11", features = ["aws"] }
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
 tempfile = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]

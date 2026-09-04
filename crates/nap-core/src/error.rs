@@ -43,6 +43,11 @@ pub enum NapError {
     #[error("repository not found at '{0}'")]
     RepositoryNotFound(String),
 
+    #[error(
+        "operation requires a local NAP working tree for '{repository}'; use 'nap pull {repository}' first"
+    )]
+    LocalWorkingTreeRequired { repository: String },
+
     #[error("repository already exists at '{0}'")]
     RepositoryAlreadyExists(String),
 

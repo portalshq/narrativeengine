@@ -27,7 +27,6 @@ use clap::Parser;
 use nap_cli::{AuthCmd, BackendCmd, ChooseCmd, Cli, Commands, RemoteCmd};
 use nap_core::{
     commit::Change,
-    error::NapError,
     manifest::Representation,
     provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
@@ -133,6 +132,17 @@ fn main() -> Result<()> {
         .or_else(|| std::env::var("NAP_DIR").ok().map(PathBuf::from))
         .unwrap_or_else(|| PathBuf::from("~/.nap"));
     let base_dir = expand_path(&base_dir);
+
+    // Server-backed reads are the default. Keep the selector in one place so
+    // every CLI-created Resolver observes the same source without widening all
+    // command function signatures.
+    if cli.local {
+        unsafe { std::env::set_var("NAP_RESOLVE_SOURCE", "local") };
+    } else if cli.remote {
+        unsafe { std::env::set_var("NAP_RESOLVE_SOURCE", "remote") };
+    } else {
+        unsafe { std::env::remove_var("NAP_RESOLVE_SOURCE") };
+    }
 
     // Ensure the base directory exists (e.g. ~/.nap/)
     std::fs::create_dir_all(&base_dir)
@@ -299,7 +309,7 @@ fn main() -> Result<()> {
 /// credential store. Login deliberately inherits stdio for browser/device-code
 /// interaction; repository commands remain noninteractive.
 fn cmd_auth(cmd: AuthCmd) -> Result<()> {
-    const CLOUD_REMOTE: &str = "grpcs://lore.portals.works";
+    use nap_core::provider::portals_cloud::PORTALS_CLOUD_URL as CLOUD_REMOTE;
     let cloud_auth_url = std::env::var("NAP_AUTH_URL")
         .unwrap_or_else(|_| "ucs-auth://auth.portals.works".to_string());
     let (args, stdin_secret): (Vec<String>, Option<String>) = match cmd {
@@ -411,8 +421,8 @@ fn prompt_for_provider() -> Result<String> {
 }
 
 /// Get LoreBackend with precedence: env vars > provider config > defaults
-fn get_lore_backend(_base_dir: &Path) -> LoreBackend {
-    LoreBackend::from_env()
+fn get_lore_backend(base_dir: &Path) -> LoreBackend {
+    LoreBackend::from_nap_home(base_dir)
 }
 
 /// Open a repository, honoring the optional version-control backend.
@@ -425,30 +435,15 @@ fn get_lore_backend(_base_dir: &Path) -> LoreBackend {
 fn open_repo(base_dir: &Path, repository: &str) -> Result<Repository> {
     let repo_path = base_dir.join(repository);
     let vcs: Option<Box<dyn nap_core::vcs::VcsBackend>> =
-        if nap_core::provider::version_control_configured(base_dir) {
-            Some(Box::new(get_lore_backend(base_dir)))
-        } else {
-            None
-        };
-    Repository::open_optional(&repo_path, vcs).map_err(|e| match e {
-        NapError::RepositoryNotFound(_) => {
-            anyhow::anyhow!("repository not found: '{}'", repository)
-        }
-        _ => anyhow::anyhow!(e),
-    })
+        Some(Box::new(get_lore_backend(base_dir)));
+    Repository::open_optional(&repo_path, vcs).map_err(|e| anyhow::anyhow!(e))
 }
 
 /// Return a configured VCS backend for CLI-initiated VCS operations, or a
 /// clear error when none is configured.
 fn require_backend(base_dir: &Path, operation: &str) -> Result<Box<dyn nap_core::vcs::VcsBackend>> {
-    if nap_core::provider::version_control_configured(base_dir) {
-        Ok(Box::new(get_lore_backend(base_dir)))
-    } else {
-        Err(NapError::BackendNotConfigured {
-            operation: operation.to_string(),
-        }
-        .into())
-    }
+    let _ = operation;
+    Ok(Box::new(get_lore_backend(base_dir)))
 }
 
 fn cmd_init(
@@ -1101,6 +1096,7 @@ fn cmd_resolve(
     let resolver = Resolver::new(base_dir);
     let wants_provenance = provenance || include_blobs;
     let options = ResolveOptions {
+        source: None,
         branch,
         commit,
         path: None,
@@ -1201,10 +1197,12 @@ fn cmd_commit(base_dir: &Path, repository: &str, message: &str, author: &str) ->
 
 fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
     let uri: NapUri = uri_str.parse().context("invalid URI")?;
-    let repo = open_repo(base_dir, &uri.repository)?;
-    let history = repo
-        .history(&uri.entity_type, &uri.entity_id, limit)
-        .context("failed to get history")?;
+    let history = if std::env::var("NAP_RESOLVE_SOURCE").ok().as_deref() == Some("local") {
+        open_repo(base_dir, &uri.repository)?.history(&uri.entity_type, &uri.entity_id, limit)
+    } else {
+        Resolver::new(base_dir).remote_history(&uri, limit)
+    }
+    .context("failed to get history")?;
 
     if history.is_empty() {
         emit(format!("No history found for {uri_str}"));
@@ -1251,6 +1249,35 @@ fn cmd_list(base_dir: &Path, repository: Option<&str>, entity_type: Option<&str>
             }
         }
         Some(repository) => {
+            if std::env::var("NAP_RESOLVE_SOURCE").ok().as_deref() != Some("local") {
+                let resolver = Resolver::new(base_dir);
+                let entities: Vec<(String, String)> = match entity_type {
+                    Some(et) => resolver
+                        .list_remote_entities(repository, &EntityType::new(et))?
+                        .into_iter()
+                        .map(|id| (et.to_string(), id))
+                        .collect(),
+                    None => resolver
+                        .list_remote_manifest_paths(repository)?
+                        .into_iter()
+                        .filter_map(|path| {
+                            let (entity_type, filename) = path.split_once('/')?;
+                            Some((
+                                entity_type.to_string(),
+                                filename.strip_suffix(".yaml")?.to_string(),
+                            ))
+                        })
+                        .collect(),
+                };
+                if is_piped {
+                    println!("{}", serde_json::to_string_pretty(&entities.iter().map(|(kind, id)| serde_json::json!({"type": kind, "id": id, "uri": format!("nap://{repository}/{kind}/{id}")})).collect::<Vec<_>>())?);
+                } else {
+                    for (kind, id) in entities {
+                        println!("  nap://{repository}/{kind}/{id}");
+                    }
+                }
+                return Ok(());
+            }
             let repo = open_repo(base_dir, repository)?;
             let is_piped = !std::io::stdout().is_terminal();
             match entity_type {
@@ -1300,6 +1327,18 @@ fn cmd_list(base_dir: &Path, repository: Option<&str>, entity_type: Option<&str>
 }
 
 fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
+    if name.is_none() && std::env::var("NAP_RESOLVE_SOURCE").ok().as_deref() != Some("local") {
+        let branches = Resolver::new(base_dir).list_remote_branches(repository)?;
+        if !std::io::stdout().is_terminal() {
+            println!("{}", serde_json::to_string_pretty(&branches)?);
+        } else {
+            println!("Branches in {repository}:");
+            for branch in branches {
+                println!("  {branch}");
+            }
+        }
+        return Ok(());
+    }
     let repo = open_repo(base_dir, repository)?;
     match name {
         Some(branch_name) => {
@@ -1322,7 +1361,107 @@ fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<(
     Ok(())
 }
 
+fn pull_entity_uri(value: &str) -> Option<NapUri> {
+    if value.contains("://") {
+        return None;
+    }
+    let normalized = if value.starts_with("nap://") {
+        value.to_string()
+    } else {
+        format!("nap://{value}")
+    };
+    normalized.parse().ok()
+}
+
+fn validate_pulled_manifests(path: &Path, required: &[String]) -> Result<()> {
+    for file in required {
+        let manifest = path.join(file);
+        if !manifest.is_file() {
+            anyhow::bail!(
+                "Lore clone did not materialize required NAP manifest '{}'; the remote repository is not a usable NAP repository",
+                file
+            );
+        }
+        serde_yaml::from_str::<serde_yaml::Value>(
+            &std::fs::read_to_string(&manifest).with_context(|| {
+                format!("failed to read pulled manifest '{}'", manifest.display())
+            })?,
+        )
+        .with_context(|| format!("invalid YAML in pulled manifest '{}'", manifest.display()))?;
+    }
+    Ok(())
+}
+
+fn clone_nap_pull(remote_url: &str, target: &Path, required: Vec<String>) -> Result<()> {
+    let parent = target
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("invalid pull target '{}'", target.display()))?;
+    let suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temporary = parent.join(format!(".__nap_clone_{suffix}"));
+    let clone = if required.len() > 1 {
+        LoreBackend::clone_repo_with_root_files(remote_url, &temporary, &required)
+    } else {
+        LoreBackend::clone_repo(remote_url, &temporary)
+    };
+    if let Err(error) = clone {
+        let _ = std::fs::remove_dir_all(&temporary);
+        return Err(error.into());
+    }
+    if let Err(error) = validate_pulled_manifests(&temporary, &required) {
+        let _ = std::fs::remove_dir_all(&temporary);
+        return Err(error);
+    }
+    if target.exists() {
+        let _ = std::fs::remove_dir_all(&temporary);
+        anyhow::bail!(
+            "repository '{}' already exists at {}",
+            target
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("repository"),
+            target.display()
+        );
+    }
+    std::fs::rename(&temporary, target)
+        .with_context(|| format!("failed to finalize clone at '{}'", target.display()))?;
+    Ok(())
+}
+
 fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
+    let entity = pull_entity_uri(url_or_name);
+    if let Some(uri) = entity {
+        require_backend(base_dir, "clone entity")?;
+        let backend = LoreBackend::from_nap_home(base_dir);
+        let remote_url = format!(
+            "{}/{}",
+            backend.remote_url().trim_end_matches('/'),
+            uri.repository
+        );
+        let required = vec!["repository.yaml".to_string(), uri.manifest_path()];
+        let target = base_dir.join(&uri.repository);
+        if target.exists() {
+            LoreBackend::sync_root_files(&target, &required)
+                .context("failed to synchronize requested entity manifests")?;
+            validate_pulled_manifests(&target, &required)?;
+            emit(format!(
+                "✓ Pulled '{}' into {}",
+                uri.identity(),
+                target.display()
+            ));
+            return Ok(());
+        }
+        emit(format!("  Cloning {} from {remote_url} …", uri.identity()));
+        clone_nap_pull(&remote_url, &target, required)?;
+        emit(format!(
+            "✓ Pulled '{}' to {}",
+            uri.identity(),
+            target.display()
+        ));
+        return Ok(());
+    }
     if looks_like_url(url_or_name) {
         // ── Clone from URL ──────────────────────────────────────
         require_backend(base_dir, "clone repository")?;
@@ -1374,6 +1513,11 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
                 .ok_or_else(|| anyhow::anyhow!("cannot determine repository name from URL"))?
         };
 
+        if let Err(error) = validate_pulled_manifests(&tmp_path, &["repository.yaml".to_string()]) {
+            let _ = std::fs::remove_dir_all(&tmp_path);
+            return Err(error);
+        }
+
         // Check if the target directory already exists
         let target = base_dir.join(&name);
         if target.exists() {
@@ -1402,25 +1546,12 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         } else {
             // Doesn't exist locally, construct URL and clone
             require_backend(base_dir, "clone repository")?;
-            let backend_config = LoreBackend::from_env();
+            let backend_config = LoreBackend::from_nap_home(base_dir);
             let remote_url = format!("{}/{}", backend_config.remote_url(), url_or_name);
 
-            // Perform clone
-            let tmp_suffix = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_nanos())
-                .unwrap_or(0);
-            let tmp_name = format!(".__nap_clone_{tmp_suffix}");
-            let tmp_path = base_dir.join(&tmp_name);
-
             emit(format!("  Cloning from {remote_url} …"));
-            LoreBackend::clone_repo(&remote_url, &tmp_path)
-                .context("failed to clone repository")?;
-
-            // Rename temp → final
             let target = base_dir.join(url_or_name);
-            std::fs::rename(&tmp_path, &target)
-                .context(format!("failed to rename {tmp_name} → {url_or_name}"))?;
+            clone_nap_pull(&remote_url, &target, vec!["repository.yaml".to_string()])?;
 
             emit(format!(
                 "✓ Cloned repository '{url_or_name}' to {}",
@@ -1624,8 +1755,12 @@ fn cmd_switch(base_dir: &Path, repository: &str, name: &str) -> Result<()> {
 }
 
 fn cmd_head_hash(base_dir: &Path, repository: &str) -> Result<()> {
-    let repo = open_repo(base_dir, repository)?;
-    let hash = repo.head_hash().context("failed to get HEAD hash")?;
+    let hash = if std::env::var("NAP_RESOLVE_SOURCE").ok().as_deref() == Some("local") {
+        open_repo(base_dir, repository)?.head_hash()
+    } else {
+        Resolver::new(base_dir).remote_head_hash(repository)
+    }
+    .context("failed to get HEAD hash")?;
     if !std::io::stdout().is_terminal() {
         println!(
             "{}",

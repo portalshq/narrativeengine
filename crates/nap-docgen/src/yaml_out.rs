@@ -41,7 +41,11 @@ fn render_command_yaml(cmd: &CommandModel, out: &mut String, indent: usize) {
     if let Some(ref long) = cmd.long_about {
         out.push_str(&format!("{pad}  long_about: |\n"));
         for line in long.lines() {
-            out.push_str(&format!("{pad}    {line}\n"));
+            if line.is_empty() {
+                out.push('\n');
+            } else {
+                out.push_str(&format!("{pad}    {line}\n"));
+            }
         }
     }
     out.push_str(&format!("{pad}  usage: {}\n", yaml_escape(&cmd.usage)));

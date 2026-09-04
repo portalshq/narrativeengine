@@ -903,6 +903,7 @@ def resolve(
     branch: str | None = None,
     commit: str | None = None,
     path: str | None = None,
+    source: str | None = None,
 ) -> dict[str, Any]:
     """Resolve a NAP URI to a manifest or subtree.
 
@@ -917,8 +918,8 @@ def resolve(
         The resolved manifest dict or subtree value.
     """
     repo_path = _resolve_repo_path(repo_path)
-    if branch is not None or commit is not None or path is not None:
-        result = _native.resolve_with_options(uri, repo_path, branch, commit, path)
+    if branch is not None or commit is not None or path is not None or source is not None:
+        result = _native.resolve_with_options(uri, repo_path, branch, commit, path, source)
     else:
         result = _native.resolve(uri, repo_path)
     return cast(dict[str, Any], json.loads(result))
@@ -937,9 +938,13 @@ def presign_representation(
 ) -> dict[str, Any]:
     """Create a time-limited public URL for a committed representation.
 
+    ``uri`` is the entity ID, such as ``25th-chapter/character/nathan-gunn``;
+    the ``nap://`` prefix is optional. ``representation`` is the manifest key,
+    such as ``item``. Its URI is relative to the entity's asset directory.
+
     The returned URL is a bearer capability. Do not log or retain it beyond
-    ``expires_at``. Portals Cloud HTTP ingress is currently not enabled; pass
-    ``http_url`` only for a Lore deployment whose presign endpoint is exposed.
+    ``expires_at``. Provider configuration selects the HTTP origin, and
+    authenticated requests reuse the active Lore login.
     """
     rp = _resolve_repo_path(repo_path)
     result = _native.presign_representation(
