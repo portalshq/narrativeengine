@@ -305,8 +305,22 @@ mod tests {
         assert!(config.contains("[notification]"));
         assert!(config.contains("[feature]"));
 
-        // Verify paths are included
-        assert!(config.contains(&nap_home.display().to_string()));
+        // Verify paths round-trip through TOML decoding. Comparing the raw
+        // rendered text is incorrect on Windows because backslashes must be
+        // escaped in TOML basic strings.
+        let parsed: toml::Value = toml::from_str(&config).unwrap();
+        assert_eq!(
+            parsed["immutable_store"]["local"]["path"].as_str(),
+            nap_home
+                .join("lore")
+                .join("store")
+                .join("immutable")
+                .to_str()
+        );
+        assert_eq!(
+            parsed["mutable_store"]["local"]["path"].as_str(),
+            nap_home.join("lore").join("store").join("mutable").to_str()
+        );
 
         // Windows paths must remain valid TOML (notably `\\U` is a Unicode
         // escape in TOML and must be encoded as `\\\\U`).
