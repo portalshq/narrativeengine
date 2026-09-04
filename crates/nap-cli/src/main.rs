@@ -1401,11 +1401,11 @@ fn clone_nap_pull(remote_url: &str, target: &Path, required: Vec<String>) -> Res
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let temporary = parent.join(format!(".__nap_clone_{suffix}"));
-    let clone = if required.len() > 1 {
-        LoreBackend::clone_repo_with_root_files(remote_url, &temporary, &required)
-    } else {
-        LoreBackend::clone_repo(remote_url, &temporary)
-    };
+    // Always make the requested manifests explicit Lore clone roots. This
+    // includes repository.yaml for repository pulls; without it Lore's
+    // default clone behavior is not a contract that the NAP marker is
+    // materialized locally.
+    let clone = LoreBackend::clone_repo_with_root_files(remote_url, &temporary, &required);
     if let Err(error) = clone {
         let _ = std::fs::remove_dir_all(&temporary);
         return Err(error.into());
@@ -1543,13 +1543,14 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         // ── Pull existing repo OR clone by name ───────────────────
         let target_dir = base_dir.join(url_or_name);
         if target_dir.exists() {
-            // Refresh the repository manifest before opening the local tree.
-            LoreBackend::sync_root_files(&target_dir, &["repository.yaml".to_string()])
-                .context("failed to synchronize repository.yaml")?;
-            validate_pulled_manifests(&target_dir, &["repository.yaml".to_string()])?;
-            let repo = open_repo(base_dir, url_or_name)?;
-            repo.pull(None, None)
+            // A full Lore sync resolves one remote revision and materializes
+            // its complete working tree, including repository.yaml. Do not
+            // first perform a selective sync: two remote operations can
+            // otherwise observe different branch tips.
+            let backend = get_lore_backend(base_dir);
+            nap_core::vcs::VcsBackend::pull(&backend, &target_dir, None, None)
                 .context("failed to pull latest changes")?;
+            validate_pulled_manifests(&target_dir, &["repository.yaml".to_string()])?;
             emit(format!("✓ Pulled latest changes for '{url_or_name}'"));
         } else {
             // Doesn't exist locally, construct URL and clone
