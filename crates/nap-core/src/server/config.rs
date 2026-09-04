@@ -83,6 +83,8 @@ fn generate_config_toml(nap_home: &Path) -> String {
     let _cert_path = nap_home.join("lore").join("certs").join("cert.pem");
     let _key_path = nap_home.join("lore").join("certs").join("key.pem");
     let presign_key = new_presign_key();
+    let immutable_path_toml = toml_quote(&immutable_path);
+    let mutable_path_toml = toml_quote(&mutable_path);
 
     format!(
         r#"
@@ -190,10 +192,19 @@ mode = "local"
 [feature]
 history_step_size = 100
 "#,
-        presign_key,
-        immutable_path.display(),
-        mutable_path.display()
+        presign_key, immutable_path_toml, mutable_path_toml
     )
+}
+
+/// Encode a filesystem path as a TOML basic string. Windows paths contain
+/// backslashes, which must be escaped or generated configuration is invalid.
+fn toml_quote(path: &Path) -> String {
+    path.to_string_lossy()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
 }
 
 /// Paths to generated configuration files
@@ -296,5 +307,15 @@ mod tests {
 
         // Verify paths are included
         assert!(config.contains(&nap_home.display().to_string()));
+
+        // Windows paths must remain valid TOML (notably `\\U` is a Unicode
+        // escape in TOML and must be encoded as `\\\\U`).
+        let windows_path =
+            Path::new(r"C:\Users\RUNNER~1\AppData\Local\Temp\.tmp123\lore\store\immutable");
+        let windows_config = config.replace(
+            &toml_quote(&nap_home.join("lore").join("store").join("immutable")),
+            &toml_quote(windows_path),
+        );
+        toml::from_str::<toml::Value>(&windows_config).unwrap();
     }
 }

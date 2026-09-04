@@ -1474,7 +1474,12 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         let tmp_path = base_dir.join(&tmp_name);
 
         emit(format!("  Cloning from {url_or_name} …"));
-        LoreBackend::clone_repo(url_or_name, &tmp_path).context("failed to clone repository")?;
+        LoreBackend::clone_repo_with_root_files(
+            url_or_name,
+            &tmp_path,
+            &["repository.yaml".to_string()],
+        )
+        .context("failed to clone repository")?;
 
         // Read the repository name — prefer .nap/config.yaml, fall back to
         // repository.yaml or URL last segment (lore 0.8.4-portals.8 creates .lore, not .nap).
@@ -1538,7 +1543,10 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         // ── Pull existing repo OR clone by name ───────────────────
         let target_dir = base_dir.join(url_or_name);
         if target_dir.exists() {
-            // Already exists locally, pull latest changes
+            // Refresh the repository manifest before opening the local tree.
+            LoreBackend::sync_root_files(&target_dir, &["repository.yaml".to_string()])
+                .context("failed to synchronize repository.yaml")?;
+            validate_pulled_manifests(&target_dir, &["repository.yaml".to_string()])?;
             let repo = open_repo(base_dir, url_or_name)?;
             repo.pull(None, None)
                 .context("failed to pull latest changes")?;

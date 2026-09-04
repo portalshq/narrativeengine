@@ -10,5 +10,7 @@ Options:
       --remote-url <REMOTE_URL>      Remote URL (required for remote provider)
   -v, --verbose                      Enable verbose debug logging
       --workspace-id <WORKSPACE_ID>  Workspace ID (for remote provider)
+      --remote                       Resolve repository reads through the configured Lore server (the default)
       --reset                        Reset the provider configuration file
+      --local                        Resolve repository reads from an explicitly checked-out local working tree
   -h, --help                         Print help

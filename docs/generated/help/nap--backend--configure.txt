@@ -26,6 +26,12 @@ Options:
       --initial-commit
           Bootstrap existing repositories with an initial commit without prompting
 
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
       --no-initial-commit
           Skip bootstrapping existing repositories with an initial commit
 

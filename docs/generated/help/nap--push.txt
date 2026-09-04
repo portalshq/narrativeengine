@@ -10,4 +10,5 @@ Options:
       --remote <REMOTE>      Remote name (default: tracking branch's remote, or "origin") [default: origin]
       --branch <BRANCH>      Branch to push (default: current branch)
   -v, --verbose              Enable verbose debug logging
+      --local                Resolve repository reads from an explicitly checked-out local working tree
   -h, --help                 Print help

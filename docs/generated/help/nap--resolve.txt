@@ -29,6 +29,12 @@ Options:
           [env: NAP_OUTPUT=]
           [default: yaml]
 
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
       --provenance
           Include condensed per-file provenance for the manifest and direct representations
 

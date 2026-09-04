@@ -8,4 +8,6 @@ Options:
       --api-key-env <API_KEY_ENV>  Environment variable containing the API key [default: PORTALS_CLOUD_API_KEY]
   -v, --verbose                    Enable verbose debug logging
       --no-browser                 Print the login URL without opening a browser
+      --remote                     Resolve repository reads through the configured Lore server (the default)
+      --local                      Resolve repository reads from an explicitly checked-out local working tree
   -h, --help                       Print help

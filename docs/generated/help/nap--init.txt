@@ -28,6 +28,9 @@ Options:
       --workspace-id <WORKSPACE_ID>
           Workspace ID (for remote provider)
 
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
       --remote <REMOTE>
           Remote URL to add as origin after init
 

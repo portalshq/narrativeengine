@@ -168,11 +168,17 @@ Options:
   -v, --verbose
           Enable verbose debug logging
 
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
       --ttl-seconds <TTL_SECONDS>
           Requested lifetime in seconds; Lore enforces its configured bounds
 
       --http-url <HTTP_URL>
           Explicit Lore HTTP origin, such as http://127.0.0.1:41339
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
 
       --token-env <TOKEN_ENV>
           Environment variable containing a repository-scoped bearer token

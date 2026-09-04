@@ -12,4 +12,6 @@ Options:
   -m, --message <MESSAGE>    Commit message [default: "set property"]
   -a, --author <AUTHOR>      Author identifier [default: nap-cli]
   -v, --verbose              Enable verbose debug logging
+      --remote               Resolve repository reads through the configured Lore server (the default)
+      --local                Resolve repository reads from an explicitly checked-out local working tree
   -h, --help                 Print help

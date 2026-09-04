@@ -17,5 +17,11 @@ Options:
   -v, --verbose
           Enable verbose debug logging
 
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
   -h, --help
           Print help (see a summary with '-h')
