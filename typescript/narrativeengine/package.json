@@ -1,6 +1,6 @@
 {
   "name": "@portalshq/narrativeengine",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "Provider-driven TypeScript context and generation middleware for sequential narratives.",
   "publishConfig": {
     "access": "public"
