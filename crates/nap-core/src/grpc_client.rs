@@ -136,10 +136,10 @@ impl Interceptor for GrpcAuthInterceptor {
             let bin_val = BinaryMetadataValue::from_bytes(&self.repository_id_bytes);
             request
                 .metadata_mut()
-                .insert_bin("lore-partition", bin_val.clone());
+                .insert_bin("lore-partition-bin", bin_val.clone());
             request
                 .metadata_mut()
-                .insert_bin("urc-repository-id", bin_val);
+                .insert_bin("urc-repository-id-bin", bin_val);
         }
 
         Ok(request)
@@ -501,7 +501,7 @@ impl LoreGrpcClient {
         prefix: String,
     ) -> Result<Vec<String>, NapError> {
         let mut tree = self.make_thin_client();
-        let mut stream = tree
+        let response = tree
             .revision_tree(RevisionTreeRequest {
                 query: Some(
                     proto_gen::lore::thin_client::v1::revision_tree_request::Query::Identifier(
@@ -511,9 +511,21 @@ impl LoreGrpcClient {
                 path_prefix: Some(prefix),
                 max_depth: None,
             })
-            .await
-            .map_err(|status| map_grpc_status("RevisionTree", status))?
-            .into_inner();
+            .await;
+        let mut stream = match response {
+            Ok(response) => response.into_inner(),
+            // Lore represents a repository with no committed revisions as a
+            // zero signature. Listing an empty repository is still valid;
+            // surface it as an empty list rather than leaking this server
+            // implementation detail to NAP users.
+            Err(status)
+                if status.code() == tonic::Code::InvalidArgument
+                    && status.message().contains("zeroed revision") =>
+            {
+                return Ok(Vec::new());
+            }
+            Err(status) => return Err(map_grpc_status("RevisionTree", status)),
+        };
         let mut paths = Vec::new();
         while let Some(item) = stream
             .message()

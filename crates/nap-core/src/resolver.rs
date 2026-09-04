@@ -416,13 +416,21 @@ impl Resolver {
                     .map(|rest| format!("https://{rest}"))
             })
             .unwrap_or(server);
-        let mut builder = LoreGrpcClient::builder().endpoint(endpoint);
-        if let Ok(token) = std::env::var("NAP_LORE_GRPC_TOKEN") {
-            builder = builder.token(token);
-        } else if let Ok(token) = std::env::var("NAP_REMOTE_AUTH_TOKEN") {
-            builder = builder.token(token);
-        }
-        builder.build()
+        let token = std::env::var("NAP_LORE_GRPC_TOKEN")
+            .ok()
+            .or_else(|| std::env::var("NAP_REMOTE_AUTH_TOKEN").ok());
+
+        // `Endpoint::connect_lazy()` creates Tokio I/O state. Construct it
+        // inside the bridge rather than on the synchronous CLI thread; doing
+        // so outside a Tokio reactor panics in hyper-util before the first
+        // RPC (for example, `nap list <repository>`).
+        block_on_grpc(async move {
+            let mut builder = LoreGrpcClient::builder().endpoint(endpoint);
+            if let Some(token) = token {
+                builder = builder.token(token);
+            }
+            builder.build()
+        })
     }
 
     fn remote_manifest(

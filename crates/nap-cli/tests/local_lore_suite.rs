@@ -243,6 +243,70 @@ fn test_local_lore_pull_entity_materializes_manifests() {
     assert!(pulled.join("character/claire-cole.yaml").is_file());
 }
 
+/// Server-backed list commands must run their gRPC client inside NAP's Tokio
+/// bridge. This regresses the historical "there is no reactor running"
+/// panic from hyper-util.
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_list_remote_repository_and_entities() {
+    let source = TempDir::new().expect("Failed to create source temp dir");
+    let repository = unique_universe_name("test-list-remote");
+
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["create", "--base-dir"])
+        .arg(source.path())
+        .args(["--repository", &repository, "character", "claire-cole"])
+        .args(["--name", "Claire Cole"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["remote", "add", "--base-dir"])
+        .arg(source.path())
+        .args([&repository, "origin"])
+        .arg(format!("lore://localhost:41337/{repository}"))
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["push", "--base-dir"])
+        .arg(source.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    let reader = TempDir::new().expect("Failed to create reader temp dir");
+    nap_cmd()
+        .args(["init", "--base-dir"])
+        .arg(reader.path())
+        .args(["--provider", "local"])
+        .assert()
+        .success();
+    nap_cmd()
+        .args(["list", "--base-dir"])
+        .arg(reader.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(&repository));
+    nap_cmd()
+        .args(["list", "--base-dir"])
+        .arg(reader.path())
+        .arg(&repository)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("claire-cole"));
+}
+
 #[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_create_entity() {
