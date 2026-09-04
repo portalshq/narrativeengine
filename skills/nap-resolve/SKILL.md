@@ -96,7 +96,7 @@ Checking the current workspace is not required for this skill. Nap usually store
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.8.8) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.8.9) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview

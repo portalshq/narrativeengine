@@ -163,7 +163,7 @@ NAP persistence failed: Atlas revision was generated but not committed.
 
 
 # NAP CLI Reference
-The `nap` command-line interface (v0.8.8) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+The `nap` command-line interface (v0.8.9) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
 
 
 ## Command Overview
