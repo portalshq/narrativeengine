@@ -90,4 +90,10 @@ Use explicit `--branch` or MCP-equivalent arguments. Do not rely on whichever br
  
 Do not store VCS branch-head data in manifests. Branch heads and commit history belong to NAP/Lore version control.
  
+## Guardrails
+
+Checking the current workspace is not required for this skill. Nap usually stores all repos in a centralized directory unless configured otherwise.
+
+{{include docs/generated/cli.md}}
+
 {{include docs/authored/mcp/overview.md}}

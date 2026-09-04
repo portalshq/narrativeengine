@@ -25,6 +25,7 @@ For creating or resolving individual entities, use `nap-resolve`. For revising e
 * **Branch:** `nap branch <universe_name> <branch_name>` — creates a new timeline/snapshot.
   * Example: `nap branch toystory classic`
 * **Clone/pull:** `nap pull <remote> <universe_name>` — clones or pulls a repository from a remote.
+
 ## Guardrails
  
  Unless the user explicitly requests a different provider or storage location:

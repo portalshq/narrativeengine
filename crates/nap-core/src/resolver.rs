@@ -456,7 +456,7 @@ impl Resolver {
                 "representation '{representation_name}' has no repository-relative URI"
             ))
         })?;
-        let file_path = Self::resolve_representation_path(&uri.manifest_path(), representation_uri)?
+        let file_path = Self::resolve_representation_path(&uri, representation_uri)?
             .ok_or_else(|| {
                 NapError::Other(format!(
                     "representation '{representation_name}' is external; only direct repository files can be presigned"
@@ -777,7 +777,7 @@ impl Resolver {
                 .uri
                 .as_deref()
                 .map(|representation_uri| {
-                    Self::resolve_representation_path(&manifest_path, representation_uri)
+                    Self::resolve_representation_path(uri, representation_uri)
                 })
                 .transpose()?
                 .flatten();
@@ -915,7 +915,7 @@ impl Resolver {
     }
 
     fn resolve_representation_path(
-        manifest_path: &str,
+        uri: &NapUri,
         representation_uri: &str,
     ) -> Result<Option<String>, NapError> {
         if representation_uri.contains("://") {
@@ -942,8 +942,10 @@ impl Resolver {
             }
         }
 
-        let manifest_dir = Path::new(manifest_path).parent().unwrap_or(Path::new(""));
-        Ok(Some(Self::path_to_lore_path(&manifest_dir.join(clean))))
+        // Match nap add: representation URIs are relative to the entity's
+        // asset directory, including world entities whose manifest is at root.
+        let entity_dir = Path::new(uri.entity_type.as_str()).join(&uri.entity_id);
+        Ok(Some(Self::path_to_lore_path(&entity_dir.join(clean))))
     }
 
     fn path_to_lore_path(path: &Path) -> String {
@@ -1233,7 +1235,7 @@ mod unit_tests {
                     ]),
                 ),
                 (
-                    "character/face_image.png".to_string(),
+                    "character/woody/face_image.png".to_string(),
                     BTreeMap::from([("nap.provenance.kind".to_string(), "generation".to_string())]),
                 ),
             ]),
@@ -1259,7 +1261,7 @@ mod unit_tests {
         assert_eq!(representation_file.name.as_deref(), Some("face_image"));
         assert_eq!(
             representation_file.path.as_deref(),
-            Some("character/face_image.png")
+            Some("character/woody/face_image.png")
         );
         assert_eq!(representation_file.uri.as_deref(), Some("face_image.png"));
         assert_eq!(representation_file.format.as_deref(), Some("png"));
@@ -1281,7 +1283,10 @@ mod unit_tests {
             requests[0].get("revision").unwrap(),
             &envelope.provenance.revision
         );
-        assert_eq!(requests[1].get("path").unwrap(), "character/face_image.png");
+        assert_eq!(
+            requests[1].get("path").unwrap(),
+            "character/woody/face_image.png"
+        );
         assert_eq!(
             requests[1].get("revision").unwrap(),
             &envelope.provenance.revision
@@ -1646,7 +1651,7 @@ mod unit_tests {
 
         let result = resolver
             .presign_representation(
-                "nap://toystory/character/woody",
+                "toystory/character/woody",
                 "face_image",
                 &PresignOptions {
                     ttl_seconds: Some(90),
@@ -1661,6 +1666,28 @@ mod unit_tests {
         assert_eq!(result.expires_at, 12345);
         assert_eq!(result.repository_id, "0123456789abcdef0123456789abcdef");
         assert!(result.url.ends_with("?token=opaque"));
+    }
+
+    #[test]
+    fn representation_paths_use_the_entity_asset_directory() {
+        for (entity, asset, expected) in [
+            (
+                "nap://25th-chapter/character/nathan-gunn",
+                "item.jpg",
+                "character/nathan-gunn/item.jpg",
+            ),
+            (
+                "nap://25th-chapter/world/25th-chapter",
+                "images/map.png",
+                "world/25th-chapter/images/map.png",
+            ),
+        ] {
+            let uri: NapUri = entity.parse().unwrap();
+            assert_eq!(
+                Resolver::resolve_representation_path(&uri, asset).unwrap(),
+                Some(expected.to_string()),
+            );
+        }
     }
 
     #[tokio::test]

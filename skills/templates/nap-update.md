@@ -161,4 +161,6 @@ Failed:
 NAP persistence failed: Atlas revision was generated but not committed.
 ```
 
+{{include docs/generated/cli.md}}
+
 {{include docs/authored/mcp/overview.md}}
