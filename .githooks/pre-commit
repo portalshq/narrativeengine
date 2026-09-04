@@ -21,6 +21,7 @@ CHANGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -c '\.ts$' 
 HAS_RUST=$([ "$CHANGED_RUST" -gt 0 ] && echo 1 || echo 0)
 HAS_PY=$([ "$CHANGED_PY" -gt 0 ] && echo 1 || echo 0)
 HAS_TS=$([ "$CHANGED_TS" -gt 0 ] && echo 1 || echo 0)
+CHANGED_LOCK=$(git diff --cached --name-only --diff-filter=ACMR | grep -cx 'Cargo.lock' || true)
 
 echo "── Pre-commit checks ─────────────────────────"
 
@@ -28,6 +29,14 @@ echo "── Pre-commit checks ────────────────�
 echo "→ cargo run -p nap-docgen..."
 cargo run -p nap-docgen
 git add docs/generated/ skills/*/SKILL.md README.md
+
+# ── 0.5. Cargo lock integrity ──────────────────────────────────
+# Resolve the complete locked graph whenever Cargo.lock changes. This catches
+# bad registry checksums and stale lock entries before CI/release tagging.
+if [ "$CHANGED_LOCK" -gt 0 ]; then
+  echo "→ cargo metadata --locked (Cargo.lock changed)..."
+  cargo metadata --locked --format-version 1 >/dev/null
+fi
 
 # ── 1. Rust formatting ─────────────────────────────────────────
 if [ "$HAS_RUST" -eq 1 ]; then
