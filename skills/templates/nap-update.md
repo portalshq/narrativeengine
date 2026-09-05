@@ -24,7 +24,59 @@ Once a NAP entity URI is established in a task, carry forward:
 - stable representation keys such as `character_sheet`, `face_sheet`, `portrait`, or `model_sheet`
 - user-approved identity constraints and negative constraints
 Later turns that keep refining the same entity must still invoke this skill even when the user does not mention NAP again.
- 
+
+## Character Creation and Character Sheets
+
+Treat a request to create a character, character sheet, reference sheet, or
+other character visual as a persistence workflow. Do not leave generated
+assets only in the conversation or on a local filesystem.
+
+1. Create or resolve the character entity on its target branch.
+2. Add every accepted generated asset with a stable semantic representation
+   key. Use `character_sheet` for a complete three-view reference sheet and
+   `portrait` for a portrait.
+3. Commit the representation and any properties that describe the accepted
+   character in the same turn. `nap add` and `nap set` may commit
+   automatically; otherwise run one `nap commit` after updating the manifest.
+4. Resolve the entity from the branch that received the commit and confirm its
+   manifest contains the expected representation key, URI, format, and
+   BLAKE3 hash.
+
+Keep the manifest current whenever a character is created or a character sheet
+is generated. A file is not complete until it is represented in the entity
+manifest and committed to NAP.
+
+## Entity Variants
+
+When the user asks to create a variant of an existing entity, create a new
+entity. Never replace the base entity's canonical identity or overwrite its
+representations to impersonate a variant.
+
+1. Resolve the base entity and its target branch.
+2. Create a distinct entity ID that describes the variant, for example
+   `claire-cole-summer-dress` for
+   `nap://25th-chapter/character/claire-cole-summer-dress`.
+3. Persist the variant's applicable properties and representations, then
+   commit its manifest.
+4. Update the base entity's `properties.variants` value to the complete,
+   deduplicated list of NAP URIs for every known variant, including the new
+   URI. Preserve existing entries; do not record local paths or bare IDs.
+5. Commit the base-manifest update and resolve both entities to verify the
+   variant and the base entity's `variants` property.
+
+For example, the base entity `nap://25th-chapter/character/claire-cole` keeps:
+
+```yaml
+properties:
+  variants:
+    - nap://25th-chapter/character/claire-cole-summer-dress
+    - nap://25th-chapter/character/claire-cole-riot-gear
+```
+
+Use the same target branch for the base update and variant unless the user
+explicitly asks for a different branch. Report both committed entity URIs and
+their revisions.
+
 ## Target Branch
  
 The **target branch** is whichever branch the entity's accepted work is meant to land on. It is **not always `main`** — resolve it per task, in this order:
