@@ -563,15 +563,10 @@ impl Resolver {
             .ok_or_else(|| NapError::Other(format!("representation '{representation_name}' is external; only direct repository files can be presigned")))?;
         let (repository_id_bytes, address, revision) =
             self.remote_representation_address(uri, options, file_path)?;
+        // `Representation::hash` is BLAKE3 over the reassembled file bytes,
+        // whereas a Lore address hashes its storage fragment tree for large
+        // files. They are separate identifiers and must not be compared.
         let hash = hex::encode(&address.hash);
-        if let Some(expected) = representation.hash.strip_prefix("blake3:")
-            && expected != hash
-        {
-            return Err(NapError::ContentHashMismatch {
-                expected: representation.hash.clone(),
-                actual: format!("blake3:{hash}"),
-            });
-        }
         let repository_id = format_lore_repository_id(&repository_id_bytes);
         let address_string = format!("{}-{}", hash, hex::encode(&address.context));
         let http_url = options
@@ -770,14 +765,9 @@ impl Resolver {
 
         let repository = vcs.repository_descriptor(&repo.root)?;
         let content = vcs.file_content_address_at_ref(&repo.root, &file_path, &revision)?;
-        if let Some(expected_hash) = representation.hash.strip_prefix("blake3:")
-            && expected_hash != content.hash
-        {
-            return Err(NapError::ContentHashMismatch {
-                expected: representation.hash.clone(),
-                actual: format!("blake3:{}", content.hash),
-            });
-        }
+        // `Representation::hash` is BLAKE3 over the reassembled file bytes,
+        // whereas a Lore address hashes its storage fragment tree for large
+        // files. They are separate identifiers and must not be compared.
         let address = content.as_lore_address();
 
         let configured_http_url = options

@@ -56,6 +56,16 @@ fn create_test_image(dir: &Path, name: &str) -> PathBuf {
 }
 
 #[cfg(feature = "local-e2e")]
+/// Create a representation that Lore stores as a fragment tree rather than a
+/// single raw-content fragment.
+fn create_fragmented_test_file(dir: &Path, name: &str) -> PathBuf {
+    let file_path = dir.join(name);
+    fs::write(&file_path, vec![0xA5; 256 * 1024 + 1])
+        .expect("Failed to write fragmented test file");
+    file_path
+}
+
+#[cfg(feature = "local-e2e")]
 /// Generate a unique repository name for testing
 fn unique_universe_name(prefix: &str) -> String {
     let timestamp = std::time::SystemTime::now()
@@ -609,7 +619,10 @@ fn test_local_lore_presign_redeems_binary_representation() {
         .assert()
         .success();
 
-    let asset = create_test_image(tmp.path(), "presigned.png");
+    // This exceeds Lore's 256 KiB single-fragment threshold. Its Lore address
+    // hashes the fragment tree, while NAP's representation hash covers the
+    // full file bytes.
+    let asset = create_fragmented_test_file(tmp.path(), "presigned.bin");
     let uri = format!("nap://{repository}/character/testhero");
     nap_cmd()
         .args(["add", "--base-dir"])
@@ -617,7 +630,7 @@ fn test_local_lore_presign_redeems_binary_representation() {
         .arg(&uri)
         .arg("reference_image")
         .arg(&asset)
-        .args(["--format", "png"])
+        .args(["--format", "bin"])
         .assert()
         .success();
     nap_cmd()
