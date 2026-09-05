@@ -235,19 +235,10 @@ fn validate_presigned_url(
 }
 
 fn format_lore_repository_id(bytes: &[u8]) -> String {
-    if bytes.len() == 16 {
-        let value = hex::encode(bytes);
-        format!(
-            "{}-{}-{}-{}-{}",
-            &value[..8],
-            &value[8..12],
-            &value[12..16],
-            &value[16..20],
-            &value[20..]
-        )
-    } else {
-        hex::encode(bytes)
-    }
+    // Lore's HTTP `RepositoryId` is a `Partition`, whose textual form is
+    // exactly 32 lowercase hexadecimal characters. It is binary-compatible
+    // with UUID data but does not accept UUID's hyphenated display form.
+    hex::encode(bytes)
 }
 
 impl ResolveOptions {
@@ -2076,6 +2067,14 @@ mod unit_tests {
             format: "png".to_string(),
         };
         assert!(!format!("{result:?}").contains("token=secret"));
+    }
+
+    #[test]
+    fn lore_repository_id_for_http_is_partition_hex() {
+        let bytes = [0xabu8; 16];
+        let formatted = format_lore_repository_id(&bytes);
+        assert_eq!(formatted, "ab".repeat(16));
+        assert!(!formatted.contains('-'));
     }
 
     #[test]
