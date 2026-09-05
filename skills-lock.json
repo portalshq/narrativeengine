@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "character-reference-sheet": {
+      "source": "portalshq/narrativeengine",
+      "sourceType": "github",
+      "skillPath": "skills/character-reference-sheet/SKILL.md",
+      "computedHash": "9f4ea9abc5096e95a7acb8874b56f182bfce13f877f3493d3df146c2e72d08fb"
+    },
+    "nap-repo": {
+      "source": "portalshq/narrativeengine",
+      "sourceType": "github",
+      "skillPath": "skills/nap-repo/SKILL.md",
+      "computedHash": "4f7ce5033df5538d3e0353ae135f489f9d6866d8cb3285348abb7e751cce9196"
+    },
+    "nap-resolve": {
+      "source": "portalshq/narrativeengine",
+      "sourceType": "github",
+      "skillPath": "skills/nap-resolve/SKILL.md",
+      "computedHash": "ad8345c3611854d2dbebe5bba7babf6a77652af3a0d23fef659e2f11e08ac30c"
+    },
+    "nap-update": {
+      "source": "portalshq/narrativeengine",
+      "sourceType": "github",
+      "skillPath": "skills/nap-update/SKILL.md",
+      "computedHash": "37ae1194f6add5cf5aebececfe0e77081ec380509a13d63044fb774909bd195d"
+    }
+  }
+}
