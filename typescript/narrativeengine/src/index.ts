@@ -27,6 +27,10 @@ export {
 } from "./sequence.js";
 export type {
   BuildContextRequest,
+  BlockRetrievalConfig,
+  BlockRetrievalStep,
+  ContextProseConfig,
+  ContextRendererInput,
   GenerateBlockRequest,
   GenerateBlockResult,
   GenerationProviderRequest,

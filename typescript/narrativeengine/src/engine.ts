@@ -85,20 +85,21 @@ interface PendingChannelBatch {
 }
 
 const DEFAULT_CONFIG: ResolvedNarrativeEngineConfig = Object.freeze({
-  reciprocalDivisions: 5,
-  minimumBlocks: 3,
-  hybridCandidateLimit: 20,
-  hybridTopK: 3,
-  saliencyThreshold: 0.65,
-  weightDense: 0.7,
-  significanceCoefficient: 1.5,
-  maxLoreAtoms: 20,
-  maxNotableEvents: 20,
-  maxUniqueEntityRepresentations: 5,
-  representationProperties: Object.freeze([]),
-  maxConcurrency: 4,
-  pxErrorPolicy: "continue",
-  temporalPhrasing: true,
+  historicalSampleDivisions: 5,
+  minimumBlocksForHistoricalSampling: 3,
+  hybridSearchCandidateLimit: 20,
+  maximumSearchResults: 3,
+  minimumSearchRelevanceScore: 0.65,
+  vectorSearchWeight: 0.7,
+  notableSearchResultBonus: 1.5,
+  maximumLoreItems: 20,
+  maximumNotableBlocks: 20,
+  maximumEntityRepresentations: 5,
+  preferredEntityRepresentationProperties: Object.freeze([]),
+  maximumConcurrentGenerationTasks: 4,
+  enrichmentFailureBehavior: "continue",
+  includeTemporalContextLabels: true,
+  contextProse: Object.freeze({}),
 });
 
 function isDataProvider(value: unknown): value is NarrativeDataProvider {
@@ -117,32 +118,33 @@ function isDataProvider(value: unknown): value is NarrativeDataProvider {
 
 function resolveConfig(config: NarrativeEngineConfig = {}): ResolvedNarrativeEngineConfig {
   const resolved: ResolvedNarrativeEngineConfig = {
-    reciprocalDivisions: config.reciprocalDivisions ?? DEFAULT_CONFIG.reciprocalDivisions,
-    minimumBlocks: config.minimumBlocks ?? DEFAULT_CONFIG.minimumBlocks,
-    hybridCandidateLimit: config.hybridCandidateLimit ?? DEFAULT_CONFIG.hybridCandidateLimit,
-    hybridTopK: config.hybridTopK ?? DEFAULT_CONFIG.hybridTopK,
-    saliencyThreshold: config.saliencyThreshold ?? DEFAULT_CONFIG.saliencyThreshold,
-    weightDense: config.weightDense ?? DEFAULT_CONFIG.weightDense,
-    significanceCoefficient:
-      config.significanceCoefficient ?? DEFAULT_CONFIG.significanceCoefficient,
-    maxLoreAtoms: config.maxLoreAtoms ?? DEFAULT_CONFIG.maxLoreAtoms,
-    maxNotableEvents: config.maxNotableEvents ?? DEFAULT_CONFIG.maxNotableEvents,
-    maxUniqueEntityRepresentations:
-      config.maxUniqueEntityRepresentations ?? DEFAULT_CONFIG.maxUniqueEntityRepresentations,
-    representationProperties: Object.freeze([...(config.representationProperties ?? [])]),
-    maxConcurrency: config.maxConcurrency ?? DEFAULT_CONFIG.maxConcurrency,
-    pxErrorPolicy: config.pxErrorPolicy ?? DEFAULT_CONFIG.pxErrorPolicy,
-    temporalPhrasing: config.temporalPhrasing ?? DEFAULT_CONFIG.temporalPhrasing,
+    historicalSampleDivisions: config.historicalSampleDivisions ?? config.reciprocalDivisions ?? DEFAULT_CONFIG.historicalSampleDivisions,
+    minimumBlocksForHistoricalSampling: config.minimumBlocksForHistoricalSampling ?? config.minimumBlocks ?? DEFAULT_CONFIG.minimumBlocksForHistoricalSampling,
+    hybridSearchCandidateLimit: config.hybridSearchCandidateLimit ?? config.hybridCandidateLimit ?? DEFAULT_CONFIG.hybridSearchCandidateLimit,
+    maximumSearchResults: config.maximumSearchResults ?? config.hybridTopK ?? DEFAULT_CONFIG.maximumSearchResults,
+    minimumSearchRelevanceScore: config.minimumSearchRelevanceScore ?? config.saliencyThreshold ?? DEFAULT_CONFIG.minimumSearchRelevanceScore,
+    vectorSearchWeight: config.vectorSearchWeight ?? config.weightDense ?? DEFAULT_CONFIG.vectorSearchWeight,
+    notableSearchResultBonus: config.notableSearchResultBonus ?? config.significanceCoefficient ?? DEFAULT_CONFIG.notableSearchResultBonus,
+    maximumLoreItems: config.maximumLoreItems ?? config.maxLoreAtoms ?? DEFAULT_CONFIG.maximumLoreItems,
+    maximumNotableBlocks: config.maximumNotableBlocks ?? config.maxNotableEvents ?? DEFAULT_CONFIG.maximumNotableBlocks,
+    maximumEntityRepresentations: config.maximumEntityRepresentations ?? config.maxUniqueEntityRepresentations ?? DEFAULT_CONFIG.maximumEntityRepresentations,
+    preferredEntityRepresentationProperties: Object.freeze([...(config.preferredEntityRepresentationProperties ?? config.representationProperties ?? [])]),
+    maximumConcurrentGenerationTasks: config.maximumConcurrentGenerationTasks ?? config.maxConcurrency ?? DEFAULT_CONFIG.maximumConcurrentGenerationTasks,
+    enrichmentFailureBehavior: config.enrichmentFailureBehavior ?? config.pxErrorPolicy ?? DEFAULT_CONFIG.enrichmentFailureBehavior,
+    includeTemporalContextLabels: config.includeTemporalContextLabels ?? config.temporalPhrasing ?? DEFAULT_CONFIG.includeTemporalContextLabels,
+    blockRetrieval: config.blockRetrieval,
+    contextProse: Object.freeze({ ...(config.contextProse ?? {}) }),
+    renderContext: config.renderContext,
   };
 
   const positiveIntegers: Array<[string, number]> = [
-    ["reciprocalDivisions", resolved.reciprocalDivisions],
-    ["minimumBlocks", resolved.minimumBlocks],
-    ["hybridCandidateLimit", resolved.hybridCandidateLimit],
-    ["hybridTopK", resolved.hybridTopK],
-    ["maxLoreAtoms", resolved.maxLoreAtoms],
-    ["maxNotableEvents", resolved.maxNotableEvents],
-    ["maxConcurrency", resolved.maxConcurrency],
+    ["historicalSampleDivisions", resolved.historicalSampleDivisions],
+    ["minimumBlocksForHistoricalSampling", resolved.minimumBlocksForHistoricalSampling],
+    ["hybridSearchCandidateLimit", resolved.hybridSearchCandidateLimit],
+    ["maximumSearchResults", resolved.maximumSearchResults],
+    ["maximumLoreItems", resolved.maximumLoreItems],
+    ["maximumNotableBlocks", resolved.maximumNotableBlocks],
+    ["maximumConcurrentGenerationTasks", resolved.maximumConcurrentGenerationTasks],
   ];
   for (const [name, value] of positiveIntegers) {
     if (!Number.isInteger(value) || value <= 0) {
@@ -150,25 +152,40 @@ function resolveConfig(config: NarrativeEngineConfig = {}): ResolvedNarrativeEng
     }
   }
   if (
-    !Number.isInteger(resolved.maxUniqueEntityRepresentations) ||
-    resolved.maxUniqueEntityRepresentations < 0
+    !Number.isInteger(resolved.maximumEntityRepresentations) ||
+    resolved.maximumEntityRepresentations < 0
   ) {
     throw new NarrativeEngineError(
       "INVALID_CONFIG",
-      "maxUniqueEntityRepresentations must be a non-negative integer.",
+      "maximumEntityRepresentations must be a non-negative integer.",
     );
   }
-  if (resolved.weightDense < 0 || resolved.weightDense > 1) {
-    throw new NarrativeEngineError("INVALID_CONFIG", "weightDense must be between zero and one.");
+  if (resolved.vectorSearchWeight < 0 || resolved.vectorSearchWeight > 1) {
+    throw new NarrativeEngineError("INVALID_CONFIG", "vectorSearchWeight must be between zero and one.");
   }
-  if (!Number.isFinite(resolved.saliencyThreshold)) {
-    throw new NarrativeEngineError("INVALID_CONFIG", "saliencyThreshold must be finite.");
+  if (!Number.isFinite(resolved.minimumSearchRelevanceScore)) {
+    throw new NarrativeEngineError("INVALID_CONFIG", "minimumSearchRelevanceScore must be finite.");
   }
-  if (!Number.isFinite(resolved.significanceCoefficient) || resolved.significanceCoefficient < 0) {
+  if (!Number.isFinite(resolved.notableSearchResultBonus) || resolved.notableSearchResultBonus < 0) {
     throw new NarrativeEngineError(
       "INVALID_CONFIG",
-      "significanceCoefficient must be a non-negative finite number.",
+      "notableSearchResultBonus must be a non-negative finite number.",
     );
+  }
+  if (resolved.blockRetrieval) {
+    if (!Number.isInteger(resolved.blockRetrieval.maximumBlocks) || resolved.blockRetrieval.maximumBlocks <= 0) {
+      throw new NarrativeEngineError("INVALID_CONFIG", "blockRetrieval.maximumBlocks must be a positive integer.");
+    }
+    for (const step of resolved.blockRetrieval.steps) {
+      const count = "takeNewestBlocks" in step
+        ? step.takeNewestBlocks
+        : "addNotableBlocksUntilThereAre" in step
+          ? step.addNotableBlocksUntilThereAre
+          : undefined;
+      if (count !== undefined && (!Number.isInteger(count) || count <= 0)) {
+        throw new NarrativeEngineError("INVALID_CONFIG", "blockRetrieval step counts must be positive integers.");
+      }
+    }
   }
   return resolved;
 }
@@ -249,58 +266,134 @@ export class NarrativeEngine<
     this.blockCache = resolvedOptions.blockCache ?? new InMemoryBlockCache<TBlock>();
   }
 
+  /** Return the fully resolved configuration currently used by this engine. */
   getLabConfig(): ResolvedNarrativeEngineConfig {
-    return { ...this.config, representationProperties: [...this.config.representationProperties] };
+    return {
+      ...this.config,
+      preferredEntityRepresentationProperties: [
+        ...this.config.preferredEntityRepresentationProperties,
+      ],
+    };
   }
 
+  /** Merge, validate, and activate configuration changes for future requests. */
   setLabConfig(config: NarrativeEngineConfig): void {
     this.config = resolveConfig({ ...this.config, ...config });
   }
 
+  /** Retrieve and render context without generating or persisting a story block. */
   async buildContext(request: BuildContextRequest): Promise<NarrativeContext<TBlock, TLore>> {
     const { channelId, inputQuery } = request;
+    const recipe = this.config.blockRetrieval;
+    const requestsSearchResults = !recipe || recipe.steps.some(
+      (step) => "fillRemainingSpaceWithSearchResults" in step,
+    );
+    // A recipe retrieves notable blocks only after its earlier steps have run.
+    // This lets a recent-first recipe avoid a notable query when it already
+    // contains enough notable blocks.
+    const requestsNotableBlocks = !recipe;
     const [totalBlockCount, rawLore, rawCandidates, rawNotableEvents] = await Promise.all([
       this.dataProvider.getBlockCount(channelId),
       this.dataProvider.getLoreAtoms(channelId),
-      this.dataProvider.getHybridSearchCandidates(
-        channelId,
-        inputQuery,
-        this.config.hybridCandidateLimit,
-      ),
-      this.dataProvider.getNotableEvents(channelId),
+      requestsSearchResults
+        ? this.dataProvider.getHybridSearchCandidates(
+            channelId,
+            inputQuery,
+            this.config.hybridSearchCandidateLimit,
+          )
+        : Promise.resolve([]),
+      requestsNotableBlocks ? this.dataProvider.getNotableEvents(channelId) : Promise.resolve([]),
     ]);
 
     const loreAtoms = [...rawLore]
       .filter((atom) => atom.isActive !== false)
       .sort((left, right) => right.happenedAt - left.happenedAt)
-      .slice(0, this.config.maxLoreAtoms);
-    const notableEvents = [...rawNotableEvents]
+      .slice(0, this.config.maximumLoreItems);
+    let sortedNotableEvents = [...rawNotableEvents]
       .sort((left, right) => right.happenedAt - left.happenedAt || right.index - left.index)
-      .slice(0, this.config.maxNotableEvents);
+    let notableEvents = sortedNotableEvents.slice(0, this.config.maximumNotableBlocks);
     const scoredCandidates = this.scoreCandidates(rawCandidates);
     const survivors = scoredCandidates
-      .filter((candidate) => candidate.scoreFinalFused >= this.config.saliencyThreshold)
+      .filter((candidate) => candidate.scoreFinalFused >= this.config.minimumSearchRelevanceScore)
       .sort(
         (left, right) =>
           right.scoreFinalFused - left.scoreFinalFused ||
           right.block.happenedAt - left.block.happenedAt ||
           right.block.index - left.block.index,
       )
-      .slice(0, this.config.hybridTopK);
+      .slice(0, this.config.maximumSearchResults);
 
     this.warmBlocks(channelId, rawCandidates.map((candidate) => candidate.block));
     this.warmBlocks(channelId, notableEvents);
 
-    const historicalIndices =
-      totalBlockCount >= this.config.minimumBlocks
-        ? generateHistoricalIndices(totalBlockCount, this.config.reciprocalDivisions)
+    let historicalIndices =
+      totalBlockCount >= this.config.minimumBlocksForHistoricalSampling
+        ? generateHistoricalIndices(totalBlockCount, this.config.historicalSampleDivisions)
         : [];
-    const historicalBlocks = await this.loadBlocks(channelId, historicalIndices);
-    const chronologicalBlocks = this.mergeBlocksNewestFirst([
-      ...historicalBlocks,
-      ...notableEvents,
-      ...survivors.map((candidate) => candidate.block),
-    ]);
+    let chronologicalBlocks: TBlock[];
+    if (!recipe) {
+      const historicalBlocks = await this.loadBlocks(channelId, historicalIndices);
+      chronologicalBlocks = this.mergeBlocksNewestFirst([
+        ...historicalBlocks,
+        ...notableEvents,
+        ...survivors.map((candidate) => candidate.block),
+      ]);
+    } else {
+      historicalIndices = [];
+      const selected: TBlock[] = [];
+      const selectedIds = new Set<string>();
+      const add = (block: TBlock): void => {
+        if (selected.length >= recipe.maximumBlocks || selectedIds.has(String(block.id))) return;
+        selected.push(block);
+        selectedIds.add(String(block.id));
+      };
+      for (const step of recipe.steps) {
+        if ("takeNewestBlocks" in step) {
+          const count = Math.min(step.takeNewestBlocks, recipe.maximumBlocks);
+          const recentBlocks = this.dataProvider.getNewestBlocks
+            ? await this.dataProvider.getNewestBlocks(channelId, count)
+            : await (async () => {
+                const firstIndex = Math.max(1, totalBlockCount - count + 1);
+                const recentIndices = Array.from(
+                  { length: Math.max(0, totalBlockCount - firstIndex + 1) },
+                  (_, index) => firstIndex + index,
+                );
+                return await this.loadBlocks(channelId, recentIndices);
+              })();
+          historicalIndices.push(...recentBlocks.map((block) => block.index));
+          recentBlocks.forEach(add);
+        } else if ("addNotableBlocksUntilThereAre" in step) {
+          let notableCount = selected.filter((block) => block.isNotable === true).length;
+          if (notableCount < step.addNotableBlocksUntilThereAre && sortedNotableEvents.length === 0) {
+            const needed = Math.min(
+              step.addNotableBlocksUntilThereAre - notableCount,
+              recipe.maximumBlocks - selected.length,
+            );
+            const extraNotableBlocks = this.dataProvider.getNewestNotableBlocks
+              ? await this.dataProvider.getNewestNotableBlocks(
+                  channelId,
+                  needed,
+                  [...selectedIds],
+                )
+              : await this.dataProvider.getNotableEvents(channelId);
+            sortedNotableEvents = [...extraNotableBlocks]
+              .sort((left, right) => right.happenedAt - left.happenedAt || right.index - left.index);
+            notableEvents = sortedNotableEvents;
+            this.warmBlocks(channelId, notableEvents);
+          }
+          for (const block of sortedNotableEvents) {
+            if (notableCount >= step.addNotableBlocksUntilThereAre || selected.length >= recipe.maximumBlocks) break;
+            if (!selectedIds.has(String(block.id))) {
+              add(block);
+              notableCount += 1;
+            }
+          }
+        } else {
+          survivors.forEach((candidate) => add(candidate.block));
+        }
+      }
+      chronologicalBlocks = this.mergeBlocksNewestFirst(selected);
+    }
 
     const warnings: string[] = [];
     let enrichment: PxEnrichment = {};
@@ -311,11 +404,11 @@ export class NarrativeEngine<
           inputQuery,
           chronologicalBlocks,
           loreAtoms,
-          representationProperties: this.config.representationProperties,
-          maxUniqueEntityRepresentations: this.config.maxUniqueEntityRepresentations,
+          representationProperties: this.config.preferredEntityRepresentationProperties,
+          maxUniqueEntityRepresentations: this.config.maximumEntityRepresentations,
         });
       } catch (error) {
-        if (this.config.pxErrorPolicy === "fail") {
+        if (this.config.enrichmentFailureBehavior === "fail") {
           throw new NarrativeEngineError("PX_FAILED", "PX context enrichment failed.", error);
         }
         warnings.push(`PX context enrichment failed: ${errorMessage(error)}`);
@@ -352,14 +445,18 @@ export class NarrativeEngine<
 
     return {
       ...contextWithoutPrompt,
-      prompt: this.composePrompt(contextWithoutPrompt),
+      prompt: this.config.renderContext
+        ? this.config.renderContext(contextWithoutPrompt)
+        : this.composePrompt(contextWithoutPrompt),
     };
   }
 
+  /** @deprecated Build context and return only its rendered prompt text. */
   async generateContext(channelId: string, inputQuery: string): Promise<string> {
     return (await this.buildContext({ channelId, inputQuery })).prompt;
   }
 
+  /** Build context, generate one block, persist it, and return both block and context. */
   async generateBlock(
     request: GenerateBlockRequest<TParameters>,
   ): Promise<GenerateBlockResult<TBlock, TLore>> {
@@ -381,6 +478,7 @@ export class NarrativeEngine<
     }
   }
 
+  /** Generate and persist an ordered batch of story blocks. */
   async generateBlocksBatch(
     requests: readonly GenerateBlockRequest<TParameters>[],
   ): Promise<readonly GenerateBlockResult<TBlock, TLore>[]> {
@@ -388,7 +486,7 @@ export class NarrativeEngine<
     const generationProvider = this.requireGenerationProvider();
     const contexts = await mapWithConcurrency(
       requests,
-      this.config.maxConcurrency,
+      this.config.maximumConcurrentGenerationTasks,
       async (request) => await this.buildContext(request),
     );
     const generationRequests = contexts.map((context, index) => {
@@ -403,7 +501,7 @@ export class NarrativeEngine<
         ? await generationProvider.generateBlocksBatch(generationRequests)
         : await mapWithConcurrency(
             generationRequests,
-            this.config.maxConcurrency,
+            this.config.maximumConcurrentGenerationTasks,
             async (generationRequest) => await generationProvider.generateBlock(generationRequest),
           );
     } catch (error) {
@@ -438,14 +536,17 @@ export class NarrativeEngine<
     return completed;
   }
 
+  /** Remove one block from the in-memory retrieval cache. */
   invalidateBlock(channelId: string, index: number): void {
     this.blockCache.invalidate(channelId, index);
   }
 
+  /** Remove every cached block for one channel. */
   invalidateChannel(channelId: string): void {
     this.blockCache.invalidateChannel(channelId);
   }
 
+  /** Remove every block from this engine's in-memory retrieval cache. */
   clearCache(): void {
     this.blockCache.clear();
   }
@@ -476,16 +577,16 @@ export class NarrativeEngine<
       scoreKeywordSparse: number;
     }[],
   ): Array<ScoredHybridCandidate<TBlock>> {
-    const weightSparse = 1 - this.config.weightDense;
+    const weightSparse = 1 - this.config.vectorSearchWeight;
     return candidates.map((candidate) => {
       const scoreRawFused =
-        candidate.scoreVectorDense * this.config.weightDense +
+        candidate.scoreVectorDense * this.config.vectorSearchWeight +
         candidate.scoreKeywordSparse * weightSparse;
       return {
         ...candidate,
         scoreRawFused,
         scoreFinalFused: candidate.block.isNotable
-          ? scoreRawFused * this.config.significanceCoefficient
+          ? scoreRawFused * this.config.notableSearchResultBonus
           : scoreRawFused,
       };
     });
@@ -504,7 +605,7 @@ export class NarrativeEngine<
   private selectRepresentations(
     representations: readonly NarrativeRepresentation[],
   ): NarrativeRepresentation[] {
-    if (this.config.maxUniqueEntityRepresentations === 0) return [];
+    if (this.config.maximumEntityRepresentations === 0) return [];
     const groups = new Map<string, NarrativeRepresentation[]>();
     for (const representation of representations) {
       if (representation.uri.trim().length === 0) continue;
@@ -516,16 +617,16 @@ export class NarrativeEngine<
     const selected: NarrativeRepresentation[] = [];
     for (const group of groups.values()) {
       let representation: NarrativeRepresentation | undefined;
-      if (this.config.representationProperties.length === 0) {
+      if (this.config.preferredEntityRepresentationProperties.length === 0) {
         representation = group[0];
       } else {
-        for (const property of this.config.representationProperties) {
+        for (const property of this.config.preferredEntityRepresentationProperties) {
           representation = group.find((candidate) => candidate.property === property);
           if (representation) break;
         }
       }
       if (representation) selected.push(representation);
-      if (selected.length >= this.config.maxUniqueEntityRepresentations) break;
+      if (selected.length >= this.config.maximumEntityRepresentations) break;
     }
     return selected;
   }
@@ -543,29 +644,27 @@ export class NarrativeEngine<
   }): string {
     const sections: string[] = [];
     if (context.loreAtoms.length > 0) {
-      sections.push(`Essential facts of the story: ${context.loreAtoms.map((atom) => atom.content).join(" ")}`);
+      sections.push(`${this.config.contextProse.loreHeading ?? "Essential facts of the story:"} ${context.loreAtoms.map((atom) => atom.content).join(" ")}`);
     }
     if (context.chronologicalBlocks.length > 0) {
       const oldestFirst = [...context.chronologicalBlocks].reverse();
       const blockLines = oldestFirst.map((block) => {
-        if (!this.config.temporalPhrasing) return `Entry ${String(block.id)}: ${block.content}`;
+        if (!this.config.includeTemporalContextLabels) {
+          return `${this.config.contextProse.entryLabel ?? "Entry"} ${String(block.id)}: ${block.content}`;
+        }
         const offset = Math.max(1, context.metadata.totalBlockCount - block.index + 1);
-        return `${offset} ${offset === 1 ? "storyblock" : "storyblocks"} ago: ${block.content}`;
+        const unit = offset === 1
+          ? (this.config.contextProse.singularRelativeTimeUnit ?? "beat")
+          : (this.config.contextProse.pluralRelativeTimeUnit ?? "beats");
+        return `${offset} ${unit} ago: ${block.content}`;
       });
-      sections.push(`Historical context:\n${blockLines.join("\n")}`);
+      sections.push(`${this.config.contextProse.historyHeading ?? "Historical context:"}\n${blockLines.join("\n")}`);
     }
 
-    const pxPayload = {
-      entities: context.entities,
-      representations: context.representations,
-      references: context.references,
-      relationships: context.relationships,
-      eventHistory: context.eventHistory,
-    };
-    if (Object.values(pxPayload).some((values) => values.length > 0)) {
-      sections.push(`Structured entity context:\n${JSON.stringify(pxPayload)}`);
-    }
     sections.push(context.inputQuery);
+    if (context.entities.length > 0) {
+      sections.push(`${this.config.contextProse.entitiesHeading ?? "entities:"}\n${JSON.stringify(context.entities)}`);
+    }
     return sections.join("\n\n");
   }
 

@@ -21,7 +21,15 @@ export interface NarrativeDataProvider<
     limit: number,
   ): Promise<readonly HybridCandidate<TBlock>[]>;
   getBlocksByIndices(channelId: string, indices: readonly number[]): Promise<readonly TBlock[]>;
+  /** Return the newest blocks directly, avoiding a count-and-index scan when supported. */
+  getNewestBlocks?(channelId: string, limit: number): Promise<readonly TBlock[]>;
   getNotableEvents(channelId: string): Promise<readonly TBlock[]>;
+  /** Return only the newest notable blocks that are not already in context. */
+  getNewestNotableBlocks?(
+    channelId: string,
+    limit: number,
+    excludeBlockIds?: readonly string[],
+  ): Promise<readonly TBlock[]>;
   insertBlock(channelId: string, block: TBlockInput): Promise<TBlock>;
   getProviderType(): string;
 }
@@ -144,6 +152,24 @@ export class MemoryProvider<
 
   async getNotableEvents(channelId: string): Promise<readonly TBlock[]> {
     return this.getChannel(channelId).blocks.filter((block) => block.isNotable === true);
+  }
+
+  async getNewestBlocks(channelId: string, limit: number): Promise<readonly TBlock[]> {
+    return [...this.getChannel(channelId).blocks]
+      .sort((left, right) => right.index - left.index)
+      .slice(0, limit);
+  }
+
+  async getNewestNotableBlocks(
+    channelId: string,
+    limit: number,
+    excludeBlockIds: readonly string[] = [],
+  ): Promise<readonly TBlock[]> {
+    const excluded = new Set(excludeBlockIds);
+    return [...this.getChannel(channelId).blocks]
+      .filter((block) => block.isNotable === true && !excluded.has(String(block.id)))
+      .sort((left, right) => right.index - left.index)
+      .slice(0, limit);
   }
 
   async insertBlock(channelId: string, input: TBlockInput): Promise<TBlock> {

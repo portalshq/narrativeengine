@@ -79,6 +79,71 @@ describe("NarrativeEngine retrieval", () => {
     expect(context.prompt.indexOf("Block 1")).toBeLessThan(context.prompt.indexOf("Block 2"));
     expect(context.prompt.indexOf("Block 2")).toBeLessThan(context.prompt.indexOf("Block 3"));
   });
+
+  it("executes a readable recent-then-notable retrieval recipe without search", async () => {
+    const blocks = Array.from({ length: 20 }, (_, offset) =>
+      makeBlock(offset + 1, `Block ${offset + 1}`, offset + 1 === 3 || offset + 1 === 5 || offset + 1 === 19),
+    );
+    const getHybridSearchCandidates = vi.fn();
+    const getNotableEvents = vi.fn().mockResolvedValue(blocks.filter((block) => block.isNotable));
+    const getNewestBlocks = vi.fn(async (_channelId: string, limit: number) =>
+      blocks.slice(-limit).reverse(),
+    );
+    const getNewestNotableBlocks = vi.fn(async (
+      _channelId: string,
+      limit: number,
+      excludedIds: readonly string[] = [],
+    ) => blocks.filter((block) => block.isNotable && !excludedIds.includes(String(block.id))).reverse().slice(0, limit));
+    const provider = makeProvider({
+      getBlockCount: vi.fn().mockResolvedValue(20),
+      getBlocksByIndices: vi.fn(async (_channelId: string, indices: readonly number[]) =>
+        blocks.filter((block) => indices.includes(block.index)),
+      ),
+      getHybridSearchCandidates,
+      getNotableEvents,
+      getNewestBlocks,
+      getNewestNotableBlocks,
+    });
+    const engine = new NarrativeEngine({
+      dataProvider: provider,
+      config: {
+        blockRetrieval: {
+          maximumBlocks: 12,
+          steps: [
+            { takeNewestBlocks: 7 },
+            { addNotableBlocksUntilThereAre: 5 },
+          ],
+        },
+      },
+    });
+
+    const context = await engine.buildContext({ channelId: "alpha", inputQuery: "Next" });
+
+    expect(getHybridSearchCandidates).not.toHaveBeenCalled();
+    expect(getNewestBlocks).toHaveBeenCalledWith("alpha", 7);
+    expect(getNewestNotableBlocks).toHaveBeenCalledWith("alpha", 4, ["20", "19", "18", "17", "16", "15", "14"]);
+    expect(getNotableEvents).not.toHaveBeenCalled();
+    expect(context.chronologicalBlocks.map((block) => block.index)).toEqual([20, 19, 18, 17, 16, 15, 14, 5, 3]);
+    expect(context.chronologicalBlocks.filter((block) => block.isNotable).length).toBe(3);
+  });
+
+  it("customizes prose and permits full context rendering", async () => {
+    const provider = makeProvider({
+      getBlockCount: vi.fn().mockResolvedValue(1),
+      getLoreAtoms: vi.fn().mockResolvedValue([{ id: 1, content: "Mira is brave", happenedAt: 1 }]),
+    });
+    const engine = new NarrativeEngine({
+      dataProvider: provider,
+      config: {
+        contextProse: { loreHeading: "Known:", entitiesHeading: "Cast:" },
+        renderContext: (context) => `Story request: ${context.inputQuery}`,
+      },
+    });
+
+    const context = await engine.buildContext({ channelId: "alpha", inputQuery: "Continue" });
+
+    expect(context.prompt).toBe("Story request: Continue");
+  });
 });
 
 describe("NarrativeEngine PX and generation", () => {
@@ -132,7 +197,8 @@ describe("NarrativeEngine PX and generation", () => {
 
     expect(order).toEqual(["px", "generate", "insert"]);
     expect(result.block).toMatchObject({ id: 10, content: "Generated" });
-    expect(result.context.prompt).toContain("Structured entity context");
+    expect(result.context.prompt).toContain("entities:");
+    expect(result.context.prompt).not.toContain("representations");
   });
 
   it("continues with a warning by default and can fail hard on PX errors", async () => {

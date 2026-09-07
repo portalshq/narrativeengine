@@ -27,6 +27,8 @@ describe("MemoryProvider", () => {
     await expect(provider.getLoreAtoms("alpha")).resolves.toEqual([lore[0]]);
     await expect(provider.getBlocksByIndices("alpha", [2])).resolves.toEqual([blocks[1]]);
     await expect(provider.getNotableEvents("alpha")).resolves.toEqual([blocks[0]]);
+    await expect(provider.getNewestBlocks("alpha", 1)).resolves.toEqual([blocks[1]]);
+    await expect(provider.getNewestNotableBlocks("alpha", 1, ["1"])).resolves.toEqual([]);
     await expect(provider.getHybridSearchCandidates("alpha", "council", 1)).resolves.toEqual([
       { block: blocks[0], scoreVectorDense: 0.8, scoreKeywordSparse: 0.8 },
     ]);
