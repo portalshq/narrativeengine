@@ -8,7 +8,7 @@ Arguments:
 Options:
   -c, --commit <COMMIT>      Commit hash to revert
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
-  -a, --author <AUTHOR>      Author identifier [default: px-cli]
+  -a, --author <AUTHOR>      Author identifier [default: px]
   -v, --verbose              Enable verbose debug logging
       --remote               Resolve repository reads through the configured Lore server (the default)
       --local                Resolve repository reads from an explicitly checked-out local working tree

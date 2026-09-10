@@ -43,7 +43,7 @@ wheels = [
 
 [[package]]
 name = "px-sdk"
-version = "0.8.15"
+version = "0.8.16"
 source = { editable = "." }
 
 [package.optional-dependencies]
