@@ -114,8 +114,8 @@ mod tests {
         for (provider, remote, origin) in [
             (
                 "local",
-                "grpc://localhost:41337/repo",
-                "http://localhost:41339",
+                "grpc://127.0.0.1:41337/repo",
+                "http://127.0.0.1:41339",
             ),
             (
                 "portals-cloud",
