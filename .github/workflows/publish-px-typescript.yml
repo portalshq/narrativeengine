@@ -35,15 +35,15 @@ jobs:
           node-version: lts/*
 
       - run: npm ci
-        working-directory: typescript/px
+        working-directory: typescript/px-sdk
 
       - run: npx napi build --cargo-cwd . --platform --release --target ${{ matrix.target }}
-        working-directory: typescript/px
+        working-directory: typescript/px-sdk
 
       - uses: actions/upload-artifact@v4
         with:
           name: napi-px-${{ matrix.target }}
-          path: typescript/px/*.node
+          path: typescript/px-sdk/*.node
 
   publish:
     needs: build
@@ -66,21 +66,21 @@ jobs:
       - run: npm install -g npm@^11
 
       - run: npm ci
-        working-directory: typescript/px
+        working-directory: typescript/px-sdk
 
       - uses: actions/download-artifact@v4
         with:
           pattern: napi-px-*
-          path: typescript/px/
+          path: typescript/px-sdk/
           merge-multiple: true
 
       - run: npm run build:types
-        working-directory: typescript/px
+        working-directory: typescript/px-sdk
 
-      - run: ls -la typescript/px/*.node
+      - run: ls -la typescript/px-sdk/*.node
 
       # Publish via npm Trusted Publishing (OIDC): no NODE_AUTH_TOKEN.
       # Requires a trusted publisher on npmjs.com for @portalshq/px
       # pointing at portalshq/narrativeengine + this workflow file (+ production env).
       - run: npm publish --access public
-        working-directory: typescript/px
+        working-directory: typescript/px-sdk
