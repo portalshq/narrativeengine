@@ -20,7 +20,7 @@ license = "MIT"
 authors = ["Cinematic Canvas <team@cinematiccanvas.com>"]
 
 [workspace.dependencies]
-px-core = { package = "portalshq-px", path = "crates/px-core" }
+px-core = { package = "portalshq-px", version = "0.8", path = "crates/px-core" }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }

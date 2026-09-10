@@ -7,7 +7,7 @@ authors.workspace = true
 description = "HTTP resolver server for the PX protocol"
 
 [dependencies]
-px-core = { package = "portalshq-px", path = "../px-core" }
+px-core = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 tower = { workspace = true }

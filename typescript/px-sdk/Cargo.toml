@@ -10,7 +10,7 @@ description = "NAPI-RS bindings for the PX SDK."
 crate-type = ["cdylib"]
 
 [dependencies]
-px-core = { package = "portalshq-px", path = "../../crates/px-core" }
+px-core = { workspace = true }
 napi = { workspace = true, features = ["tokio_rt"] }
 napi-derive = { workspace = true }
 serde_json = { workspace = true }
