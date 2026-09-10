@@ -383,7 +383,7 @@ impl ProviderConfig {
                     anyhow::bail!(
                         "Invalid remote_url '{}' in provider.toml. \
                          URL must start with 'lore://', 'lores://', 'grpc://', or 'grpcs://'. \
-                         Example: lore://localhost:41337",
+                         Example: lore://127.0.0.1:41337",
                         url
                     );
                 }

@@ -72,7 +72,7 @@ impl Provider for LocalProvider {
     }
 
     fn lore_url_base(&self) -> Result<String> {
-        Ok("lore://localhost:41337".to_string())
+        Ok("lore://127.0.0.1:41337".to_string())
     }
 
     fn workspace_id(&self) -> &str {

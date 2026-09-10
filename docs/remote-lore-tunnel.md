@@ -49,7 +49,7 @@ Treat every returned presigned URL as a bearer secret until its expiry.
 ### 3. Configure PX (local machine)
 
 ```bash
-export PX_LORE_URL_BASE='lore://localhost:41337'
+export PX_LORE_URL_BASE='lore://127.0.0.1:41337'
 export PX_WORKSPACE_ID='default'
 ```
 
@@ -87,7 +87,7 @@ The `R:` prefix tells the chisel **server** to listen on those ports and forward
 ### 3. Configure PX (remote machine)
 
 ```bash
-export PX_LORE_URL_BASE='lore://localhost:41337'
+export PX_LORE_URL_BASE='lore://127.0.0.1:41337'
 export PX_WORKSPACE_ID='default'
 ```
 

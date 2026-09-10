@@ -82,7 +82,7 @@ pub fn configured_origin(px_home: &Path, remote: &str) -> Result<String> {
         .and_then(toml::Value::as_str)
         .unwrap_or_else(
             || match config.get("provider_type").and_then(toml::Value::as_str) {
-                Some("local") => "lore://localhost:41337",
+                Some("local") => "lore://127.0.0.1:41337",
                 Some("portals-cloud") => super::portals_cloud::PORTALS_CLOUD_URL,
                 _ => "",
             },

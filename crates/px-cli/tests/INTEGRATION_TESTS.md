@@ -9,9 +9,9 @@ This directory contains integration test suites for the PX CLI.
 Tests px functionality against a local lore server.
 
 **Requirements:**
-- A running local lore server at `lore://localhost:41337`
+- A running local lore server at `lore://127.0.0.1:41337`
 - The `lore` binary in PATH
-- Environment: `PX_LORE_URL_BASE=lore://localhost:41337`
+- Environment: `PX_LORE_URL_BASE=lore://127.0.0.1:41337`
 
 **Test Coverage:**
 - Connect to local lore server and initialize px

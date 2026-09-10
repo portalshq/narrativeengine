@@ -364,11 +364,11 @@ impl LoreBackend {
                     }
                 }
                 "portals-cloud" => return PORTALS_CLOUD_URL.to_string(),
-                "local" => return "lore://localhost:41337".to_string(),
+                "local" => return "lore://127.0.0.1:41337".to_string(),
                 _ => {}
             }
         }
-        "lore://localhost:41337".to_string()
+        "lore://127.0.0.1:41337".to_string()
     }
     /// Create a new Lore backend.
     ///
@@ -443,7 +443,7 @@ impl LoreBackend {
     ///
     /// | Env var               | Default                   |
     /// |-----------------------|---------------------------|
-    /// | `PX_LORE_URL_BASE`   | provider-dependent; local uses `lore://localhost:41337` |
+    /// | `PX_LORE_URL_BASE`   | provider-dependent; local uses `lore://127.0.0.1:41337` |
     /// | `PX_WORKSPACE_ID`    | `default`                 |
     ///
     /// Note: For new code, prefer using the RepositoryApi with Provider architecture
@@ -464,7 +464,7 @@ impl LoreBackend {
         let workspace_from_env = std::env::var("PX_WORKSPACE_ID").ok();
 
         if url_from_env.is_some() || workspace_from_env.is_some() {
-            let base = url_from_env.unwrap_or_else(|| "lore://localhost:41337".to_string());
+            let base = url_from_env.unwrap_or_else(|| "lore://127.0.0.1:41337".to_string());
             let workspace_id = workspace_from_env.unwrap_or_else(|| "default".to_string());
             tracing::debug!(
                 url_base = %base,
@@ -490,12 +490,12 @@ impl LoreBackend {
                 match config.provider_type.as_str() {
                     "local" => {
                         tracing::debug!(
-                            url_base = "lore://localhost:41337",
+                            url_base = "lore://127.0.0.1:41337",
                             workspace_id = "default",
                             "LoreBackend::from_env using local provider from PX_INIT_BASE_DIR"
                         );
                         return Self {
-                            remote_url: "lore://localhost:41337".to_string(),
+                            remote_url: "lore://127.0.0.1:41337".to_string(),
                             workspace_id: "default".to_string(),
                         };
                     }
@@ -565,12 +565,12 @@ impl LoreBackend {
                 "local" => {
                     // Local provider uses localhost defaults
                     tracing::debug!(
-                        url_base = "lore://localhost:41337",
+                        url_base = "lore://127.0.0.1:41337",
                         workspace_id = "default",
                         "LoreBackend::from_env using local provider configuration"
                     );
                     return Self {
-                        remote_url: "lore://localhost:41337".to_string(),
+                        remote_url: "lore://127.0.0.1:41337".to_string(),
                         workspace_id: "default".to_string(),
                     };
                 }
@@ -611,7 +611,7 @@ impl LoreBackend {
         }
 
         // Priority 3: Defaults
-        let base = "lore://localhost:41337".to_string();
+        let base = "lore://127.0.0.1:41337".to_string();
         let workspace_id = "default".to_string();
         tracing::debug!(
             url_base = %base,
@@ -1344,7 +1344,7 @@ mod structured_output_tests {
         let repository = concat!(
             "{\"tagName\":\"repositoryData\",\"data\":{",
             "\"id\":\"0123456789abcdef0123456789abcdef\",",
-            "\"remoteUrl\":\"lore://localhost:41337/repo\"}}\n",
+            "\"remoteUrl\":\"lore://127.0.0.1:41337/repo\"}}\n",
             "{\"tagName\":\"complete\",\"data\":{}}"
         );
         let file = concat!(
@@ -1465,7 +1465,7 @@ mod tests {
             ],
             || {
                 let backend = LoreBackend::from_env();
-                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.remote_url, "lore://127.0.0.1:41337");
                 assert_eq!(backend.workspace_id, "default");
             },
         );
@@ -1557,7 +1557,7 @@ workspace_id = "provider-ws"
             || {
                 let backend = LoreBackend::from_env();
                 // Should use defaults since provider config doesn't exist
-                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.remote_url, "lore://127.0.0.1:41337");
                 assert_eq!(backend.workspace_id, "default");
             },
         );
@@ -1585,7 +1585,7 @@ provider_type = "local"
             ],
             || {
                 let backend = LoreBackend::from_env();
-                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.remote_url, "lore://127.0.0.1:41337");
                 assert_eq!(backend.workspace_id, "default");
             },
         );
@@ -1670,7 +1670,7 @@ provider_type = "unknown-provider"
             ],
             || {
                 let backend = LoreBackend::from_env();
-                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.remote_url, "lore://127.0.0.1:41337");
                 assert_eq!(backend.workspace_id, "default");
             },
         );

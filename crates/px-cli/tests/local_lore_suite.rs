@@ -2,9 +2,9 @@
 //!
 //! This suite tests px functionality against a local lore server.
 //! Requires:
-//! - A running local lore server at lore://localhost:41337
+//! - A running local lore server at lore://127.0.0.1:41337
 //! - The lore binary in PATH
-//! - Environment: PX_LORE_URL_BASE=lore://localhost:41337
+//! - Environment: PX_LORE_URL_BASE=lore://127.0.0.1:41337
 //!
 //! Run with:
 //!   cargo test -p portalshq-px-cli --test local_lore_suite --features local-e2e -- --test-threads=1
@@ -25,7 +25,7 @@ use tempfile::TempDir;
 fn px_cmd() -> Command {
     let mut cmd = Command::cargo_bin("px").expect("Failed to find px binary");
     cmd.timeout(std::time::Duration::from_secs(300));
-    cmd.env("PX_LORE_URL_BASE", "lore://localhost:41337");
+    cmd.env("PX_LORE_URL_BASE", "lore://127.0.0.1:41337");
     cmd.env("PX_WORKSPACE_ID", "default");
     cmd
 }
@@ -164,7 +164,7 @@ fn test_local_lore_clone_repository() {
         .arg(tmp.path())
         .arg(&repository)
         .arg("origin")
-        .arg(format!("lore://localhost:41337/{}", repository))
+        .arg(format!("lore://127.0.0.1:41337/{}", repository))
         .assert()
         .success();
 
@@ -183,7 +183,7 @@ fn test_local_lore_clone_repository() {
         .arg("pull")
         .arg("--base-dir")
         .arg(clone_tmp.path())
-        .arg(format!("lore://localhost:41337/{}", repository))
+        .arg(format!("lore://127.0.0.1:41337/{}", repository))
         .assert()
         .success();
 
@@ -223,7 +223,7 @@ fn test_local_lore_pull_entity_materializes_manifests() {
         .args(["remote", "add", "--base-dir"])
         .arg(source.path())
         .args([&repository, "origin"])
-        .arg(format!("lore://localhost:41337/{repository}"))
+        .arg(format!("lore://127.0.0.1:41337/{repository}"))
         .assert()
         .success();
     px_cmd()
@@ -284,7 +284,7 @@ fn test_local_lore_list_remote_repository_and_entities() {
         .args(["remote", "add", "--base-dir"])
         .arg(source.path())
         .args([&repository, "origin"])
-        .arg(format!("lore://localhost:41337/{repository}"))
+        .arg(format!("lore://127.0.0.1:41337/{repository}"))
         .assert()
         .success();
     px_cmd()
@@ -349,7 +349,7 @@ fn test_local_lore_remote_read_command_suite() {
         .args(["remote", "add", "--base-dir"])
         .arg(source.path())
         .args([&repository, "origin"])
-        .arg(format!("lore://localhost:41337/{repository}"))
+        .arg(format!("lore://127.0.0.1:41337/{repository}"))
         .assert()
         .success();
     px_cmd()
@@ -442,7 +442,7 @@ fn test_local_lore_remote_resolve_reads_manifest_from_parent_tree() {
         .args(["remote", "add", "--base-dir"])
         .arg(source.path())
         .args([&repository, "origin"])
-        .arg(format!("lore://localhost:41337/{repository}"))
+        .arg(format!("lore://127.0.0.1:41337/{repository}"))
         .assert()
         .success();
     px_cmd()
@@ -1200,7 +1200,7 @@ fn test_local_lore_remote_operations() {
         .arg(tmp.path())
         .arg(&repository)
         .arg("origin")
-        .arg(format!("lore://localhost:41337/{}", repository))
+        .arg(format!("lore://127.0.0.1:41337/{}", repository))
         .assert()
         .success();
 
@@ -1270,7 +1270,7 @@ fn test_local_lore_sync_operations() {
         .arg(tmp.path())
         .arg(&repository)
         .arg("origin")
-        .arg(format!("lore://localhost:41337/{}", repository))
+        .arg(format!("lore://127.0.0.1:41337/{}", repository))
         .assert()
         .success();
 

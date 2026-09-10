@@ -4,8 +4,8 @@
 //! following the "Quick Start" and "Usage Guide" workflows from documentation.
 //!
 //! Prerequisites:
-//!   - A running local lore server at `lore://localhost:41337` (for provider validation)
-//!     and `grpc://localhost:41337` (for actual CLI operations).
+//!   - A running local lore server at `lore://127.0.0.1:41337` (for provider validation)
+//!     and `grpc://127.0.0.1:41337` (for actual CLI operations).
 //!   - The `lore` binary in PATH.
 //!
 //! Known Issues:
@@ -29,7 +29,7 @@ use tempfile::TempDir;
 ///
 /// Uses `--provider remote` to avoid each test starting its own lore server
 /// daemon (which would conflict on ports 41337/41339).  The lore server must
-/// already be running at `lore://localhost:41337`.
+/// already be running at `lore://127.0.0.1:41337`.
 fn px_cmd(px_home: &Path) -> Command {
     let mut cmd = Command::cargo_bin("px").expect("Failed to find px binary");
     cmd.timeout(std::time::Duration::from_secs(30));
@@ -38,7 +38,7 @@ fn px_cmd(px_home: &Path) -> Command {
     cmd.env("PX_DIR", px_home);
     // Use gRPC transport for tests — QUIC (lore://) may not work in all
     // environments (e.g. macOS sandbox).  gRPC on TCP 41337 is reliable.
-    cmd.env("PX_LORE_URL_BASE", "grpc://localhost:41337");
+    cmd.env("PX_LORE_URL_BASE", "grpc://127.0.0.1:41337");
     cmd.env("PX_WORKSPACE_ID", "default");
 
     cmd
@@ -56,7 +56,7 @@ fn init_provider_and_universe(px_home: &Path, repository: &str) {
         .arg("--provider")
         .arg("remote")
         .arg("--remote-url")
-        .arg("lore://localhost:41337")
+        .arg("lore://127.0.0.1:41337")
         .arg("--workspace-id")
         .arg("default")
         .assert()

@@ -49,7 +49,7 @@ cleanup() {
 trap cleanup EXIT
 
 if curl --fail --silent --show-error --max-time 2 "$LORE_HEALTH_URL" >/dev/null; then
-  echo "Using existing healthy Lore server at lore://localhost:41337"
+  echo "Using existing healthy Lore server at lore://127.0.0.1:41337"
 else
   SERVER_HOME="$(mktemp -d "${TMPDIR:-/tmp}/px-lore-integration.XXXXXX")"
   BOOTSTRAP_REPOSITORY="release-integration-bootstrap-$(date +%s)-$$"

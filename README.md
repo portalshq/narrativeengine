@@ -100,7 +100,7 @@ px init toystory --provider local
 px init --provider local
 
 # Initialize with remote provider
-px init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
+px init --provider remote --remote-url lore://127.0.0.1:41337 --workspace-id my-workspace
 
 # Initialize with Portals Cloud
 px auth login
