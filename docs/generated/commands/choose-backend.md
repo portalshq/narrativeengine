@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap choose backend
+# px choose backend
 Choose backend provider
 
 
 ## Synopsis
 ```bash
-nap backend [OPTIONS] <PROVIDER>
+px backend [OPTIONS] <PROVIDER>
 ```
 
 
@@ -40,5 +40,5 @@ nap backend [OPTIONS] <PROVIDER>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `backend` command
+`crates/px-cli/src/main.rs` — `backend` command
 

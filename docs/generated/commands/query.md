@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap query
+# px query
 Query a subtree from a manifest
 
 
 ## Synopsis
 ```bash
-nap query [OPTIONS] <URI> <PATH>
+px query [OPTIONS] <URI> <PATH>
 ```
 
 
@@ -21,7 +21,7 @@ nap query [OPTIONS] <URI> <PATH>
 | Name | Description | Required |
 |---|---|---|
 | path | Dot-notation path. e.g., "appearances.audienceVotes" | Yes |
-| uri | NAP URI | Yes |
+| uri | PX URI | Yes |
 
 
 ## Options
@@ -42,21 +42,21 @@ nap query [OPTIONS] <URI> <PATH>
 
 | Variable | Description |
 |---|---|
-| NAP\_OUTPUT | Override for --format |
+| PX\_OUTPUT | Override for --format |
 
 
 ## Examples
 ```bash
 # Query a subtree
-nap query nap://toystory/character/woody properties
+px query px://toystory/character/woody properties
 
 # Query nested properties
-nap query nap://toystory/character/woody properties.toy_type
+px query px://toystory/character/woody properties.toy_type
 
 # Query as YAML
-nap query nap://toystory/character/woody properties -f yaml
+px query px://toystory/character/woody properties -f yaml
 ```
 
 ## Source
-`crates/nap-cli/src/main.rs` — `query` command
+`crates/px-cli/src/main.rs` — `query` command
 

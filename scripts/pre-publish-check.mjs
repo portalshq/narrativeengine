@@ -51,8 +51,8 @@ const pyprojectVersionNE = readFileSync(
   "utf-8",
 ).match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
-const pyprojectVersionNAP = readFileSync(
-  resolve(rootDir, "python/nap-sdk/pyproject.toml"),
+const pyprojectVersionPx = readFileSync(
+  resolve(rootDir, "python/px-sdk/pyproject.toml"),
   "utf-8",
 ).match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
@@ -60,31 +60,31 @@ const packageVersionNE = JSON.parse(
   readFileSync(resolve(rootDir, "typescript/narrativeengine/package.json"), "utf-8"),
 ).version;
 
-const packageVersionNAP = JSON.parse(
-  readFileSync(resolve(rootDir, "typescript/nap-sdk/package.json"), "utf-8"),
+const packageVersionPx = JSON.parse(
+  readFileSync(resolve(rootDir, "typescript/px-sdk/package.json"), "utf-8"),
 ).version;
 
 // Guard: all must be parseable
 if (!cargoVersion) fail("Could not extract version from Cargo.toml");
 if (!pyprojectVersionNE)
   fail("Could not extract version from python/narrativeengine/pyproject.toml");
-if (!pyprojectVersionNAP)
-  fail("Could not extract version from python/nap-sdk/pyproject.toml");
+if (!pyprojectVersionPx)
+  fail("Could not extract version from python/px-sdk/pyproject.toml");
 if (!packageVersionNE)
   fail("Could not extract version from typescript/narrativeengine/package.json");
-if (!packageVersionNAP)
-  fail("Could not extract version from typescript/nap-sdk/package.json");
+if (!packageVersionPx)
+  fail("Could not extract version from typescript/px-sdk/package.json");
 
 // Compare (only meaningful if all parsed)
-if (cargoVersion && pyprojectVersionNE && pyprojectVersionNAP && packageVersionNE && packageVersionNAP) {
+if (cargoVersion && pyprojectVersionNE && pyprojectVersionPx && packageVersionNE && packageVersionPx) {
   if (cargoVersion !== pyprojectVersionNE)
     fail(`Cargo.toml (${cargoVersion}) ≠ python/narrativeengine/pyproject.toml (${pyprojectVersionNE})`);
-  if (cargoVersion !== pyprojectVersionNAP)
-    fail(`Cargo.toml (${cargoVersion}) ≠ python/nap-sdk/pyproject.toml (${pyprojectVersionNAP})`);
+  if (cargoVersion !== pyprojectVersionPx)
+    fail(`Cargo.toml (${cargoVersion}) ≠ python/px-sdk/pyproject.toml (${pyprojectVersionPx})`);
   if (cargoVersion !== packageVersionNE)
     fail(`Cargo.toml (${cargoVersion}) ≠ typescript/narrativeengine/package.json (${packageVersionNE})`);
-  if (cargoVersion !== packageVersionNAP)
-    fail(`Cargo.toml (${cargoVersion}) ≠ typescript/nap-sdk/package.json (${packageVersionNAP})`);
+  if (cargoVersion !== packageVersionPx)
+    fail(`Cargo.toml (${cargoVersion}) ≠ typescript/px-sdk/package.json (${packageVersionPx})`);
 
   if (exitCode === 0) pass(`All packages declare version ${cargoVersion}`);
 }

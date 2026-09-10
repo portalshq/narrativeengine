@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap verify
+# px verify
 Verify a manifest signature (stub for v0)
 
 
 ## Synopsis
 ```bash
-nap verify <URI>
+px verify <URI>
 ```
 
 
@@ -20,7 +20,7 @@ nap verify <URI>
 
 | Name | Description | Required |
 |---|---|---|
-| uri | NAP URI | Yes |
+| uri | PX URI | Yes |
 
 
 ## Flags
@@ -31,5 +31,5 @@ nap verify <URI>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `verify` command
+`crates/px-cli/src/main.rs` — `verify` command
 

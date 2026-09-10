@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap history
+# px history
 View commit history for an entity
 
 
 ## Synopsis
 ```bash
-nap history [OPTIONS] <URI>
+px history [OPTIONS] <URI>
 ```
 
 
@@ -20,7 +20,7 @@ nap history [OPTIONS] <URI>
 
 | Name | Description | Required |
 |---|---|---|
-| uri | NAP URI | Yes |
+| uri | PX URI | Yes |
 
 
 ## Options
@@ -38,5 +38,5 @@ nap history [OPTIONS] <URI>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `history` command
+`crates/px-cli/src/main.rs` — `history` command
 

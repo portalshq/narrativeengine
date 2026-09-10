@@ -1,51 +1,51 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# NAP CLI Reference
-The `nap` command-line interface (v0.8.14) provides tools for creating, resolving, and managing narrative resources using the Narrative Addressing Protocol.
+# PX CLI Reference
+The `px` command-line interface (v0.8.15) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview
 
 | Command | Description |
 |---|---|
-| [\`nap add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
-| [\`nap auth\`](docs/generated/commands/auth.md) | Manage secure Portals Cloud authentication |
-| [\`nap backend\`](docs/generated/commands/backend.md) | Configure or inspect the version-control backend |
-| [\`nap branch\`](docs/generated/commands/branch.md) | Create or list branches |
-| [\`nap choose\`](docs/generated/commands/choose.md) | Choose backend provider |
-| [\`nap commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
-| [\`nap content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
-| [\`nap create\`](docs/generated/commands/create.md) | Create a new entity manifest |
-| [\`nap diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
-| [\`nap doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
-| [\`nap head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
-| [\`nap history\`](docs/generated/commands/history.md) | View commit history for an entity |
-| [\`nap init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
-| [\`nap install\`](docs/generated/commands/install.md) | Install required dependencies |
-| [\`nap list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
-| [\`nap merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
-| [\`nap presign\`](docs/generated/commands/presign.md) | Create a time-limited public URL for a committed representation |
-| [\`nap publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
-| [\`nap pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
-| [\`nap push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
-| [\`nap query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
-| [\`nap remote\`](docs/generated/commands/remote.md) | Manage remotes on a repository |
-| [\`nap resolve\`](docs/generated/commands/resolve.md) | Resolve a NAP URI to its manifest or a subtree |
-| [\`nap revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
-| [\`nap schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
-| [\`nap set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
-| [\`nap sign\`](docs/generated/commands/sign.md) | Sign a manifest (stub for v0) |
-| [\`nap status\`](docs/generated/commands/status.md) | Show system status |
-| [\`nap switch\`](docs/generated/commands/switch.md) | Switch to a branch |
-| [\`nap sync\`](docs/generated/commands/sync.md) | Sync with remote |
-| [\`nap validate\`](docs/generated/commands/validate.md) | Validate a manifest against the NAP schema |
-| [\`nap verify\`](docs/generated/commands/verify.md) | Verify a manifest signature (stub for v0) |
+| [\`px add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
+| [\`px auth\`](docs/generated/commands/auth.md) | Manage secure Portals Cloud authentication |
+| [\`px backend\`](docs/generated/commands/backend.md) | Configure or inspect the version-control backend |
+| [\`px branch\`](docs/generated/commands/branch.md) | Create or list branches |
+| [\`px choose\`](docs/generated/commands/choose.md) | Choose backend provider |
+| [\`px commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
+| [\`px content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
+| [\`px create\`](docs/generated/commands/create.md) | Create a new entity manifest |
+| [\`px diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
+| [\`px doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
+| [\`px head-hash\`](docs/generated/commands/head-hash.md) | Show the current HEAD commit hash |
+| [\`px history\`](docs/generated/commands/history.md) | View commit history for an entity |
+| [\`px init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
+| [\`px install\`](docs/generated/commands/install.md) | Install required dependencies |
+| [\`px list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
+| [\`px merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
+| [\`px presign\`](docs/generated/commands/presign.md) | Create a time-limited public URL for a committed representation |
+| [\`px publish\`](docs/generated/commands/publish.md) | Publish changes to remote |
+| [\`px pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
+| [\`px push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
+| [\`px query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
+| [\`px remote\`](docs/generated/commands/remote.md) | Manage remotes on a repository |
+| [\`px resolve\`](docs/generated/commands/resolve.md) | Resolve a PX URI to its manifest or a subtree |
+| [\`px revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
+| [\`px schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
+| [\`px set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
+| [\`px sign\`](docs/generated/commands/sign.md) | Sign a manifest (stub for v0) |
+| [\`px status\`](docs/generated/commands/status.md) | Show system status |
+| [\`px switch\`](docs/generated/commands/switch.md) | Switch to a branch |
+| [\`px sync\`](docs/generated/commands/sync.md) | Sync with remote |
+| [\`px validate\`](docs/generated/commands/validate.md) | Validate a manifest against the PX schema |
+| [\`px verify\`](docs/generated/commands/verify.md) | Verify a manifest signature (stub for v0) |
 
 
 ## Global Options
@@ -54,31 +54,31 @@ The `nap` command-line interface (v0.8.14) provides tools for creating, resolvin
 |---|---|---|
 |     --local | Resolve repository reads from an explicitly checked-out local working tree |  |
 |     --remote | Resolve repository reads through the configured Lore server (the default) |  |
-| -d, --base-dir | Base directory for repository repositories. Defaults to $NAP\_DIR, or ~/.nap if unset |  |
+| -d, --base-dir | Base directory for repository repositories. Defaults to $PX\_DIR, or ~/.px if unset |  |
 | -v, --verbose | Enable verbose debug logging |  |
 
 
 ## Output Formats
 Most commands support `--format` (`-f`) with values `yaml` (default) or `json`.
 
-When stdout is not a terminal, JSON is used automatically. Override with `$NAP_OUTPUT`.
+When stdout is not a terminal, JSON is used automatically. Override with `$PX_OUTPUT`.
 
 
 ## Common Examples
 ```bash
 # Initialize a repository
-nap init toystory
+px init toystory
 
 # Create an entity
-nap create character woody -u toystory -n "Woody"
+px create character woody -u toystory -n "Woody"
 
 # Resolve a manifest
-nap resolve nap://toystory/character/woody
+px resolve px://toystory/character/woody
 
 # Query a subtree
-nap query nap://toystory/character/woody properties
+px query px://toystory/character/woody properties
 
 # View commit history
-nap history nap://toystory/character/woody
+px history px://toystory/character/woody
 ```
 

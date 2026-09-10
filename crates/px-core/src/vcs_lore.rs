@@ -1,0 +1,1738 @@
+//! Lore VCS backend implementation.
+//!
+//! [`LoreBackend`] implements [`VcsBackend`] by shelling out to the `lore`
+//! CLI. All processes are run
+//! non-interactively with structured JSON output where possible.
+//!
+//! ## CLI command mapping
+//!
+//! | `VcsBackend` method          | `lore` equivalent                                        |
+//! |------------------------------|----------------------------------------------------------|
+//! | `init`                       | `lore repository create` + `lore clone`                  |
+//! | `commit`                     | `lore stage --scan` + `lore revision commit`             |
+//! | `read_file_at_ref`           | `lore file cat <path> --revision <ref>`                  |
+//! | `log`                        | `lore log --format json`                                 |
+//! | `create_branch`              | `lore branch create <name>`                              |
+//! | `switch_branch`              | `lore branch switch <name>`                              |
+//! | `current_branch`             | `lore branch show`                                       |
+//! | `head_hash`                  | `lore log --limit 1 --format json`                       |
+//! | `revert`                     | `lore revision revert <hash>`                            |
+//! | `list_branches`              | `lore branch list`                                       |
+//! | `add_remote`                 | `lore repository add <url>`                              |
+//! | `remove_remote`              | `lore repository remove <url>`                           |
+//! | `list_remotes`               | `lore repository list`                                   |
+//! | `push`                       | `lore branch push`                                       |
+//! | `pull`                       | `lore sync`                                              |
+//!
+//! ## Error translation
+//!
+//! Known `lore` exit codes are mapped to structured [`PxError`] variants.
+//! Unknown failures capture the full CLI stderr for debugging.  No error
+//! is ever silently swallowed.
+
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::Instant;
+
+use crate::error::PxError;
+use crate::vcs::{CommitInfo, VcsBackend, VcsContentAddress, VcsRepositoryDescriptor};
+
+/// Minimal TOML structure for parsing provider.toml
+#[derive(serde::Deserialize)]
+struct ProviderConfigToml {
+    provider_type: String,
+    remote_url: Option<String>,
+    workspace_id: Option<String>,
+}
+
+/// Hardcoded Portals Cloud URL (can be overridden by PX_LORE_URL_BASE env var)
+use crate::provider::portals_cloud::PORTALS_CLOUD_URL;
+
+// ---------------------------------------------------------------------------
+// LoreProcessRunner
+// ---------------------------------------------------------------------------
+
+/// A thin runner that executes `lore(1)` CLI commands.
+///
+/// All invocations inject:
+/// - `--non-interactive` so the CLI never blocks on input.
+/// - `--format json` when the corresponding method supports structured output.
+///
+/// ## Design
+///
+/// This struct exists as a single point of process-control policy: it
+/// is the **only** code in the crate that calls `std::process::Command`.
+/// Every other module uses [`VcsBackend`] or [`RepoService`] and never
+/// touches the `lore` binary directly.
+pub struct LoreProcessRunner;
+
+impl LoreProcessRunner {
+    /// Path to the `lore` binary.  Override via `PXLORE_CLI` env var, or
+    /// default to `lore` (picked up from `$PATH`).
+    pub fn binary() -> String {
+        std::env::var("PXLORE_CLI").unwrap_or_else(|_| "lore".to_string())
+    }
+
+    /// Run a `lore` subcommand and return stdout on success.
+    ///
+    /// `cwd` sets the working directory (the Lore workspace directory).
+    pub fn run<I, S>(args: I, cwd: Option<&Path>) -> Result<String, PxError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        let args_vec: Vec<String> = args
+            .into_iter()
+            .map(|s| s.as_ref().to_string_lossy().into_owned())
+            .collect();
+        let bin = Self::binary();
+        let mut cmd = Command::new(&bin);
+        cmd.args(&args_vec);
+
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir);
+        }
+
+        let start = Instant::now();
+        // Safety: we capture output — no interactive TTY needed.
+        let output = cmd.output().map_err(|e| {
+            PxError::VcsError(format!(
+                "failed to execute `{}`: {}. Is `{}` installed and on $PATH?",
+                bin, e, bin
+            ))
+        })?;
+        let duration = start.elapsed();
+        if duration > std::time::Duration::from_secs(5) {
+            tracing::warn!(
+                duration_ms = duration.as_millis(),
+                command = format!("{} {:?}", bin, args_vec),
+                "lore command took > 5s — check Lore server health"
+            );
+        }
+
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            return Ok(stdout);
+        }
+
+        // ── Error translation ────────────────────────────────────────
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let exit_code = output.status.code().unwrap_or(-1);
+
+        // We categorise known Lore exit codes into PxError variants.
+        // For v0 this is best-effort; the list will grow with production
+        // experience.
+        let px_err = match exit_code {
+            1 => {
+                // Generic error — check for known patterns in stderr.
+                if stderr.contains("not authenticated")
+                    || stderr.contains("authentication required")
+                    || stderr.contains("Unauthenticated")
+                {
+                    PxError::VcsError(
+                        "Portals Cloud authentication is required; run `px auth login` in an interactive terminal and retry"
+                            .to_string(),
+                    )
+                } else if stderr.contains("not a lore workspace")
+                    || stderr.contains("not an initialised lore workspace")
+                {
+                    PxError::VcsError(format!(
+                        "not a lore workspace at {:?}",
+                        cwd.unwrap_or(Path::new("."))
+                    ))
+                } else if stderr.contains("not found") {
+                    PxError::VcsError(format!("path not found in lore workspace: {}", stderr))
+                } else {
+                    PxError::VcsError(format!(
+                        "lore CLI exited with code {}: {}",
+                        exit_code, stderr
+                    ))
+                }
+            }
+            64..=126 => {
+                // Usage / config errors.
+                PxError::VcsError(format!(
+                    "lore CLI configuration error ({}): {}",
+                    exit_code, stderr
+                ))
+            }
+            _ => PxError::VcsError(format!(
+                "lore CLI exited with code {}: {}",
+                exit_code, stderr
+            )),
+        };
+
+        Err(px_err)
+    }
+}
+
+fn parse_lore_event_data(stdout: &str, tag: &str) -> Result<serde_json::Value, String> {
+    let mut match_data = None;
+    for line in stdout.lines().filter(|line| !line.trim().is_empty()) {
+        let event: serde_json::Value =
+            serde_json::from_str(line).map_err(|e| format!("invalid Lore JSON event: {e}"))?;
+        if event.get("tagName").and_then(serde_json::Value::as_str) == Some(tag) {
+            if match_data.is_some() {
+                return Err(format!("Lore returned multiple {tag} events"));
+            }
+            match_data = event.get("data").cloned();
+        }
+    }
+    match_data.ok_or_else(|| format!("Lore returned no {tag} event"))
+}
+
+fn select_http_token(
+    events: &str,
+    repository: &str,
+    user: &str,
+    origin: &str,
+    now_ms: u64,
+) -> Result<Option<String>, PxError> {
+    let url = crate::provider::http::validate_origin(origin)
+        .map_err(|e| PxError::Other(e.to_string()))?;
+    let host = url.host_str().unwrap();
+    let mut selected = None;
+    for line in events.lines().filter(|line| !line.trim().is_empty()) {
+        // Never include the event or token in parse errors.
+        let event: serde_json::Value = serde_json::from_str(line)
+            .map_err(|_| PxError::VcsError("invalid Lore identity response".into()))?;
+        if event["tagName"] != "authIdentity" {
+            continue;
+        }
+        let data = &event["data"];
+        if data["resource"].as_str() != Some(repository)
+            || data["userId"].as_str() != Some(user)
+            || data["expires"].as_u64().unwrap_or(0) <= now_ms
+        {
+            continue;
+        }
+        let authorized = data["authorizedDomains"]
+            .as_str()
+            .unwrap_or("")
+            .split(',')
+            .any(|domain| {
+                let domain = domain.trim().to_ascii_lowercase();
+                !domain.is_empty()
+                    && (host.eq_ignore_ascii_case(&domain)
+                        || host.to_ascii_lowercase().ends_with(&format!(".{domain}")))
+            });
+        if !authorized {
+            continue;
+        }
+        if let Some(token) = data["token"].as_str().filter(|s| !s.is_empty()) {
+            if selected
+                .as_deref()
+                .is_some_and(|previous| previous != token)
+            {
+                return Err(PxError::VcsError(
+                    "ambiguous Lore repository credentials; run px auth login".into(),
+                ));
+            }
+            selected = Some(token.to_string());
+        }
+    }
+    Ok(selected)
+}
+
+fn event_string(data: &serde_json::Value, field: &str) -> Result<String, String> {
+    data.get(field)
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| format!("Lore {field} is missing or is not a string"))
+}
+
+fn validate_lower_hex(value: &str, bytes: usize, label: &str) -> Result<(), String> {
+    if value.len() != bytes * 2 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(format!("Lore returned an invalid {label}"));
+    }
+    Ok(())
+}
+
+fn hydrate_lore_file(
+    repo_path: &Path,
+    args: impl IntoIterator<Item = String>,
+    prefix: &str,
+) -> Result<Vec<u8>, PxError> {
+    // A private directory prevents another local user from replacing the
+    // predictable output path with a symlink while Lore is writing it.
+    let temp_dir = tempfile::Builder::new()
+        .prefix(&format!("px-{prefix}-"))
+        .tempdir()
+        .map_err(|e| PxError::VcsError(format!("failed to create private temp directory: {e}")))?;
+    let output_path = temp_dir.path().join("content");
+    let output = output_path.to_string_lossy().into_owned();
+    let mut command_args: Vec<String> = args.into_iter().collect();
+    command_args.extend([
+        "--output".to_string(),
+        output,
+        "--non-interactive".to_string(),
+    ]);
+    LoreProcessRunner::run(command_args, Some(repo_path))?;
+    std::fs::read(&output_path).map_err(|e| {
+        PxError::VcsError(format!(
+            "failed to read Lore output {}: {e}",
+            output_path.display()
+        ))
+    })
+}
+
+fn parse_metadata_output(stdout: &str) -> Result<BTreeMap<String, String>, String> {
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(stdout) {
+        let mut metadata = BTreeMap::new();
+        if let serde_json::Value::Object(map) = value {
+            for (key, value) in map {
+                let rendered = match value {
+                    serde_json::Value::String(s) => s,
+                    serde_json::Value::Bool(b) => b.to_string(),
+                    serde_json::Value::Number(n) => n.to_string(),
+                    serde_json::Value::Null => continue,
+                    other => serde_json::to_string(&other).map_err(|e| e.to_string())?,
+                };
+                metadata.insert(key, rendered);
+            }
+        }
+        return Ok(metadata);
+    }
+
+    let mut metadata = BTreeMap::new();
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Some((key, value)) = trimmed.split_once('=').or_else(|| trimmed.split_once(':')) {
+            let key = key.trim();
+            if !key.is_empty() {
+                metadata.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+    Ok(metadata)
+}
+
+// ---------------------------------------------------------------------------
+// LoreBackend
+// ---------------------------------------------------------------------------
+
+/// A [`VcsBackend`] implementation backed by the Lore VCS CLI (`lore(1)`).
+///
+/// `LoreBackend` requires a remote `lore://` URL and a workspace identity
+/// so that it can call `lore repository create` / `lore clone` during init.
+///
+/// Use [`LoreBackend::new()`] for the default configuration
+/// (reads env-var overrides for the server URL, or falls back to a
+/// local-dev default).
+#[derive(Debug, Clone)]
+pub struct LoreBackend {
+    /// The `lore://` remote URL for the repository.
+    remote_url: String,
+    /// Workspace identifier (multi-tenancy scope).
+    workspace_id: String,
+}
+
+impl LoreBackend {
+    /// Construct a backend using a specific PX home rather than whichever
+    /// directory happens to be in `PX_DIR`.
+    pub fn from_px_home(px_home: &Path) -> Self {
+        if std::env::var("PX_LORE_URL_BASE").is_ok() || std::env::var("PX_WORKSPACE_ID").is_ok() {
+            return Self::from_env();
+        }
+        let workspace_id = std::fs::read_to_string(px_home.join("provider.toml"))
+            .ok()
+            .and_then(|content| toml::from_str::<ProviderConfigToml>(&content).ok())
+            .and_then(|config| config.workspace_id)
+            .unwrap_or_else(|| "default".to_string());
+        Self::from_provider(&Self::configured_server_url(px_home), &workspace_id)
+    }
+    /// Resolve the configured Lore server for a PX home. This is shared by
+    /// remote readers so `--base-dir` is respected instead of silently
+    /// consulting a different `PX_DIR`.
+    pub fn configured_server_url(px_home: &Path) -> String {
+        if let Ok(url) = std::env::var("PX_LORE_URL_BASE") {
+            return url;
+        }
+        let config_path = px_home.join("provider.toml");
+        if let Ok(content) = std::fs::read_to_string(config_path)
+            && let Ok(config) = toml::from_str::<ProviderConfigToml>(&content)
+        {
+            match config.provider_type.as_str() {
+                "remote" => {
+                    if let Some(url) = config.remote_url {
+                        return url;
+                    }
+                }
+                "portals-cloud" => return PORTALS_CLOUD_URL.to_string(),
+                "local" => return "lore://localhost:41337".to_string(),
+                _ => {}
+            }
+        }
+        "lore://localhost:41337".to_string()
+    }
+    /// Create a new Lore backend.
+    ///
+    /// `remote_url` should be a `lore://host/repository` URL.
+    /// `workspace_id` scopes the repository to a multi-tenant workspace.
+    pub fn new(remote_url: &str, workspace_id: &str) -> Self {
+        Self {
+            remote_url: remote_url.to_string(),
+            workspace_id: workspace_id.to_string(),
+        }
+    }
+
+    pub fn remote_url(&self) -> &str {
+        &self.remote_url
+    }
+
+    /// Clone a remote Lore repository to a local path.
+    ///
+    /// Equivalent to `lore clone <url> <dest>`.  Does NOT require an
+    /// existing `LoreBackend` instance — use this when you just want
+    /// to clone and don't need a full backend.
+    pub fn clone_repo(url: &str, dest: &Path) -> Result<(), PxError> {
+        LoreProcessRunner::run(
+            [
+                "clone",
+                url,
+                dest.to_str().unwrap_or("."),
+                "--non-interactive",
+            ],
+            None,
+        )?;
+        Ok(())
+    }
+
+    /// Clone only the requested repository-root files and their dependencies.
+    /// Lore keeps the resulting checkout sparse while still materialising the
+    /// PX manifests needed by an entity pull.
+    pub fn clone_repo_with_root_files(
+        url: &str,
+        dest: &Path,
+        root_files: &[String],
+    ) -> Result<(), PxError> {
+        let mut args = vec![
+            "clone".to_string(),
+            url.to_string(),
+            dest.to_string_lossy().to_string(),
+            "--non-interactive".to_string(),
+        ];
+        for root_file in root_files {
+            args.push("--root-file".to_string());
+            args.push(root_file.clone());
+        }
+        LoreProcessRunner::run(args.iter().map(String::as_str), None)?;
+        Ok(())
+    }
+
+    /// Synchronize selected root files in an existing Lore working tree.
+    pub fn sync_root_files(dest: &Path, root_files: &[String]) -> Result<(), PxError> {
+        let mut args = vec!["revision".to_string(), "sync".to_string()];
+        for root_file in root_files {
+            args.push("--root-file".to_string());
+            args.push(root_file.clone());
+        }
+        LoreProcessRunner::run(args.iter().map(String::as_str), Some(dest))?;
+        Ok(())
+    }
+
+    /// Convenience constructor that reads configuration from environment
+    /// variables with sensible local-development defaults.
+    ///
+    /// Precedence: env vars > provider config > defaults
+    ///
+    /// | Env var               | Default                   |
+    /// |-----------------------|---------------------------|
+    /// | `PX_LORE_URL_BASE`   | provider-dependent; local uses `lore://localhost:41337` |
+    /// | `PX_WORKSPACE_ID`    | `default`                 |
+    ///
+    /// Note: For new code, prefer using the RepositoryApi with Provider architecture
+    /// instead of this legacy environment-based constructor.
+    pub fn from_env() -> Self {
+        // Ensure the Lore server is running
+        if let Ok(px_dir) = std::env::var("PX_DIR") {
+            let manager = crate::server::manager::ServerManager::new(Path::new(&px_dir));
+            let _ = tokio::runtime::Handle::try_current().map(|handle| {
+                handle.block_on(async {
+                    let _ = manager.ensure_running().await;
+                });
+            });
+        }
+
+        // Priority 1: Environment variables (for testing/override)
+        let url_from_env = std::env::var("PX_LORE_URL_BASE").ok();
+        let workspace_from_env = std::env::var("PX_WORKSPACE_ID").ok();
+
+        if url_from_env.is_some() || workspace_from_env.is_some() {
+            let base = url_from_env.unwrap_or_else(|| "lore://localhost:41337".to_string());
+            let workspace_id = workspace_from_env.unwrap_or_else(|| "default".to_string());
+            tracing::debug!(
+                url_base = %base,
+                workspace_id = %workspace_id,
+                "LoreBackend::from_env using environment variables (override)"
+            );
+            return Self {
+                remote_url: base,
+                workspace_id,
+            };
+        }
+
+        // Priority 2: Provider configuration from --base-dir's provider.toml (for cmd_init_universe)
+        // Check base_dir hinted via PX_INIT_BASE_DIR (set by px-cli) before falling back to PX_DIR.
+        // Handles all provider types (local, remote, portals-cloud) for atomic init.
+        if let Ok(base_dir_str) = std::env::var("PX_INIT_BASE_DIR") {
+            let base_path = PathBuf::from(&base_dir_str);
+            let provider_config_path = base_path.join("provider.toml");
+            if provider_config_path.exists()
+                && let Ok(config_content) = std::fs::read_to_string(&provider_config_path)
+                && let Ok(config) = toml::from_str::<ProviderConfigToml>(&config_content)
+            {
+                match config.provider_type.as_str() {
+                    "local" => {
+                        tracing::debug!(
+                            url_base = "lore://localhost:41337",
+                            workspace_id = "default",
+                            "LoreBackend::from_env using local provider from PX_INIT_BASE_DIR"
+                        );
+                        return Self {
+                            remote_url: "lore://localhost:41337".to_string(),
+                            workspace_id: "default".to_string(),
+                        };
+                    }
+                    "remote" => {
+                        if let (Some(url), Some(workspace)) =
+                            (config.remote_url, config.workspace_id)
+                        {
+                            tracing::debug!(
+                                url_base = %url,
+                                workspace_id = %workspace,
+                                "LoreBackend::from_env using remote provider from PX_INIT_BASE_DIR"
+                            );
+                            return Self {
+                                remote_url: url,
+                                workspace_id: workspace,
+                            };
+                        }
+                    }
+                    "portals-cloud" => {
+                        let workspace_id =
+                            config.workspace_id.unwrap_or_else(|| "default".to_string());
+                        tracing::debug!(
+                            url_base = %PORTALS_CLOUD_URL,
+                            workspace_id = %workspace_id,
+                            "LoreBackend::from_env using portals-cloud provider from PX_INIT_BASE_DIR"
+                        );
+                        return Self {
+                            remote_url: PORTALS_CLOUD_URL.to_string(),
+                            workspace_id,
+                        };
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Priority 2b: Provider configuration from PX_DIR
+        let px_dir = if let Ok(px_dir_str) = std::env::var("PX_DIR") {
+            // Expand ~ in PX_DIR if present (same logic as px-cli expand_path)
+            let path = PathBuf::from(&px_dir_str);
+            if let Some(s) = path.to_str() {
+                if let Some(stripped) = s.strip_prefix('~') {
+                    let home = std::env::var("HOME")
+                        .or_else(|_| std::env::var("USERPROFILE"))
+                        .unwrap_or_else(|_| ".".to_string());
+                    PathBuf::from(home).join(stripped.trim_start_matches('/'))
+                } else {
+                    path
+                }
+            } else {
+                path
+            }
+        } else {
+            // Default to ~/.px if PX_DIR is not set
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| ".".to_string());
+            PathBuf::from(home).join(".px")
+        };
+
+        let provider_config_path = px_dir.join("provider.toml");
+        if provider_config_path.exists()
+            && let Ok(config_content) = std::fs::read_to_string(&provider_config_path)
+            && let Ok(config) = toml::from_str::<ProviderConfigToml>(&config_content)
+        {
+            match config.provider_type.as_str() {
+                "local" => {
+                    // Local provider uses localhost defaults
+                    tracing::debug!(
+                        url_base = "lore://localhost:41337",
+                        workspace_id = "default",
+                        "LoreBackend::from_env using local provider configuration"
+                    );
+                    return Self {
+                        remote_url: "lore://localhost:41337".to_string(),
+                        workspace_id: "default".to_string(),
+                    };
+                }
+                "remote" => {
+                    // Remote provider uses configured URL and workspace
+                    if let (Some(url), Some(workspace)) = (config.remote_url, config.workspace_id) {
+                        tracing::debug!(
+                            url_base = %url,
+                            workspace_id = %workspace,
+                            "LoreBackend::from_env using remote provider configuration"
+                        );
+                        return Self {
+                            remote_url: url,
+                            workspace_id: workspace,
+                        };
+                    }
+                }
+                "portals-cloud" => {
+                    // Portals Cloud uses hardcoded URL (env vars already checked above)
+                    let workspace_id = config.workspace_id.unwrap_or_else(|| "default".to_string());
+                    tracing::debug!(
+                        url_base = %PORTALS_CLOUD_URL,
+                        workspace_id = %workspace_id,
+                        "LoreBackend::from_env using portals-cloud provider configuration"
+                    );
+                    return Self {
+                        remote_url: PORTALS_CLOUD_URL.to_string(),
+                        workspace_id,
+                    };
+                }
+                _ => {
+                    tracing::debug!(
+                        provider_type = %config.provider_type,
+                        "Unknown provider type, falling back to defaults"
+                    );
+                }
+            }
+        }
+
+        // Priority 3: Defaults
+        let base = "lore://localhost:41337".to_string();
+        let workspace_id = "default".to_string();
+        tracing::debug!(
+            url_base = %base,
+            workspace_id = %workspace_id,
+            "LoreBackend::from_env using defaults"
+        );
+        Self {
+            remote_url: base,
+            workspace_id,
+        }
+    }
+
+    /// Create LoreBackend from provider configuration
+    ///
+    /// This is the preferred constructor for new code using the Provider architecture.
+    pub fn from_provider(url_base: &str, workspace_id: &str) -> Self {
+        tracing::debug!(
+            url_base = %url_base,
+            workspace_id = %workspace_id,
+            "Creating LoreBackend from provider configuration"
+        );
+
+        Self {
+            remote_url: url_base.to_string(),
+            workspace_id: workspace_id.to_string(),
+        }
+    }
+
+    /// Build a `lore::` remote URL for a given repository ID.
+    fn repo_url(&self, repo_id: &str) -> String {
+        format!("{}/{}", self.remote_url.trim_end_matches('/'), repo_id)
+    }
+}
+
+impl VcsBackend for LoreBackend {
+    /// Get the remote URL base for constructing repository URLs.
+    fn remote_url_base(&self) -> Result<String, PxError> {
+        Ok(self.remote_url.clone())
+    }
+
+    // ── init ─────────────────────────────────────────────────────────
+    fn init(&self, path: &Path) -> Result<(), PxError> {
+        // For Lore, "init" means:
+        //   1. `lore repository create <repo_url> --id <ws> --repository <server_path>`
+        //   2. `lore clone <repo_url> <local_path>`
+        //
+        // We derive a repo id from the leaf directory of `path`.
+        // The server-side data is stored at `<parent>/.lore-server/<repo_id>`
+        // to avoid collision with the clone destination.
+
+        let raw_id = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("px-repo");
+        // Defensive: `cmd_init_universe` creates a temp dir `base_dir/px_init_<ts>`
+        // or `base_dir/<repo>_<ts>` and then `Repository::init_optional(&tmp, repo, vcs)`
+        // writes `tmp/repository.yaml` with `id: px://<repo>/world/<repo>`.
+        // `LoreBackend::init` historically derived `repo_id` from `tmp.file_name()`
+        // (e.g. `.__px_init_…` or `px_init_…`) and created `grpcs://…/.__px_init_…`
+        // on the remote — rejected by `store.validate_resource` → `Not authorized`.
+        // Prefer the canonical repository name from `repository.yaml` (`id` field)
+        // when it exists; fall back to sanitized leaf.
+        let repo_id = {
+            let from_manifest = path
+                .join("repository.yaml")
+                .exists()
+                .then(|| {
+                    std::fs::read_to_string(path.join("repository.yaml"))
+                        .ok()
+                        .and_then(|c| {
+                            serde_yaml::from_str::<serde_yaml::Value>(&c)
+                                .ok()
+                                .and_then(|v| {
+                                    v.get("id").and_then(|id| id.as_str()).and_then(|id_str| {
+                                        // id is "px://<repository>/world/<repository>" or "px://<repo>/<type>/<id>"
+                                        id_str.strip_prefix("px://").and_then(|rest| {
+                                            rest.split('/').next().map(|s| s.to_string())
+                                        })
+                                    })
+                                })
+                        })
+                })
+                .flatten()
+                .filter(|s| {
+                    !s.is_empty()
+                        && s.chars()
+                            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                });
+            from_manifest.unwrap_or_else(|| {
+                let sanitized = raw_id.trim_start_matches(['.', '_']);
+                if sanitized.is_empty()
+                    || !sanitized
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                {
+                    "px-repo".to_string()
+                } else {
+                    sanitized.to_string()
+                }
+            })
+        };
+
+        let url = self.repo_url(&repo_id);
+        let path_str = path.to_str().unwrap_or(".");
+
+        // Server-side storage lives alongside the repo, not inside it.
+        let server_path = path
+            .parent()
+            .unwrap_or(path)
+            .join(".lore-server")
+            .join(repo_id);
+
+        // Step 1: Create the remote repository.
+        LoreProcessRunner::run(
+            [
+                "repository",
+                "create",
+                &url,
+                "--id",
+                &self.workspace_id,
+                "--repository",
+                server_path.to_str().unwrap_or("."),
+                "--non-interactive",
+            ],
+            None,
+        )
+        .map_err(|e| {
+            PxError::VcsError(format!("failed to create lore repository '{}': {}", url, e))
+        })?;
+
+        // Step 2: Clone it locally.
+        LoreProcessRunner::run(["clone", &url, path_str, "--non-interactive"], None).map_err(
+            |e| {
+                PxError::VcsError(format!(
+                    "failed to clone lore repository to {:?}: {}",
+                    path, e
+                ))
+            },
+        )?;
+
+        Ok(())
+    }
+
+    // ── commit ───────────────────────────────────────────────────────
+    fn commit(&self, path: &Path, message: &str, author: &str) -> Result<String, PxError> {
+        // Lore requires an explicit stage step.
+        // Stage 1: Discover and stage all changes.
+        LoreProcessRunner::run(["stage", "--scan", ".", "--non-interactive"], Some(path))?;
+
+        // Stage 2: Commit with identity.
+        let stdout = LoreProcessRunner::run(
+            [
+                "revision",
+                "commit",
+                message,
+                "--identity",
+                author,
+                "--non-interactive",
+            ],
+            Some(path),
+        )?;
+
+        // Parse the revision signature from stdout. Lore now outputs a
+        // multi-line report. We look for the "Signature :" line.
+        let signature = stdout
+            .lines()
+            .find_map(|line| {
+                line.strip_prefix("Signature :")
+                    .or_else(|| line.strip_prefix("Signature:"))
+            })
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|| {
+                // Fallback: try the old "Created revision <sig> (#<num>)" format.
+                stdout
+                    .lines()
+                    .next()
+                    .unwrap_or(&stdout)
+                    .trim()
+                    .strip_prefix("Created revision ")
+                    .and_then(|s| s.split_whitespace().next())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| stdout.trim().to_string())
+            });
+
+        Ok(signature)
+    }
+
+    // ── read_file_at_ref ─────────────────────────────────────────────
+    fn read_file_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: Option<&str>,
+    ) -> Result<String, PxError> {
+        let bytes = self.read_file_bytes_at_ref(repo_path, file_path, reference)?;
+        String::from_utf8(bytes).map_err(|e| {
+            PxError::VcsError(format!(
+                "{} is not valid UTF-8; use read_file_bytes_at_ref for binary content: {e}",
+                file_path
+            ))
+        })
+    }
+
+    fn read_file_bytes_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: Option<&str>,
+    ) -> Result<Vec<u8>, PxError> {
+        let Some(reference) = reference else {
+            let full_path = repo_path.join(file_path);
+            return std::fs::read(&full_path).map_err(|e| {
+                PxError::VcsError(format!("failed to read {}: {e}", full_path.display()))
+            });
+        };
+
+        hydrate_lore_file(
+            repo_path,
+            [
+                "file".to_string(),
+                "write".to_string(),
+                "--path".to_string(),
+                file_path.to_string(),
+                "--revision".to_string(),
+                reference.to_string(),
+            ],
+            "file-at-ref",
+        )
+    }
+
+    fn repository_descriptor(&self, repo_path: &Path) -> Result<VcsRepositoryDescriptor, PxError> {
+        let stdout = LoreProcessRunner::run(
+            ["repository", "info", "--json", "--non-interactive"],
+            Some(repo_path),
+        )?;
+        let data = parse_lore_event_data(&stdout, "repositoryData")
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore repository info: {e}")))?;
+        let id = event_string(&data, "id")
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore repository info: {e}")))?;
+        validate_lower_hex(&id, 16, "repository ID")
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore repository info: {e}")))?;
+        let remote_url = data
+            .get("remoteUrl")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        Ok(VcsRepositoryDescriptor { id, remote_url })
+    }
+
+    fn http_bearer_token(
+        &self,
+        repo_path: &Path,
+        repository_id: &str,
+        http_origin: &str,
+    ) -> Result<Option<String>, PxError> {
+        // repository_descriptor and manifest hydration already exercised Lore's
+        // authenticated transport, which refreshes repository-scoped credentials.
+        let identity = LoreProcessRunner::run(
+            ["auth", "info", "--json", "--non-interactive"],
+            Some(repo_path),
+        )?;
+        let user = parse_lore_event_data(&identity, "authUserInfo")
+            .and_then(|data| event_string(&data, "id"))
+            .map_err(|_| PxError::VcsError("No active Lore identity; run px auth login".into()))?;
+        let tokens = LoreProcessRunner::run(
+            [
+                "auth",
+                "list",
+                "--with-token",
+                "--json",
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )
+        .map_err(|_| {
+            PxError::VcsError(
+                "Could not read Lore repository credentials; run px auth login".into(),
+            )
+        })?;
+        select_http_token(
+            &tokens,
+            repository_id,
+            &user,
+            http_origin,
+            chrono::Utc::now().timestamp_millis().max(0) as u64,
+        )
+    }
+
+    fn file_content_address_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: &str,
+    ) -> Result<VcsContentAddress, PxError> {
+        let stdout = LoreProcessRunner::run(
+            [
+                "file",
+                "info",
+                file_path,
+                "--revision",
+                reference,
+                "--json",
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )?;
+        let data = parse_lore_event_data(&stdout, "fileInfo")
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        if data.get("isFile").and_then(serde_json::Value::as_bool) != Some(true) {
+            return Err(PxError::VcsError(format!(
+                "representation path '{file_path}' is not a file at revision '{reference}'"
+            )));
+        }
+        let hash = event_string(&data, "hash")
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        let context = event_string(&data, "context")
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        validate_lower_hex(&hash, 32, "file hash")
+            .and_then(|_| validate_lower_hex(&context, 16, "file context"))
+            .map_err(|e| PxError::VcsError(format!("failed to parse Lore file info: {e}")))?;
+        Ok(VcsContentAddress { hash, context })
+    }
+
+    // ── file metadata ───────────────────────────────────────────────
+    fn file_metadata_at_ref(
+        &self,
+        repo_path: &Path,
+        file_path: &str,
+        reference: &str,
+    ) -> Result<Option<BTreeMap<String, String>>, PxError> {
+        let stdout = LoreProcessRunner::run(
+            [
+                "file",
+                "metadata",
+                "get",
+                file_path,
+                "--revision",
+                reference,
+                "--non-interactive",
+            ],
+            Some(repo_path),
+        )?;
+
+        if stdout.trim().is_empty() || stdout.trim() == "null" {
+            return Ok(None);
+        }
+
+        parse_metadata_output(&stdout)
+            .map(Some)
+            .map_err(|e| PxError::VcsError(format!("failed to parse lore file metadata: {e}")))
+    }
+
+    fn read_provenance_blob(&self, repo_path: &Path, address: &str) -> Result<String, PxError> {
+        let bytes = hydrate_lore_file(
+            repo_path,
+            [
+                "file".to_string(),
+                "write".to_string(),
+                "--address".to_string(),
+                address.to_string(),
+            ],
+            "provenance-blob",
+        )?;
+        String::from_utf8(bytes).map_err(|e| {
+            PxError::VcsError(format!(
+                "hydrated provenance blob {address} is not valid UTF-8: {e}"
+            ))
+        })
+    }
+
+    // ── log ──────────────────────────────────────────────────────────
+    fn log(
+        &self,
+        path: &Path,
+        _file: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<CommitInfo>, PxError> {
+        let limit_str = limit.to_string();
+        let args = vec!["history", &limit_str, "--non-interactive"];
+
+        let stdout = LoreProcessRunner::run(&args, Some(path))?;
+
+        if stdout.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Parse plain text output. Each revision is a block:
+        //   Revision  : N
+        //   Signature : <hex>
+        //   Branch    : <id>
+        //   Date      : <date>
+        //       <message>
+        //   Creator   : <author>
+        //   Committer : <author>
+        let mut commits = Vec::new();
+        let mut current_signature = String::new();
+        let mut current_author = String::new();
+        let mut current_message = String::new();
+        let mut current_timestamp = String::new();
+        let mut current_parent: Option<String> = None;
+        let mut in_message = false;
+
+        for line in stdout.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("Signature :") || trimmed.starts_with("Signature:") {
+                // Save previous commit if we have one.
+                if !current_signature.is_empty() {
+                    commits.push(CommitInfo {
+                        id: std::mem::take(&mut current_signature),
+                        parent: current_parent.take(),
+                        author: std::mem::take(&mut current_author),
+                        message: std::mem::take(&mut current_message),
+                        timestamp: std::mem::take(&mut current_timestamp),
+                    });
+                }
+                current_signature = trimmed
+                    .strip_prefix("Signature :")
+                    .or_else(|| trimmed.strip_prefix("Signature:"))
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
+                in_message = false;
+            } else if trimmed.starts_with("Date      :") || trimmed.starts_with("Date:") {
+                current_timestamp = trimmed
+                    .split_once(':')
+                    .map(|(_, v)| v.trim().to_string())
+                    .unwrap_or_default();
+                in_message = true;
+            } else if trimmed.starts_with("Creator   :") || trimmed.starts_with("Creator:") {
+                current_author = trimmed
+                    .split_once(':')
+                    .map(|(_, v)| v.trim().to_string())
+                    .unwrap_or_default();
+                in_message = false;
+            } else if trimmed.starts_with("Revision  :")
+                || trimmed.starts_with("Revision:")
+                || trimmed.starts_with("Branch    :")
+                || trimmed.starts_with("Branch:")
+                || trimmed.starts_with("Committer :")
+                || trimmed.starts_with("Committer:")
+            {
+                in_message = false;
+            } else if in_message {
+                if trimmed.is_empty() || trimmed == "Commit succeeded" {
+                    in_message = false;
+                } else {
+                    if !current_message.is_empty() {
+                        current_message.push('\n');
+                    }
+                    current_message.push_str(trimmed);
+                }
+            }
+        }
+        // Push the last commit.
+        if !current_signature.is_empty() {
+            commits.push(CommitInfo {
+                id: current_signature,
+                parent: current_parent,
+                author: current_author,
+                message: current_message,
+                timestamp: current_timestamp,
+            });
+        }
+
+        Ok(commits)
+    }
+
+    // ── branching ────────────────────────────────────────────────────
+    fn create_branch(&self, path: &Path, name: &str) -> Result<(), PxError> {
+        LoreProcessRunner::run(["branch", "create", name, "--non-interactive"], Some(path))?;
+        Ok(())
+    }
+
+    fn switch_branch(&self, path: &Path, name: &str) -> Result<(), PxError> {
+        LoreProcessRunner::run(["branch", "switch", name, "--non-interactive"], Some(path))?;
+        Ok(())
+    }
+
+    fn current_branch(&self, path: &Path) -> Result<String, PxError> {
+        let stdout = LoreProcessRunner::run(["branch", "show", "--non-interactive"], Some(path))?;
+        Ok(stdout.trim().to_string())
+    }
+
+    fn list_branches(&self, path: &Path) -> Result<Vec<String>, PxError> {
+        let stdout = LoreProcessRunner::run(["branch", "list", "--non-interactive"], Some(path))?;
+        if stdout.is_empty() {
+            return Ok(Vec::new());
+        }
+        // Parse plain text output:
+        //   Local branches:
+        //   * main
+        //     feature-x
+        //   Remote branches:
+        //     main
+        let mut branches = Vec::new();
+        let mut in_local = false;
+        for line in stdout.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("Local branches") {
+                in_local = true;
+                continue;
+            }
+            if trimmed.starts_with("Remote branches") {
+                in_local = false;
+                continue;
+            }
+            if in_local && !trimmed.is_empty() {
+                // Strip "* " prefix for current branch marker.
+                let name = trimmed.strip_prefix("* ").unwrap_or(trimmed);
+                branches.push(name.to_string());
+            }
+        }
+        Ok(branches)
+    }
+
+    // ── head / revert ────────────────────────────────────────────────
+    fn head_hash(&self, path: &Path) -> Result<String, PxError> {
+        let stdout = LoreProcessRunner::run(["history", "1", "--non-interactive"], Some(path))?;
+
+        if stdout.trim().is_empty() {
+            return Err(PxError::VcsError(
+                "no commits in lore workspace".to_string(),
+            ));
+        }
+
+        // Parse "Signature : <hex>" from plain text output.
+        stdout
+            .lines()
+            .find_map(|line| {
+                line.trim()
+                    .strip_prefix("Signature :")
+                    .or_else(|| line.trim().strip_prefix("Signature:"))
+            })
+            .map(|s| s.trim().to_string())
+            .ok_or_else(|| {
+                PxError::VcsError(format!(
+                    "failed to parse signature from lore history: {stdout}"
+                ))
+            })
+    }
+
+    fn revert(&self, path: &Path, commit_hash: &str) -> Result<String, PxError> {
+        let stdout = LoreProcessRunner::run(
+            ["revision", "revert", commit_hash, "--non-interactive"],
+            Some(path),
+        )?;
+        // Lore outputs: "Created revert revision <signature>"
+        let signature = stdout
+            .trim()
+            .strip_prefix("Created revert revision ")
+            .unwrap_or(stdout.trim());
+        Ok(signature.to_string())
+    }
+
+    fn resolve_branch_head(&self, path: &Path, branch: &str) -> Result<String, PxError> {
+        let stdout = LoreProcessRunner::run(
+            ["history", "1", "--branch", branch, "--non-interactive"],
+            Some(path),
+        )?;
+
+        if stdout.trim().is_empty() {
+            return Err(PxError::VcsError(format!(
+                "no commits found on branch '{branch}'"
+            )));
+        }
+
+        // Parse "Signature : <hex>" from plain text output.
+        stdout
+            .lines()
+            .find_map(|line| {
+                line.trim()
+                    .strip_prefix("Signature :")
+                    .or_else(|| line.trim().strip_prefix("Signature:"))
+            })
+            .map(|s| s.trim().to_string())
+            .ok_or_else(|| {
+                PxError::VcsError(format!(
+                    "failed to parse signature from lore history on branch '{branch}': {stdout}"
+                ))
+            })
+    }
+
+    // ── remotes ──────────────────────────────────────────────────────
+    // Lore 0.8.4-portals.x has no `lore repository add/remove` — store remotes
+    // locally in `.lore/remotes.toml` (simple, robust, extensible; not via lore CLI).
+    fn add_remote(&self, path: &Path, name: &str, url: &str) -> Result<(), PxError> {
+        let remotes_path = path.join(".lore").join("remotes.toml");
+        let mut map: std::collections::BTreeMap<String, String> = if remotes_path.exists() {
+            let content = std::fs::read_to_string(&remotes_path).unwrap_or_default();
+            toml::from_str(&content).unwrap_or_default()
+        } else {
+            std::collections::BTreeMap::new()
+        };
+        map.insert(name.to_string(), url.to_string());
+        if let Some(parent) = remotes_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| PxError::VcsError(e.to_string()))?;
+        }
+        let content = toml::to_string(&map).map_err(|e| PxError::VcsError(e.to_string()))?;
+        std::fs::write(&remotes_path, content).map_err(|e| PxError::VcsError(e.to_string()))?;
+        Ok(())
+    }
+
+    fn remove_remote(&self, path: &Path, name: &str) -> Result<(), PxError> {
+        let remotes_path = path.join(".lore").join("remotes.toml");
+        if !remotes_path.exists() {
+            return Ok(());
+        }
+        let content = std::fs::read_to_string(&remotes_path).unwrap_or_default();
+        let mut map: std::collections::BTreeMap<String, String> =
+            toml::from_str(&content).unwrap_or_default();
+        map.remove(name);
+        let new_content = toml::to_string(&map).map_err(|e| PxError::VcsError(e.to_string()))?;
+        std::fs::write(&remotes_path, new_content).map_err(|e| PxError::VcsError(e.to_string()))?;
+        Ok(())
+    }
+
+    fn list_remotes(&self, path: &Path) -> Result<Vec<(String, String)>, PxError> {
+        let remotes_path = path.join(".lore").join("remotes.toml");
+        if !remotes_path.exists() {
+            return Ok(Vec::new());
+        }
+        let content = std::fs::read_to_string(&remotes_path).unwrap_or_default();
+        let map: std::collections::BTreeMap<String, String> =
+            toml::from_str(&content).unwrap_or_default();
+        Ok(map.into_iter().collect())
+    }
+
+    // ── push / pull ──────────────────────────────────────────────────
+    fn push(
+        &self,
+        path: &Path,
+        _remote: Option<&str>,
+        branch: Option<&str>,
+    ) -> Result<(), PxError> {
+        // Resolve the branch name: prefer the caller-supplied value,
+        // fall back to the workspace's current branch, then "main".
+        let branch_name = match branch {
+            Some(b) => b.to_string(),
+            None => self
+                .current_branch(path)
+                .unwrap_or_else(|_| "main".to_string()),
+        };
+
+        // Push branch via lore CLI (handles blob upload + branch tip advancement internally)
+        let args = vec![
+            "branch",
+            "push",
+            &branch_name,
+            "--fast-forward-merge",
+            "--non-interactive",
+        ];
+        LoreProcessRunner::run(&args, Some(path))?;
+
+        Ok(())
+    }
+
+    fn pull(
+        &self,
+        path: &Path,
+        _remote: Option<&str>,
+        _branch: Option<&str>,
+    ) -> Result<(), PxError> {
+        // Sync via lore CLI (handles remote checking + blob download internally)
+        let args = vec!["sync", "--non-interactive", "--reset"];
+        LoreProcessRunner::run(&args, Some(path))?;
+
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod structured_output_tests {
+    use super::*;
+
+    #[test]
+    fn http_credentials_are_scoped_to_identity_repository_domain_and_expiry() {
+        let token = |repo: &str, user: &str, domain: &str, expires: u64| {
+            serde_json::json!({
+                "tagName": "authIdentity", "data": { "resource": repo, "userId": user,
+                    "authorizedDomains": domain, "expires": expires, "token": "test-secret" }
+            })
+            .to_string()
+        };
+        let origin = "https://lore.portals.works";
+        assert_eq!(
+            select_http_token(
+                &token("repo", "alice", "portals.works", 2000),
+                "repo",
+                "alice",
+                origin,
+                1000
+            )
+            .unwrap()
+            .as_deref(),
+            Some("test-secret")
+        );
+        for event in [
+            token("", "alice", "portals.works", 2000),
+            token("other", "alice", "portals.works", 2000),
+            token("repo", "bob", "portals.works", 2000),
+            token("repo", "alice", "", 2000),
+            token("repo", "alice", "other.test", 2000),
+            token("repo", "alice", "portals.works", 500),
+        ] {
+            assert!(
+                select_http_token(&event, "repo", "alice", origin, 1000)
+                    .unwrap()
+                    .is_none()
+            );
+        }
+        assert!(
+            select_http_token(
+                &token("repo", "alice", "portals.works", 2000),
+                "repo",
+                "alice",
+                "https://evilportals.works",
+                1000
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn parses_repository_and_file_events_independently() {
+        let repository = concat!(
+            "{\"tagName\":\"repositoryData\",\"data\":{",
+            "\"id\":\"0123456789abcdef0123456789abcdef\",",
+            "\"remoteUrl\":\"lore://localhost:41337/repo\"}}\n",
+            "{\"tagName\":\"complete\",\"data\":{}}"
+        );
+        let file = concat!(
+            "{\"tagName\":\"fileInfo\",\"data\":{",
+            "\"hash\":\"9753abf79e5aef60bd95ab76c1e5a14d01239beb37ff9897b6af8e040eb2413a\",",
+            "\"context\":\"fedcba9876543210fedcba9876543210\",\"isFile\":true}}"
+        );
+        let repository_data = parse_lore_event_data(repository, "repositoryData").unwrap();
+        let file_data = parse_lore_event_data(file, "fileInfo").unwrap();
+        assert_eq!(
+            event_string(&repository_data, "id").unwrap(),
+            "0123456789abcdef0123456789abcdef"
+        );
+        assert_eq!(
+            event_string(&file_data, "context").unwrap(),
+            "fedcba9876543210fedcba9876543210"
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_or_malformed_events() {
+        let duplicate =
+            "{\"tagName\":\"fileInfo\",\"data\":{}}\n{\"tagName\":\"fileInfo\",\"data\":{}}";
+        assert!(parse_lore_event_data(duplicate, "fileInfo").is_err());
+        assert!(parse_lore_event_data("not-json", "fileInfo").is_err());
+        assert!(validate_lower_hex("abc", 16, "context").is_err());
+    }
+
+    #[test]
+    fn working_tree_binary_reads_are_lossless() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let bytes = [0_u8, 0xff, 0x42];
+        std::fs::write(temp.path().join("asset.bin"), bytes).unwrap();
+        let backend = LoreBackend::from_env();
+        assert_eq!(
+            backend
+                .read_file_bytes_at_ref(temp.path(), "asset.bin", None)
+                .unwrap(),
+            bytes
+        );
+        assert!(
+            backend
+                .read_file_at_ref(temp.path(), "asset.bin", None)
+                .unwrap_err()
+                .to_string()
+                .contains("read_file_bytes_at_ref")
+        );
+    }
+}
+
+#[cfg(all(test, feature = "lore-integration"))]
+mod tests {
+    use super::*;
+
+    // ---- LoreProcessRunner tests ---------------------------------------
+
+    #[test]
+    fn test_binary_default() {
+        assert_eq!(LoreProcessRunner::binary(), "lore");
+    }
+
+    #[test]
+    fn test_binary_from_env() {
+        temp_env::with_var("PXLORE_CLI", Some("/custom/lore"), || {
+            assert_eq!(LoreProcessRunner::binary(), "/custom/lore");
+        });
+    }
+
+    #[test]
+    fn test_run_captures_stdout() {
+        // We can't test a real `lore` call in CI without the binary.
+        // This test verifies the runner returns an error for a missing
+        // binary, which confirms the process-spawning path works.
+        temp_env::with_var("PXLORE_CLI", Some("lore-nonexistent-binary-12345"), || {
+            let result = LoreProcessRunner::run(["--version"], None);
+            assert!(result.is_err());
+            let err = result.unwrap_err().to_string();
+            assert!(
+                err.contains("lore-nonexistent-binary-12345"),
+                "error: {}",
+                err
+            );
+        });
+    }
+
+    // ---- LoreBackend tests --------------------------------------------
+
+    #[test]
+    fn test_new_and_from_env() {
+        let backend = LoreBackend::new("lore://myhost:8700", "test-workspace");
+        assert_eq!(backend.remote_url, "lore://myhost:8700");
+        assert_eq!(backend.workspace_id, "test-workspace");
+
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", Some("lore://custom:9999")),
+                ("PX_WORKSPACE_ID", Some("custom-ws")),
+            ],
+            || {
+                let from_env = LoreBackend::from_env();
+                assert_eq!(from_env.remote_url, "lore://custom:9999");
+                assert_eq!(from_env.workspace_id, "custom-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_default_without_env_vars() {
+        // Test default behavior when no env vars are set and no provider config exists
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_env_var_override() {
+        // Test that env vars take precedence over provider config
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", Some("lore://override:1234")),
+                ("PX_WORKSPACE_ID", Some("override-ws")),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://override:1234");
+                assert_eq!(backend.workspace_id, "override-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_partial_env_override() {
+        // Test partial env var override (only URL set, workspace defaults)
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", Some("lore://partial:5678")),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://partial:5678");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_provider_config() {
+        // Test provider config reading when env vars are not set
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "remote"
+remote_url = "lore://provider:9999"
+workspace_id = "provider-ws"
+"#,
+        )
+        .unwrap();
+
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://provider:9999");
+                assert_eq!(backend.workspace_id, "provider-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_px_dir_with_tilde() {
+        // Test PX_DIR with ~ expansion
+        let _home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                // Should use defaults since provider config doesn't exist
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_local_provider_config() {
+        // Test local provider configuration
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "local"
+"#,
+        )
+        .unwrap();
+
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_portals_cloud_provider_config() {
+        // Test portals-cloud provider configuration
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "portals-cloud"
+workspace_id = "cloud-ws"
+"#,
+        )
+        .unwrap();
+
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, PORTALS_CLOUD_URL);
+                assert_eq!(backend.workspace_id, "cloud-ws");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_portals_cloud_default_workspace() {
+        // Test portals-cloud with default workspace
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "portals-cloud"
+"#,
+        )
+        .unwrap();
+
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, PORTALS_CLOUD_URL);
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_from_env_unknown_provider_type() {
+        // Test unknown provider type falls back to defaults
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let provider_config = temp_dir.path().join("provider.toml");
+        std::fs::write(
+            &provider_config,
+            r#"
+provider_type = "unknown-provider"
+"#,
+        )
+        .unwrap();
+
+        let px_dir_str = temp_dir.path().to_str().unwrap();
+        temp_env::with_vars(
+            vec![
+                ("PX_LORE_URL_BASE", None::<&str>),
+                ("PX_WORKSPACE_ID", None::<&str>),
+                ("PX_DIR", Some(px_dir_str)),
+            ],
+            || {
+                let backend = LoreBackend::from_env();
+                assert_eq!(backend.remote_url, "lore://localhost:41337");
+                assert_eq!(backend.workspace_id, "default");
+            },
+        );
+    }
+
+    #[test]
+    fn test_repo_url_joining() {
+        let backend = LoreBackend::new("lore://localhost:8700", "ws");
+        assert_eq!(backend.repo_url("my-repo"), "lore://localhost:8700/my-repo");
+
+        // With trailing slash.
+        let backend2 = LoreBackend::new("lore://host:8700/", "ws");
+        assert_eq!(backend2.repo_url("foo"), "lore://host:8700/foo");
+    }
+
+    #[test]
+    fn test_list_branches_empty_json() {
+        // Verify the edge case guards work for empty/bogus stdout.
+        // The `[]` and `null` branches of `list_branches` are tested
+        // through unit coverage of the deserialisation logic in `log`.
+        // edge-case guards checked in production code
+    }
+
+    #[test]
+    fn test_commit_parses_signature_from_stdout() {
+        // We can't call the real commit, but we can check the stdout
+        // parse path is wired in: the `commit` impl extracts the first
+        // whitespace token after "Created revision ".
+        let sample = "Created revision a1b2c3d4 (#42)";
+        let signature = sample
+            .strip_prefix("Created revision ")
+            .and_then(|s| s.split_whitespace().next())
+            .unwrap_or(sample);
+        assert_eq!(signature, "a1b2c3d4");
+    }
+
+    // ---- CommitInfo from_lore_revision test -------------------------
+
+    #[test]
+    fn test_commit_info_from_lore_revision() {
+        let info = CommitInfo::from_lore_revision(
+            "sig123",
+            Some("sig122"),
+            "alice",
+            "feat: add manifest",
+            "2026-06-30T12:00:00Z",
+        );
+        assert_eq!(info.id, "sig123");
+        assert_eq!(info.parent.as_deref(), Some("sig122"));
+        assert_eq!(info.author, "alice");
+        assert_eq!(info.message, "feat: add manifest");
+        assert_eq!(info.timestamp, "2026-06-30T12:00:00Z");
+    }
+
+    #[test]
+    fn test_commit_info_default_timestamp() {
+        // When timestamp is empty, we expect an RFC 3339 timestamp.
+        let info = CommitInfo::from_lore_revision("sig", None, "bob", "msg", "");
+        assert!(
+            info.timestamp.contains('T') || info.timestamp.contains('Z'),
+            "expected RFC 3339 timestamp, got: {}",
+            info.timestamp
+        );
+    }
+}

@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap merge
+# px merge
 Three-way merge of JSON/YAML values
 
 
 ## Synopsis
 ```bash
-nap merge [OPTIONS] <BASE> <CURRENT> <PROPOSED>
+px merge [OPTIONS] <BASE> <CURRENT> <PROPOSED>
 ```
 
 
@@ -40,5 +40,5 @@ nap merge [OPTIONS] <BASE> <CURRENT> <PROPOSED>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `merge` command
+`crates/px-cli/src/main.rs` — `merge` command
 

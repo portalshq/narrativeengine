@@ -1,0 +1,27 @@
+Clone or pull a repository from a remote.
+
+If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via pull.
+
+Usage: px pull [OPTIONS] <URL_OR_NAME>
+
+Arguments:
+  <URL_OR_NAME>
+          URL (clone) or repository name (pull existing)
+
+Options:
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset
+
+          [env: PX_DIR=]
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
+  -h, --help
+          Print help (see a summary with '-h')

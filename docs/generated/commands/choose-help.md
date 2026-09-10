@@ -1,19 +1,19 @@
 ---
 generated: true
-generator: nap-docgen
+generator: px-docgen
 version: 0.4.5
 git_sha: 5db190b
 source: clap
 ---
 
 
-# nap choose help
+# px choose help
 Print this message or the help of the given subcommand(s)
 
 
 ## Synopsis
 ```bash
-nap Usage: help [COMMAND]...
+px Usage: help [COMMAND]...
 ```
 
 
@@ -25,5 +25,5 @@ nap Usage: help [COMMAND]...
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `help` command
+`crates/px-cli/src/main.rs` — `help` command
 

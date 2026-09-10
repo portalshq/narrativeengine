@@ -1,0 +1,331 @@
+//! PX Manifest — the core primitive.
+//!
+//! The manifest is the durable representation of a narrative resource.
+//! It is:
+//! - **Human-editable** — YAML, readable by toybox-builders
+//! - **Machine-editable** — structured, schema-validated
+//! - **Agent-readable** — subtree-queryable for AI workflows
+//! - **Mergeable** — YAML maps merge cleanly
+//! - **Portable** — no runtime dependency, just a file
+//! - **Signable** — hash the content, sign the hash
+//! - **Versionable** — the manifest IS what gets committed
+//!
+//! # Design: Manifest is current state. History is external.
+//!
+//! The full commit history lives in the VCS, NOT inside the manifest.
+//! This keeps manifests bounded and avoids self-referential revision pointers.
+
+use std::collections::BTreeMap;
+use std::path::Path;
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+use crate::content::ContentHash;
+use crate::error::PxError;
+use crate::types::EntityType;
+
+/// A PX manifest — the canonical representation of a narrative resource.
+///
+/// # Example (YAML)
+/// ```yaml
+/// id: "px://toystory/character/woody"
+/// name: "Woody"
+/// entity_type: character
+/// version: 17
+/// properties:
+///   homeworld: "px://toystory/location/andys-room"
+///   toy_type: human
+/// representations:
+///   reference_image:
+///     hash: "blake3:af1349b9..."
+///     format: png
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Manifest {
+    /// The canonical PX URI for this resource.
+    /// e.g., `"px://toystory/character/woody"`
+    pub id: String,
+
+    /// Human-readable name.
+    pub name: String,
+
+    /// The kind of entity this manifest describes.
+    pub entity_type: EntityType,
+
+    /// Monotonic version counter. Incremented on each commit.
+    #[serde(default)]
+    pub version: u64,
+
+    /// Access control. Owners have full control. Optional for v0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub principals: Option<Principal>,
+
+    /// Entity-specific key-value properties.
+    /// Character: personality, toy_type, homeworld, etc.
+    /// Scene: setting, time_of_day, mood, etc.
+    /// Location: geography, atmosphere, etc.
+    #[serde(default)]
+    pub properties: BTreeMap<String, serde_yaml::Value>,
+
+    /// Content-addressed representations of this entity.
+    /// e.g., reference_image, voice_model, mesh, splat, etc.
+    #[serde(default)]
+    pub representations: BTreeMap<String, Representation>,
+
+    /// Cross-references to other PX resources.
+    /// e.g., appears_in, relationships, contains, etc.
+    #[serde(default)]
+    pub references: BTreeMap<String, serde_yaml::Value>,
+
+    /// AI generation provenance — which model, prompt, seed, etc.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provenance: Option<Provenance>,
+
+    /// Arbitrary extension metadata. Future-proof escape hatch.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub metadata: BTreeMap<String, serde_yaml::Value>,
+}
+
+/// Access control principals for a manifest.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Principal {
+    /// Full control — can modify, transfer, delete.
+    #[serde(default)]
+    pub owners: Vec<String>,
+
+    /// Can modify content but not transfer ownership.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub maintainers: Vec<String>,
+
+    /// Can publish/distribute but not modify source.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub publishers: Vec<String>,
+}
+
+/// A content-addressed representation of an entity.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Representation {
+    /// BLAKE3 content hash. e.g., `"blake3:af1349b9..."`.
+    pub hash: String,
+
+    /// File format. e.g., `"png"`, `"glb"`, `"onnx"`, `"spz"`.
+    pub format: String,
+
+    /// Optional storage URI. e.g., `"gs://assets/toystory/woody/ref.png"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uri: Option<String>,
+
+    /// Optional quality tier: draft, production, distribution.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<String>,
+}
+
+/// AI generation provenance metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Provenance {
+    /// Which AI model generated this entity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+
+    /// Content-addressed hash of the prompt used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_hash: Option<String>,
+
+    /// Generation seed for reproducibility.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<String>,
+
+    /// Additional generation parameters.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub parameters: BTreeMap<String, String>,
+
+    /// What this entity was derived from (parent entity URI).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub derived_from: Option<String>,
+
+    /// When this entity was created.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+impl Manifest {
+    /// Create a new manifest with minimal required fields.
+    pub fn new(repository: &str, entity_type: EntityType, entity_id: &str, name: &str) -> Self {
+        let id = if entity_type.as_str() == "world" {
+            format!("px://{repository}/world/{repository}")
+        } else {
+            format!("px://{repository}/{entity_type}/{entity_id}")
+        };
+
+        Self {
+            id,
+            name: name.to_string(),
+            entity_type,
+            version: 0,
+            principals: None,
+            properties: BTreeMap::new(),
+            representations: BTreeMap::new(),
+            references: BTreeMap::new(),
+            provenance: None,
+            metadata: BTreeMap::new(),
+        }
+    }
+
+    /// Serialize this manifest to YAML.
+    pub fn to_yaml(&self) -> Result<String, PxError> {
+        serde_yaml::to_string(self).map_err(|e| PxError::ManifestValidationError(e.to_string()))
+    }
+
+    /// Deserialize a manifest from a YAML string.
+    pub fn from_yaml(yaml: &str) -> Result<Self, PxError> {
+        serde_yaml::from_str(yaml).map_err(|e| PxError::ManifestParseError {
+            path: "<string>".to_string(),
+            source: e,
+        })
+    }
+
+    /// Read a manifest from a YAML file on disk.
+    pub fn from_file(path: &Path) -> Result<Self, PxError> {
+        let content = std::fs::read_to_string(path)?;
+        serde_yaml::from_str(&content).map_err(|e| PxError::ManifestParseError {
+            path: path.display().to_string(),
+            source: e,
+        })
+    }
+
+    /// Write this manifest to a YAML file on disk.
+    pub fn to_file(&self, path: &Path) -> Result<(), PxError> {
+        let yaml = self.to_yaml()?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(path, yaml).map_err(|e| PxError::ManifestWriteError {
+            path: path.display().to_string(),
+            source: e,
+        })
+    }
+
+    /// Convert the manifest to a serde_yaml::Value for query traversal.
+    pub fn to_value(&self) -> Result<serde_yaml::Value, PxError> {
+        serde_yaml::to_value(self).map_err(|e| PxError::ManifestValidationError(e.to_string()))
+    }
+
+    /// Convert the manifest to a serde_json::Value for JSON output.
+    pub fn to_json_value(&self) -> Result<serde_json::Value, PxError> {
+        serde_json::to_value(self).map_err(|e| PxError::ManifestValidationError(e.to_string()))
+    }
+
+    /// Compute the BLAKE3 hash of this manifest's YAML representation.
+    pub fn content_hash(&self) -> Result<ContentHash, PxError> {
+        let yaml = self.to_yaml()?;
+        Ok(ContentHash::from_str_content(&yaml))
+    }
+
+    /// Add or update a representation.
+    pub fn set_representation(&mut self, key: &str, repr: Representation) {
+        self.representations.insert(key.to_string(), repr);
+    }
+
+    /// Add or update a property.
+    pub fn set_property(&mut self, key: &str, value: serde_yaml::Value) {
+        self.properties.insert(key.to_string(), value);
+    }
+
+    /// Add a cross-reference.
+    pub fn add_reference(&mut self, key: &str, value: serde_yaml::Value) {
+        self.references.insert(key.to_string(), value);
+    }
+
+    /// Increment the version counter.
+    pub fn bump_version(&mut self) {
+        self.version += 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_manifest_new() {
+        let manifest = Manifest::new("toystory", EntityType::new("character"), "woody", "Woody");
+        assert_eq!(manifest.id, "px://toystory/character/woody");
+        assert_eq!(manifest.name, "Woody");
+        assert_eq!(manifest.entity_type.as_str(), "character");
+        assert_eq!(manifest.version, 0);
+    }
+
+    #[test]
+    fn test_manifest_yaml_roundtrip() {
+        let mut manifest =
+            Manifest::new("toystory", EntityType::new("character"), "woody", "Woody");
+        manifest.set_property("toy_type", serde_yaml::Value::String("plush".to_string()));
+        manifest.set_representation(
+            "reference_image",
+            Representation {
+                hash: "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    .to_string(),
+                format: "png".to_string(),
+                uri: Some("gs://assets/woody/ref.png".to_string()),
+                tier: Some("production".to_string()),
+            },
+        );
+
+        let yaml = manifest.to_yaml().unwrap();
+        let parsed = Manifest::from_yaml(&yaml).unwrap();
+
+        assert_eq!(parsed.id, manifest.id);
+        assert_eq!(parsed.name, manifest.name);
+        assert!(parsed.properties.contains_key("toy_type"));
+        assert!(parsed.representations.contains_key("reference_image"));
+    }
+
+    #[test]
+    fn test_manifest_ignores_legacy_head_on_parse() {
+        let yaml = r#"
+id: "px://toystory/character/woody"
+name: "Woody"
+entity_type: character
+version: 1
+head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"#;
+
+        let parsed = Manifest::from_yaml(yaml).unwrap();
+        let serialized = parsed.to_yaml().unwrap();
+
+        assert_eq!(parsed.id, "px://toystory/character/woody");
+        assert!(!serialized.contains("\nhead:"));
+    }
+
+    #[test]
+    fn test_manifest_world_uri() {
+        let manifest = Manifest::new(
+            "toystory",
+            EntityType::new("world"),
+            "toystory",
+            "Toy Story Repository",
+        );
+        assert_eq!(manifest.id, "px://toystory/world/toystory");
+    }
+
+    #[test]
+    fn test_manifest_custom_entity_type() {
+        let manifest = Manifest::new(
+            "lab",
+            EntityType::new("paper"),
+            "cold-fusion-v2",
+            "Cold Fusion Paper",
+        );
+        assert_eq!(manifest.id, "px://lab/paper/cold-fusion-v2");
+        assert_eq!(manifest.entity_type.as_str(), "paper");
+    }
+
+    #[test]
+    fn test_manifest_content_hash_deterministic() {
+        let manifest = Manifest::new("toystory", EntityType::new("character"), "woody", "Woody");
+        let hash_a = manifest.content_hash().unwrap();
+        let hash_b = manifest.content_hash().unwrap();
+        assert_eq!(hash_a, hash_b);
+    }
+}

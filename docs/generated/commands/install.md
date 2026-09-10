@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap install
+# px install
 Install required dependencies
 
 
 ## Synopsis
 ```bash
-nap install <TARGET>
+px install <TARGET>
 ```
 
 
@@ -31,5 +31,5 @@ nap install <TARGET>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `install` command
+`crates/px-cli/src/main.rs` — `install` command
 

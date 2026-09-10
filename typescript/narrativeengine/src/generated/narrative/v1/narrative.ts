@@ -47,16 +47,16 @@ export interface BaseNarrativeLore {
 }
 
 export interface Entity {
-  /** nap: "nap://repository/entityType/entityId" */
+  /** px: "px://repository/entityType/entityId" */
   id: string;
   name: string;
   /** character, location, scene, prop, world */
   type: string;
   description: string;
   representations: Representation[];
-  /** nap-sdk properties */
+  /** px-sdk properties */
   properties: { [key: string]: string };
-  /** nap-sdk references */
+  /** px-sdk references */
   references: { [key: string]: string };
 }
 
@@ -111,8 +111,8 @@ export interface GenerationParameters {
   includeInactiveEntities: boolean;
   entityTypes: string[];
   enableEntityExtraction: boolean;
-  napRepository: string;
-  napEntityTypes: string[];
+  pxRepository: string;
+  pxEntityTypes: string[];
   /** Cross-language cancellation token */
   cancellationToken: string;
 }

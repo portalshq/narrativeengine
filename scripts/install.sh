@@ -7,10 +7,10 @@ set -euo pipefail
 ###############################################################################
 
 REPO="portalshq/narrativeengine"
-BINARY_NAME="nap"
-MCP_BINARY_NAME="nap-mcp-server"
+BINARY_NAME="px"
+MCP_BINARY_NAME="px-mcp-server"
 VERSION="${VERSION:-latest}"
-BASE_URL="${NAP_INSTALL_BASE_URL:-}"
+BASE_URL="${PX_INSTALL_BASE_URL:-}"
 
 ###############################################################################
 # Utilities
@@ -71,6 +71,31 @@ case "$OS" in
 esac
 
 ###############################################################################
+# Install location and collision protection
+###############################################################################
+
+INSTALL_DIR="${PX_INSTALL_DIR:-/usr/local/bin}"
+
+if [[ -n "${PX_INSTALL_DIR:-}" ]]; then
+    mkdir -p "$INSTALL_DIR"
+elif [[ ! -w "$INSTALL_DIR" ]]; then
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+fi
+
+# Refuse before any download: an installer must never silently replace a
+# command a user already has on PATH or in its selected destination.
+for binary in "$BINARY_NAME" "$MCP_BINARY_NAME"; do
+    target="$INSTALL_DIR/$binary"
+    existing="$(command -v "$binary" 2>/dev/null || true)"
+    if [[ -e "$target" || -n "$existing" ]]; then
+        echo "Refusing to overwrite existing '$binary' executable (${existing:-$target})." >&2
+        echo "Choose a different PX_INSTALL_DIR or remove the existing executable explicitly." >&2
+        exit 1
+    fi
+done
+
+###############################################################################
 # Download
 ###############################################################################
 
@@ -122,19 +147,6 @@ curl \
     --output "$MCP_FILE"
 
 chmod +x "$MCP_FILE"
-
-###############################################################################
-# Install location
-###############################################################################
-
-INSTALL_DIR="${NAP_INSTALL_DIR:-/usr/local/bin}"
-
-if [[ -n "${NAP_INSTALL_DIR:-}" ]]; then
-    mkdir -p "$INSTALL_DIR"
-elif [[ ! -w "$INSTALL_DIR" ]]; then
-    INSTALL_DIR="$HOME/.local/bin"
-    mkdir -p "$INSTALL_DIR"
-fi
 
 mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
 mv "$MCP_FILE" "$INSTALL_DIR/$MCP_BINARY_NAME"

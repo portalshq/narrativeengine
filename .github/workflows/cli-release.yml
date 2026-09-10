@@ -25,7 +25,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             typescript/narrativeengine/package-lock.json
-            typescript/nap-sdk/package-lock.json
+            typescript/px-sdk/package-lock.json
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: pip install ruff mypy pydantic
@@ -48,8 +48,8 @@ jobs:
           --locked
           --workspace
           --exclude narrativeengine-py
-          --exclude nap-sdk-py
-          --exclude nap-sdk-ts
+          --exclude px-sdk-py
+          --exclude px-sdk-ts
 
   build:
     needs: test
@@ -59,24 +59,24 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            bin: nap
-            mcp_bin: nap-mcp-server
+            bin: px
+            mcp_bin: px-mcp-server
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            bin: nap
-            mcp_bin: nap-mcp-server
+            bin: px
+            mcp_bin: px-mcp-server
           - os: macos-15
             target: x86_64-apple-darwin
-            bin: nap
-            mcp_bin: nap-mcp-server
+            bin: px
+            mcp_bin: px-mcp-server
           - os: macos-latest
             target: aarch64-apple-darwin
-            bin: nap
-            mcp_bin: nap-mcp-server
+            bin: px
+            mcp_bin: px-mcp-server
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            bin: nap.exe
-            mcp_bin: nap-mcp-server.exe
+            bin: px.exe
+            mcp_bin: px-mcp-server.exe
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -90,20 +90,20 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --locked --release --target ${{ matrix.target }} --bin nap --bin nap-mcp-server
+        run: cargo build --locked --release --target ${{ matrix.target }} --bin px --bin px-mcp-server
 
       - name: Prepare binary
         shell: bash
         run: |
           mkdir -p artifacts
-          NAME="nap-${{ matrix.target }}"
+          NAME="px-${{ matrix.target }}"
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             NAME="${NAME}.exe"
           fi
           cp \
             "target/${{ matrix.target }}/release/${{ matrix.bin }}" \
             "artifacts/${NAME}"
-          MCP_NAME="nap-mcp-server-${{ matrix.target }}"
+          MCP_NAME="px-mcp-server-${{ matrix.target }}"
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             MCP_NAME="${MCP_NAME}.exe"
           fi
@@ -113,7 +113,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: nap-${{ matrix.target }}
+          name: px-${{ matrix.target }}
           path: artifacts/*
           if-no-files-found: error
 
@@ -151,12 +151,12 @@ jobs:
         run: |
           cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS
           VERSION="${RELEASE_TAG#v}"
-          LORE_VERSION="$(sed -n 's/^pub const PINNED_LORE_VERSION: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
-          LORE_REPOSITORY="$(sed -n 's/^pub const PINNED_LORE_REPOSITORY: &str = "\([^"]*\)";/\1/p' ../crates/nap-core/src/server/version.rs)"
-          LORE_INSTALLER_SHA256="$(sed -n '/^pub const PINNED_LORE_INSTALLER_SHA256:/{n;s/^[[:space:]]*"\([^"]*\)";/\1/p;}' ../crates/nap-core/src/server/version.rs)"
-          LORE_ARTIFACT_MANIFEST_SHA256="$(sed -n '/^pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str =/,/";$/{s/.*"\(sha256:[a-f0-9]\{64\}\)".*/\1/p;}' ../crates/nap-core/src/server/version.rs)"
-          LORE_ARTIFACT_MANIFEST_URL="$(sed -n '/^pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str =/,/";$/{s/.*"\(https:.*\)".*/\1/p;}' ../crates/nap-core/src/server/version.rs)"
-          LORE_SIGNATURE_BUNDLE_URL="$(sed -n '/^pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str =/,/";$/{s/.*"\(https:.*\)".*/\1/p;}' ../crates/nap-core/src/server/version.rs)"
+          LORE_VERSION="$(sed -n 's/^pub const PINNED_LORE_VERSION: &str = "\([^"]*\)";/\1/p' ../crates/px-core/src/server/version.rs)"
+          LORE_REPOSITORY="$(sed -n 's/^pub const PINNED_LORE_REPOSITORY: &str = "\([^"]*\)";/\1/p' ../crates/px-core/src/server/version.rs)"
+          LORE_INSTALLER_SHA256="$(sed -n '/^pub const PINNED_LORE_INSTALLER_SHA256:/{n;s/^[[:space:]]*"\([^"]*\)";/\1/p;}' ../crates/px-core/src/server/version.rs)"
+          LORE_ARTIFACT_MANIFEST_SHA256="$(sed -n '/^pub const PINNED_LORE_ARTIFACT_MANIFEST_SHA256: &str =/,/";$/{s/.*"\(sha256:[a-f0-9]\{64\}\)".*/\1/p;}' ../crates/px-core/src/server/version.rs)"
+          LORE_ARTIFACT_MANIFEST_URL="$(sed -n '/^pub const PINNED_LORE_ARTIFACT_MANIFEST_URL: &str =/,/";$/{s/.*"\(https:.*\)".*/\1/p;}' ../crates/px-core/src/server/version.rs)"
+          LORE_SIGNATURE_BUNDLE_URL="$(sed -n '/^pub const PINNED_LORE_SIGNATURE_BUNDLE_URL: &str =/,/";$/{s/.*"\(https:.*\)".*/\1/p;}' ../crates/px-core/src/server/version.rs)"
           EXPECTED_LORE_RELEASE_BASE="https://github.com/portalshq/lore/releases/download/v${LORE_VERSION}"
           [[ "$LORE_INSTALLER_SHA256" =~ ^[a-f0-9]{64}$ ]] || { echo "Lore installer checksum is incomplete" >&2; exit 1; }
           [[ "$LORE_ARTIFACT_MANIFEST_SHA256" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Lore artifact manifest is not pinned" >&2; exit 1; }

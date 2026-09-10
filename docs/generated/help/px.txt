@@ -1,0 +1,46 @@
+CLI for the PX protocol
+
+Usage: px [OPTIONS] <COMMAND>
+
+Commands:
+  auth          Manage secure Portals Cloud authentication
+  install       Install required dependencies
+  init          Initialize a repository repository and/or configure the backend provider
+  choose        Choose backend provider
+  backend       Configure or inspect the version-control backend
+  doctor        Run diagnostics and repair
+  publish       Publish changes to remote
+  status        Show system status
+  sync          Sync with remote
+  create        Create a new entity manifest
+  resolve       Resolve a PX URI to its manifest or a subtree
+  presign       Create a time-limited public URL for a committed representation
+  query         Query a subtree from a manifest
+  commit        Commit changes to a repository repository
+  history       View commit history for an entity
+  list          List repositories or entities within a repository
+  branch        Create or list branches
+  set           Set a property on an entity manifest
+  add           Add a file representation to an entity manifest
+  revert        Revert a commit by hash (undoes all changes in that commit)
+  pull          Clone or pull a repository from a remote
+  push          Push the current branch to its configured upstream remote
+  remote        Manage remotes on a repository
+  sign          Sign a manifest (stub for v0)
+  verify        Verify a manifest signature (stub for v0)
+  switch        Switch to a branch
+  head-hash     Show the current HEAD commit hash
+  validate      Validate a manifest against the PX schema
+  schema        Print a JSON Schema for manifest or commit types
+  diff          Show diff between two manifest files or versions
+  merge         Three-way merge of JSON/YAML values
+  content-hash  Compute the BLAKE3 content hash of a file
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
+  -v, --verbose              Enable verbose debug logging
+      --remote               Resolve repository reads through the configured Lore server (the default)
+      --local                Resolve repository reads from an explicitly checked-out local working tree
+  -h, --help                 Print help
+  -V, --version              Print version

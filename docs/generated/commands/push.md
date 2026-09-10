@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap push
+# px push
 Push the current branch to its configured upstream remote
 
 
 ## Synopsis
 ```bash
-nap push [OPTIONS] <REPOSITORY>
+px push [OPTIONS] <REPOSITORY>
 ```
 
 
@@ -39,5 +39,5 @@ nap push [OPTIONS] <REPOSITORY>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `push` command
+`crates/px-cli/src/main.rs` — `push` command
 

@@ -23,16 +23,16 @@ message BaseNarrativeLore {
   optional bool is_active = 4;
 }
 
-// Enhanced types for nap-sdk integration
+// Enhanced types for px-sdk integration
 
 message Entity {
-  string id = 1; // nap: "nap://repository/entityType/entityId"
+  string id = 1; // px: "px://repository/entityType/entityId"
   string name = 2;
   string type = 3; // character, location, scene, prop, world
   string description = 4;
   repeated Representation representations = 5;
-  map<string, string> properties = 6; // nap-sdk properties
-  map<string, string> references = 7; // nap-sdk references
+  map<string, string> properties = 6; // px-sdk properties
+  map<string, string> references = 7; // px-sdk references
 }
 
 message Representation {
@@ -71,8 +71,8 @@ message GenerationParameters {
   bool include_inactive_entities = 4;
   repeated string entity_types = 5;
   bool enable_entity_extraction = 6;
-  string nap_repository = 7;
-  repeated string nap_entity_types = 8;
+  string px_repository = 7;
+  repeated string px_entity_types = 8;
   string cancellation_token = 9; // Cross-language cancellation token
 }
 

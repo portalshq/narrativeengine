@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap create
+# px create
 Create a new entity manifest
 
 
 ## Synopsis
 ```bash
-nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTITY_ID>
+px create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTITY_ID>
 ```
 
 
@@ -28,7 +28,7 @@ nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTI
 
 | Flag | Description | Default |
 |---|---|---|
-| -a, --author | Author identifier | nap-cli |
+| -a, --author | Author identifier | px |
 | -n, --name | Human-readable name |  |
 | -u, --repository | Repository name |  |
 
@@ -43,15 +43,15 @@ nap create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTI
 ## Examples
 ```bash
 # Create a character
-nap create character woody -u toystory -n "Woody"
+px create character woody -u toystory -n "Woody"
 
 # Create a location
-nap create location andys-room -u toystory -n "Andy's Room"
+px create location andys-room -u toystory -n "Andy's Room"
 
 # Create with a specific author
-nap create character jessie -u toystory -n "Jessie" -a "toybox-builder"
+px create character jessie -u toystory -n "Jessie" -a "toybox-builder"
 ```
 
 ## Source
-`crates/nap-cli/src/main.rs` — `create` command
+`crates/px-cli/src/main.rs` — `create` command
 

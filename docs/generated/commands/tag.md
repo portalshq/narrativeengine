@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
+generator: px-docgen
 version: 0.5.0
 source: clap
 ---
 
 
-# nap tag
+# px tag
 Create or list tags
 
 
 ## Synopsis
 ```bash
-nap tag <REPOSITORY> [NAME]
+px tag <REPOSITORY> [NAME]
 ```
 
 
@@ -32,5 +32,5 @@ nap tag <REPOSITORY> [NAME]
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `tag` command
+`crates/px-cli/src/main.rs` — `tag` command
 

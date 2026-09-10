@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap auth logout
+# px auth logout
 Remove locally cached Lore credentials
 
 
 ## Synopsis
 ```bash
-nap logout
+px logout
 ```
 
 
@@ -24,5 +24,5 @@ nap logout
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `logout` command
+`crates/px-cli/src/main.rs` — `logout` command
 

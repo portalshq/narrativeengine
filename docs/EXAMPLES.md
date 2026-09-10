@@ -1,6 +1,6 @@
 # EXAMPLES.md
 
-`nap` is a domain-agnostic entity management system. By using custom entity types and a repository-defined structure, you can adapt `nap` to store, track, and manage information in any domain.
+`px` is a domain-agnostic entity management system. By using custom entity types and a repository-defined structure, you can adapt `px` to store, track, and manage information in any domain.
 
 The following examples assume a root `repository.yaml` file defining the valid entity types for the project.
 
@@ -22,14 +22,14 @@ types:
 ### Commands
 ```bash
 # Create a new research paper entity
-nap create paper/cold-fusion-v2 -n "Replicating Cold Fusion Results"
+px create paper/cold-fusion-v2 -n "Replicating Cold Fusion Results"
 
 # Assign domain-specific properties
-nap set nap://lab/paper/cold-fusion-v2 status "peer-reviewed"
-nap set nap://lab/paper/cold-fusion-v2 doi "10.1038/example"
+px set px://lab/paper/cold-fusion-v2 status "peer-reviewed"
+px set px://lab/paper/cold-fusion-v2 doi "10.1038/example"
 
 # Add representation (the actual PDF)
-nap add nap://lab/paper/cold-fusion-v2 manuscript ./data/manuscript.pdf --format pdf
+px add px://lab/paper/cold-fusion-v2 manuscript ./data/manuscript.pdf --format pdf
 ```
 
 ---
@@ -50,14 +50,14 @@ types:
 ### Commands
 ```bash
 # Create a new device entity
-nap create device/macbook-m4-042 -n "Engineer Laptop 042"
+px create device/macbook-m4-042 -n "Engineer Laptop 042"
 
 # Assign domain-specific properties
-nap set nap://it/device/macbook-m4-042 serial_number "A123-BC456"
-nap set nap://it/device/macbook-m4-042 assigned_to "jane.doe@company.com"
+px set px://it/device/macbook-m4-042 serial_number "A123-BC456"
+px set px://it/device/macbook-m4-042 assigned_to "jane.doe@company.com"
 
 # Add representation (purchase receipt)
-nap add nap://it/device/macbook-m4-042 purchase_receipt ./docs/receipts/mbp-042.pdf --format pdf
+px add px://it/device/macbook-m4-042 purchase_receipt ./docs/receipts/mbp-042.pdf --format pdf
 ```
 
 ---
@@ -78,14 +78,14 @@ types:
 ### Commands
 ```bash
 # Create a new deity entity
-nap create deity/solaris -n "Solaris, The Sun Bringer"
+px create deity/solaris -n "Solaris, The Sun Bringer"
 
 # Assign domain-specific properties
-nap set nap://fantasy/deity/solaris alignment "Lawful Good"
-nap set nap://fantasy/deity/solaris domain "Light"
+px set px://fantasy/deity/solaris alignment "Lawful Good"
+px set px://fantasy/deity/solaris domain "Light"
 
 # Add representation (character concept art)
-nap add nap://fantasy/deity/solaris concept_art ./assets/art/solaris_concept.png --format png
+px add px://fantasy/deity/solaris concept_art ./assets/art/solaris_concept.png --format png
 ```
 
 ---
@@ -106,21 +106,21 @@ types:
 ### Commands
 ```bash
 # Create a new service entity
-nap create service/auth-provider -n "Authentication Service"
+px create service/auth-provider -n "Authentication Service"
 
 # Assign domain-specific properties
-nap set nap://platform/service/auth-provider language "Rust"
-nap set nap://platform/service/auth-provider owner "platform-team"
+px set px://platform/service/auth-provider language "Rust"
+px set px://platform/service/auth-provider owner "platform-team"
 
 # Add representation (architecture diagram)
-nap add nap://platform/service/auth-provider architecture_diagram ./docs/diagrams/auth-flow.svg --format svg
+px add px://platform/service/auth-provider architecture_diagram ./docs/diagrams/auth-flow.svg --format svg
 ```
 
 ***
 
 ### Summary of Workflow
-Regardless of the domain, the `nap` interaction remains consistent:
+Regardless of the domain, the `px` interaction remains consistent:
 1.  **Define:** Add your types to `repository.yaml`.
-2.  **Create:** Use `nap create <type>/<id>` to initialize an entity.
-3.  **Set:** Use `nap set <uri> <key> <value>` to attach metadata.
-4.  **Represent:** Use `nap add <uri> <key> <file> --format <format>` to attach files, assets, or documentation.
+2.  **Create:** Use `px create <type>/<id>` to initialize an entity.
+3.  **Set:** Use `px set <uri> <key> <value>` to attach metadata.
+4.  **Represent:** Use `px add <uri> <key> <file> --format <format>` to attach files, assets, or documentation.

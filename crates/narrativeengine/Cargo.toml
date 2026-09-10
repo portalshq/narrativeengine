@@ -11,7 +11,7 @@ name = "narrativeengine"
 crate-type = ["rlib"]
 
 [dependencies]
-nap-core = { path = "../nap-core" }
+px-core = { package = "portalshq-px", path = "../px-core" }
 schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

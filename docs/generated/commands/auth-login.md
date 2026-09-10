@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap auth login
+# px auth login
 Sign in through the configured Lore authentication service
 
 
 ## Synopsis
 ```bash
-nap login [OPTIONS]
+px login [OPTIONS]
 ```
 
 
@@ -33,5 +33,5 @@ nap login [OPTIONS]
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `login` command
+`crates/px-cli/src/main.rs` — `login` command
 

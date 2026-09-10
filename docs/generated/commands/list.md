@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap list
+# px list
 List repositories or entities within a repository
 
 
 ## Synopsis
 ```bash
-nap list [OPTIONS] [REPOSITORY]
+px list [OPTIONS] [REPOSITORY]
 ```
 
 
@@ -38,5 +38,5 @@ nap list [OPTIONS] [REPOSITORY]
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `list` command
+`crates/px-cli/src/main.rs` — `list` command
 

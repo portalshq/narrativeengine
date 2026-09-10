@@ -7,11 +7,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Check required environment variables
-export NAP_LORE_URL_BASE="${NAP_LORE_URL_BASE:-grpcs://lore.portals.works}"
+export PX_LORE_URL_BASE="${PX_LORE_URL_BASE:-grpcs://lore.portals.works}"
 
-if [ -z "${NAP_WORKSPACE_ID:-}" ]; then
-    echo "Error: NAP_WORKSPACE_ID environment variable not set"
-    echo "Example: export NAP_WORKSPACE_ID='your-workspace-id'"
+if [ -z "${PX_WORKSPACE_ID:-}" ]; then
+    echo "Error: PX_WORKSPACE_ID environment variable not set"
+    echo "Example: export PX_WORKSPACE_ID='your-workspace-id'"
     exit 1
 fi
 
@@ -40,8 +40,8 @@ mkdir -p "$ARTIFACT_DIR"
 cat > "$ARTIFACT_DIR/env.json" <<EOF
 {
   "timestamp_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "nap_lore_url_base": "$NAP_LORE_URL_BASE",
-  "nap_workspace_id": "$NAP_WORKSPACE_ID",
+  "px_lore_url_base": "$PX_LORE_URL_BASE",
+  "px_workspace_id": "$PX_WORKSPACE_ID",
   "git_sha": "$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || echo "unknown")",
   "git_branch": "$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")",
   "lore_client_version": "$(grep -E '^version' "$ROOT_DIR/Cargo.toml" 2>/dev/null | head -1 || echo "unknown")",
@@ -50,29 +50,29 @@ cat > "$ARTIFACT_DIR/env.json" <<EOF
 EOF
 
 echo "Running Portals Cloud integration tests..."
-echo "NAP_LORE_URL_BASE: $NAP_LORE_URL_BASE"
-echo "NAP_WORKSPACE_ID: $NAP_WORKSPACE_ID"
+echo "PX_LORE_URL_BASE: $PX_LORE_URL_BASE"
+echo "PX_WORKSPACE_ID: $PX_WORKSPACE_ID"
 echo "Artifact dir: $ARTIFACT_DIR"
 echo ""
 
 cd "$ROOT_DIR"
 # Authenticate via service-account API key (functional integration: exchanges HMAC key for JWT via 8086 internal API)
-if ! cargo run -p nap-cli -- auth login --api-key 2>&1 | tee "$ARTIFACT_DIR/auth-login.log"; then
-    echo "ERROR: nap auth login --api-key failed — key not exchanged for JWT (check KMS/JWKS/pepper)" | tee -a "$ARTIFACT_DIR/auth-login.log"
+if ! cargo run -p portalshq-px-cli -- auth login --api-key 2>&1 | tee "$ARTIFACT_DIR/auth-login.log"; then
+    echo "ERROR: px auth login --api-key failed — key not exchanged for JWT (check KMS/JWKS/pepper)" | tee -a "$ARTIFACT_DIR/auth-login.log"
     exit 1
 fi
-trap 'cargo run -p nap-cli -- auth logout >/dev/null 2>&1 || true; echo "Artifacts: $ARTIFACT_DIR" ' EXIT
+trap 'cargo run -p portalshq-px-cli -- auth logout >/dev/null 2>&1 || true; echo "Artifacts: $ARTIFACT_DIR" ' EXIT
 
 # Run suite: human log + machine JSON (extensible to JUnit via cargo2junit/nextest)
 # --format json is unstable; we tee human output and also try json for future parsing
 set +e
-cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1 --nocapture "$@" 2>&1 | tee "$ARTIFACT_DIR/nap-cloud-e2e.log"
+cargo test -p portalshq-px-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1 --nocapture "$@" 2>&1 | tee "$ARTIFACT_DIR/px-cloud-e2e.log"
 TEST_RC=${PIPESTATUS[0]}
 # Also emit JSON for machine parsing if cargo supports it (non-fatal if not)
-cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1 --format=json 2>"$ARTIFACT_DIR/nap-cloud-e2e.json" || true
+cargo test -p portalshq-px-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1 --format=json 2>"$ARTIFACT_DIR/px-cloud-e2e.json" || true
 # If cargo2junit or nextest is available, produce JUnit (non-fatal, extensible)
 if command -v cargo2junit >/dev/null 2>&1; then
-    cargo2junit < "$ARTIFACT_DIR/nap-cloud-e2e.log" > "$ARTIFACT_DIR/junit.xml" 2>/dev/null || true
+    cargo2junit < "$ARTIFACT_DIR/px-cloud-e2e.log" > "$ARTIFACT_DIR/junit.xml" 2>/dev/null || true
 fi
 echo "Artifacts written to $ARTIFACT_DIR (log, json, env.json, junit.xml if available)"
 exit $TEST_RC

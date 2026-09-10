@@ -6,11 +6,11 @@
 curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash
 ```
 
-The installation script installs both `nap` and `nap-mcp-server`. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use NAP through host-side CLI proxy calls.
+The installation script installs both `px` and `px-mcp-server`. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use PX through host-side CLI proxy calls.
 
 ### Skills Install
 
-Install these skills to use NAP with agent workflows, including entity-aware prompts, generation templates, and the resolve/update steps that keep character and scene output consistent.
+Install these skills to use PX with agent workflows, including entity-aware prompts, generation templates, and the resolve/update steps that keep character and scene output consistent.
 
 ```bash
 npx skills add portalshq/narrativeengine
@@ -19,13 +19,13 @@ npx skills add portalshq/narrativeengine
 <!-- ### CLI & Server (Rust — compile from source)
 
 ```bash
-git clone https://github.com/cinematiccanvas/nap.git
-cd nap
+git clone https://github.com/cinematiccanvas/px.git
+cd px
 cargo build --release
 
 # Binaries land in target/release/
-#   nap          — CLI tool
-#   nap-server   — HTTP resolver server
+#   px          — CLI tool
+#   px-server   — HTTP resolver server
 ```
 
 ### Python SDK (prebuilt wheel, no Rust needed)
@@ -59,56 +59,56 @@ const block = createBlock("char-1", "A brave adventurer");
 
 ```bash
 # Initialize a repository (prompts for provider on first run)
-nap init toystory
+px init toystory
 
 # Initialize with local provider
-nap init toystory --provider local
+px init toystory --provider local
 
 # Configure provider only (no repository)
-nap init --provider local
+px init --provider local
 
 # Initialize with remote provider
-nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
+px init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
 
 # Initialize with Portals Cloud
-nap auth login
-nap init --provider portals-cloud
+px auth login
+px init --provider portals-cloud
 
 # Inspect or clear the OS-keyring-backed session
-nap auth status
-nap auth logout
+px auth status
+px auth logout
 
 # Check system status
-nap status
+px status
 
 # Run diagnostics
-nap doctor
+px doctor
 
 # Run diagnostics with auto-repair
-nap doctor --repair
+px doctor --repair
 ```
 
 Portals Cloud uses `grpcs://lore.portals.works` on standard TLS port 443. Login is
 the only interactive VCS step; repository operations remain noninteractive and
-return an actionable `nap auth login` error when credentials are missing or
+return an actionable `px auth login` error when credentials are missing or
 expired. Lore automatically exchanges the eight-hour login session for a
 five-minute token scoped to the single repository used by init, clone, push,
 pull, sync, publish, and locking. CI uses a revocable service-account API key
 exchange; do not store long-lived bearer tokens in CI variables.
 
-`nap install lore` installs the exact `portalshq/lore` release compiled into
-that Nap version. It downloads the installer from the same release tag,
+`px install lore` installs the exact `portalshq/lore` release compiled into
+that Px version. It downloads the installer from the same release tag,
 verifies its pinned SHA-256 before execution, and explicitly selects the
 Portals fork. It never executes the mutable `main` installer or silently falls
 back to an upstream Lore binary. Production release metadata binds this Lore
-client version to Nap's signed checksum manifest.
+client version to Px's signed checksum manifest.
 
 CI reads the API key from its secret store and passes it to Lore over stdin,
 so the secret is absent from process arguments and command logs:
 
 ```bash
 export PORTALS_CLOUD_API_KEY="${CI_PORTALS_CLOUD_API_KEY}"
-nap auth login --api-key
+px auth login --api-key
 ```
 
 Use `--api-key-env NAME` to select a different secret environment variable.
@@ -117,56 +117,56 @@ Use `--api-key-env NAME` to select a different secret environment variable.
 
 ```bash
 # Initialize a new repository
-nap init toystory
+px init toystory
 
 # See what you created
 ls toystory/
-# → .nap/  repository.yaml  characters/  locations/  scenes/  props/
+# → .px/  repository.yaml  characters/  locations/  scenes/  props/
 ```
 
 ### Create & Inspect Entities
 
 ```bash
 # Create a character
-nap create character woody -u toystory -n "Woody"
+px create character woody -u toystory -n "Woody"
 
 # Create a location
-nap create location andys-room -u toystory -n "Andy's Room"
+px create location andys-room -u toystory -n "Andy's Room"
 
 # Set properties
-nap set nap://toystory/character/woody toy_type human
-nap set nap://toystory/character/woody homeworld "nap://toystory/location/andys-room"
+px set px://toystory/character/woody toy_type human
+px set px://toystory/character/woody homeworld "px://toystory/location/andys-room"
 
 # Resolve a manifest
-nap resolve nap://toystory/character/woody
+px resolve px://toystory/character/woody
 
 # Query a specific field
-nap resolve nap://toystory/character/woody#properties.toy_type
+px resolve px://toystory/character/woody#properties.toy_type
 # → human
 
 # Query a subtree
-nap query nap://toystory/character/woody properties
+px query px://toystory/character/woody properties
 ```
 
 ### Version Control
 
 ```bash
 # View commit history
-nap history nap://toystory/character/woody
+px history px://toystory/character/woody
 
 # Create branches
-nap branch toystory canon
+px branch toystory canon
 
 # Sync with remote
-nap sync toystory
+px sync toystory
 
 # Publish to remote
-nap publish toystory
+px publish toystory
 ```
 
 ### Output Formats
 
 ```bash
-nap resolve nap://toystory/character/woody -f json
-nap resolve nap://toystory/character/woody -f yaml
+px resolve px://toystory/character/woody -f json
+px resolve px://toystory/character/woody -f yaml
 ```

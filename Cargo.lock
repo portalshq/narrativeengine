@@ -1506,151 +1506,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084"
 
 [[package]]
-name = "nap-cli"
-version = "0.8.14"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "chrono",
- "clap",
- "nap-core",
- "predicates",
- "rand 0.8.7",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "nap-core"
-version = "0.8.14"
-dependencies = [
- "anyhow",
- "async-trait",
- "blake3",
- "bytes",
- "chrono",
- "ed25519-dalek",
- "hex",
- "jsonschema",
- "nix",
- "object_store",
- "prost",
- "prost-build",
- "protoc-bin-vendored",
- "rand 0.9.4",
- "rcgen",
- "reqwest",
- "semver",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "similar",
- "temp-env",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-stream",
- "toml",
- "tonic",
- "tonic-build",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "ulid",
- "which",
- "windows-sys 0.59.0",
- "zstd-sys",
-]
-
-[[package]]
-name = "nap-docgen"
-version = "0.8.14"
-dependencies = [
- "anyhow",
- "camino",
- "clap",
- "indexmap 1.9.3",
- "nap-cli",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "toml",
- "walkdir",
-]
-
-[[package]]
-name = "nap-mcp-server"
-version = "0.8.14"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "nap-sdk-py"
-version = "0.8.14"
-dependencies = [
- "nap-core",
- "pyo3",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
-]
-
-[[package]]
-name = "nap-sdk-ts"
-version = "0.8.14"
-dependencies = [
- "nap-core",
- "napi",
- "napi-build",
- "napi-derive",
- "serde",
- "serde_json",
- "serde_yaml",
-]
-
-[[package]]
-name = "nap-server"
-version = "0.8.14"
-dependencies = [
- "anyhow",
- "axum 0.8.9",
- "base64",
- "chrono",
- "nap-core",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
- "tower 0.5.3",
- "tower-http",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "nap-test-utils"
-version = "0.8.14"
-dependencies = [
- "chrono",
- "nap-core",
- "serde_yaml",
- "tempfile",
-]
-
-[[package]]
 name = "napi"
 version = "2.16.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1710,12 +1565,12 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine"
-version = "0.8.14"
+version = "0.8.15"
 dependencies = [
  "chrono",
- "nap-core",
  "narrativeengine",
  "once_cell",
+ "portalshq-px",
  "proptest",
  "prost",
  "prost-build",
@@ -1732,7 +1587,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-py"
-version = "0.8.14"
+version = "0.8.15"
 dependencies = [
  "narrativeengine",
  "pyo3",
@@ -2057,6 +1912,69 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
 
 [[package]]
+name = "portalshq-px"
+version = "0.8.15"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "blake3",
+ "bytes",
+ "chrono",
+ "ed25519-dalek",
+ "hex",
+ "jsonschema",
+ "nix",
+ "object_store",
+ "prost",
+ "prost-build",
+ "protoc-bin-vendored",
+ "rand 0.9.4",
+ "rcgen",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "similar",
+ "temp-env",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "toml",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "ulid",
+ "which",
+ "windows-sys 0.59.0",
+ "zstd-sys",
+]
+
+[[package]]
+name = "portalshq-px-cli"
+version = "0.8.15"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "chrono",
+ "clap",
+ "portalshq-px",
+ "predicates",
+ "rand 0.8.7",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2272,6 +2190,88 @@ name = "protoc-bin-vendored-win32"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95067976aca6421a523e491fce939a3e65249bac4b977adee0ee9771568e8aa3"
+
+[[package]]
+name = "px-docgen"
+version = "0.8.15"
+dependencies = [
+ "anyhow",
+ "camino",
+ "clap",
+ "indexmap 1.9.3",
+ "portalshq-px-cli",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "toml",
+ "walkdir",
+]
+
+[[package]]
+name = "px-mcp-server"
+version = "0.8.15"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "px-sdk-py"
+version = "0.8.15"
+dependencies = [
+ "portalshq-px",
+ "pyo3",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+]
+
+[[package]]
+name = "px-sdk-ts"
+version = "0.8.15"
+dependencies = [
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "portalshq-px",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
+name = "px-server"
+version = "0.8.15"
+dependencies = [
+ "anyhow",
+ "axum 0.8.9",
+ "base64",
+ "chrono",
+ "portalshq-px",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "tower 0.5.3",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "px-test-utils"
+version = "0.8.15"
+dependencies = [
+ "chrono",
+ "portalshq-px",
+ "serde_yaml",
+ "tempfile",
+]
 
 [[package]]
 name = "pyo3"

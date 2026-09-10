@@ -1,0 +1,1121 @@
+/**
+ * PX SDK — TypeScript bindings for the PX protocol.
+ *
+ * Powered by Rust via NAPI-RS native addon.  All functions that return
+ * structured data return plain objects (JSON-deserialized from the native
+ * layer).
+ *
+ * @module px-sdk
+ */
+
+import { homedir } from "node:os";
+import { join } from "node:path";
+import native from "./native.js";
+
+// ── Types ────────────────────────────────────────────────────────────
+
+/** A parsed PX URI. */
+export interface PxUri {
+  repository: string;
+  entity_type: string;
+  entity_id: string;
+  fragment?: string;
+}
+
+/** A PX manifest — the canonical representation of a narrative resource. */
+export interface Manifest {
+  id: string;
+  name: string;
+  entity_type: string;
+  version: number;
+  properties: Record<string, unknown>;
+  representations: Record<string, Representation>;
+  references: Record<string, unknown>;
+  provenance?: Provenance;
+  metadata?: Record<string, unknown>;
+}
+
+/** A content-addressed representation (image, voice model, mesh, etc.). */
+export interface Representation {
+  hash: string;
+  format: string;
+  uri?: string;
+  tier?: string;
+}
+
+/** AI generation provenance metadata. */
+export interface Provenance {
+  model?: string;
+  prompt_hash?: string;
+  seed?: string;
+  parameters?: Record<string, string>;
+  derived_from?: string;
+  created_at?: string;
+}
+
+/** A PX commit object. */
+export interface Commit {
+  id: string;
+  parent?: string;
+  timestamp: string;
+  author: string;
+  signature?: string;
+  message: string;
+  manifest_hash: string;
+  changes: Change[];
+}
+
+/** A single change within a commit. */
+export interface Change {
+  path: string;
+  operation: "set" | "delete" | "append" | "remove";
+  old_value?: string;
+  new_value?: string;
+}
+
+/** Commit info from VCS history. */
+export interface CommitEntry {
+  id: string;
+  parent?: string;
+  author: string;
+  message: string;
+  timestamp: string;
+}
+
+/** Remote entry (name, URL) pair. */
+export type RemoteEntry = [string, string];
+
+/** Repo info result. */
+export interface RepoInfo {
+  root: string;
+  repository: string;
+}
+
+/** Operation result with commit. */
+export interface CommitResult {
+  commit: Commit;
+  version: number;
+}
+
+/** Entity creation result. */
+export interface CreateEntityResult {
+  manifest: Manifest;
+  commit_hash: string;
+}
+
+/** Validation result. */
+export interface ValidationResult {
+  valid: boolean;
+  errors?: string[];
+}
+
+/** Storage config. */
+export interface StorageConfig {
+  backend: string;
+  base_dir: string;
+  assets_prefix: string;
+  bucket: string;
+}
+
+/** Generic success response. */
+export interface SuccessResponse {
+  success: boolean;
+  [key: string]: unknown;
+}
+
+/** Merge result. */
+export type MergeResult =
+  | { Merged: Record<string, unknown> }
+  | { Conflicts: Array<{ path: string; conflict_type: string; base: unknown; current: unknown; proposed: unknown }> };
+
+/** Merge diff entry. */
+export interface DiffEntry {
+  path: string;
+  operation: string;
+  old_value?: unknown;
+  new_value?: unknown;
+}
+
+/** Options for creating a bearer URL for a committed representation. */
+export interface PresignOptions {
+  repoPath?: string;
+  branch?: string;
+  commit?: string;
+  ttlSeconds?: number;
+  httpUrl?: string;
+  bearerToken?: string;
+}
+
+/** Select the configured Lore server or an explicit local working tree. */
+export type ResolveSource = "remote" | "local";
+
+/** A time-limited public URL for an immutable representation. */
+export interface PresignedRepresentation {
+  url: string;
+  expires_at: number;
+  revision: string;
+  repository_id: string;
+  address: string;
+  representation: string;
+  format: string;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+/** Resolve the PX base directory from env or default. */
+function resolveRepoPath(repoPath?: string): string {
+  return repoPath || process.env.PX_DIR || join(homedir(), ".px");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// URI Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Parse a `px://` URI into its component parts.
+ *
+ * @param uri - A PX URI (e.g. `"px://starwars/character/lukeskywalker"`)
+ * @returns Parsed URI components
+ */
+export function parseUri(uri: string): PxUri {
+  return JSON.parse(native.parseUri(uri)) as PxUri;
+}
+
+/**
+ * Construct a new PX URI from components.
+ *
+ * @param repository - Repository name (e.g. `"starwars"`)
+ * @param entityType - Entity type (e.g. `"character"`)
+ * @param entityId - Entity ID slug (e.g. `"lukeskywalker"`)
+ * @param fragment - Optional query fragment
+ * @returns Parsed URI components
+ */
+export function uriNew(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  fragment?: string,
+): PxUri {
+  return JSON.parse(native.uriNew(repository, entityType, entityId, fragment)) as PxUri;
+}
+
+/**
+ * Return the canonical identity URI (without fragment).
+ *
+ * @param uri - A PX URI, possibly with a fragment
+ * @returns Identity URI string
+ */
+export function uriIdentity(uri: string): string {
+  return native.uriIdentity(uri);
+}
+
+/**
+ * Return the relative filesystem path for an entity's manifest.
+ *
+ * @param uri - A PX URI
+ * @returns Relative path (e.g. `"characters/lukeskywalker.yaml"`)
+ */
+export function uriManifestPath(uri: string): string {
+  return native.uriManifestPath(uri);
+}
+
+/**
+ * Format URI components into a `px://` URI string.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type
+ * @param entityId - Entity ID
+ * @param fragment - Optional query fragment
+ * @returns Full PX URI string
+ */
+export function uriFormat(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  fragment?: string,
+): string {
+  return native.uriFormat(repository, entityType, entityId, fragment);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EntityType Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Parse an entity type string.
+ *
+ * @param s - Type string (e.g. `"character"`, `"location"`, `"scene"`, `"prop"`, `"world"`)
+ * @returns The normalized entity type string
+ */
+export function entityTypeParse(s: string): string {
+  return JSON.parse(native.entityTypeParse(s)) as string;
+}
+
+/**
+ * Return the directory name used for this entity type in a repository.
+ *
+ * @param entityType - Type string
+ * @returns Directory name (e.g. `"characters"`)
+ */
+export function entityTypeDirectoryName(entityType: string): string {
+  return native.entityTypeDirectoryName(entityType);
+}
+
+/**
+ * Return all subdirectory entity types (character, location, scene, prop).
+ *
+ * @returns Array of entity type strings
+ */
+export function entityTypeList(): string[] {
+  return JSON.parse(native.entityTypeList()) as string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Manifest Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Parse a YAML manifest string into a JSON-serializable object.
+ *
+ * @param yamlStr - YAML string representing a PX manifest
+ * @returns Parsed manifest
+ */
+export function parseManifest(yamlStr: string): Manifest {
+  return JSON.parse(native.parseManifest(yamlStr)) as Manifest;
+}
+
+/**
+ * Create a new manifest with minimal required fields.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID slug
+ * @param name - Human-readable name
+ * @returns New manifest
+ */
+export function manifestNew(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  name: string,
+): Manifest {
+  return JSON.parse(native.manifestNew(repository, entityType, entityId, name)) as Manifest;
+}
+
+/**
+ * Serialize a manifest object to YAML.
+ *
+ * @param manifest - Manifest object
+ * @returns YAML string representation
+ */
+export function manifestToYaml(manifest: Manifest): string {
+  return native.manifestToYaml(JSON.stringify(manifest));
+}
+
+/**
+ * Read a manifest from a YAML string.
+ *
+ * @param yamlStr - YAML string
+ * @returns Parsed manifest
+ */
+export function manifestFromYaml(yamlStr: string): Manifest {
+  return JSON.parse(native.manifestFromYaml(yamlStr)) as Manifest;
+}
+
+/**
+ * Compute the SHA-256 content hash of a manifest.
+ *
+ * @param manifest - Manifest object
+ * @returns Content hash in `sha256:<hex>` format
+ */
+export function manifestContentHash(manifest: Manifest): string {
+  return native.manifestContentHash(JSON.stringify(manifest));
+}
+
+/**
+ * Add or update a property on a manifest.
+ *
+ * @param manifest - Manifest object
+ * @param key - Property key
+ * @param value - Property value string (parsed as YAML)
+ * @returns Updated manifest
+ */
+export function manifestSetProperty(manifest: Manifest, key: string, value: string): Manifest {
+  return JSON.parse(native.manifestSetProperty(JSON.stringify(manifest), key, value)) as Manifest;
+}
+
+/**
+ * Add a cross-reference to a manifest.
+ *
+ * @param manifest - Manifest object
+ * @param key - Reference key
+ * @param value - Reference value string (parsed as YAML)
+ * @returns Updated manifest
+ */
+export function manifestAddReference(manifest: Manifest, key: string, value: string): Manifest {
+  return JSON.parse(native.manifestAddReference(JSON.stringify(manifest), key, value)) as Manifest;
+}
+
+/**
+ * Add or update a representation on a manifest.
+ *
+ * @param manifest - Manifest object
+ * @param key - Representation key
+ * @param hash - Content hash string
+ * @param format - File format (e.g. `"png"`, `"glb"`)
+ * @param uri - Optional storage URI
+ * @param tier - Optional quality tier
+ * @returns Updated manifest
+ */
+export function manifestSetRepresentation(
+  manifest: Manifest,
+  key: string,
+  hash: string,
+  format: string,
+  uri?: string,
+  tier?: string,
+): Manifest {
+  return JSON.parse(
+    native.manifestSetRepresentation(JSON.stringify(manifest), key, hash, format, uri, tier),
+  ) as Manifest;
+}
+
+/**
+ * Increment the version counter on a manifest.
+ *
+ * @param manifest - Manifest object
+ * @returns Updated manifest with version incremented
+ */
+export function manifestBumpVersion(manifest: Manifest): Manifest {
+  return JSON.parse(native.manifestBumpVersion(JSON.stringify(manifest))) as Manifest;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ContentHash Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Compute the BLAKE3 content hash of raw bytes.
+ *
+ * @param data - Raw byte data
+ * @returns Content hash `blake3:<hex>`
+ */
+export function contentHashFromBytes(data: Buffer): string {
+  return native.contentHashFromBytes(data);
+}
+
+/**
+ * Compute the BLAKE3 content hash of a string.
+ *
+ * @param s - Input string
+ * @returns Content hash `blake3:<hex>`
+ */
+export function contentHashFromString(s: string): string {
+  return native.contentHashFromString(s);
+}
+
+/**
+ * Parse and validate a `blake3:<hex>` content hash string.
+ *
+ * @param s - Content hash string
+ * @returns The validated content hash
+ * @throws If the string is not a valid content hash
+ */
+export function contentHashParse(s: string): string {
+  return native.contentHashParse(s);
+}
+
+/**
+ * Verify that bytes match a content hash.
+ *
+ * @param hash - Content hash string
+ * @param data - Raw byte data to verify
+ * @returns `true` if the data matches the hash
+ */
+export function contentHashVerify(hash: string, data: Buffer): boolean {
+  return native.contentHashVerify(hash, data);
+}
+
+/**
+ * Extract the hex digest from a content hash string.
+ *
+ * @param hash - Content hash string (`sha256:<hex>`)
+ * @returns The 64-character hex digest
+ */
+export function contentHashHexDigest(hash: string): string {
+  return native.contentHashHexDigest(hash);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Commit / Change Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Create a "Set" change record.
+ *
+ * @param path - Dot-notation path (e.g. `"properties.species"`)
+ * @param newValue - New value string
+ * @param oldValue - Optional previous value string
+ * @returns Change object
+ */
+export function changeSet(path: string, newValue: string, oldValue?: string): Change {
+  return JSON.parse(native.changeSet(path, oldValue ?? null, newValue)) as Change;
+}
+
+/**
+ * Create a "Delete" change record.
+ *
+ * @param path - Dot-notation path
+ * @param oldValue - Previous value string
+ * @returns Change object
+ */
+export function changeDelete(path: string, oldValue: string): Change {
+  return JSON.parse(native.changeDelete(path, oldValue)) as Change;
+}
+
+/**
+ * Create an "Append" change record.
+ *
+ * @param path - Dot-notation path
+ * @param newValue - New value to append
+ * @returns Change object
+ */
+export function changeAppend(path: string, newValue: string): Change {
+  return JSON.parse(native.changeAppend(path, newValue)) as Change;
+}
+
+/**
+ * Create a new PX commit object.
+ *
+ * @param author - Author identifier
+ * @param message - Human-readable commit message
+ * @param manifestHash - SHA-256 hash of the resulting manifest
+ * @param changes - Array of change objects
+ * @param parent - Optional parent commit hash
+ * @returns Commit object with auto-computed `id`
+ */
+export function commitNew(
+  author: string,
+  message: string,
+  manifestHash: string,
+  changes: Change[],
+  parent?: string,
+): Commit {
+  return JSON.parse(
+    native.commitNew(parent ?? null, author, message, manifestHash, JSON.stringify(changes)),
+  ) as Commit;
+}
+
+/**
+ * Verify a commit's ID by re-computing the hash.
+ *
+ * @param commit - Commit object
+ * @returns `true` if the ID is valid
+ */
+export function commitVerifyId(commit: Commit): boolean {
+  return native.commitVerifyId(JSON.stringify(commit));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Repository Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Initialize a new PX repository repository.
+ *
+ * @param repository - Repository name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Repo info with `root` and `repository`
+ */
+export function repoInit(repository: string, basePath?: string): RepoInfo {
+  return JSON.parse(native.repoInit(resolveRepoPath(basePath), repository)) as RepoInfo;
+}
+
+/**
+ * Open an existing PX repository repository.
+ *
+ * @param repository - Repository name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Repo info
+ */
+export function repoOpen(repository: string, basePath?: string): RepoInfo {
+  return JSON.parse(native.repoOpen(resolveRepoPath(basePath), repository)) as RepoInfo;
+}
+
+/**
+ * Create a new entity manifest and commit it.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID slug
+ * @param name - Human-readable name
+ * @param author - Author identifier (default: `"px-sdk"`)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Object with `manifest` and `commit_hash`
+ */
+export function repoCreateEntity(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  name: string,
+  author: string = "px-sdk",
+  basePath?: string,
+): CreateEntityResult {
+  return JSON.parse(
+    native.repoCreateEntity(resolveRepoPath(basePath), repository, entityType, entityId, name, author),
+  ) as CreateEntityResult;
+}
+
+/**
+ * Read a manifest from the repository.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Manifest object
+ */
+export function repoReadManifest(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  basePath?: string,
+): Manifest {
+  return JSON.parse(
+    native.repoReadManifest(resolveRepoPath(basePath), repository, entityType, entityId),
+  ) as Manifest;
+}
+
+/**
+ * Read a manifest at a specific VCS reference (commit, branch).
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID
+ * @param reference - VCS ref (commit hash or branch name)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Manifest object
+ */
+export function repoReadManifestAtRef(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  reference: string,
+  basePath?: string,
+): Manifest {
+  return JSON.parse(
+    native.repoReadManifestAtRef(resolveRepoPath(basePath), repository, entityType, entityId, reference),
+  ) as Manifest;
+}
+
+/**
+ * Write a manifest to the repository (does NOT commit).
+ *
+ * @param repository - Repository name
+ * @param manifest - Manifest object
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns The filesystem path where the manifest was written
+ */
+export function repoWriteManifest(
+  repository: string,
+  manifest: Manifest,
+  basePath?: string,
+): string {
+  return native.repoWriteManifest(resolveRepoPath(basePath), repository, JSON.stringify(manifest));
+}
+
+/**
+ * Commit changes to a manifest.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID
+ * @param message - Commit message
+ * @param author - Author identifier (default: `"px-sdk"`)
+ * @param changes - Array of change objects
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Object with `commit` and `version`
+ */
+export function repoCommitManifest(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  message: string,
+  author: string = "px-sdk",
+  changes: Change[] = [],
+  basePath?: string,
+): CommitResult {
+  return JSON.parse(
+    native.repoCommitManifest(
+      resolveRepoPath(basePath), repository, entityType, entityId,
+      message, author, JSON.stringify(changes),
+    ),
+  ) as CommitResult;
+}
+
+/**
+ * Delete an entity manifest and commit the deletion.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID
+ * @param author - Author identifier (default: `"px-sdk"`)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns The VCS commit hash of the deletion
+ */
+export function repoDeleteEntity(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  author: string = "px-sdk",
+  basePath?: string,
+): string {
+  return native.repoDeleteEntity(resolveRepoPath(basePath), repository, entityType, entityId, author);
+}
+
+/**
+ * Get commit history for an entity.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param entityId - Entity ID
+ * @param limit - Maximum number of commits (default: 20)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Array of commit entries
+ */
+export function repoHistory(
+  repository: string,
+  entityType: string,
+  entityId: string,
+  limit: number = 20,
+  basePath?: string,
+): CommitEntry[] {
+  return JSON.parse(
+    native.repoHistory(resolveRepoPath(basePath), repository, entityType, entityId, limit),
+  ) as CommitEntry[];
+}
+
+/**
+ * List all entity IDs of a given type in a repository.
+ *
+ * @param repository - Repository name
+ * @param entityType - Entity type string
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Array of entity ID strings
+ */
+export function repoListEntities(
+  repository: string,
+  entityType: string,
+  basePath?: string,
+): string[] {
+  return JSON.parse(
+    native.repoListEntities(resolveRepoPath(basePath), repository, entityType),
+  ) as string[];
+}
+
+/**
+ * Create a branch in a repository repository.
+ *
+ * @param repository - Repository name
+ * @param name - Branch name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Success response
+ */
+export function repoCreateBranch(
+  repository: string,
+  name: string,
+  basePath?: string,
+): SuccessResponse {
+  return JSON.parse(
+    native.repoCreateBranch(resolveRepoPath(basePath), repository, name),
+  ) as SuccessResponse;
+}
+
+/**
+ * Switch to a branch in a repository repository.
+ *
+ * @param repository - Repository name
+ * @param name - Branch name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Success response
+ */
+export function repoSwitchBranch(
+  repository: string,
+  name: string,
+  basePath?: string,
+): SuccessResponse {
+  return JSON.parse(
+    native.repoSwitchBranch(resolveRepoPath(basePath), repository, name),
+  ) as SuccessResponse;
+}
+
+/**
+ * List all branches in a repository repository.
+ *
+ * @param repository - Repository name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Array of branch names
+ */
+export function repoListBranches(
+  repository: string,
+  basePath?: string,
+): string[] {
+  return JSON.parse(
+    native.repoListBranches(resolveRepoPath(basePath), repository),
+  ) as string[];
+}
+
+/**
+ * Get the current HEAD hash of a repository repository.
+ *
+ * @param repository - Repository name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns The HEAD commit hash
+ */
+export function repoHeadHash(
+  repository: string,
+  basePath?: string,
+): string {
+  return native.repoHeadHash(resolveRepoPath(basePath), repository);
+}
+
+/**
+ * Revert a commit across an entire repository.
+ *
+ * @param repository - Repository name
+ * @param commitHash - Hash of the commit to revert
+ * @param author - Author identifier (default: `"px-sdk"`)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns The new revert commit hash
+ */
+export function repoRevertCommit(
+  repository: string,
+  commitHash: string,
+  author: string = "px-sdk",
+  basePath?: string,
+): string {
+  return native.repoRevertCommit(resolveRepoPath(basePath), repository, commitHash, author);
+}
+
+/**
+ * Add a remote to a repository repository.
+ *
+ * @param repository - Repository name
+ * @param name - Remote name (e.g. `"origin"`)
+ * @param url - Remote URL
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Success response
+ */
+export function repoAddRemote(
+  repository: string,
+  name: string,
+  url: string,
+  basePath?: string,
+): SuccessResponse {
+  return JSON.parse(
+    native.repoAddRemote(resolveRepoPath(basePath), repository, name, url),
+  ) as SuccessResponse;
+}
+
+/**
+ * Remove a remote from a repository repository.
+ *
+ * @param repository - Repository name
+ * @param name - Remote name to remove
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Success response
+ */
+export function repoRemoveRemote(
+  repository: string,
+  name: string,
+  basePath?: string,
+): SuccessResponse {
+  return JSON.parse(
+    native.repoRemoveRemote(resolveRepoPath(basePath), repository, name),
+  ) as SuccessResponse;
+}
+
+/**
+ * List remotes on a repository repository.
+ *
+ * @param repository - Repository name
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Array of `[name, url]` tuples
+ */
+export function repoListRemotes(
+  repository: string,
+  basePath?: string,
+): RemoteEntry[] {
+  return JSON.parse(
+    native.repoListRemotes(resolveRepoPath(basePath), repository),
+  ) as RemoteEntry[];
+}
+
+/**
+ * Push the current branch to a remote.
+ *
+ * @param repository - Repository name
+ * @param remote - Remote name (optional)
+ * @param branch - Branch to push (optional)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Success response
+ */
+export function repoPush(
+  repository: string,
+  remote?: string,
+  branch?: string,
+  basePath?: string,
+): SuccessResponse {
+  return JSON.parse(
+    native.repoPush(resolveRepoPath(basePath), repository, remote, branch),
+  ) as SuccessResponse;
+}
+
+/**
+ * Pull the current branch from a remote.
+ *
+ * @param repository - Repository name
+ * @param remote - Remote name (optional)
+ * @param branch - Branch to pull (optional)
+ * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Success response
+ */
+export function repoPull(
+  repository: string,
+  remote?: string,
+  branch?: string,
+  basePath?: string,
+): SuccessResponse {
+  return JSON.parse(
+    native.repoPull(resolveRepoPath(basePath), repository, remote, branch),
+  ) as SuccessResponse;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Resolver Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Resolve a PX URI to a manifest or subtree.
+ *
+ * @param uri - PX URI (e.g. `"px://starwars/character/lukeskywalker"`)
+ * @param repoPath - Base directory for repositories (defaults to `$PX_DIR` / `~/.px`)
+ * @param branch - Optional branch selector
+ * @param commit - Optional commit hash selector (BLAKE3)
+ * @param path - Optional subtree query path
+ * @returns Resolved manifest or subtree value
+ */
+export function resolve(
+  uri: string,
+  repoPath?: string,
+  branch?: string,
+  commit?: string,
+  path?: string,
+  source?: ResolveSource,
+): Record<string, unknown> {
+  const rp = resolveRepoPath(repoPath);
+  if (branch !== undefined || commit !== undefined || path !== undefined || source !== undefined) {
+    return JSON.parse(native.resolveWithOptions(uri, rp, branch, commit, path, source)) as Record<string, unknown>;
+  }
+  return JSON.parse(native.resolve(uri, rp)) as Record<string, unknown>;
+}
+
+/**
+ * Create a time-limited public URL for a committed representation.
+ *
+ * The URL is a bearer capability. Do not log it or retain it beyond
+ * `expires_at`. Provider configuration selects the HTTP origin; authenticated
+ * requests reuse the active Lore login.
+ *
+ * @param uri Entity ID, such as `25th-chapter/character/nathan-gunn`; `px://` is optional.
+ * @param representation Manifest representation key, such as `item`. Its URI is relative to the entity's asset directory.
+ * @param options Revision, lifetime, repository location, and Lore HTTP configuration.
+ */
+export async function presignRepresentation(
+  uri: string,
+  representation: string,
+  options: PresignOptions = {},
+): Promise<PresignedRepresentation> {
+  const result = await native.presignRepresentation(
+    uri,
+    representation,
+    resolveRepoPath(options.repoPath),
+    options.branch,
+    options.commit,
+    options.ttlSeconds,
+    options.httpUrl,
+    options.bearerToken,
+  );
+  return JSON.parse(result) as PresignedRepresentation;
+}
+
+/**
+ * Query a specific subtree path from a manifest.
+ *
+ * This is the most efficient way to read a single property from an entity.
+ *
+ * @param uri - PX URI
+ * @param path - Dot-notation query path (e.g. `"properties.species"`)
+ * @param repoPath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns The value at the given path
+ */
+export function resolveQuery(
+  uri: string,
+  path: string,
+  repoPath?: string,
+): unknown {
+  return JSON.parse(native.resolveQuery(uri, resolveRepoPath(repoPath), path));
+}
+
+/**
+ * List all repository repositories available.
+ *
+ * @param repoPath - Base directory (defaults to `$PX_DIR` / `~/.px`)
+ * @returns Array of repository names
+ */
+export function listRepositories(repoPath?: string): string[] {
+  return JSON.parse(native.listRepositories(resolveRepoPath(repoPath))) as string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Schema Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Get the JSON Schema for a PX manifest.
+ *
+ * @returns JSON Schema object
+ */
+export function manifestSchema(): Record<string, unknown> {
+  return JSON.parse(native.manifestSchema()) as Record<string, unknown>;
+}
+
+/**
+ * Get the JSON Schema for a PX commit.
+ *
+ * @returns JSON Schema object
+ */
+export function commitSchema(): Record<string, unknown> {
+  return JSON.parse(native.commitSchema()) as Record<string, unknown>;
+}
+
+/**
+ * Validate a manifest against the manifest schema.
+ *
+ * @param manifest - Manifest object
+ * @returns Validation result with `valid` flag and optional `errors`
+ */
+export function validateManifest(manifest: Manifest): ValidationResult {
+  return JSON.parse(native.validateManifest(JSON.stringify(manifest))) as ValidationResult;
+}
+
+/**
+ * Validate a commit against the commit schema.
+ *
+ * @param commit - Commit object
+ * @returns Validation result with `valid` flag and optional `errors`
+ */
+export function validateCommit(commit: Commit): ValidationResult {
+  return JSON.parse(native.validateCommit(JSON.stringify(commit))) as ValidationResult;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Merge Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Three-way merge of manifest values.
+ *
+ * @param schema - The SDL schema document
+ * @param base - The base (common ancestor) value
+ * @param current - The current value
+ * @param proposed - The proposed new value
+ * @returns Merge result (either `Merged` or `Conflicts`)
+ */
+export function mergeMerge(
+  schema: Record<string, unknown>,
+  base: Record<string, unknown>,
+  current: Record<string, unknown>,
+  proposed: Record<string, unknown>,
+): MergeResult {
+  return JSON.parse(
+    native.mergeMerge(
+      JSON.stringify(schema), JSON.stringify(base), JSON.stringify(current), JSON.stringify(proposed),
+    ),
+  ) as MergeResult;
+}
+
+/**
+ * Compute the diff between two manifest values.
+ *
+ * @param schema - The schema definition (SDL document as JSON)
+ * @param base - The base value
+ * @param candidate - The candidate value to compare against base
+ * @returns Array of change entries describing the differences
+ */
+export function mergeDiff(
+  schema: Record<string, unknown>,
+  base: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+): DiffEntry[] {
+  return JSON.parse(
+    native.mergeDiff(
+      JSON.stringify(schema),
+      JSON.stringify(base),
+      JSON.stringify(candidate),
+    ),
+  ) as DiffEntry[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Storage Engine Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Get the active storage engine configuration.
+ *
+ * @returns Storage config object
+ */
+export function storageConfig(): StorageConfig {
+  return JSON.parse(native.storageConfig()) as StorageConfig;
+}
+
+/**
+ * Ingest raw media bytes into the content-addressed storage engine.
+ *
+ * The storage backend is determined by the `PX_STORAGE_BACKEND`
+ * environment variable at the Rust layer (`"local"` or `"s3"`).
+ *
+ * @param data - Raw bytes of the media asset (image, audio, mesh, etc.)
+ * @param format - File extension without a leading dot (e.g. `"png"`, `"jpg"`, `"wav"`, `"glb"`)
+ * @returns Promise resolving to the content hash `sha256:<hex>`
+ */
+export async function ingestMedia(data: Buffer, format: string): Promise<string> {
+  return native.ingestMedia(data, format);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VCS / Lore Operations
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Clone a Lore repository.
+ *
+ * @param url - Lore remote URL
+ * @param destPath - Local destination path
+ * @returns Success response
+ */
+export function loreClone(url: string, destPath: string): SuccessResponse {
+  return JSON.parse(native.loreClone(url, destPath)) as SuccessResponse;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Version
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Return the px-sdk version string.
+ */
+export function version(): string {
+  return native.version();
+}

@@ -1,0 +1,38 @@
+[package]
+name = "portalshq-px-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "CLI for the PX protocol"
+
+[[bin]]
+name = "px"
+path = "src/main.rs"
+
+[lib]
+name = "px_cli"
+
+[features]
+default = []
+lore-e2e = []
+local-e2e = []
+workflow-e2e = []
+
+[dependencies]
+px-core = { package = "portalshq-px", path = "../px-core" }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+rand = "0.8"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.0"

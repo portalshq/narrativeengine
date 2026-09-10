@@ -31,7 +31,7 @@ uv run --active pytest
 uv run --active ruff check --fix .
 uv run --active mypy
 
-# Build nap-sdk Python bindings
-cd "$ROOT_DIR/python/nap-sdk"
+# Build px-sdk Python bindings
+cd "$ROOT_DIR/python/px-sdk"
 uv pip install --python "$PYTHON_BIN" -e ".[dev]"
 uv run --active maturin develop

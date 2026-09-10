@@ -10,7 +10,7 @@ npm run build
 npm run lint
 npm test
 
-echo "=== nap-sdk (TypeScript) ==="
-cd "$ROOT_DIR/typescript/nap-sdk"
+echo "=== px-sdk (TypeScript) ==="
+cd "$ROOT_DIR/typescript/px-sdk"
 npm install
 npm run build

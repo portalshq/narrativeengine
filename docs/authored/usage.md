@@ -1,12 +1,12 @@
-# NAP Usage Guide
+# PX Usage Guide
 
-> **Narrative Addressing Protocol** — making narrative resources addressable, portable, resolvable, and versioned across tools, storage systems, formats, and AI workflows.
+> **PX protocol** — making narrative resources addressable, portable, resolvable, and versioned across tools, storage systems, formats, and AI workflows.
 
-This guide covers practical workflows for four core capabilities of the `nap` CLI:
+This guide covers practical workflows for four core capabilities of the `px` CLI:
 
 | Domain | What it does |
 |---|---|
-| **Addressing** | Give every story element a stable, canonical `nap://` URI |
+| **Addressing** | Give every story element a stable, canonical `px://` URI |
 | **Portability** | Move repositorys between tools, teams, and storage systems |
 | **Resolution** | Look up manifests, query subtrees, trace history via CLI or HTTP API |
 | **World-Building** | Model characters, locations, scenes, props, and their relationships |
@@ -14,8 +14,8 @@ This guide covers practical workflows for four core capabilities of the `nap` CL
 ---
 
 ## Abstract
-Nap makes narrative resources addressable, portable, resolvable, and versioned across tools, storage systems, formats, and AI workflows.
-Nap addresses are stable -- entity references are immutable.
+Px makes narrative resources addressable, portable, resolvable, and versioned across tools, storage systems, formats, and AI workflows.
+Px addresses are stable -- entity references are immutable.
 
 ---
 
@@ -50,34 +50,34 @@ Nap addresses are stable -- entity references are immutable.
 ## Reference
 
 ```bash
-# Initialize a repository in ~/.nap/
-nap init toystory
+# Initialize a repository in ~/.px/
+px init toystory
 
 # Create entities
-nap create character woody -u toystory -n "Woody"
-nap create location andys-room -u toystory -n "Andy's Room"
-nap create scene pizza-planet -u toystory -n "Pizza Planet Scene"
+px create character woody -u toystory -n "Woody"
+px create location andys-room -u toystory -n "Andy's Room"
+px create scene pizza-planet -u toystory -n "Pizza Planet Scene"
 
 # Set properties with cross-references
-nap set nap://toystory/character/woody toy_type human
-nap set nap://toystory/character/woody homeworld "nap://toystory/location/andys-room"
+px set px://toystory/character/woody toy_type human
+px set px://toystory/character/woody homeworld "px://toystory/location/andys-room"
 
 # Resolve manifests
-nap resolve nap://toystory/character/woody
+px resolve px://toystory/character/woody
 
 # Fragment queries
-nap resolve nap://toystory/character/woody#properties.homeworld
+px resolve px://toystory/character/woody#properties.homeworld
 
 # Subtree queries
-nap query nap://toystory/character/woody properties
+px query px://toystory/character/woody properties
 
 # Version control
-nap history nap://toystory/character/woody
-nap branch toystory canon
-nap tag toystory episode-4
+px history px://toystory/character/woody
+px branch toystory canon
+px tag toystory episode-4
 
 # HTTP server
-nap-server
+px-server
 curl http://localhost:3100/resolve/toystory/character/woody
 ```
 
@@ -87,10 +87,10 @@ curl http://localhost:3100/resolve/toystory/character/woody
 
 ### 1.1 URI Anatomy
 
-Every narrative resource gets a stable, canonical `nap://` URI:
+Every narrative resource gets a stable, canonical `px://` URI:
 
 ```
-nap://toystory/character/woody#properties.homeworld
+px://toystory/character/woody#properties.homeworld
 ────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
  scheme repository  entity_type entity_id          fragment (query)
 ```
@@ -102,47 +102,47 @@ nap://toystory/character/woody#properties.homeworld
 
 ### 1.2 Cross-Reference Grid
 
-Build a web of references between entities using `nap://` URIs as values:
+Build a web of references between entities using `px://` URIs as values:
 
 ```bash
 # Create locations
-nap create location andys-room -u toystory -n "Andy's Room"
-nap create location alderaan -u toystory -n "Alderaan"
-nap create location deathstar -u toystory -n "Death Star"
+px create location andys-room -u toystory -n "Andy's Room"
+px create location alderaan -u toystory -n "Alderaan"
+px create location deathstar -u toystory -n "Death Star"
 
 # Create a scene
-nap create scene pizza-planet -u toystory -n "Pizza Planet Scene"
+px create scene pizza-planet -u toystory -n "Pizza Planet Scene"
 
-# Cross-reference everything with nap:// URIs
-nap set nap://toystory/character/woody homeworld "nap://toystory/location/andys-room"
-nap set nap://toystory/character/woody affiliation "toybox_alliance"
-nap set nap://toystory/character/woody master "nap://toystory/character/mrpotatohead"
+# Cross-reference everything with px:// URIs
+px set px://toystory/character/woody homeworld "px://toystory/location/andys-room"
+px set px://toystory/character/woody affiliation "toybox_alliance"
+px set px://toystory/character/woody master "px://toystory/character/mrpotatohead"
 
-nap set nap://toystory/location/andys-room climate "desert"
-nap set nap://toystory/location/andys-room moons "2"
+px set px://toystory/location/andys-room climate "desert"
+px set px://toystory/location/andys-room moons "2"
 
-nap set nap://toystory/scene/pizza-planet setting "nap://toystory/location/andys-room"
-nap set nap://toystory/scene/pizza-planet participants \
-  '["nap://toystory/character/woody", "nap://toystory/character/buzzlightyear"]'
+px set px://toystory/scene/pizza-planet setting "px://toystory/location/andys-room"
+px set px://toystory/scene/pizza-planet participants \
+  '["px://toystory/character/woody", "px://toystory/character/buzzlightyear"]'
 ```
 
 The resulting manifest for Woody looks like this:
 
 ```yaml
-id: nap://toystory/character/woody
+id: px://toystory/character/woody
 name: Woody
 entity_type: character
 version: 5
 properties:
-  homeworld: "nap://toystory/location/andys-room"
+  homeworld: "px://toystory/location/andys-room"
   toy_type: human
   affiliation: toybox_alliance
-  master: "nap://toystory/character/mrpotatohead"
+  master: "px://toystory/character/mrpotatohead"
 references: {}
 head: a72c9f3b...
 ```
 
-**Use case — story bible automation:** A script can traverse every `nap://` URI in a manifest and verify it resolves. If someone deletes `nap://toystory/character/mrpotatohead`, the broken reference is caught immediately.
+**Use case — story bible automation:** A script can traverse every `px://` URI in a manifest and verify it resolves. If someone deletes `px://toystory/character/mrpotatohead`, the broken reference is caught immediately.
 
 ### 1.3 Fragment Queries for Precision Addressing
 
@@ -150,33 +150,33 @@ Address sub-parts of a resource with `#fragment` syntax — ideal for AI agents,
 
 ```bash
 # Get a single field
-nap resolve nap://toystory/character/woody#properties.homeworld
-# → "nap://toystory/location/andys-room"
+px resolve px://toystory/character/woody#properties.homeworld
+# → "px://toystory/location/andys-room"
 
 # Get a reference array
-nap resolve nap://toystory/scene/pizza-planet#properties.participants
+px resolve px://toystory/scene/pizza-planet#properties.participants
 
 # Chain into nested objects
-nap resolve nap://toystory/character/woody#representations.reference_image.hash
+px resolve px://toystory/character/woody#representations.reference_image.hash
 
 # Array index access
-nap resolve nap://toystory/character/woody#references.appears_in.0
+px resolve px://toystory/character/woody#references.appears_in.0
 ```
 
 **Use case — AI context window optimization:** Instead of feeding an LLM a 40K-token manifest, pull exactly the 500 tokens it needs:
 
 ```bash
 # An AI writing a scene only needs participants and setting
-nap query nap://toystory/scene/pizza-planet properties.participants -f json
-nap query nap://toystory/scene/pizza-planet properties.setting -f json
+px query px://toystory/scene/pizza-planet properties.participants -f json
+px query px://toystory/scene/pizza-planet properties.setting -f json
 ```
 
 **Use case — CI/CD validation:** Verify every cross-reference resolves:
 
 ```bash
-nap resolve nap://toystory/character/woody#references.appears_in \
+px resolve px://toystory/character/woody#references.appears_in \
   | jq -r '.[]' \
-  | xargs -I{} nap resolve {}
+  | xargs -I{} px resolve {}
 ```
 
 ### 1.4 Versioned Addressing for Canon Management
@@ -185,28 +185,28 @@ Branch and tag are **orthogonal selectors** — never in the URI. Address the sa
 
 ```bash
 # Create branches for alternate canon tracks
-nap branch toystory legends
-nap branch toystory canon
-nap branch toystory "what-if"
+px branch toystory legends
+px branch toystory canon
+px branch toystory "what-if"
 
 # Tag major releases
-nap tag toystory episode-4
-nap tag toystory episode-5
-nap tag toystory episode-6
+px tag toystory episode-4
+px tag toystory episode-5
+px tag toystory episode-6
 
 # Resolve at specific points in time
-nap resolve nap://toystory/character/woody --branch legends
-nap resolve nap://toystory/character/woody --tag episode-4
-nap resolve nap://toystory/character/woody --commit a72c9f3b
+px resolve px://toystory/character/woody --branch legends
+px resolve px://toystory/character/woody --tag episode-4
+px resolve px://toystory/character/woody --commit a72c9f3b
 ```
 
 **Use case — divergent timelines:** In a "What If" branch, Woody joins the Toybox Corp. The `canon` branch has `affiliation: toybox_alliance`; the `what-if` branch has `affiliation: toybox_corp`. Both resolve from the same URI — only the selector differs. The manifests diverge silently, and the resolver picks the right one based on context.
 
 ```bash
-nap resolve nap://toystory/character/woody#properties.affiliation
+px resolve px://toystory/character/woody#properties.affiliation
 # → toybox_alliance
 
-nap resolve nap://toystory/character/woody#properties.affiliation \
+px resolve px://toystory/character/woody#properties.affiliation \
   --branch what-if
 # → toybox_corp
 ```
@@ -217,17 +217,17 @@ nap resolve nap://toystory/character/woody#properties.affiliation \
 
 ### 2.1 Repository-as-Repo: Move Your World Anywhere
 
-Every NAP repository is **files + Git** — zero runtime dependencies. This means it works with every transport and storage system:
+Every PX repository is **files + Git** — zero runtime dependencies. This means it works with every transport and storage system:
 
 ```bash
 # Archive an entire repository as a tarball
-tar czf toystory.nap toystory/
+tar czf toystory.px toystory/
 
 # Ship it via any medium — S3, Dropbox, scp, USB drive
 scp -r toystory/ user@server:/repositorys/
 
 # Clone across teams
-git clone git@github.com:studio/toystory-nap.git
+git clone git@github.com:studio/toystory-px.git
 
 # Sync to shared drives
 rsync -avz toystory/ /shared/drive/projects/
@@ -236,22 +236,22 @@ rsync -avz toystory/ /shared/drive/projects/
 aws s3 sync toystory/ s3://studio-assets/repositorys/toystory/
 ```
 
-**Use case — multi-studio collaboration:** Studio A builds characters, Studio B builds locations, Studio C builds scenes. Each works in their own Git branch, and NAP URIs are the contract between them. When they merge, the references resolve across all three.
+**Use case — multi-studio collaboration:** Studio A builds characters, Studio B builds locations, Studio C builds scenes. Each works in their own Git branch, and PX URIs are the contract between them. When they merge, the references resolve across all three.
 
 ```bash
 # Studio A works on characters
-git clone git@github.com:studio/toystory-nap.git
-nap create character slinky -u toystory -n "Slinky Dog"
+git clone git@github.com:studio/toystory-px.git
+px create character slinky -u toystory -n "Slinky Dog"
 
 # Studio B works on locations
-git clone git@github.com:studio/toystory-nap.git
-nap create location deathstar -u toystory -n "Death Star"
+git clone git@github.com:studio/toystory-px.git
+px create location deathstar -u toystory -n "Death Star"
 
 # On merge, Studio A's character can reference Studio B's location
-nap set nap://toystory/character/slinky base "nap://toystory/location/deathstar"
+px set px://toystory/character/slinky base "px://toystory/location/deathstar"
 ```
 
-**Use case — offline fieldwork:** A writer on a plane builds an entire repository with no internet, just the `nap` binary and a text editor. When they reconnect, `git push` syncs everything.
+**Use case — offline fieldwork:** A writer on a plane builds an entire repository with no internet, just the `px` binary and a text editor. When they reconnect, `git push` syncs everything.
 
 ### 2.2 Content-Addressed Assets
 
@@ -259,7 +259,7 @@ Manifests don't store files — they store **BLAKE3 hashes** pointing to assets.
 
 ```bash
 # Link a reference image by content hash
-nap add-repr nap://toystory/character/woody reference_image \
+px add-repr px://toystory/character/woody reference_image \
   ./assets/woody_ref.png --format png
 # ✓ Added representation 'reference_image' (png)
 #   Hash: blake3:e3b0c44...
@@ -278,13 +278,13 @@ representations:
 You can attach any asset type — images, 3D meshes, audio, video, ONNX models:
 
 ```bash
-nap add-repr nap://toystory/character/woody voice_model \
+px add-repr px://toystory/character/woody voice_model \
   ./assets/woody_voice.onnx --format onnx
 
-nap add-repr nap://toystory/location/andys-room concept_art \
+px add-repr px://toystory/location/andys-room concept_art \
   ./assets/andys-room_concept.png --format png
 
-nap add-repr nap://toystory/prop/andy-hat mesh \
+px add-repr px://toystory/prop/andy-hat mesh \
   ./assets/andy_hat.glb --format glb
 ```
 
@@ -302,11 +302,11 @@ echo "blake3:e3b0c44...  woody_ref.png" | b3sum --check
 Record which model, prompt, and seed generated a character design — right in the manifest:
 
 ```bash
-nap set nap://toystory/character/woody provenance.model "midjourney-v6"
-nap set nap://toystory/character/woody provenance.seed "8675309"
-nap set nap://toystory/character/woody provenance.prompt_hash "blake3:abc123..."
-nap set nap://toystory/character/woody provenance.derived_from \
-  "nap://toystory/character/woody/v1"
+px set px://toystory/character/woody provenance.model "midjourney-v6"
+px set px://toystory/character/woody provenance.seed "8675309"
+px set px://toystory/character/woody provenance.prompt_hash "blake3:abc123..."
+px set px://toystory/character/woody provenance.derived_from \
+  "px://toystory/character/woody/v1"
 ```
 
 The manifest captures full generative lineage:
@@ -319,14 +319,14 @@ provenance:
   parameters:
     stylize: "1000"
     chaos: "20"
-  derived_from: "nap://toystory/character/woody/v1"
+  derived_from: "px://toystory/character/woody/v1"
   created_at: "2026-06-09T20:00:00Z"
 ```
 
 **Use case — rights & attribution:** When a model is deprecated or a license changes, you can identify every asset generated with it:
 
 ```bash
-nap query nap://toystory/character/woody provenance.model
+px query px://toystory/character/woody provenance.model
 # → midjourney-v6
 ```
 
@@ -338,7 +338,7 @@ The `.yaml` manifest is simultaneously **human-editable**, **machine-readable**,
 
 ```yaml
 # characters/slinky.yaml
-id: nap://toystory/character/slinky
+id: px://toystory/character/slinky
 name: "Slinky Dog"
 entity_type: character
 version: 3
@@ -346,8 +346,8 @@ properties:
   toy_type: human
   affiliation: toybox_corp
   accessory: red
-  master: "nap://toystory/character/palpatine"
-  apprentice: "nap://toystory/character/woody"
+  master: "px://toystory/character/palpatine"
+  apprentice: "px://toystory/character/woody"
 representations:
   voice_actor:
     hash: "blake3:f8a2b1..."
@@ -374,26 +374,26 @@ The `query` command extracts exactly the data you need from deep manifest trees 
 
 ```bash
 # Get the first scene a character appears in
-nap query nap://toystory/character/woody references.appears_in.0
+px query px://toystory/character/woody references.appears_in.0
 
 # Get just image hashes across all characters (for caching)
-nap query nap://toystory/character/woody representations.reference_image.hash
+px query px://toystory/character/woody representations.reference_image.hash
 
 # List available keys for tab completion / introspection
-nap resolve nap://toystory/character/woody#representations
+px resolve px://toystory/character/woody#representations
 
 # Different output formats
-nap query nap://toystory/character/woody properties -f json
-nap query nap://toystory/character/woody properties -f yaml
+px query px://toystory/character/woody properties -f json
+px query px://toystory/character/woody properties -f yaml
 ```
 
 **Use case — AI story generator:** A GPT agent builds a scene by querying the setting, participants, and mood, then generates appropriate dialog — all from fragment queries:
 
 ```bash
 # Agent gathers context into variables
-SETTING=$(nap query nap://toystory/scene/pizza-planet properties -f json)
-MOOD=$(nap query nap://toystory/scene/pizza-planet properties.mood -f json)
-PARTICIPANTS=$(nap query nap://toystory/scene/pizza-planet properties.participants -f json)
+SETTING=$(px query px://toystory/scene/pizza-planet properties -f json)
+MOOD=$(px query px://toystory/scene/pizza-planet properties.mood -f json)
+PARTICIPANTS=$(px query px://toystory/scene/pizza-planet properties.participants -f json)
 
 # Agent generates scene using only the relevant data
 echo "Setting: $SETTING"
@@ -403,20 +403,20 @@ echo "Participants: $PARTICIPANTS"
 **Use case — API response size optimization:** A mobile client fetching character info only needs the `properties` subtree, not the full manifest (which may include provenance data, representations metadata, references arrays, etc.):
 
 ```bash
-nap query nap://toystory/character/woody properties -f json
+px query px://toystory/character/woody properties -f json
 # Returns ~200 bytes instead of ~2000
 ```
 
 ### 3.2 REST API for Integration
 
-The `nap-server` exposes the full resolver as an HTTP API — ideal for web UIs, game engines, and microservices:
+The `px-server` exposes the full resolver as an HTTP API — ideal for web UIs, game engines, and microservices:
 
 ```bash
 # Start the server (defaults to port 3100)
-cargo run -p nap-server
+cargo run -p px-server
 
 # Custom port and base path
-NAP_PORT=8080 NAP_BASE_PATH=/path/to/repositorys nap-server
+PX_PORT=8080 PX_BASE_PATH=/path/to/repositorys px-server
 ```
 
 #### API Endpoints
@@ -461,7 +461,7 @@ curl -X POST http://localhost:3100/commit/toystory/character/woody \
   }'
 ```
 
-**Use case — game engine integration:** A Unity or Unreal plugin queries the NAP server at build time to populate character data, spawn points, and prop manifests:
+**Use case — game engine integration:** A Unity or Unreal plugin queries the PX server at build time to populate character data, spawn points, and prop manifests:
 
 ```csharp
 // Unity example — fetch character data at editor time
@@ -486,14 +486,14 @@ Every change is content-addressed and versioned. Trace exactly how a character e
 
 ```bash
 # View commit history
-nap history nap://toystory/character/woody -n 20
+px history px://toystory/character/woody -n 20
 # a72c9f3 2026-06-09T20:15:00Z — set toy_type to human — alice
 # b83d1a2 2026-06-09T20:10:00Z — set homeworld — alice
 # c94e2b1 2026-06-09T20:05:00Z — added reference_image — bob
 # d05f3c0 2026-06-09T20:00:00Z — Create character 'Woody' — alice
 
 # Resolve what the manifest looked like at a specific commit
-nap resolve nap://toystory/character/woody --commit b83d1a2
+px resolve px://toystory/character/woody --commit b83d1a2
 
 # View history via API
 curl http://localhost:3100/history/toystory/character/woody
@@ -502,7 +502,7 @@ curl http://localhost:3100/history/toystory/character/woody
 **Use case — canon dispute resolution:** When two writers disagree on whether Woody's hair color changed between drafts, the commit log shows exactly when and by whom it was modified:
 
 ```bash
-nap history nap://toystory/character/woody | grep "hair"
+px history px://toystory/character/woody | grep "hair"
 # f7a2b1c 2026-06-08T14:30:00Z — set hair_color to brown — bob
 # e8d3c2b 2026-06-07T09:15:00Z — set hair_color to blond — alice
 ```
@@ -519,27 +519,27 @@ Discover what repositorys and entities are available:
 
 ```bash
 # List all repositorys in the base directory
-nap list
-# nap://toystory/
-# nap://toystory/
-# nap://middleearth/
+px list
+# px://toystory/
+# px://toystory/
+# px://middleearth/
 
 # List all entities in a repository
-nap list toystory
+px list toystory
 # character:
-#   nap://toystory/character/woody
-#   nap://toystory/character/slinky
+#   px://toystory/character/woody
+#   px://toystory/character/slinky
 # location:
-#   nap://toystory/location/andys-room
-#   nap://toystory/location/deathstar
+#   px://toystory/location/andys-room
+#   px://toystory/location/deathstar
 # scene:
-#   nap://toystory/scene/pizza-planet
+#   px://toystory/scene/pizza-planet
 
 # Filter by type
-nap list toystory -t character
+px list toystory -t character
 # character:
-#   nap://toystory/character/woody
-#   nap://toystory/character/slinky
+#   px://toystory/character/woody
+#   px://toystory/character/slinky
 ```
 
 ---
@@ -552,65 +552,65 @@ Build out a repository from scratch with a structured workflow:
 
 ```bash
 # Step 1: Initialize the repository
-nap init myworld
+px init myworld
 
 # Step 2: Define the world metadata
-nap set nap://myworld/world/myworld canon_level "canon"
-nap set nap://myworld/world/myworld timeline "Age of Discovery"
-nap set nap://myworld/world/myworld theme "exploration vs exploitation"
+px set px://myworld/world/myworld canon_level "canon"
+px set px://myworld/world/myworld timeline "Age of Discovery"
+px set px://myworld/world/myworld theme "exploration vs exploitation"
 
 # Step 3: Create factions / groups as properties on the world
-nap set nap://myworld/world/myworld factions \
+px set px://myworld/world/myworld factions \
   '["The Commonwealth", "The Outer Rim Syndicate", "The Core"]'
 
 # Step 4: Create characters
-nap create character captain-rex -u myworld -n "Captain Rex"
-nap create character admiral-torres -u myworld -n "Admiral Torres"
-nap create character lyra -u myworld -n "Lyra"
+px create character captain-rex -u myworld -n "Captain Rex"
+px create character admiral-torres -u myworld -n "Admiral Torres"
+px create character lyra -u myworld -n "Lyra"
 
 # Step 5: Flesh out character properties
-nap set nap://myworld/character/captain-rex rank "Captain"
-nap set nap://myworld/character/captain-rex affiliation "The Commonwealth"
-nap set nap://myworld/character/captain-rex ship "nap://myworld/prop/valkyrie"
+px set px://myworld/character/captain-rex rank "Captain"
+px set px://myworld/character/captain-rex affiliation "The Commonwealth"
+px set px://myworld/character/captain-rex ship "px://myworld/prop/valkyrie"
 
 # Step 6: Create locations
-nap create location kyra-prime -u myworld -n "Kyra Prime"
-nap set nap://myworld/location/kyra-prime type "colonial_capital"
-nap set nap://myworld/location/kyra-prime controlled_by "The Commonwealth"
+px create location kyra-prime -u myworld -n "Kyra Prime"
+px set px://myworld/location/kyra-prime type "colonial_capital"
+px set px://myworld/location/kyra-prime controlled_by "The Commonwealth"
 
 # Step 7: Create scenes that connect everything
-nap create scene first-contact -u myworld -n "First Contact"
-nap set nap://myworld/scene/first-contact setting "nap://myworld/location/kyra-prime"
-nap set nap://myworld/scene/first-contact participants \
+px create scene first-contact -u myworld -n "First Contact"
+px set px://myworld/scene/first-contact setting "px://myworld/location/kyra-prime"
+px set px://myworld/scene/first-contact participants \
   '[
-    "nap://myworld/character/captain-rex",
-    "nap://myworld/character/lyra"
+    "px://myworld/character/captain-rex",
+    "px://myworld/character/lyra"
   ]'
-nap set nap://myworld/scene/first-contact mood "tense"
-nap set nap://myworld/scene/first-contact outcome "alliance_formed"
+px set px://myworld/scene/first-contact mood "tense"
+px set px://myworld/scene/first-contact outcome "alliance_formed"
 
 # Step 8: Add reference images
-nap add-repr nap://myworld/character/captain-rex reference_image \
+px add-repr px://myworld/character/captain-rex reference_image \
   ./concept/rex.png --format png
 
 # Step 9: Commit everything
-nap commit myworld -m "Complete first act world-building" -a "writer@studio.com"
+px commit myworld -m "Complete first act world-building" -a "writer@studio.com"
 ```
 
 ### 4.2 Entity Types Reference
 
 | Type | URI Pattern | What it models | Example properties |
 |---|---|---|---|
-| `world` | `nap://<name>/world/<name>` | The repository itself — rules, canon level, metadata | `canon_level`, `timeline`, `theme`, `factions` |
-| `character` | `nap://<name>/character/<id>` | Persistent character with identity across scenes | `homeworld`, `toy_type`, `affiliation`, `master`, `apprentice` |
-| `location` | `nap://<name>/location/<id>` | Spatial setting | `climate`, `type`, `controlled_by`, `population` |
-| `scene` | `nap://<name>/scene/<id>` | Narrative moment — participants, timeline, events | `setting`, `participants`, `mood`, `outcome`, `time_of_day` |
-| `prop` | `nap://<name>/prop/<id>` | Physical object with materials, variants, ownership | `owner`, `material`, `weight`, `color` |
+| `world` | `px://<name>/world/<name>` | The repository itself — rules, canon level, metadata | `canon_level`, `timeline`, `theme`, `factions` |
+| `character` | `px://<name>/character/<id>` | Persistent character with identity across scenes | `homeworld`, `toy_type`, `affiliation`, `master`, `apprentice` |
+| `location` | `px://<name>/location/<id>` | Spatial setting | `climate`, `type`, `controlled_by`, `population` |
+| `scene` | `px://<name>/scene/<id>` | Narrative moment — participants, timeline, events | `setting`, `participants`, `mood`, `outcome`, `time_of_day` |
+| `prop` | `px://<name>/prop/<id>` | Physical object with materials, variants, ownership | `owner`, `material`, `weight`, `color` |
 
 **World manifest** (`repository.yaml` — created automatically):
 
 ```yaml
-id: nap://myworld/world/myworld
+id: px://myworld/world/myworld
 name: myworld Repository
 entity_type: world
 version: 3
@@ -632,37 +632,37 @@ The `references` field builds a directed graph between entities. This enables ri
 
 ```bash
 # Character → scenes they appear in
-nap set nap://toystory/character/woody references.appears_in \
-  '["nap://toystory/scene/pizza-planet", "nap://toystory/scene/trenchrun"]'
+px set px://toystory/character/woody references.appears_in \
+  '["px://toystory/scene/pizza-planet", "px://toystory/scene/trenchrun"]'
 
 # Location → scenes set there
-nap set nap://toystory/location/andys-room references.appears_in \
-  '["nap://toystory/scene/pizza-planet"]'
+px set px://toystory/location/andys-room references.appears_in \
+  '["px://toystory/scene/pizza-planet"]'
 
 # Character → relationships
-nap set nap://toystory/character/woody references.relationships \
+px set px://toystory/character/woody references.relationships \
   '[
-    {"target": "nap://toystory/character/slinky", "type": "father"},
-    {"target": "nap://toystory/character/jessie", "type": "sister"},
-    {"target": "nap://toystory/character/rex", "type": "friend"}
+    {"target": "px://toystory/character/slinky", "type": "father"},
+    {"target": "px://toystory/character/jessie", "type": "sister"},
+    {"target": "px://toystory/character/rex", "type": "friend"}
   ]'
 
 # Prop → owner
-nap set nap://toystory/prop/andy-hat references.owner "nap://toystory/character/andy"
+px set px://toystory/prop/andy-hat references.owner "px://toystory/character/andy"
 ```
 
 **Graph traversal examples:**
 
 ```bash
 # Find all scenes a character appears in
-nap query nap://toystory/character/woody references.appears_in
+px query px://toystory/character/woody references.appears_in
 
 # Find all characters that visit a location
 # (resolve scene participants for each scene set at the location)
-nap resolve nap://toystory/scene/pizza-planet#properties.participants
+px resolve px://toystory/scene/pizza-planet#properties.participants
 
 # Find a character's relationships
-nap query nap://toystory/character/woody references.relationships -f json
+px query px://toystory/character/woody references.relationships -f json
 ```
 
 ### 4.4 Multi-Repository Portfolio
@@ -671,47 +671,47 @@ Manage multiple fictional worlds under one resolver:
 
 ```bash
 # Create repositorys side by side
-nap init toystory
-nap init toystory
-nap init middleearth
+px init toystory
+px init toystory
+px init middleearth
 
 # Every repository is independently addressable
-nap create character buzzlightyear -u toystory -n "Buzz Lightyear"
-nap create location andysroom -u toystory -n "Andy's Room"
-nap create character frodo -u middleearth -n "Frodo Baggins"
-nap create location theshire -u middleearth -n "The Shire"
+px create character buzzlightyear -u toystory -n "Buzz Lightyear"
+px create location andysroom -u toystory -n "Andy's Room"
+px create character frodo -u middleearth -n "Frodo Baggins"
+px create location theshire -u middleearth -n "The Shire"
 
 # List all repositorys
-nap list
-# nap://toystory/
-# nap://toystory/
-# nap://middleearth/
+px list
+# px://toystory/
+# px://toystory/
+# px://middleearth/
 
 # Each repository has its own Git history, branches, tags
-nap branch middleearth canon
-nap tag middleearth fellowship-of-the-ring
+px branch middleearth canon
+px tag middleearth fellowship-of-the-ring
 ```
 
-**Repository directory layout (default: `~/.nap/`):**
+**Repository directory layout (default: `~/.px/`):**
 
 ```
-~/.nap/
+~/.px/
 ├── toystory/              ← independent Git repo
-│   ├── .nap/config.yaml
+│   ├── .px/config.yaml
 │   ├── repository.yaml
 │   ├── characters/
 │   ├── locations/
 │   ├── scenes/
 │   └── props/
 ├── toystory/              ← independent Git repo
-│   ├── .nap/config.yaml
+│   ├── .px/config.yaml
 │   ├── repository.yaml
 │   ├── characters/
 │   ├── locations/
 │   ├── scenes/
 │   └── props/
 └── middleearth/           ← independent Git repo
-    ├── .nap/config.yaml
+    ├── .px/config.yaml
     ├── repository.yaml
     ├── characters/
     ├── locations/
@@ -725,17 +725,17 @@ Track every AI-generated asset with full lineage:
 
 ```bash
 # After generating a character design with Midjourney
-nap set nap://toystory/character/woody provenance.model "midjourney-v6"
-nap set nap://toystory/character/woody provenance.seed "8675309"
-nap set nap://toystory/character/woody provenance.prompt_hash "blake3:abc123..."
-nap set nap://toystory/character/woody provenance.parameters.stylize "1000"
+px set px://toystory/character/woody provenance.model "midjourney-v6"
+px set px://toystory/character/woody provenance.seed "8675309"
+px set px://toystory/character/woody provenance.prompt_hash "blake3:abc123..."
+px set px://toystory/character/woody provenance.parameters.stylize "1000"
 
 # After iterating with an LLM
-nap set nap://toystory/character/woody provenance.derived_from \
-  "nap://toystory/character/woody/v1"
+px set px://toystory/character/woody provenance.derived_from \
+  "px://toystory/character/woody/v1"
 
 # Set the creation timestamp
-nap set nap://toystory/character/woody provenance.created_at "2026-06-09T20:00:00Z"
+px set px://toystory/character/woody provenance.created_at "2026-06-09T20:00:00Z"
 ```
 
 The provenance block captures complete generative lineage:
@@ -748,7 +748,7 @@ provenance:
   parameters:
     stylize: "1000"
     chaos: "20"
-  derived_from: "nap://toystory/character/woody/v1"
+  derived_from: "px://toystory/character/woody/v1"
   created_at: "2026-06-09T20:00:00Z"
 ```
 
@@ -756,7 +756,7 @@ provenance:
 
 ```bash
 # Find all entities generated with a specific model
-nap query nap://toystory/character/woody provenance.model
+px query px://toystory/character/woody provenance.model
 # → midjourney-v6
 ```
 
@@ -769,53 +769,53 @@ nap query nap://toystory/character/woody provenance.model
 ### Composition
 
 ```bash
-# Initialize a repository (defaults to ~/.nap/)
-nap init myrepository
+# Initialize a repository (defaults to ~/.px/)
+px init myrepository
 
 # Override with any directory
-nap init myrepository -d /path/to/shared/repositorys
-nap init myrepository -d ~/Dropbox/TeamWorldbuilding
+px init myrepository -d /path/to/shared/repositorys
+px init myrepository -d ~/Dropbox/TeamWorldbuilding
 
 # Point the resolver at a specific path
-nap -d /mnt/nas/repositorys list
-nap -d /mnt/nas/repositorys resolve nap://toystory/character/woody
+px -d /mnt/nas/repositorys list
+px -d /mnt/nas/repositorys resolve px://toystory/character/woody
 ```
 
 ### Output Formats
 
 ```bash
 # JSON for programmatic consumption
-nap resolve nap://toystory/character/woody -f json | jq '.properties'
+px resolve px://toystory/character/woody -f json | jq '.properties'
 
 # YAML for human review and editing
-nap resolve nap://toystory/character/woody -f yaml
+px resolve px://toystory/character/woody -f yaml
 ```
 
 ### Debugging
 
 ```bash
 # Verbose mode shows tracing output
-nap -v resolve nap://toystory/character/woody
+px -v resolve px://toystory/character/woody
 
 # Check server health
 curl http://localhost:3100/health
-# {"status":"ok","protocol":"NAP","version":"0.1.0"}
+# {"status":"ok","protocol":"PX","version":"0.1.0"}
 ```
 
 ### Quick Bootstrap a New Repository
 
 ```bash
 # One-liner to seed a new repository
-nap init mynovel \
-  && nap create character hero -u mynovel -n "The Hero" \
-  && nap create location village -u mynovel -n "Home Village" \
-  && nap set nap://mynovel/character/hero homeworld "nap://mynovel/location/village" \
-  && nap set nap://mynovel/character/hero archetype "reluctant hero"
+px init mynovel \
+  && px create character hero -u mynovel -n "The Hero" \
+  && px create location village -u mynovel -n "Home Village" \
+  && px set px://mynovel/character/hero homeworld "px://mynovel/location/village" \
+  && px set px://mynovel/character/hero archetype "reluctant hero"
 ```
 
 ### Working Without Git
 
-While NAP uses Git for version control, all of your data is plain YAML files. You can:
+While PX uses Git for version control, all of your data is plain YAML files. You can:
 
 - Edit manifests directly in any text editor
 - Version them with any VCS (Fossil, Mercurial, Jujutsu)
@@ -828,8 +828,8 @@ While NAP uses Git for version control, all of your data is plain YAML files. Yo
 
 ```
 toystory/                    ← repository root (Git repo)
-├── .nap/
-│   └── config.yaml          ← NAP repository configuration
+├── .px/
+│   └── config.yaml          ← PX repository configuration
 ├── repository.yaml            ← world manifest
 ├── characters/
 │   ├── woody.yaml
@@ -848,38 +848,38 @@ toystory/                    ← repository root (Git repo)
 
 | Command | Description |
 |---|---|
-| `nap init <repository>` | Initialize a new repository repository (prompts for provider on first run) |
-| `nap init <repository> --provider <type>` | Initialize repository + configure provider |
-| `nap init --provider <type>` | Configure provider only (no repository) |
-| `nap create <type> <id> -u <repository> -n <name>` | Create a new entity manifest |
-| `nap resolve <uri>` | Resolve a NAP URI to a manifest or subtree |
-| `nap query <uri> <path>` | Query a subtree from a manifest |
-| `nap set <uri> <key> <value>` | Set a property on an entity |
-| `nap add-repr <uri> <key> <file> --format <fmt>` | Add a content-addressed representation |
-| `nap commit <repository> -m <message>` | Commit changes to the VCS |
-| `nap history <uri>` | View commit history for an entity |
-| `nap list [repository]` | List repositorys or entities |
-| `nap branch <repository> [name]` | Create or list branches |
-| `nap switch <repository> <branch>` | Switch to a branch |
-| `nap tag <repository> [name]` | Create or list tags |
-| `nap validate <uri>` | Validate a manifest against the NAP schema |
-| `nap publish <repository>` | Push current branch to origin (convenience shortcut) |
-| `nap push <repository>` | Push to a configurable remote (use `--remote` and `--branch`) |
-| `nap pull <url-or-name>` | Clone from URL or pull an existing repository |
-| `nap sync <repository>` | Pull current branch from default remote |
-| `nap remote add <repository> <name> <url>` | Add a remote |
-| `nap remote ls <repository>` | List remotes |
-| `nap remote rm <repository> <name>` | Remove a remote |
-| `nap revert <repository> -c <hash>` | Revert a commit |
-| `nap diff <base> <candidate>` | Diff two manifest files |
-| `nap merge <base> <current> <proposed>` | Three-way merge |
-| `nap content-hash <file>` | Compute BLAKE3 content hash |
-| `nap schema <name>` | Print JSON schema (manifest or commit) |
-| `nap sign <uri>` | Sign a manifest (stub in v0) |
-| `nap verify <uri>` | Verify a manifest signature (stub in v0) |
-| `nap doctor [--repair]` | Run diagnostics and optionally auto-repair |
-| `nap status` | Show system status and provider info |
-| `nap choose backend --provider <type>` | Switch backend provider |
+| `px init <repository>` | Initialize a new repository repository (prompts for provider on first run) |
+| `px init <repository> --provider <type>` | Initialize repository + configure provider |
+| `px init --provider <type>` | Configure provider only (no repository) |
+| `px create <type> <id> -u <repository> -n <name>` | Create a new entity manifest |
+| `px resolve <uri>` | Resolve a PX URI to a manifest or subtree |
+| `px query <uri> <path>` | Query a subtree from a manifest |
+| `px set <uri> <key> <value>` | Set a property on an entity |
+| `px add-repr <uri> <key> <file> --format <fmt>` | Add a content-addressed representation |
+| `px commit <repository> -m <message>` | Commit changes to the VCS |
+| `px history <uri>` | View commit history for an entity |
+| `px list [repository]` | List repositorys or entities |
+| `px branch <repository> [name]` | Create or list branches |
+| `px switch <repository> <branch>` | Switch to a branch |
+| `px tag <repository> [name]` | Create or list tags |
+| `px validate <uri>` | Validate a manifest against the PX schema |
+| `px publish <repository>` | Push current branch to origin (convenience shortcut) |
+| `px push <repository>` | Push to a configurable remote (use `--remote` and `--branch`) |
+| `px pull <url-or-name>` | Clone from URL or pull an existing repository |
+| `px sync <repository>` | Pull current branch from default remote |
+| `px remote add <repository> <name> <url>` | Add a remote |
+| `px remote ls <repository>` | List remotes |
+| `px remote rm <repository> <name>` | Remove a remote |
+| `px revert <repository> -c <hash>` | Revert a commit |
+| `px diff <base> <candidate>` | Diff two manifest files |
+| `px merge <base> <current> <proposed>` | Three-way merge |
+| `px content-hash <file>` | Compute BLAKE3 content hash |
+| `px schema <name>` | Print JSON schema (manifest or commit) |
+| `px sign <uri>` | Sign a manifest (stub in v0) |
+| `px verify <uri>` | Verify a manifest signature (stub in v0) |
+| `px doctor [--repair]` | Run diagnostics and optionally auto-repair |
+| `px status` | Show system status and provider info |
+| `px choose backend --provider <type>` | Switch backend provider |
 
 ### Command Notes
 
@@ -889,9 +889,9 @@ toystory/                    ← repository root (Git repo)
 
 **`init` vs `choose`:** `init` can both create a repository and configure a provider. `choose` only switches providers — use it when you want to change providers without creating a repository.
 
-Global options: `-d/--base-dir <path>` (default `~/.nap`), `-v/--verbose`, `-f/--format <yaml|json>`
+Global options: `-d/--base-dir <path>` (default `~/.px`), `-v/--verbose`, `-f/--format <yaml|json>`
 
-Repository repositories are stored in `~/.nap/<repository>/` by default. Use `-d` (or `--base-dir`) to point to a different directory.
+Repository repositories are stored in `~/.px/<repository>/` by default. Use `-d` (or `--base-dir`) to point to a different directory.
 
 ---
 
@@ -904,4 +904,4 @@ Repository repositories are stored in `~/.nap/<repository>/` by default. Use `-d
 
 ---
 
-*NAP is in v0 (prototype). The core data model and resolution engine are functional. Advanced features (signing, verification, distributed resolution) are planned for future iterations.*
+*PX is in v0 (prototype). The core data model and resolution engine are functional. Advanced features (signing, verification, distributed resolution) are planned for future iterations.*

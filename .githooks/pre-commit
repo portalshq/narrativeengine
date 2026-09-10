@@ -25,9 +25,9 @@ CHANGED_LOCK=$(git diff --cached --name-only --diff-filter=ACMR | grep -cx 'Carg
 
 echo "── Pre-commit checks ─────────────────────────"
 
-# ── 0. nap-docgen ─────────────────────────────────────────────
-echo "→ cargo run -p nap-docgen..."
-cargo run -p nap-docgen
+# ── 0. px-docgen ─────────────────────────────────────────────
+echo "→ cargo run -p px-docgen..."
+cargo run -p px-docgen
 git add docs/generated/ skills/*/SKILL.md README.md
 
 # ── 0.5. Cargo lock integrity ──────────────────────────────────

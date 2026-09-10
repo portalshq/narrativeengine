@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap init
+# px init
 Initialize a repository repository and/or configure the backend provider
 
 
 ## Synopsis
 ```bash
-nap init [OPTIONS] [REPOSITORY]
+px init [OPTIONS] [REPOSITORY]
 ```
 
 
@@ -21,7 +21,7 @@ Initialize a repository repository and/or configure the backend provider.
 
 When a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:
 
-nap init toystory                     # create repository nap init toystory --provider local    # create repository + configure provider nap init --provider local             # configure provider only
+px init toystory                     # create repository px init toystory --provider local    # create repository + configure provider px init --provider local             # configure provider only
 
 
 ## Arguments
@@ -52,21 +52,21 @@ nap init toystory                     # create repository nap init toystory --pr
 ## Examples
 ```bash
 # Initialize a new repository
-nap init toystory
+px init toystory
 
 # Initialize with local provider
-nap init toystory --provider local
+px init toystory --provider local
 
 # Initialize with remote provider
-nap init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
+px init --provider remote --remote-url lore://localhost:41337 --workspace-id my-workspace
 
 # Configure provider only (no repository creation)
-nap init --provider local
+px init --provider local
 
 # Initialize with a remote origin
-nap init toystory --origin lore://localhost:41337/toystory
+px init toystory --origin lore://localhost:41337/toystory
 ```
 
 ## Source
-`crates/nap-cli/src/main.rs` — `init` command
+`crates/px-cli/src/main.rs` — `init` command
 

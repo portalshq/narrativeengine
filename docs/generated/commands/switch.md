@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap switch
+# px switch
 Switch to a branch
 
 
 ## Synopsis
 ```bash
-nap switch <REPOSITORY> <NAME>
+px switch <REPOSITORY> <NAME>
 ```
 
 
@@ -32,5 +32,5 @@ nap switch <REPOSITORY> <NAME>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `switch` command
+`crates/px-cli/src/main.rs` — `switch` command
 

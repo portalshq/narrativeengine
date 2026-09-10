@@ -1,16 +1,16 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
 # Environment Variables
-The following environment variables are recognized by `nap`.
+The following environment variables are recognized by `px`.
 
 
 | Variable | Description |
 |---|---|
-| NAP\_OUTPUT | Override for --format |
+| PX\_OUTPUT | Override for --format |
 

@@ -60,10 +60,10 @@ pub struct LabConfig {
     /// Cap on lore atoms included in the prompt (Lore Overload protection).
     pub max_lore_atoms: Option<usize>,
     pub timestamp: Option<String>,
-    // Enhanced fields for nap-sdk integration
+    // Enhanced fields for px-sdk integration
     pub enable_entity_extraction: Option<bool>,
     pub max_entity_representations: Option<usize>,
-    pub default_nap_repository: Option<String>,
+    pub default_px_repository: Option<String>,
 }
 
 /// Fully resolved config with no optional fields.
@@ -78,7 +78,7 @@ pub struct ResolvedLabConfig {
     // Enhanced fields
     pub enable_entity_extraction: bool,
     pub max_entity_representations: usize,
-    pub default_nap_repository: Option<String>,
+    pub default_px_repository: Option<String>,
 }
 
 impl Default for ResolvedLabConfig {
@@ -92,7 +92,7 @@ impl Default for ResolvedLabConfig {
             timestamp: None,
             enable_entity_extraction: true,
             max_entity_representations: 5,
-            default_nap_repository: None,
+            default_px_repository: None,
         }
     }
 }
@@ -112,7 +112,7 @@ impl ResolvedLabConfig {
             max_entity_representations: o
                 .max_entity_representations
                 .unwrap_or(self.max_entity_representations),
-            default_nap_repository: o.default_nap_repository.or(self.default_nap_repository),
+            default_px_repository: o.default_px_repository.or(self.default_px_repository),
         }
     }
 }
@@ -233,7 +233,7 @@ where
         self
     }
 
-    /// Set the entity extractor for nap-sdk integration.
+    /// Set the entity extractor for px-sdk integration.
     pub fn with_entity_extractor(mut self, extractor: Arc<dyn EntityExtractor>) -> Self {
         self.entity_extractor = Some(extractor);
         self
@@ -316,7 +316,7 @@ where
                 timestamp: self.lab_config.timestamp.clone(),
                 enable_entity_extraction: Some(self.lab_config.enable_entity_extraction),
                 max_entity_representations: Some(self.lab_config.max_entity_representations),
-                default_nap_repository: self.lab_config.default_nap_repository.clone(),
+                default_px_repository: self.lab_config.default_px_repository.clone(),
             }),
             phases: TracePhases {
                 harvest: Some(serde_json::json!({
@@ -410,8 +410,8 @@ where
                     match extractor
                         .extract_entities(
                             &content,
-                            Some(&parameters.nap_repository),
-                            &parameters.nap_entity_types,
+                            Some(&parameters.px_repository),
+                            &parameters.px_entity_types,
                         )
                         .await
                     {
@@ -1152,8 +1152,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec![],
             enable_entity_extraction: false,
-            nap_repository: "".into(),
-            nap_entity_types: vec![],
+            px_repository: "".into(),
+            px_entity_types: vec![],
             cancellation_token: "".to_string(),
         };
 
@@ -1482,7 +1482,7 @@ mod tests {
             timestamp: None,
             enable_entity_extraction: None,
             max_entity_representations: None,
-            default_nap_repository: None,
+            default_px_repository: None,
         });
 
         let result = engine.generate_context("test", "query").await;
@@ -1559,7 +1559,7 @@ mod tests {
             timestamp: None,
             enable_entity_extraction: None,
             max_entity_representations: None,
-            default_nap_repository: None,
+            default_px_repository: None,
         });
 
         let result = engine.generate_context("test", "query").await;
@@ -1589,7 +1589,7 @@ mod tests {
             timestamp: None,
             enable_entity_extraction: None,
             max_entity_representations: None,
-            default_nap_repository: None,
+            default_px_repository: None,
         });
         let cfg = engine.get_lab_config();
         assert!((cfg.saliency_threshold - 0.9).abs() < f64::EPSILON);
@@ -1724,8 +1724,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec![],
             enable_entity_extraction: false,
-            nap_repository: "".to_string(),
-            nap_entity_types: vec![],
+            px_repository: "".to_string(),
+            px_entity_types: vec![],
             cancellation_token: "".to_string(),
         };
 
@@ -1746,7 +1746,7 @@ mod tests {
         });
         let extractor = Arc::new(MockEntityExtractor {
             entities: vec![crate::narrative::v1::Entity {
-                id: "nap://test/character/hero".to_string(),
+                id: "px://test/character/hero".to_string(),
                 name: "Hero".to_string(),
                 r#type: "character".to_string(),
                 description: "The protagonist".to_string(),
@@ -1767,8 +1767,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec!["character".to_string()],
             enable_entity_extraction: true,
-            nap_repository: "test".to_string(),
-            nap_entity_types: vec!["character".to_string()],
+            px_repository: "test".to_string(),
+            px_entity_types: vec!["character".to_string()],
             cancellation_token: "".to_string(),
         };
 
@@ -1924,8 +1924,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec![],
             enable_entity_extraction: false,
-            nap_repository: "".to_string(),
-            nap_entity_types: vec![],
+            px_repository: "".to_string(),
+            px_entity_types: vec![],
             cancellation_token: "".to_string(),
         };
 
@@ -1950,7 +1950,7 @@ mod tests {
         let extractor = Arc::new(MockEntityExtractor {
             entities: vec![
                 crate::narrative::v1::Entity {
-                    id: "nap://test/character/hero".to_string(),
+                    id: "px://test/character/hero".to_string(),
                     name: "Hero".to_string(),
                     r#type: "character".to_string(),
                     description: "The protagonist".to_string(),
@@ -1959,7 +1959,7 @@ mod tests {
                     references: std::collections::HashMap::new(),
                 },
                 crate::narrative::v1::Entity {
-                    id: "nap://test/location/temple".to_string(),
+                    id: "px://test/location/temple".to_string(),
                     name: "Ancient Temple".to_string(),
                     r#type: "location".to_string(),
                     description: "Sacred location".to_string(),
@@ -1992,8 +1992,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec!["character".to_string(), "location".to_string()],
             enable_entity_extraction: true,
-            nap_repository: "test".to_string(),
-            nap_entity_types: vec!["character".to_string(), "location".to_string()],
+            px_repository: "test".to_string(),
+            px_entity_types: vec!["character".to_string(), "location".to_string()],
             cancellation_token: "".to_string(),
         };
 
@@ -2072,8 +2072,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec!["character".to_string()],
             enable_entity_extraction: true,
-            nap_repository: "test".to_string(),
-            nap_entity_types: vec!["character".to_string()],
+            px_repository: "test".to_string(),
+            px_entity_types: vec!["character".to_string()],
             cancellation_token: "".to_string(),
         };
 
@@ -2102,7 +2102,7 @@ mod tests {
         });
         let extractor = Arc::new(MockEntityExtractor {
             entities: vec![crate::narrative::v1::Entity {
-                id: "nap://test/character/hero".to_string(),
+                id: "px://test/character/hero".to_string(),
                 name: "Hero".to_string(),
                 r#type: "character".to_string(),
                 description: "The protagonist".to_string(),
@@ -2158,8 +2158,8 @@ mod tests {
             include_inactive_entities: false,
             entity_types: vec!["character".to_string()],
             enable_entity_extraction: true,
-            nap_repository: "test".to_string(),
-            nap_entity_types: vec!["character".to_string()],
+            px_repository: "test".to_string(),
+            px_entity_types: vec!["character".to_string()],
             cancellation_token: "".to_string(),
         };
 
@@ -2196,7 +2196,7 @@ mod tests {
         });
         let extractor = Arc::new(MockEntityExtractor {
             entities: vec![crate::narrative::v1::Entity {
-                id: "nap://test/character/hero".to_string(),
+                id: "px://test/character/hero".to_string(),
                 name: "Hero".to_string(),
                 r#type: "character".to_string(),
                 description: "The protagonist".to_string(),

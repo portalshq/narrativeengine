@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap head-hash
+# px head-hash
 Show the current HEAD commit hash
 
 
 ## Synopsis
 ```bash
-nap head-hash <REPOSITORY>
+px head-hash <REPOSITORY>
 ```
 
 
@@ -31,5 +31,5 @@ nap head-hash <REPOSITORY>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `head-hash` command
+`crates/px-cli/src/main.rs` — `head-hash` command
 

@@ -34,7 +34,7 @@ pub trait ContentGenerator: Send + Sync {
 }
 
 /// Trait for entity extraction integration.
-/// Applications implement this to integrate with nap-sdk or similar services.
+/// Applications implement this to integrate with px-sdk or similar services.
 pub trait EntityExtractor: Send + Sync {
     /// Extract entities from the given context.
     fn extract_entities(

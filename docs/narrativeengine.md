@@ -12,9 +12,9 @@ NarrativeEngine is a SDK platform for interactive enterinment. Domain models, va
 │   ├── narrativeengine-py
 │   ├── narrativeengine-ts
 │   ├── narrativeengine-codegen
-│   ├── nap-core
-│   ├── nap-cli
-│   └── nap-server
+│   ├── px-core
+│   ├── px-cli
+│   └── px-server
 ├── generated
 │   ├── csharp
 │   ├── go

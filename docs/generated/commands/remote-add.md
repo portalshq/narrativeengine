@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap remote add
+# px remote add
 Add a remote to a repository repository
 
 
 ## Synopsis
 ```bash
-nap add <REPOSITORY> <NAME> <URL>
+px add <REPOSITORY> <NAME> <URL>
 ```
 
 
@@ -33,5 +33,5 @@ nap add <REPOSITORY> <NAME> <URL>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `add` command
+`crates/px-cli/src/main.rs` — `add` command
 

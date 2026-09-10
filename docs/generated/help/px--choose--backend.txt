@@ -1,0 +1,16 @@
+Choose backend provider
+
+Usage: px choose backend [OPTIONS] <PROVIDER>
+
+Arguments:
+  <PROVIDER>  Provider type: local, portals-cloud, or remote
+
+Options:
+  -d, --base-dir <BASE_DIR>          Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
+      --remote-url <REMOTE_URL>      Remote URL (required for remote provider)
+  -v, --verbose                      Enable verbose debug logging
+      --workspace-id <WORKSPACE_ID>  Workspace ID (for remote provider)
+      --remote                       Resolve repository reads through the configured Lore server (the default)
+      --reset                        Reset the provider configuration file
+      --local                        Resolve repository reads from an explicitly checked-out local working tree
+  -h, --help                         Print help

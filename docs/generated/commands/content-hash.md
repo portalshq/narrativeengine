@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap content-hash
+# px content-hash
 Compute the BLAKE3 content hash of a file
 
 
 ## Synopsis
 ```bash
-nap content-hash <FILE>
+px content-hash <FILE>
 ```
 
 
@@ -31,5 +31,5 @@ nap content-hash <FILE>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `content-hash` command
+`crates/px-cli/src/main.rs` — `content-hash` command
 

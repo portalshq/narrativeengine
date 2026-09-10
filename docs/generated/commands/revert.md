@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap revert
+# px revert
 Revert a commit by hash (undoes all changes in that commit)
 
 
 ## Synopsis
 ```bash
-nap revert [OPTIONS] --commit <COMMIT> <REPOSITORY>
+px revert [OPTIONS] --commit <COMMIT> <REPOSITORY>
 ```
 
 
@@ -27,7 +27,7 @@ nap revert [OPTIONS] --commit <COMMIT> <REPOSITORY>
 
 | Flag | Description | Default |
 |---|---|---|
-| -a, --author | Author identifier | nap-cli |
+| -a, --author | Author identifier | px |
 | -c, --commit | Commit hash to revert |  |
 
 
@@ -39,5 +39,5 @@ nap revert [OPTIONS] --commit <COMMIT> <REPOSITORY>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `revert` command
+`crates/px-cli/src/main.rs` — `revert` command
 

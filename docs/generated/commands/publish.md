@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap publish
+# px publish
 Publish changes to remote
 
 
 ## Synopsis
 ```bash
-nap publish <REPOSITORY>
+px publish <REPOSITORY>
 ```
 
 
@@ -31,5 +31,5 @@ nap publish <REPOSITORY>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `publish` command
+`crates/px-cli/src/main.rs` — `publish` command
 

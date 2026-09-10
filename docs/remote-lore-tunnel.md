@@ -1,6 +1,6 @@
 # Lore Server Tunnel
 
-Connect NAP to a remote lore server (or vice versa) using Chisel for TCP + UDP forwarding.
+Connect PX to a remote lore server (or vice versa) using Chisel for TCP + UDP forwarding.
 
 ## Lore Server Ports
 
@@ -20,9 +20,9 @@ brew install chisel-tunnel
 curl https://i.jpillora.com/chisel! | bash
 ```
 
-## Use Case A: Local NAP → Remote Lore
+## Use Case A: Local PX → Remote Lore
 
-Your local NAP client talks to a lore server running on a remote machine.
+Your local PX client talks to a lore server running on a remote machine.
 
 ### 1. Start Chisel server (remote machine)
 
@@ -42,15 +42,15 @@ chisel client --auth loredev:hunter2 remote-host:8080 \
 This binds local ports 41337 (TCP+UDP) and 41339 (TCP) and forwards them through the tunnel to the remote lore server.
 
 Port forwarding alone does not enable presigned URLs. The remote Lore server
-must also configure a unique `[server.http] presigned_url_hmac_key`. Point NAP
-at the forwarded HTTP endpoint with `NAP_LORE_HTTP_URL=http://127.0.0.1:41339`.
+must also configure a unique `[server.http] presigned_url_hmac_key`. Point PX
+at the forwarded HTTP endpoint with `PX_LORE_HTTP_URL=http://127.0.0.1:41339`.
 Treat every returned presigned URL as a bearer secret until its expiry.
 
-### 3. Configure NAP (local machine)
+### 3. Configure PX (local machine)
 
 ```bash
-export NAP_LORE_URL_BASE='lore://localhost:41337'
-export NAP_WORKSPACE_ID='default'
+export PX_LORE_URL_BASE='lore://localhost:41337'
+export PX_WORKSPACE_ID='default'
 ```
 
 ### How It Works (Use Case A)
@@ -63,9 +63,9 @@ export NAP_WORKSPACE_ID='default'
 
 ---
 
-## Use Case B: Remote NAP → Local Lore
+## Use Case B: Remote PX → Local Lore
 
-A remote NAP client talks to your local lore server (dev machine).
+A remote PX client talks to your local lore server (dev machine).
 
 ### 1. Start Chisel server (remote machine)
 
@@ -84,11 +84,11 @@ chisel client --auth loredev:hunter2 remote-host:8080 \
 
 The `R:` prefix tells the chisel **server** to listen on those ports and forward connections back through the tunnel to the local machine.
 
-### 3. Configure NAP (remote machine)
+### 3. Configure PX (remote machine)
 
 ```bash
-export NAP_LORE_URL_BASE='lore://localhost:41337'
-export NAP_WORKSPACE_ID='default'
+export PX_LORE_URL_BASE='lore://localhost:41337'
+export PX_WORKSPACE_ID='default'
 ```
 
 ### How It Works (Use Case B)
@@ -134,7 +134,7 @@ If the chisel server reports `Server cannot listen on R:41337`, another process 
 ```bash
 # Forward to a different local port instead
 R:41338:127.0.0.1:41337
-# Then configure NAP to use lore://localhost:41338
+# Then configure PX to use lore://localhost:41338
 ```
 
 ### SSH alias resolution

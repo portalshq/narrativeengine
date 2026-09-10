@@ -1,10 +1,10 @@
 ```bash
 # Query a subtree
-nap query nap://toystory/character/woody properties
+px query px://toystory/character/woody properties
 
 # Query nested properties
-nap query nap://toystory/character/woody properties.toy_type
+px query px://toystory/character/woody properties.toy_type
 
 # Query as YAML
-nap query nap://toystory/character/woody properties -f yaml
+px query px://toystory/character/woody properties -f yaml
 ```

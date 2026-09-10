@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap validate
-Validate a manifest against the NAP schema
+# px validate
+Validate a manifest against the PX schema
 
 
 ## Synopsis
 ```bash
-nap validate [OPTIONS] [URI]
+px validate [OPTIONS] [URI]
 ```
 
 
@@ -20,7 +20,7 @@ nap validate [OPTIONS] [URI]
 
 | Name | Description | Required |
 |---|---|---|
-| uri | NAP URI of the entity to validate | No |
+| uri | PX URI of the entity to validate | No |
 
 
 ## Options
@@ -38,5 +38,5 @@ nap validate [OPTIONS] [URI]
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `validate` command
+`crates/px-cli/src/main.rs` — `validate` command
 

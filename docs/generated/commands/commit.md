@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap commit
+# px commit
 Commit changes to a repository repository
 
 
 ## Synopsis
 ```bash
-nap commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
+px commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
 ```
 
 
@@ -27,7 +27,7 @@ nap commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
 
 | Flag | Description | Default |
 |---|---|---|
-| -a, --author | Author identifier | nap-cli |
+| -a, --author | Author identifier | px |
 | -m, --message | Commit message |  |
 
 
@@ -41,12 +41,12 @@ nap commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
 ## Examples
 ```bash
 # Commit all changes in a repository
-nap commit toystory -m "Add Woody character"
+px commit toystory -m "Add Woody character"
 
 # Commit with a specific author
-nap commit toystory -m "Update Andy's Room properties" -a "toybox-builder"
+px commit toystory -m "Update Andy's Room properties" -a "toybox-builder"
 ```
 
 ## Source
-`crates/nap-cli/src/main.rs` — `commit` command
+`crates/px-cli/src/main.rs` — `commit` command
 

@@ -6,6 +6,6 @@ set -euo pipefail
 # It should be run before commits and releases.
 
 echo "Generating documentation..."
-cargo run -p nap-docgen
+cargo run -p px-docgen
 
 echo "Done."

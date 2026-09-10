@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap auth
+# px auth
 Manage secure Portals Cloud authentication
 
 
 ## Synopsis
 ```bash
-nap auth <COMMAND>
+px auth <COMMAND>
 ```
 
 
@@ -33,5 +33,5 @@ nap auth <COMMAND>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `auth` command
+`crates/px-cli/src/main.rs` — `auth` command
 

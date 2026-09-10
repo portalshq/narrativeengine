@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap remote rm
+# px remote rm
 Remove a remote from a repository repository
 
 
 ## Synopsis
 ```bash
-nap rm <REPOSITORY> <NAME>
+px rm <REPOSITORY> <NAME>
 ```
 
 
@@ -32,5 +32,5 @@ nap rm <REPOSITORY> <NAME>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `rm` command
+`crates/px-cli/src/main.rs` — `rm` command
 

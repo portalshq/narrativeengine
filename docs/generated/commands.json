@@ -1,6 +1,6 @@
 {
-  "generator": "nap-docgen",
-  "version": "0.8.14",
+  "generator": "px-docgen",
+  "version": "0.8.15",
   "commands": [
     {
       "name": "add",
@@ -14,7 +14,7 @@
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI",
+          "about": "PX URI",
           "required": true,
           "default_value": null,
           "short": null,
@@ -63,7 +63,7 @@
           "name": "author",
           "about": "Author identifier",
           "required": false,
-          "default_value": "nap-cli",
+          "default_value": "px",
           "short": "a",
           "long": "author",
           "takes_value": true
@@ -229,7 +229,7 @@
           "name": "configure",
           "full_path": "backend configure",
           "about": "Configure the version-control backend",
-          "long_about": "Configure the version-control backend.\n\nAfter configuration, existing unversioned repositories in this NAP home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).",
+          "long_about": "Configure the version-control backend.\n\nAfter configuration, existing unversioned repositories in this PX home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).",
           "usage": "Usage: configure [OPTIONS] <BACKEND>",
           "aliases": [],
           "arguments": [
@@ -480,7 +480,7 @@
           "name": "author",
           "about": "Author identifier",
           "required": false,
-          "default_value": "nap-cli",
+          "default_value": "px",
           "short": "a",
           "long": "author",
           "takes_value": true
@@ -583,7 +583,7 @@
           "name": "author",
           "about": "Author identifier",
           "required": false,
-          "default_value": "nap-cli",
+          "default_value": "px",
           "short": "a",
           "long": "author",
           "takes_value": true
@@ -730,7 +730,7 @@
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI",
+          "about": "PX URI",
           "required": true,
           "default_value": null,
           "short": null,
@@ -767,7 +767,7 @@
       "name": "init",
       "full_path": "init",
       "about": "Initialize a repository repository and/or configure the backend provider",
-      "long_about": "Initialize a repository repository and/or configure the backend provider.\n\nWhen a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:\n\nnap init toystory                     # create repository nap init toystory --provider local    # create repository + configure provider nap init --provider local             # configure provider only",
+      "long_about": "Initialize a repository repository and/or configure the backend provider.\n\nWhen a repository name is provided, creates the repository structure (directories, config, repository manifest, initial commit). When --provider is given (or no provider is configured), sets up the backend provider. Both can be combined:\n\npx init toystory                     # create repository px init toystory --provider local    # create repository + configure provider px init --provider local             # configure provider only",
       "usage": "Usage: init [OPTIONS] [REPOSITORY]",
       "aliases": [],
       "arguments": [
@@ -983,13 +983,13 @@
       "name": "presign",
       "full_path": "presign",
       "about": "Create a time-limited public URL for a committed representation",
-      "long_about": "Create a time-limited public URL for a committed representation.\n\nPass the entity ID first and the representation name second:\n\n```bash\nnap presign 25th-chapter/character/nathan-gunn item\n```\n\n- `25th-chapter/character/nathan-gunn` identifies the repository, entity type,\n  and entity ID. The `nap://` prefix is optional.\n- `item` is the exact key under the entity manifest's `representations` map.\n  It is not a file path or the entity's display name.\n\nThe equivalent fully qualified command is:\n\n```bash\nnap presign nap://25th-chapter/character/nathan-gunn item\n```\n\n### How the representation is located\n\nNAP reads the entity manifest at the selected revision and looks up\n`representations.item`. For example:\n\n```yaml\nrepresentations:\n  item:\n    hash: blake3:<content hash>\n    format: jpg\n    uri: item.jpg\n```\n\nRepresentation URIs are relative to the entity's asset directory, matching\n`nap add`. For this entity, `uri: item.jpg` resolves to\n`character/nathan-gunn/item.jpg` within the repository. Keep `uri: item.jpg`;\nthere is no need to put the entity ID into the representation URI.\n\n### Revision and lifetime\n\n```bash\nnap presign 25th-chapter/character/nathan-gunn item \\\n  --branch main \\\n  --ttl-seconds 900\n```\n\nUse either `--branch` or `--commit`, never both. When neither is supplied, NAP\nuses the repository's configured default branch, falling back to the global\ndefault branch. Branches are pinned to a commit before NAP reads the manifest\nand content address. Lore applies its configured lifetime bounds and defaults\nwhen `--ttl-seconds` is omitted.\n\nThe manifest and representation file must be committed at the selected\nrevision, and the content must have been pushed to the Lore server.\nExternal URLs, linked repositories, absolute paths, path traversal, URI\nfragments, and unversioned working-tree files are not supported.\n\n### Output\n\nIn a terminal, the command prints the URL, expiration, and pinned revision.\nWhen piped or redirected, it emits JSON with `url`, `expires_at`, `revision`,\n`repository_id`, `address`, `representation`, and `format`.\n\nThe returned URL is a bearer capability: anyone who has it can download the\nimmutable bytes until it expires. Do not place it in logs, analytics, exception\nmessages, source control, or long-lived storage.\n\n### Automatic configuration\n\nNAP records the Lore HTTP origin in `provider.toml` during backend setup and\nbackfills older provider configurations automatically. Local Lore uses\n`http://127.0.0.1:41339`; standard remote Lore uses the same host on port 41339;\nTLS deployments behind port 443 use the same HTTPS origin. Portals Cloud uses\n`https://lore.portals.works`. The normal command needs no additional flags:\n\n```bash\nnap presign 25th-chapter/character/nathan-gunn item\n```\n\nAuthenticated requests reuse the active `nap auth login` / Lore identity.\nOnly unexpired repository-scoped tokens authorized for the HTTP recipient are\nused. Automatic credential reuse requires HTTPS for remote servers; loopback\nHTTP is supported for development. No separate HTTP token setup is needed.\n\nOperators with custom proxy layouts can set `http_url` in `provider.toml`.\nExplicit `--http-url` or `NAP_LORE_HTTP_URL` overrides take precedence.\nBearer-token environment overrides remain available for automation.\n\n### Server setup and signing-key security\n\nNew NAP-managed local installations create a unique 32-byte signing key in\nowner-only server configuration and bind to loopback. Existing managed configs\nreceive a missing key without replacing existing keys or other settings.\nRestart an already running server after its configuration changes.\n\nStandalone development Lore provisions a persistent owner-only `presign.key`\nin its configuration directory when no signing key is supplied. Persist this\ndirectory across restarts. Never copy that key into client configuration.\n\nOnly Lore uses the key, to sign and validate download capabilities. It is\nindependent of login tokens, JWT signing keys, and API-key peppers; NAP clients\nnever need it. Keep the key stable across restarts and private to the server.\nServer logs omit signing keys and signed query tokens. Signed responses prevent\ncaching and referrer leakage. Development URLs require network access to the host.\n\nProduction / Portals Cloud presign is WIP. NAP derives the Cloud HTTP origin,\nbut deployment still needs a dedicated shared signing key, scoped HTTPS routes,\nand query-token-safe logging. Without a supplied production key, presign stays\ndisabled. These are operator concerns, not end-user flags or secrets.\n\n### SDK methods\n\nAll three methods take the entity ID and representation name as their first\ntwo arguments, using the same lookup as the CLI:\n\n- Rust: `Resolver::presign_representation(entity_id, representation, &options)`\n  is asynchronous.\n- Python: `presign_representation(entity_id, representation, **options)` is\n  synchronous.\n- TypeScript: `presignRepresentation(entityId, representation, options)` is\n  asynchronous.\n\nPython:\n\n```python\nfrom nap_sdk import presign_representation\n\nresult = presign_representation(\n    \"25th-chapter/character/nathan-gunn\", \"item\", branch=\"main\", ttl_seconds=900\n)\n```\n\nTypeScript:\n\n```typescript\nimport { presignRepresentation } from \"@portalshq/nap-sdk\";\n\nconst result = await presignRepresentation(\n  \"25th-chapter/character/nathan-gunn\",\n  \"item\",\n  { branch: \"main\", ttlSeconds: 900 },\n);\n```\n\nThe SDKs return the same fields as the CLI JSON output.\n",
+      "long_about": "Create a time-limited public URL for a committed representation.\n\nPass the entity ID first and the representation name second:\n\n```bash\npx presign 25th-chapter/character/nathan-gunn item\n```\n\n- `25th-chapter/character/nathan-gunn` identifies the repository, entity type,\n  and entity ID. The `px://` prefix is optional.\n- `item` is the exact key under the entity manifest's `representations` map.\n  It is not a file path or the entity's display name.\n\nThe equivalent fully qualified command is:\n\n```bash\npx presign px://25th-chapter/character/nathan-gunn item\n```\n\n### How the representation is located\n\nPX reads the entity manifest at the selected revision and looks up\n`representations.item`. For example:\n\n```yaml\nrepresentations:\n  item:\n    hash: blake3:<content hash>\n    format: jpg\n    uri: item.jpg\n```\n\nRepresentation URIs are relative to the entity's asset directory, matching\n`px add`. For this entity, `uri: item.jpg` resolves to\n`character/nathan-gunn/item.jpg` within the repository. Keep `uri: item.jpg`;\nthere is no need to put the entity ID into the representation URI.\n\n### Revision and lifetime\n\n```bash\npx presign 25th-chapter/character/nathan-gunn item \\\n  --branch main \\\n  --ttl-seconds 900\n```\n\nUse either `--branch` or `--commit`, never both. When neither is supplied, PX\nuses the repository's configured default branch, falling back to the global\ndefault branch. Branches are pinned to a commit before PX reads the manifest\nand content address. Lore applies its configured lifetime bounds and defaults\nwhen `--ttl-seconds` is omitted.\n\nThe manifest and representation file must be committed at the selected\nrevision, and the content must have been pushed to the Lore server.\nExternal URLs, linked repositories, absolute paths, path traversal, URI\nfragments, and unversioned working-tree files are not supported.\n\n### Output\n\nIn a terminal, the command prints the URL, expiration, and pinned revision.\nWhen piped or redirected, it emits JSON with `url`, `expires_at`, `revision`,\n`repository_id`, `address`, `representation`, and `format`.\n\nThe returned URL is a bearer capability: anyone who has it can download the\nimmutable bytes until it expires. Do not place it in logs, analytics, exception\nmessages, source control, or long-lived storage.\n\n### Automatic configuration\n\nPX records the Lore HTTP origin in `provider.toml` during backend setup and\nbackfills older provider configurations automatically. Local Lore uses\n`http://127.0.0.1:41339`; standard remote Lore uses the same host on port 41339;\nTLS deployments behind port 443 use the same HTTPS origin. Portals Cloud uses\n`https://lore.portals.works`. The normal command needs no additional flags:\n\n```bash\npx presign 25th-chapter/character/nathan-gunn item\n```\n\nAuthenticated requests reuse the active `px auth login` / Lore identity.\nOnly unexpired repository-scoped tokens authorized for the HTTP recipient are\nused. Automatic credential reuse requires HTTPS for remote servers; loopback\nHTTP is supported for development. No separate HTTP token setup is needed.\n\nOperators with custom proxy layouts can set `http_url` in `provider.toml`.\nExplicit `--http-url` or `PX_LORE_HTTP_URL` overrides take precedence.\nBearer-token environment overrides remain available for automation.\n\n### Server setup and signing-key security\n\nNew PX-managed local installations create a unique 32-byte signing key in\nowner-only server configuration and bind to loopback. Existing managed configs\nreceive a missing key without replacing existing keys or other settings.\nRestart an already running server after its configuration changes.\n\nStandalone development Lore provisions a persistent owner-only `presign.key`\nin its configuration directory when no signing key is supplied. Persist this\ndirectory across restarts. Never copy that key into client configuration.\n\nOnly Lore uses the key, to sign and validate download capabilities. It is\nindependent of login tokens, JWT signing keys, and API-key peppers; PX clients\nnever need it. Keep the key stable across restarts and private to the server.\nServer logs omit signing keys and signed query tokens. Signed responses prevent\ncaching and referrer leakage. Development URLs require network access to the host.\n\nProduction / Portals Cloud presign is WIP. PX derives the Cloud HTTP origin,\nbut deployment still needs a dedicated shared signing key, scoped HTTPS routes,\nand query-token-safe logging. Without a supplied production key, presign stays\ndisabled. These are operator concerns, not end-user flags or secrets.\n\n### SDK methods\n\nAll three methods take the entity ID and representation name as their first\ntwo arguments, using the same lookup as the CLI:\n\n- Rust: `Resolver::presign_representation(entity_id, representation, &options)`\n  is asynchronous.\n- Python: `presign_representation(entity_id, representation, **options)` is\n  synchronous.\n- TypeScript: `presignRepresentation(entityId, representation, options)` is\n  asynchronous.\n\nPython:\n\n```python\nfrom px_sdk import presign_representation\n\nresult = presign_representation(\n    \"25th-chapter/character/nathan-gunn\", \"item\", branch=\"main\", ttl_seconds=900\n)\n```\n\nTypeScript:\n\n```typescript\nimport { presignRepresentation } from \"@portalshq/px\";\n\nconst result = await presignRepresentation(\n  \"25th-chapter/character/nathan-gunn\",\n  \"item\",\n  { branch: \"main\", ttlSeconds: 900 },\n);\n```\n\nThe SDKs return the same fields as the CLI JSON output.\n",
       "usage": "Usage: presign [OPTIONS] <ENTITY_ID> <REPRESENTATION>",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
-          "about": "Entity ID, e.g. 25th-chapter/character/nathan-gunn. The nap:// prefix is optional; fragments are not supported",
+          "about": "Entity ID, e.g. 25th-chapter/character/nathan-gunn. The px:// prefix is optional; fragments are not supported",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1195,7 +1195,7 @@
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI",
+          "about": "PX URI",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1390,14 +1390,14 @@
     {
       "name": "resolve",
       "full_path": "resolve",
-      "about": "Resolve a NAP URI to its manifest or a subtree",
-      "long_about": "Resolve a NAP URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: nap resolve nap://toystory/character/woody#references.appears_in",
+      "about": "Resolve a PX URI to its manifest or a subtree",
+      "long_about": "Resolve a PX URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: px resolve px://toystory/character/woody#references.appears_in",
       "usage": "Usage: resolve [OPTIONS] <URI>",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI. e.g., \"nap://toystory/character/woody\"",
+          "about": "PX URI. e.g., \"px://toystory/character/woody\"",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1498,7 +1498,7 @@
           "name": "author",
           "about": "Author identifier",
           "required": false,
-          "default_value": "nap-cli",
+          "default_value": "px",
           "short": "a",
           "long": "author",
           "takes_value": true
@@ -1571,7 +1571,7 @@
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI",
+          "about": "PX URI",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1611,7 +1611,7 @@
           "name": "author",
           "about": "Author identifier",
           "required": false,
-          "default_value": "nap-cli",
+          "default_value": "px",
           "short": "a",
           "long": "author",
           "takes_value": true
@@ -1641,7 +1641,7 @@
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI",
+          "about": "PX URI",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1765,14 +1765,14 @@
     {
       "name": "validate",
       "full_path": "validate",
-      "about": "Validate a manifest against the NAP schema",
+      "about": "Validate a manifest against the PX schema",
       "long_about": null,
       "usage": "Usage: validate [OPTIONS] [URI]",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI of the entity to validate",
+          "about": "PX URI of the entity to validate",
           "required": false,
           "default_value": null,
           "short": null,
@@ -1815,7 +1815,7 @@
       "arguments": [
         {
           "name": "uri",
-          "about": "NAP URI",
+          "about": "PX URI",
           "required": true,
           "default_value": null,
           "short": null,

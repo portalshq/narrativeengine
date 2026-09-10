@@ -1,0 +1,45 @@
+Resolve a PX URI to its manifest or a subtree.
+
+Fragment queries are supported via the URI: px resolve px://toystory/character/woody#references.appears_in
+
+Usage: px resolve [OPTIONS] <URI>
+
+Arguments:
+  <URI>
+          PX URI. e.g., "px://toystory/character/woody"
+
+Options:
+      --branch <BRANCH>
+          Resolve at a specific branch
+
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset
+
+          [env: PX_DIR=]
+
+      --commit <COMMIT>
+          Resolve at a specific commit hash
+
+  -v, --verbose
+          Enable verbose debug logging
+
+  -f, --format <FORMAT>
+          Output format: yaml, json
+
+          [env: PX_OUTPUT=]
+          [default: yaml]
+
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
+      --provenance
+          Include condensed per-file provenance for the manifest and direct representations
+
+      --include-blobs
+          Hydrate known readable provenance artifacts such as prompts and run records
+
+  -h, --help
+          Print help (see a summary with '-h')

@@ -1,0 +1,13 @@
+[package]
+name = "px-test-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Shared test utilities for PX crates"
+
+[dependencies]
+px-core = { package = "portalshq-px", path = "../px-core", features = ["test-utils"] }
+chrono = { workspace = true }
+serde_yaml = { workspace = true }
+tempfile = { workspace = true }

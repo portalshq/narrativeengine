@@ -5,14 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# nap-core Compilation Fixes and Enhancements Summary
+# px-core Compilation Fixes and Enhancements Summary
 
 **Date:** 2026-07-10
-**Objective:** Fix compilation errors in nap-core crate and enhance error handling, debugging, and robustness
+**Objective:** Fix compilation errors in px-core crate and enhance error handling, debugging, and robustness
 
 ## Overview
 
-This document summarizes the comprehensive fixes applied to the nap-core crate to resolve compilation errors, improve error handling, add debug capabilities, and implement rollback mechanisms for failed operations.
+This document summarizes the comprehensive fixes applied to the px-core crate to resolve compilation errors, improve error handling, add debug capabilities, and implement rollback mechanisms for failed operations.
 
 ## 1. Compilation Error Fixes
 
@@ -99,7 +99,7 @@ Enhanced existing manual validation in `ProviderConfig::validate()` with:
 ## 3. Debug Mode Support
 
 ### 3.1 Debug Environment Variable
-Added `is_debug_enabled()` function to check `NAP_DEBUG` environment variable.
+Added `is_debug_enabled()` function to check `PX_DEBUG` environment variable.
 
 **Accepted Values:** "1", "true", "yes" (case-insensitive)
 
@@ -191,7 +191,7 @@ Added debug logging throughout provider operations:
 ### 7.2 Unused Imports
 **Warning:** Several unused imports across multiple files
 **Impact:** Low - cosmetic only
-**Recommendation:** Run `cargo fix --lib -p nap-core` to auto-remove
+**Recommendation:** Run `cargo fix --lib -p portalshq-px` to auto-remove
 
 ## 8. Potential Bugs and Oversights - FIXED
 
@@ -260,7 +260,7 @@ Added detailed recovery guidance for rollback failures:
 
 ## 10. Conclusion
 
-All compilation errors in the nap-core crate have been resolved. The codebase now features:
+All compilation errors in the px-core crate have been resolved. The codebase now features:
 - Robust error handling with descriptive messages
 - Debug mode for troubleshooting
 - Rollback mechanisms for failed operations

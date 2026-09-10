@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap sync
+# px sync
 Sync with remote
 
 
 ## Synopsis
 ```bash
-nap sync <REPOSITORY>
+px sync <REPOSITORY>
 ```
 
 
@@ -31,5 +31,5 @@ nap sync <REPOSITORY>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `sync` command
+`crates/px-cli/src/main.rs` — `sync` command
 

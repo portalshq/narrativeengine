@@ -1,0 +1,16 @@
+Manage secure Portals Cloud authentication
+
+Usage: px auth [OPTIONS] <COMMAND>
+
+Commands:
+  login   Sign in through the configured Lore authentication service
+  status  Show the currently cached Lore identity without printing tokens
+  logout  Remove locally cached Lore credentials
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
+  -v, --verbose              Enable verbose debug logging
+      --remote               Resolve repository reads through the configured Lore server (the default)
+      --local                Resolve repository reads from an explicitly checked-out local working tree
+  -h, --help                 Print help

@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap doctor
+# px doctor
 Run diagnostics and repair
 
 
 ## Synopsis
 ```bash
-nap doctor [OPTIONS]
+px doctor [OPTIONS]
 ```
 
 
@@ -25,5 +25,5 @@ nap doctor [OPTIONS]
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `doctor` command
+`crates/px-cli/src/main.rs` — `doctor` command
 

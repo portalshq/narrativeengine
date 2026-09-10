@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap backend
+# px backend
 Configure or inspect the version-control backend
 
 
 ## Synopsis
 ```bash
-nap backend <COMMAND>
+px backend <COMMAND>
 ```
 
 
@@ -32,5 +32,5 @@ nap backend <COMMAND>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `backend` command
+`crates/px-cli/src/main.rs` — `backend` command
 

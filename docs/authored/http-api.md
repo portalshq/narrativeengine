@@ -1,28 +1,28 @@
 ## HTTP Server
 
-The NAP resolver server provides a REST API for resolution and commits.
+The PX resolver server provides a REST API for resolution and commits.
 
 ```bash
 # Start the server (defaults to port 3100, base path = current directory)
-nap-server
+px-server
 
 # Custom port and base path
-NAP_PORT=8080 NAP_BASE_PATH=/path/to/repositories nap-server
+PX_PORT=8080 PX_BASE_PATH=/path/to/repositories px-server
 ```
 
 ---
 
 ## Configuration
 
-NAP core uses environment variables for configuration. All variables serve specific purposes with minimal overlap.
+PX core uses environment variables for configuration. All variables serve specific purposes with minimal overlap.
 
 ### Storage Configuration
 
 | Variable | Purpose | Default | Required |
 |----------|---------|---------|----------|
-| `NAP_STORAGE_BACKEND` | Storage backend selection (`local` or `s3`) | `local` | No |
-| `NAP_DIR` | Base directory for local storage | `~/.nap` | No (local) |
-| `NAP_S3_BUCKET` | S3 bucket name | — | Yes (s3) |
+| `PX_STORAGE_BACKEND` | Storage backend selection (`local` or `s3`) | `local` | No |
+| `PX_DIR` | Base directory for local storage | `~/.px` | No (local) |
+| `PX_S3_BUCKET` | S3 bucket name | — | Yes (s3) |
 | `AWS_ACCESS_KEY_ID` | AWS/R2 access key | — | Yes (s3) |
 | `AWS_SECRET_ACCESS_KEY` | AWS/R2 secret key | — | Yes (s3) |
 | `AWS_REGION` | AWS region | — | Yes (s3) |
@@ -33,15 +33,15 @@ NAP core uses environment variables for configuration. All variables serve speci
 
 | Variable | Purpose | Default | Required |
 |----------|---------|---------|----------|
-| `NAP_LORE_URL_BASE` | Lore server URL base | `lore://localhost:8700` | No |
-| `NAP_WORKSPACE_ID` | Workspace identifier for multi-tenancy | `default` | No |
-| `NAPLORE_CLI` | Path to lore CLI binary | `lore` (from PATH) | No |
-| `NAP_LORE_GRPC_ENDPOINT` | gRPC endpoint for branch ref sync | — | No (optional) |
-| `NAP_LORE_GRPC_TOKEN` | JWT bearer token for gRPC auth | — | No (optional) |
-| `NAP_LORE_GRPC_RID` | Repository ID (hex-encoded) for gRPC | — | No (optional) |
-| `NAP_LORE_GRPC_INSECURE` | Skip TLS verification (`1`/`true`/`yes`) | `0` | No (optional) |
-| `NAP_LORE_HTTP_URL` | Explicit Lore HTTP origin for presigned URLs | `http://127.0.0.1:41339` for local Lore | No |
-| `NAP_LORE_HTTP_TOKEN` | Repository-scoped bearer token for Lore HTTP presign requests | Falls back to `NAP_LORE_GRPC_TOKEN`, then the active Lore login | No |
+| `PX_LORE_URL_BASE` | Lore server URL base | `lore://localhost:8700` | No |
+| `PX_WORKSPACE_ID` | Workspace identifier for multi-tenancy | `default` | No |
+| `PXLORE_CLI` | Path to lore CLI binary | `lore` (from PATH) | No |
+| `PX_LORE_GRPC_ENDPOINT` | gRPC endpoint for branch ref sync | — | No (optional) |
+| `PX_LORE_GRPC_TOKEN` | JWT bearer token for gRPC auth | — | No (optional) |
+| `PX_LORE_GRPC_RID` | Repository ID (hex-encoded) for gRPC | — | No (optional) |
+| `PX_LORE_GRPC_INSECURE` | Skip TLS verification (`1`/`true`/`yes`) | `0` | No (optional) |
+| `PX_LORE_HTTP_URL` | Explicit Lore HTTP origin for presigned URLs | `http://127.0.0.1:41339` for local Lore | No |
+| `PX_LORE_HTTP_TOKEN` | Repository-scoped bearer token for Lore HTTP presign requests | Falls back to `PX_LORE_GRPC_TOKEN`, then the active Lore login | No |
 
 See the [presign reference](docs/generated/commands/presign.md) for automatic
 provider endpoint selection, login reuse, and server key provisioning.
@@ -50,9 +50,9 @@ provider endpoint selection, login reuse, and server key provisioning.
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `NAP_DIR` (const) | `.nap` | Metadata directory name within repositories |
+| `PX_DIR` (const) | `.px` | Metadata directory name within repositories |
 
-**Note:** The environment variable `NAP_DIR` (storage base directory) and the constant `NAP_DIR` (metadata directory name) serve different purposes and do not overlap.
+**Note:** The environment variable `PX_DIR` (storage base directory) and the constant `PX_DIR` (metadata directory name) serve different purposes and do not overlap.
 
 ### Endpoints
 

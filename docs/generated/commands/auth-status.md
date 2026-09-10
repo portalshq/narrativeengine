@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap auth status
+# px auth status
 Show the currently cached Lore identity without printing tokens
 
 
 ## Synopsis
 ```bash
-nap status
+px status
 ```
 
 
@@ -24,5 +24,5 @@ nap status
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `status` command
+`crates/px-cli/src/main.rs` — `status` command
 

@@ -6,16 +6,16 @@ cd "$ROOT_DIR"
 
 CURRENT_VERSION=$(grep '^version = ' "$ROOT_DIR/Cargo.toml" | head -1 | sed 's/^version = "\(.*\)"/\1/')
 WORKSPACE_PACKAGES=(
-  "nap-cli"
-  "nap-mcp-server"
-  "nap-core"
-  "nap-docgen"
-  "nap-server"
-  "nap-test-utils"
+  "portalshq-px-cli"
+  "px-mcp-server"
+  "portalshq-px"
+  "px-docgen"
+  "px-server"
+  "px-test-utils"
   "narrativeengine"
   "narrativeengine-py"
-  "nap-sdk-py"
-  "nap-sdk-ts"
+  "px-sdk-py"
+  "px-sdk-ts"
 )
 
 usage() {
@@ -131,24 +131,24 @@ root = Path(sys.argv[1])
 current = sys.argv[2]
 new = sys.argv[3]
 workspace_packages = [
-    "nap-cli",
-    "nap-mcp-server",
-    "nap-core",
-    "nap-docgen",
-    "nap-server",
-    "nap-test-utils",
+    "portalshq-px-cli",
+    "px-mcp-server",
+    "portalshq-px",
+    "px-docgen",
+    "px-server",
+    "px-test-utils",
     "narrativeengine",
     "narrativeengine-py",
-    "nap-sdk-py",
-    "nap-sdk-ts",
+    "px-sdk-py",
+    "px-sdk-ts",
     ]
 
 replacements = {
     root / "Cargo.toml": [(f'version = "{current}"', f'version = "{new}"')],
     root / "python/narrativeengine/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
-    root / "python/nap-sdk/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
+    root / "python/px-sdk/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
     root / "typescript/narrativeengine/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
-    root / "typescript/nap-sdk/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
+    root / "typescript/px-sdk/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
 }
 
 for path, ops in replacements.items():
@@ -161,7 +161,7 @@ for path, ops in replacements.items():
 
 for path in [
     root / "typescript/narrativeengine/package-lock.json",
-    root / "typescript/nap-sdk/package-lock.json",
+    root / "typescript/px-sdk/package-lock.json",
 ]:
     document = json.loads(path.read_text())
     if document.get("version") != current or document.get("packages", {}).get("", {}).get("version") != current:
@@ -172,7 +172,7 @@ for path in [
 
 for path, package in [
     (root / "python/narrativeengine/uv.lock", "narrativeengine"),
-    (root / "python/nap-sdk/uv.lock", "nap-sdk"),
+    (root / "python/px-sdk/uv.lock", "px-sdk"),
 ]:
     text = path.read_text()
     pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = "){re.escape(current)}(")'
@@ -198,17 +198,17 @@ echo ""
 echo "Running pre-publish validation..."
 
 npm --prefix typescript/narrativeengine ci
-npm --prefix typescript/nap-sdk ci
+npm --prefix typescript/px-sdk ci
 env GITHUB_REF_NAME="$RELEASE_TAG" node scripts/pre-publish-check.mjs
 npm --prefix typescript/narrativeengine run build:types
-npm --prefix typescript/nap-sdk run build:types
+npm --prefix typescript/px-sdk run build:types
 
 echo "✓ Release validation passed"
 
 echo ""
 echo "Committing and tagging $RELEASE_TAG..."
 
-git add Cargo.toml Cargo.lock crates/nap-core/Cargo.toml crates/nap-cli/Cargo.toml crates/nap-mcp-server/Cargo.toml crates/nap-docgen/Cargo.toml crates/nap-server/Cargo.toml crates/nap-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/narrativeengine/uv.lock python/nap-sdk/pyproject.toml python/nap-sdk/uv.lock typescript/narrativeengine/package.json typescript/narrativeengine/package-lock.json typescript/nap-sdk/Cargo.toml typescript/nap-sdk/package.json typescript/nap-sdk/package-lock.json
+git add Cargo.toml Cargo.lock crates/px-core/Cargo.toml crates/px-cli/Cargo.toml crates/px-mcp-server/Cargo.toml crates/px-docgen/Cargo.toml crates/px-server/Cargo.toml crates/px-test-utils/Cargo.toml crates/narrativeengine/Cargo.toml python/narrativeengine/pyproject.toml python/narrativeengine/uv.lock python/px-sdk/pyproject.toml python/px-sdk/uv.lock typescript/narrativeengine/package.json typescript/narrativeengine/package-lock.json typescript/px-sdk/Cargo.toml typescript/px-sdk/package.json typescript/px-sdk/package-lock.json
 if [ -n "${RELEASE_COMMIT_COAUTHOR:-}" ]; then
   git commit -m "chore(release): cut $RELEASE_TAG" -m "Co-Authored-By: ${RELEASE_COMMIT_COAUTHOR}"
 else
@@ -225,4 +225,4 @@ echo ""
 echo "✓ Pushed $RELEASE_TAG"
 echo "→ GitHub Actions publish workflow should now be running"
 echo "→ If the 'production' environment requires approval, approve it in GitHub"
-echo "https://github.com/DigitalCreationsCo/narrativeengine/actions"
+echo "https://github.com/portalshq/narrativeengine/actions"

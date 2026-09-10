@@ -34,11 +34,11 @@ NEW_VERSION=$(node -e "
 node -e "
   const fs = require('fs');
   const pkg1 = JSON.parse(fs.readFileSync('./typescript/narrativeengine/package.json'));
-  const pkg2 = JSON.parse(fs.readFileSync('./typescript/nap-sdk/package.json'));
+  const pkg2 = JSON.parse(fs.readFileSync('./typescript/px-sdk/package.json'));
   pkg1.version = '$NEW_VERSION';
   pkg2.version = '$NEW_VERSION';
   fs.writeFileSync('./typescript/narrativeengine/package.json', JSON.stringify(pkg1, null, 2) + '\n');
-  fs.writeFileSync('./typescript/nap-sdk/package.json', JSON.stringify(pkg2, null, 2) + '\n');
+  fs.writeFileSync('./typescript/px-sdk/package.json', JSON.stringify(pkg2, null, 2) + '\n');
 "
 
 echo "✨ New version: $NEW_VERSION"

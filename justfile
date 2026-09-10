@@ -1,4 +1,4 @@
-# Justfile for NAP project commands
+# Justfile for PX project commands
 # Install: cargo install just
 # Run: just <command>
 
@@ -48,11 +48,11 @@ test-integration-cloud:
 
 # Run local integration tests directly via cargo
 test-local:
-    cargo test -p nap-cli --test local_lore_suite --features local-e2e -- --test-threads=1
+    cargo test -p portalshq-px-cli --test local_lore_suite --features local-e2e -- --test-threads=1
 
 # Run cloud integration tests directly via cargo
 test-cloud:
-    cargo test -p nap-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1
+    cargo test -p portalshq-px-cli --test cloud_lore_suite --features lore-e2e -- --test-threads=1
 
 # =============================================================================
 # Publish Commands
@@ -91,20 +91,20 @@ watch:
 fmt:
     cargo fmt
     @./typescript/narrativeengine/npm run format
-    @./typescript/nap-sdk/npm run format
+    @./typescript/px-sdk/npm run format
 
 # Lint code
 lint:
     cargo clippy -- -D warnings
     @./typescript/narrativeengine/npm run lint
-    @./typescript/nap-sdk/npm run lint
+    @./typescript/px-sdk/npm run lint
 
 # Clean build artifacts
 clean:
     cargo clean
     rm -rf node_modules/*/node_modules
     rm -rf python/narrativeengine/build
-    rm -rf python/nap-sdk/build
+    rm -rf python/px-sdk/build
 
 # =============================================================================
 # Documentation
@@ -112,8 +112,8 @@ clean:
 
 # Generate documentation from source
 docgen:
-    cargo build -p nap-cli
-    cargo run -p nap-docgen
+    cargo build -p portalshq-px-cli
+    cargo run -p px-docgen
 
 # Open rustdoc documentation in browser
 docs:
@@ -121,8 +121,8 @@ docs:
 
 # Validate that generated documentation is current
 docs-check:
-    cargo build -p nap-cli
-    cargo run -p nap-docgen
+    cargo build -p portalshq-px-cli
+    cargo run -p px-docgen
     @echo "Checking for uncommitted documentation changes..."
     @if git diff --exit-code -- docs/generated/ skills/ README.md > /dev/null 2>&1; then \
         echo "Documentation is up to date."; \
@@ -135,18 +135,18 @@ docs-check:
 # Quick Start Examples
 # =============================================================================
 
-# Example: Initialize NAP with local provider
+# Example: Initialize PX with local provider
 init-local:
-    cargo run -p nap-cli -- init --provider local
+    cargo run -p portalshq-px-cli -- init --provider local
 
-# Example: Initialize NAP with cloud provider
+# Example: Initialize PX with cloud provider
 init-cloud:
-    cargo run -p nap-cli -- init --provider portals-cloud
+    cargo run -p portalshq-px-cli -- init --provider portals-cloud
 
 # Example: Create a test repository
 create-repository repository:
-    cargo run -p nap-cli -- init {{repository}}
+    cargo run -p portalshq-px-cli -- init {{repository}}
 
 # Example: Create a character entity
 create-character repository id name:
-    cargo run -p nap-cli -- create --repository {{repository}} character {{id}} --name {{name}}
+    cargo run -p portalshq-px-cli -- create --repository {{repository}} character {{id}} --name {{name}}

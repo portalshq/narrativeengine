@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap diff
+# px diff
 Show diff between two manifest files or versions
 
 
 ## Synopsis
 ```bash
-nap diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
+px diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
 ```
 
 
@@ -39,5 +39,5 @@ nap diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `diff` command
+`crates/px-cli/src/main.rs` — `diff` command
 

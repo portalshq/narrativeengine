@@ -1,0 +1,13 @@
+Show the current HEAD commit hash
+
+Usage: px head-hash [OPTIONS] <REPOSITORY>
+
+Arguments:
+  <REPOSITORY>  Repository name
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
+  -v, --verbose              Enable verbose debug logging
+      --remote               Resolve repository reads through the configured Lore server (the default)
+      --local                Resolve repository reads from an explicitly checked-out local working tree
+  -h, --help                 Print help

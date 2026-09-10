@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap remote ls
+# px remote ls
 List remotes on a repository repository
 
 
 ## Synopsis
 ```bash
-nap ls <REPOSITORY>
+px ls <REPOSITORY>
 ```
 
 
@@ -31,5 +31,5 @@ nap ls <REPOSITORY>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `ls` command
+`crates/px-cli/src/main.rs` — `ls` command
 

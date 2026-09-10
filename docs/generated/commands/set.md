@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap set
+# px set
 Set a property on an entity manifest
 
 
 ## Synopsis
 ```bash
-nap set [OPTIONS] <URI> <KEY> <VALUE>
+px set [OPTIONS] <URI> <KEY> <VALUE>
 ```
 
 
@@ -21,7 +21,7 @@ nap set [OPTIONS] <URI> <KEY> <VALUE>
 | Name | Description | Required |
 |---|---|---|
 | key | Property key (dot-notation) | Yes |
-| uri | NAP URI | Yes |
+| uri | PX URI | Yes |
 | value | Property value | Yes |
 
 
@@ -29,7 +29,7 @@ nap set [OPTIONS] <URI> <KEY> <VALUE>
 
 | Flag | Description | Default |
 |---|---|---|
-| -a, --author | Author identifier | nap-cli |
+| -a, --author | Author identifier | px |
 | -m, --message | Commit message | set property |
 
 
@@ -41,5 +41,5 @@ nap set [OPTIONS] <URI> <KEY> <VALUE>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `set` command
+`crates/px-cli/src/main.rs` — `set` command
 

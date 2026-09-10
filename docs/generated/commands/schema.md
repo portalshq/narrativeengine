@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap schema
+# px schema
 Print a JSON Schema for manifest or commit types
 
 
 ## Synopsis
 ```bash
-nap schema [OPTIONS] <NAME>
+px schema [OPTIONS] <NAME>
 ```
 
 
@@ -38,5 +38,5 @@ nap schema [OPTIONS] <NAME>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `schema` command
+`crates/px-cli/src/main.rs` — `schema` command
 

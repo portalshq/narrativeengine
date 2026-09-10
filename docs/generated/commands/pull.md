@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap pull
+# px pull
 Clone or pull a repository from a remote
 
 
 ## Synopsis
 ```bash
-nap pull <URL_OR_NAME>
+px pull <URL_OR_NAME>
 ```
 
 
@@ -37,5 +37,5 @@ If the argument is a URL, the repo is cloned (name is read from the repo's own c
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `pull` command
+`crates/px-cli/src/main.rs` — `pull` command
 

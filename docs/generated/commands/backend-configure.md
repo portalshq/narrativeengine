@@ -1,25 +1,25 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap backend configure
+# px backend configure
 Configure the version-control backend
 
 
 ## Synopsis
 ```bash
-nap configure [OPTIONS] <BACKEND>
+px configure [OPTIONS] <BACKEND>
 ```
 
 
 ## Description
 Configure the version-control backend.
 
-After configuration, existing unversioned repositories in this NAP home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).
+After configuration, existing unversioned repositories in this PX home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).
 
 
 ## Arguments
@@ -47,5 +47,5 @@ After configuration, existing unversioned repositories in this NAP home are offe
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `configure` command
+`crates/px-cli/src/main.rs` — `configure` command
 

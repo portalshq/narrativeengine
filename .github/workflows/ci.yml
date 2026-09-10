@@ -24,7 +24,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             typescript/narrativeengine/package-lock.json
-            typescript/nap-sdk/package-lock.json
+            typescript/px-sdk/package-lock.json
       - uses: arduino/setup-protoc@v3
         with:
           # Must match publish-narrativeengine-typescript.yml AND the protoc
@@ -63,7 +63,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             typescript/narrativeengine/package-lock.json
-            typescript/nap-sdk/package-lock.json
+            typescript/px-sdk/package-lock.json
       - run: pip install maturin mypy pytest ruff pydantic
       - run: python -c "import shutil, pathlib; p = pathlib.Path('target/wheels'); shutil.rmtree(p, ignore_errors=True); p.mkdir(parents=True, exist_ok=True)"
       - run: maturin build --release --out ../../target/wheels
@@ -72,7 +72,7 @@ jobs:
         working-directory: typescript/narrativeengine
       - run: npm run build
         working-directory: typescript/narrativeengine
-      - run: cargo test --workspace --exclude narrativeengine-py --exclude nap-sdk-py --exclude nap-sdk-ts
+      - run: cargo test --workspace --exclude narrativeengine-py --exclude px-sdk-py --exclude px-sdk-ts
       - run: >-
           python -c "import pathlib, subprocess, sys; wheels = sorted(pathlib.Path('target/wheels').glob('narrativeengine-*.whl')); preferred = [w for w in wheels if 'manylinux' in w.name or 'musllinux' in w.name]; chosen = preferred[0] if preferred else wheels[0]; print(f'Installing wheel: {chosen}'); sys.exit(subprocess.call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', str(chosen)]))"
         shell: bash

@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap remote
+# px remote
 Manage remotes on a repository
 
 
 ## Synopsis
 ```bash
-nap remote <COMMAND>
+px remote <COMMAND>
 ```
 
 
@@ -33,5 +33,5 @@ nap remote <COMMAND>
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `remote` command
+`crates/px-cli/src/main.rs` — `remote` command
 

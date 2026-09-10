@@ -37,5 +37,5 @@ Divide the image into three distinct columns:
 
 Produce an official-quality reference asset with complete stylistic and design
 continuity from the supplied samples. Generate the image, then apply
-`nap-update` to store it as the entity's `character_sheet` representation and
+`px-update` to store it as the entity's `character_sheet` representation and
 commit the updated manifest.

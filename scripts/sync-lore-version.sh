@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sync Lore version from cloud's versions.yaml to nap's hardcoded constants
+# Sync Lore version from cloud's versions.yaml to px's hardcoded constants
 #
 # Usage:
 #   ./scripts/sync-lore-version.sh [path-to-cloud-repo]          # interactive sync
@@ -20,7 +20,7 @@ if [[ "${1:-}" == "--check-only" ]]; then
 fi
 
 CLOUD_REPO="${1:-../cloud}"
-VERSION_RS="crates/nap-core/src/server/version.rs"
+VERSION_RS="crates/px-core/src/server/version.rs"
 VERSIONS_YAML_URL="https://raw.githubusercontent.com/portalshq/portals-cloud/main/infra/lore/versions.yaml"
 
 # ── Helper: extract a YAML value ────────────────────────────────────────
@@ -218,7 +218,7 @@ fi
 # ── Interactive sync ────────────────────────────────────────────────────
 
 echo "========================================"
-echo "  Sync Lore Version from Cloud to Nap"
+echo "  Sync Lore Version from Cloud to Px"
 echo "========================================"
 echo ""
 
@@ -303,13 +303,13 @@ echo ""
 
 # Create backup
 BACKUP_RS=$(mktemp "${VERSION_RS}.backup.XXXXXX")
-INTEGRATION_RS="crates/nap-core/tests/lore_version_integration.rs"
+INTEGRATION_RS="crates/px-core/tests/lore_version_integration.rs"
 BACKUP_INTEGRATION=""
 if [[ -f "$INTEGRATION_RS" ]]; then
     BACKUP_INTEGRATION=$(mktemp "${INTEGRATION_RS}.backup.XXXXXX")
     cp "$INTEGRATION_RS" "$BACKUP_INTEGRATION"
 fi
-INSTALL_RS="crates/nap-core/src/server/install.rs"
+INSTALL_RS="crates/px-core/src/server/install.rs"
 BACKUP_INSTALL=""
 if [[ -f "$INSTALL_RS" ]]; then
     BACKUP_INSTALL=$(mktemp "${INSTALL_RS}.backup.XXXXXX")

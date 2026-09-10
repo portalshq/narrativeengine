@@ -27,7 +27,7 @@
 //! # Entity Enrichment Integration
 //!
 //! Entity extraction and representation retrieval are provided as extension points for application integration:
-//! - Applications can implement nap-sdk integration using the provided callbacks
+//! - Applications can implement px-sdk integration using the provided callbacks
 //! - Entity extraction is optional and configurable via `GenerationParameters`
 //! - Graceful degradation: missing or failed enrichment returns empty collections
 //!

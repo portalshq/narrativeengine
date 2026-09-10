@@ -1,32 +1,32 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap resolve
-Resolve a NAP URI to its manifest or a subtree
+# px resolve
+Resolve a PX URI to its manifest or a subtree
 
 
 ## Synopsis
 ```bash
-nap resolve [OPTIONS] <URI>
+px resolve [OPTIONS] <URI>
 ```
 
 
 ## Description
-Resolve a NAP URI to its manifest or a subtree.
+Resolve a PX URI to its manifest or a subtree.
 
-Fragment queries are supported via the URI: nap resolve nap://toystory/character/woody#references.appears_in
+Fragment queries are supported via the URI: px resolve px://toystory/character/woody#references.appears_in
 
 
 ## Arguments
 
 | Name | Description | Required |
 |---|---|---|
-| uri | NAP URI. e.g., "nap://toystory/character/woody" | Yes |
+| uri | PX URI. e.g., "px://toystory/character/woody" | Yes |
 
 
 ## Options
@@ -51,28 +51,28 @@ Fragment queries are supported via the URI: nap resolve nap://toystory/character
 
 | Variable | Description |
 |---|---|
-| NAP\_OUTPUT | Override for --format |
+| PX\_OUTPUT | Override for --format |
 
 
 ## Examples
 ```bash
 # Resolve a full manifest
-nap resolve nap://toystory/character/woody
+px resolve px://toystory/character/woody
 
 # Resolve as JSON
-nap resolve nap://toystory/character/woody -f json
+px resolve px://toystory/character/woody -f json
 
 # Resolve at a specific branch
-nap resolve nap://toystory/character/woody --branch canon
+px resolve px://toystory/character/woody --branch canon
 
 # Resolve a subtree via fragment query
-nap resolve nap://toystory/character/woody#properties.toy_type
+px resolve px://toystory/character/woody#properties.toy_type
 # → human
 
 # Resolve a nested subtree
-nap resolve nap://toystory/character/woody#references.appears_in
+px resolve px://toystory/character/woody#references.appears_in
 ```
 
 ## Source
-`crates/nap-cli/src/main.rs` — `resolve` command
+`crates/px-cli/src/main.rs` — `resolve` command
 

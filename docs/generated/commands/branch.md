@@ -1,18 +1,18 @@
 ---
 generated: "true"
-generator: nap-docgen
-version: 0.8.14
+generator: px-docgen
+version: 0.8.15
 source: clap
 ---
 
 
-# nap branch
+# px branch
 Create or list branches
 
 
 ## Synopsis
 ```bash
-nap branch <REPOSITORY> [NAME]
+px branch <REPOSITORY> [NAME]
 ```
 
 
@@ -32,5 +32,5 @@ nap branch <REPOSITORY> [NAME]
 
 
 ## Source
-`crates/nap-cli/src/main.rs` — `branch` command
+`crates/px-cli/src/main.rs` — `branch` command
 

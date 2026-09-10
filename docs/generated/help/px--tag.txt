@@ -1,0 +1,12 @@
+Create or list tags
+
+Usage: px tag [OPTIONS] <REPOSITORY> [NAME]
+
+Arguments:
+  <REPOSITORY>  Repository name
+  [NAME]        Tag name to create. Omit to list all tags
+
+Options:
+  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
+  -v, --verbose              Enable verbose debug logging
+  -h, --help                 Print help

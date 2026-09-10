@@ -1,8 +1,8 @@
-# NAP Structured Merge Engine v2
+# PX Structured Merge Engine v2
 
 ## Canonical Merge Semantics
 
-This document is the **source of truth** for NAP merge behavior.
+This document is the **source of truth** for PX merge behavior.
 
 All implementations must implement these rules exactly. Protocol invariants
 are hardcoded — they are never configurable, never expressed in SDL, and
@@ -65,7 +65,7 @@ Git Commit (storage only)
 |---|---|
 | **SDL** | Schema + merge strategy metadata (varies by schema) |
 | **Merge Semantics v2** | Protocol invariants (never vary) |
-| **nap-core** | Implementation |
+| **px-core** | Implementation |
 
 ---
 
@@ -705,5 +705,5 @@ This is guaranteed by:
 
 ---
 
-*This document is the canonical specification for NAP Structured
+*This document is the canonical specification for PX Structured
 Merge Engine v2. All implementations must conform to these semantics.*
