@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  publish:
+  publish-core:
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -24,5 +24,26 @@ jobs:
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - run: cargo publish -p portalshq-px
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  publish-cli:
+    needs: publish-core
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo publish -p portalshq-px-cli --dry-run
+      # Requires a trusted publisher on crates.io for crate `portalshq-px-cli`
+      # pointing at portalshq/narrativeengine + this workflow file (+ production env).
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - run: cargo publish -p portalshq-px-cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
