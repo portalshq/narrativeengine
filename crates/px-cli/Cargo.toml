@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "CLI for the PX protocol"
+repository = "https://github.com/portalshq/narrativeengine"
+homepage = "https://github.com/portalshq/narrativeengine"
 
 [[bin]]
 name = "px"
