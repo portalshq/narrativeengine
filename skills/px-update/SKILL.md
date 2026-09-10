@@ -215,7 +215,7 @@ PX persistence failed: Atlas revision was generated but not committed.
 
 
 # PX CLI Reference
-The `px` command-line interface (v0.8.17) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
+The `px` command-line interface (v0.8.18) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview

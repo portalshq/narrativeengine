@@ -1,6 +1,6 @@
 {
   "name": "@portalshq/px",
-  "version": "0.8.17",
+  "version": "0.8.18",
   "description": "TypeScript SDK for PX, powered by Rust and NAPI-RS.",
   "publishConfig": {
     "access": "public"
