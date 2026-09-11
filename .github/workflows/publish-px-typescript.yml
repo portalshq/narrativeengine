@@ -86,7 +86,16 @@ jobs:
 
       - run: |
           ls -la *.node index.cjs
-          npm pack --dry-run | grep -F 'index.cjs'
+          npm pack --dry-run --json | node -e '
+            let input = "";
+            process.stdin.on("data", (chunk) => input += chunk);
+            process.stdin.on("end", () => {
+              const [{ files = [] }] = Object.values(JSON.parse(input));
+              if (!files.some(({ path }) => path === "index.cjs")) {
+                throw new Error("npm package is missing index.cjs");
+              }
+            });
+          '
         working-directory: typescript/px-sdk
 
       # Publish via npm Trusted Publishing (OIDC): no NODE_AUTH_TOKEN.
