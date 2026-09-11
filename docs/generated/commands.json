@@ -1,6 +1,6 @@
 {
   "generator": "px-docgen",
-  "version": "0.8.20",
+  "version": "0.8.21",
   "commands": [
     {
       "name": "add",
