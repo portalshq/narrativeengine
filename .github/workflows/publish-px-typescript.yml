@@ -85,7 +85,7 @@ jobs:
         working-directory: typescript/px-sdk
 
       - run: |
-          ls -la typescript/px-sdk/*.node typescript/px-sdk/index.cjs
+          ls -la *.node index.cjs
           npm pack --dry-run | grep -F 'index.cjs'
         working-directory: typescript/px-sdk
 
