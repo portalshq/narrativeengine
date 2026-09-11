@@ -74,10 +74,20 @@ jobs:
           path: typescript/px-sdk/
           merge-multiple: true
 
+      # napi-rs generates index.js alongside the native binary. The package's
+      # ESM wrapper loads this CommonJS loader, so generate and retain it in
+      # the publish workspace even though the platform binaries came from the
+      # build matrix above.
+      - run: npm run build:native
+        working-directory: typescript/px-sdk
+
       - run: npm run build:types
         working-directory: typescript/px-sdk
 
-      - run: ls -la typescript/px-sdk/*.node
+      - run: |
+          ls -la typescript/px-sdk/*.node typescript/px-sdk/index.cjs
+          npm pack --dry-run | grep -F 'index.cjs'
+        working-directory: typescript/px-sdk
 
       # Publish via npm Trusted Publishing (OIDC): no NODE_AUTH_TOKEN.
       # Requires a trusted publisher on npmjs.com for @portalshq/px
