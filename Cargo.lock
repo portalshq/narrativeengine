@@ -1565,7 +1565,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "chrono",
  "narrativeengine",
@@ -1587,7 +1587,7 @@ dependencies = [
 
 [[package]]
 name = "narrativeengine-py"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "narrativeengine",
  "pyo3",
@@ -1913,7 +1913,7 @@ checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
 
 [[package]]
 name = "portalshq-px"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1956,7 +1956,7 @@ dependencies = [
 
 [[package]]
 name = "portalshq-px-cli"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2193,7 +2193,7 @@ checksum = "95067976aca6421a523e491fce939a3e65249bac4b977adee0ee9771568e8aa3"
 
 [[package]]
 name = "px-docgen"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "anyhow",
  "camino",
@@ -2210,7 +2210,7 @@ dependencies = [
 
 [[package]]
 name = "px-mcp-server"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "anyhow",
  "serde",
@@ -2221,7 +2221,7 @@ dependencies = [
 
 [[package]]
 name = "px-sdk-py"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "portalshq-px",
  "pyo3",
@@ -2233,7 +2233,7 @@ dependencies = [
 
 [[package]]
 name = "px-sdk-ts"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "napi",
  "napi-build",
@@ -2246,7 +2246,7 @@ dependencies = [
 
 [[package]]
 name = "px-server"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "anyhow",
  "axum 0.8.9",
@@ -2265,7 +2265,7 @@ dependencies = [
 
 [[package]]
 name = "px-test-utils"
-version = "0.8.19"
+version = "0.8.20"
 dependencies = [
  "chrono",
  "portalshq-px",

@@ -3,7 +3,7 @@ name: px-repo
 description: Initialize PX repositories, clone/pull repositories, and create branches at the repository level. Use for repository-lifecycle operations (px init, px pull, px branch) — not for creating or revising individual entities; see px-resolve and px-update for those.
 metadata:
   author: portals
-  version: "0.8.19"
+  version: "0.8.20"
 ---
 
 # PX Skill: Repository Management
@@ -40,7 +40,7 @@ Use --base-dir only when the user explicitly names a storage location.
 
 
 # PX CLI Reference
-The `px` command-line interface (v0.8.19) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
+The `px` command-line interface (v0.8.20) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview

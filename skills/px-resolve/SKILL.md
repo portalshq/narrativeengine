@@ -96,7 +96,7 @@ Checking the current workspace is not required for this skill. Px usually stores
 
 
 # PX CLI Reference
-The `px` command-line interface (v0.8.19) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
+The `px` command-line interface (v0.8.20) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview
