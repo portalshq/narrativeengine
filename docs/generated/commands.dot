@@ -12,20 +12,16 @@ digraph px_commands {
     "auth" -> "auth_logout";
     "auth_status" [label="px auth status"];
     "auth" -> "auth_status";
-    "backend" [label="px backend"];
-    "px" -> "backend";
-    "backend_configure" [label="px backend configure"];
-    "backend" -> "backend_configure";
-    "backend_status" [label="px backend status"];
-    "backend" -> "backend_status";
     "branch" [label="px branch"];
     "px" -> "branch";
-    "choose" [label="px choose"];
-    "px" -> "choose";
-    "choose_backend" [label="px choose backend"];
-    "choose" -> "choose_backend";
     "commit" [label="px commit"];
     "px" -> "commit";
+    "completions" [label="px completions"];
+    "px" -> "completions";
+    "configure" [label="px configure"];
+    "px" -> "configure";
+    "configure_status" [label="px configure status"];
+    "configure" -> "configure_status";
     "content-hash" [label="px content-hash"];
     "px" -> "content-hash";
     "create" [label="px create"];
@@ -34,8 +30,8 @@ digraph px_commands {
     "px" -> "diff";
     "doctor" [label="px doctor"];
     "px" -> "doctor";
-    "head-hash" [label="px head-hash"];
-    "px" -> "head-hash";
+    "head" [label="px head"];
+    "px" -> "head";
     "history" [label="px history"];
     "px" -> "history";
     "init" [label="px init"];
@@ -48,8 +44,6 @@ digraph px_commands {
     "px" -> "merge";
     "presign" [label="px presign"];
     "px" -> "presign";
-    "publish" [label="px publish"];
-    "px" -> "publish";
     "pull" [label="px pull"];
     "px" -> "pull";
     "push" [label="px push"];
@@ -72,8 +66,6 @@ digraph px_commands {
     "px" -> "schema";
     "set" [label="px set"];
     "px" -> "set";
-    "sign" [label="px sign"];
-    "px" -> "sign";
     "status" [label="px status"];
     "px" -> "status";
     "switch" [label="px switch"];
@@ -82,6 +74,4 @@ digraph px_commands {
     "px" -> "sync";
     "validate" [label="px validate"];
     "px" -> "validate";
-    "verify" [label="px verify"];
-    "px" -> "verify";
 }

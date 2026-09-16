@@ -30,7 +30,7 @@ commands:
         about: "Print help"
   - name: "auth"
     full_path: "auth"
-    about: "Manage secure Portals Cloud authentication"
+    about: "Manage secure authentication for the configured Lore provider"
     usage: "Usage: auth <COMMAND>"
     hidden: false
     flags:
@@ -69,48 +69,6 @@ commands:
         flags:
           - name: "help"
             about: "Print help"
-  - name: "backend"
-    full_path: "backend"
-    about: "Configure or inspect the version-control backend"
-    usage: "Usage: backend <COMMAND>"
-    hidden: false
-    flags:
-      - name: "help"
-        about: "Print help"
-    subcommands:
-      - name: "configure"
-        full_path: "backend configure"
-        about: "Configure the version-control backend"
-        long_about: |
-          Configure the version-control backend.
-
-          After configuration, existing unversioned repositories in this PX home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).
-        usage: "Usage: configure [OPTIONS] <BACKEND>"
-        hidden: false
-        arguments:
-          - name: "backend"
-            about: "Backend type: local or remote"
-            required: true
-        options:
-          - name: "endpoint"
-            about: "Remote endpoint URL (required for remote backend)"
-          - name: "workspace_id"
-            about: "Workspace ID (for remote backend)"
-        flags:
-          - name: "initial_commit"
-            about: "Bootstrap existing repositories with an initial commit without prompting"
-          - name: "no_initial_commit"
-            about: "Skip bootstrapping existing repositories with an initial commit"
-          - name: "help"
-            about: "Print help (see more with '--help')"
-      - name: "status"
-        full_path: "backend status"
-        about: "Show the current version-control backend configuration"
-        usage: "Usage: status"
-        hidden: false
-        flags:
-          - name: "help"
-            about: "Print help"
   - name: "branch"
     full_path: "branch"
     about: "Create or list branches"
@@ -126,34 +84,6 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
-  - name: "choose"
-    full_path: "choose"
-    about: "Choose backend provider"
-    usage: "Usage: choose <COMMAND>"
-    hidden: false
-    flags:
-      - name: "help"
-        about: "Print help"
-    subcommands:
-      - name: "backend"
-        full_path: "choose backend"
-        about: "Choose backend provider"
-        usage: "Usage: backend [OPTIONS] <PROVIDER>"
-        hidden: false
-        arguments:
-          - name: "provider"
-            about: "Provider type: local, portals-cloud, or remote"
-            required: true
-        options:
-          - name: "remote_url"
-            about: "Remote URL (required for remote provider)"
-          - name: "workspace_id"
-            about: "Workspace ID (for remote provider)"
-        flags:
-          - name: "reset"
-            about: "Reset the provider configuration file"
-          - name: "help"
-            about: "Print help"
   - name: "commit"
     full_path: "commit"
     about: "Commit changes to a repository repository"
@@ -172,6 +102,58 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
+  - name: "completions"
+    full_path: "completions"
+    about: "Generate shell completions for `px`"
+    long_about: |
+      Generate shell completions for `px`.
+
+      Usage: px completions bash > ~/.local/share/bash-completion/completions/px px completions zsh > ~/.zfunc/_px px completions fish > ~/.config/fish/completions/px.fish source <(px completions bash)   # ephemeral
+    usage: "Usage: completions <SHELL>"
+    hidden: false
+    arguments:
+      - name: "shell"
+        about: "Shell to generate completions for"
+        required: true
+    flags:
+      - name: "help"
+        about: "Print help (see more with '--help')"
+  - name: "configure"
+    full_path: "configure"
+    about: "Configure version-control backend (unified: replaces `px choose` + `px backend`)"
+    long_about: |
+      Configure version-control backend (unified: replaces `px choose` + `px backend`).
+
+      Examples: px configure                          # show current config px configure status                   # show current config px configure local                    # switch to local daemon px configure remote --remote-url lore://192.168.0.27:41337 px configure portals-cloud --workspace-id my-ws px configure --provider remote --remote-url lore://host:41337 --reset
+    usage: "Usage: configure [OPTIONS] [PROVIDER] [COMMAND]"
+    hidden: false
+    arguments:
+      - name: "provider"
+        about: "Provider type: local, portals-cloud, or remote. Positional for ergonomics; omit to show current config (or use `px configure status`)"
+        required: false
+    options:
+      - name: "remote_url"
+        about: "Remote URL (required for `remote`). Aliases: --endpoint, --remote_url"
+      - name: "workspace_id"
+        about: "Workspace ID (for `remote` and `portals-cloud`)"
+    flags:
+      - name: "reset"
+        about: "Reset provider configuration before (re)configuring"
+      - name: "initial_commit"
+        about: "Bootstrap existing unversioned repositories with an initial commit without prompting"
+      - name: "no_initial_commit"
+        about: "Skip bootstrapping existing repositories"
+      - name: "help"
+        about: "Print help (see more with '--help')"
+    subcommands:
+      - name: "status"
+        full_path: "configure status"
+        about: "Show current backend configuration and connectivity (default when no provider is given)"
+        usage: "Usage: status"
+        hidden: false
+        flags:
+          - name: "help"
+            about: "Print help"
   - name: "content-hash"
     full_path: "content-hash"
     about: "Compute the BLAKE3 content hash of a file"
@@ -236,10 +218,10 @@ commands:
         about: "Auto-repair detected issues"
       - name: "help"
         about: "Print help"
-  - name: "head-hash"
-    full_path: "head-hash"
+  - name: "head"
+    full_path: "head"
     about: "Show the current HEAD commit hash"
-    usage: "Usage: head-hash <REPOSITORY>"
+    usage: "Usage: head <REPOSITORY>"
     hidden: false
     arguments:
       - name: "repository"
@@ -513,18 +495,6 @@ commands:
     flags:
       - name: "help"
         about: "Print help (see more with '--help')"
-  - name: "publish"
-    full_path: "publish"
-    about: "Publish changes to remote"
-    usage: "Usage: publish <REPOSITORY>"
-    hidden: false
-    arguments:
-      - name: "repository"
-        about: "Repository name"
-        required: true
-    flags:
-      - name: "help"
-        about: "Print help"
   - name: "pull"
     full_path: "pull"
     about: "Clone or pull a repository from a remote"
@@ -719,18 +689,6 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
-  - name: "sign"
-    full_path: "sign"
-    about: "Sign a manifest (stub for v0)"
-    usage: "Usage: sign <URI>"
-    hidden: false
-    arguments:
-      - name: "uri"
-        about: "PX URI"
-        required: true
-    flags:
-      - name: "help"
-        about: "Print help"
   - name: "status"
     full_path: "status"
     about: "Show system status"
@@ -778,18 +736,6 @@ commands:
     options:
       - name: "file"
         about: "Path to a manifest YAML file to validate"
-    flags:
-      - name: "help"
-        about: "Print help"
-  - name: "verify"
-    full_path: "verify"
-    about: "Verify a manifest signature (stub for v0)"
-    usage: "Usage: verify <URI>"
-    hidden: false
-    arguments:
-      - name: "uri"
-        about: "PX URI"
-        required: true
     flags:
       - name: "help"
         about: "Print help"

@@ -11,6 +11,16 @@ BINARY_NAME="px"
 MCP_BINARY_NAME="px-mcp-server"
 VERSION="${VERSION:-latest}"
 BASE_URL="${PX_INSTALL_BASE_URL:-}"
+FORCE=false
+
+if [[ "${1:-}" == "--force" ]]; then
+    FORCE=true
+    shift
+fi
+if [[ $# -ne 0 ]]; then
+    echo "Usage: $0 [--force]" >&2
+    exit 2
+fi
 
 ###############################################################################
 # Utilities
@@ -83,14 +93,18 @@ elif [[ ! -w "$INSTALL_DIR" ]]; then
     mkdir -p "$INSTALL_DIR"
 fi
 
-# Refuse before any download: an installer must never silently replace a
-# command a user already has on PATH or in its selected destination.
+# Only the selected destination matters. An existing binary is replaceable if
+# it identifies itself as PX; unknown binaries require explicit --force.
+is_px_binary() {
+    local target="$1"
+    [[ -x "$target" ]] && "$target" --version 2>/dev/null | grep -Eiq '^px([ -]|$)'
+}
+
 for binary in "$BINARY_NAME" "$MCP_BINARY_NAME"; do
     target="$INSTALL_DIR/$binary"
-    existing="$(command -v "$binary" 2>/dev/null || true)"
-    if [[ -e "$target" || -n "$existing" ]]; then
-        echo "Refusing to overwrite existing '$binary' executable (${existing:-$target})." >&2
-        echo "Choose a different PX_INSTALL_DIR or remove the existing executable explicitly." >&2
+    if [[ -e "$target" ]] && ! is_px_binary "$target" && [[ "$FORCE" != true ]]; then
+        echo "Refusing to overwrite unknown executable '$target'." >&2
+        echo "Re-run with --force if this is intentional." >&2
         exit 1
     fi
 done

@@ -38,6 +38,10 @@ px push [OPTIONS] <REPOSITORY>
 | -h, --help | Print help (see more with '--help') |
 
 
+## Aliases
+- publish
+
+
 ## Source
 `crates/px-cli/src/main.rs` — `push` command
 

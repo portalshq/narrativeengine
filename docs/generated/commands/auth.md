@@ -7,7 +7,7 @@ source: clap
 
 
 # px auth
-Manage secure Portals Cloud authentication
+Manage secure authentication for the configured Lore provider
 
 
 ## Synopsis
