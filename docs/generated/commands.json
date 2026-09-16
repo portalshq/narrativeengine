@@ -86,7 +86,7 @@
     {
       "name": "auth",
       "full_path": "auth",
-      "about": "Manage secure Portals Cloud authentication",
+      "about": "Manage secure authentication for the configured Lore provider",
       "long_about": null,
       "usage": "Usage: auth <COMMAND>",
       "aliases": [],
@@ -205,123 +205,6 @@
       "hidden": false
     },
     {
-      "name": "backend",
-      "full_path": "backend",
-      "about": "Configure or inspect the version-control backend",
-      "long_about": null,
-      "usage": "Usage: backend <COMMAND>",
-      "aliases": [],
-      "arguments": [],
-      "options": [],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [
-        {
-          "name": "configure",
-          "full_path": "backend configure",
-          "about": "Configure the version-control backend",
-          "long_about": "Configure the version-control backend.\n\nAfter configuration, existing unversioned repositories in this PX home are offered an initial commit so their current filesystem state becomes the repository baseline (unless --no-initial-commit is given).",
-          "usage": "Usage: configure [OPTIONS] <BACKEND>",
-          "aliases": [],
-          "arguments": [
-            {
-              "name": "backend",
-              "about": "Backend type: local or remote",
-              "required": true,
-              "default_value": null,
-              "short": null,
-              "long": null,
-              "takes_value": true
-            }
-          ],
-          "options": [
-            {
-              "name": "endpoint",
-              "about": "Remote endpoint URL (required for remote backend)",
-              "required": false,
-              "default_value": null,
-              "short": null,
-              "long": "endpoint",
-              "takes_value": true
-            },
-            {
-              "name": "workspace_id",
-              "about": "Workspace ID (for remote backend)",
-              "required": false,
-              "default_value": null,
-              "short": null,
-              "long": "workspace-id",
-              "takes_value": true
-            }
-          ],
-          "flags": [
-            {
-              "name": "initial_commit",
-              "about": "Bootstrap existing repositories with an initial commit without prompting",
-              "required": false,
-              "default_value": "false",
-              "short": null,
-              "long": "initial-commit",
-              "takes_value": false
-            },
-            {
-              "name": "no_initial_commit",
-              "about": "Skip bootstrapping existing repositories with an initial commit",
-              "required": false,
-              "default_value": "false",
-              "short": null,
-              "long": "no-initial-commit",
-              "takes_value": false
-            },
-            {
-              "name": "help",
-              "about": "Print help (see more with '--help')",
-              "required": false,
-              "default_value": null,
-              "short": "h",
-              "long": "help",
-              "takes_value": false
-            }
-          ],
-          "subcommands": [],
-          "hidden": false
-        },
-        {
-          "name": "status",
-          "full_path": "backend status",
-          "about": "Show the current version-control backend configuration",
-          "long_about": null,
-          "usage": "Usage: status",
-          "aliases": [],
-          "arguments": [],
-          "options": [],
-          "flags": [
-            {
-              "name": "help",
-              "about": "Print help",
-              "required": false,
-              "default_value": null,
-              "short": "h",
-              "long": "help",
-              "takes_value": false
-            }
-          ],
-          "subcommands": [],
-          "hidden": false
-        }
-      ],
-      "hidden": false
-    },
-    {
       "name": "branch",
       "full_path": "branch",
       "about": "Create or list branches",
@@ -361,91 +244,6 @@
         }
       ],
       "subcommands": [],
-      "hidden": false
-    },
-    {
-      "name": "choose",
-      "full_path": "choose",
-      "about": "Choose backend provider",
-      "long_about": null,
-      "usage": "Usage: choose <COMMAND>",
-      "aliases": [],
-      "arguments": [],
-      "options": [],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [
-        {
-          "name": "backend",
-          "full_path": "choose backend",
-          "about": "Choose backend provider",
-          "long_about": null,
-          "usage": "Usage: backend [OPTIONS] <PROVIDER>",
-          "aliases": [],
-          "arguments": [
-            {
-              "name": "provider",
-              "about": "Provider type: local, portals-cloud, or remote",
-              "required": true,
-              "default_value": null,
-              "short": null,
-              "long": null,
-              "takes_value": true
-            }
-          ],
-          "options": [
-            {
-              "name": "remote_url",
-              "about": "Remote URL (required for remote provider)",
-              "required": false,
-              "default_value": null,
-              "short": null,
-              "long": "remote-url",
-              "takes_value": true
-            },
-            {
-              "name": "workspace_id",
-              "about": "Workspace ID (for remote provider)",
-              "required": false,
-              "default_value": null,
-              "short": null,
-              "long": "workspace-id",
-              "takes_value": true
-            }
-          ],
-          "flags": [
-            {
-              "name": "reset",
-              "about": "Reset the provider configuration file",
-              "required": false,
-              "default_value": "false",
-              "short": null,
-              "long": "reset",
-              "takes_value": false
-            },
-            {
-              "name": "help",
-              "about": "Print help",
-              "required": false,
-              "default_value": null,
-              "short": "h",
-              "long": "help",
-              "takes_value": false
-            }
-          ],
-          "subcommands": [],
-          "hidden": false
-        }
-      ],
       "hidden": false
     },
     {
@@ -498,6 +296,144 @@
         }
       ],
       "subcommands": [],
+      "hidden": false
+    },
+    {
+      "name": "completions",
+      "full_path": "completions",
+      "about": "Generate shell completions for `px`",
+      "long_about": "Generate shell completions for `px`.\n\nUsage: px completions bash > ~/.local/share/bash-completion/completions/px px completions zsh > ~/.zfunc/_px px completions fish > ~/.config/fish/completions/px.fish source <(px completions bash)   # ephemeral",
+      "usage": "Usage: completions <SHELL>",
+      "aliases": [],
+      "arguments": [
+        {
+          "name": "shell",
+          "about": "Shell to generate completions for",
+          "required": true,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        }
+      ],
+      "options": [],
+      "flags": [
+        {
+          "name": "help",
+          "about": "Print help (see more with '--help')",
+          "required": false,
+          "default_value": null,
+          "short": "h",
+          "long": "help",
+          "takes_value": false
+        }
+      ],
+      "subcommands": [],
+      "hidden": false
+    },
+    {
+      "name": "configure",
+      "full_path": "configure",
+      "about": "Configure version-control backend (unified: replaces `px choose` + `px backend`)",
+      "long_about": "Configure version-control backend (unified: replaces `px choose` + `px backend`).\n\nExamples: px configure                          # show current config px configure status                   # show current config px configure local                    # switch to local daemon px configure remote --remote-url lore://192.168.0.27:41337 px configure portals-cloud --workspace-id my-ws px configure --provider remote --remote-url lore://host:41337 --reset",
+      "usage": "Usage: configure [OPTIONS] [PROVIDER] [COMMAND]",
+      "aliases": [
+        "config"
+      ],
+      "arguments": [
+        {
+          "name": "provider",
+          "about": "Provider type: local, portals-cloud, or remote. Positional for ergonomics; omit to show current config (or use `px configure status`)",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        }
+      ],
+      "options": [
+        {
+          "name": "remote_url",
+          "about": "Remote URL (required for `remote`). Aliases: --endpoint, --remote_url",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "remote-url",
+          "takes_value": true
+        },
+        {
+          "name": "workspace_id",
+          "about": "Workspace ID (for `remote` and `portals-cloud`)",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "workspace-id",
+          "takes_value": true
+        }
+      ],
+      "flags": [
+        {
+          "name": "reset",
+          "about": "Reset provider configuration before (re)configuring",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "reset",
+          "takes_value": false
+        },
+        {
+          "name": "initial_commit",
+          "about": "Bootstrap existing unversioned repositories with an initial commit without prompting",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "initial-commit",
+          "takes_value": false
+        },
+        {
+          "name": "no_initial_commit",
+          "about": "Skip bootstrapping existing repositories",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "no-initial-commit",
+          "takes_value": false
+        },
+        {
+          "name": "help",
+          "about": "Print help (see more with '--help')",
+          "required": false,
+          "default_value": null,
+          "short": "h",
+          "long": "help",
+          "takes_value": false
+        }
+      ],
+      "subcommands": [
+        {
+          "name": "status",
+          "full_path": "configure status",
+          "about": "Show current backend configuration and connectivity (default when no provider is given)",
+          "long_about": null,
+          "usage": "Usage: status",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "flags": [
+            {
+              "name": "help",
+              "about": "Print help",
+              "required": false,
+              "default_value": null,
+              "short": "h",
+              "long": "help",
+              "takes_value": false
+            }
+          ],
+          "subcommands": [],
+          "hidden": false
+        }
+      ],
       "hidden": false
     },
     {
@@ -688,12 +624,15 @@
       "hidden": false
     },
     {
-      "name": "head-hash",
-      "full_path": "head-hash",
+      "name": "head",
+      "full_path": "head",
       "about": "Show the current HEAD commit hash",
       "long_about": null,
-      "usage": "Usage: head-hash <REPOSITORY>",
-      "aliases": [],
+      "usage": "Usage: head <REPOSITORY>",
+      "aliases": [
+        "head-hash",
+        "head_hash"
+      ],
       "arguments": [
         {
           "name": "repository",
@@ -1068,39 +1007,6 @@
       "hidden": false
     },
     {
-      "name": "publish",
-      "full_path": "publish",
-      "about": "Publish changes to remote",
-      "long_about": null,
-      "usage": "Usage: publish <REPOSITORY>",
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "repository",
-          "about": "Repository name",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        }
-      ],
-      "options": [],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [],
-      "hidden": false
-    },
-    {
       "name": "pull",
       "full_path": "pull",
       "about": "Clone or pull a repository from a remote",
@@ -1139,7 +1045,9 @@
       "about": "Push the current branch to its configured upstream remote",
       "long_about": null,
       "usage": "Usage: push [OPTIONS] <REPOSITORY>",
-      "aliases": [],
+      "aliases": [
+        "publish"
+      ],
       "arguments": [
         {
           "name": "repository",
@@ -1632,39 +1540,6 @@
       "hidden": false
     },
     {
-      "name": "sign",
-      "full_path": "sign",
-      "about": "Sign a manifest (stub for v0)",
-      "long_about": null,
-      "usage": "Usage: sign <URI>",
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "uri",
-          "about": "PX URI",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        }
-      ],
-      "options": [],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [],
-      "hidden": false
-    },
-    {
       "name": "status",
       "full_path": "status",
       "about": "Show system status",
@@ -1791,39 +1666,6 @@
           "takes_value": true
         }
       ],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [],
-      "hidden": false
-    },
-    {
-      "name": "verify",
-      "full_path": "verify",
-      "about": "Verify a manifest signature (stub for v0)",
-      "long_about": null,
-      "usage": "Usage: verify <URI>",
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "uri",
-          "about": "PX URI",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        }
-      ],
-      "options": [],
       "flags": [
         {
           "name": "help",

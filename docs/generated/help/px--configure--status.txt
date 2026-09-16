@@ -1,9 +1,6 @@
-Sign a manifest (stub for v0)
+Show current backend configuration and connectivity (default when no provider is given)
 
-Usage: px sign [OPTIONS] <URI>
-
-Arguments:
-  <URI>  PX URI
+Usage: px configure status [OPTIONS]
 
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]

@@ -6,13 +6,13 @@ source: clap
 ---
 
 
-# px publish
-Publish changes to remote
+# px head
+Show the current HEAD commit hash
 
 
 ## Synopsis
 ```bash
-px publish <REPOSITORY>
+px head <REPOSITORY>
 ```
 
 
@@ -30,6 +30,11 @@ px publish <REPOSITORY>
 | -h, --help | Print help |
 
 
+## Aliases
+- head-hash
+- head_hash
+
+
 ## Source
-`crates/px-cli/src/main.rs` — `publish` command
+`crates/px-cli/src/main.rs` — `head` command
 

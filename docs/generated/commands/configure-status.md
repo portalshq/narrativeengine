@@ -6,21 +6,14 @@ source: clap
 ---
 
 
-# px sign
-Sign a manifest (stub for v0)
+# px configure status
+Show current backend configuration and connectivity (default when no provider is given)
 
 
 ## Synopsis
 ```bash
-px sign <URI>
+px status
 ```
-
-
-## Arguments
-
-| Name | Description | Required |
-|---|---|---|
-| uri | PX URI | Yes |
 
 
 ## Flags
@@ -31,5 +24,5 @@ px sign <URI>
 
 
 ## Source
-`crates/px-cli/src/main.rs` — `sign` command
+`crates/px-cli/src/main.rs` — `status` command
 

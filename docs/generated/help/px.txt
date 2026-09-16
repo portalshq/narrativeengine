@@ -3,13 +3,12 @@ CLI for the PX protocol
 Usage: px [OPTIONS] <COMMAND>
 
 Commands:
-  auth          Manage secure Portals Cloud authentication
+  auth          Manage secure authentication for the configured Lore provider
   install       Install required dependencies
   init          Initialize a repository repository and/or configure the backend provider
-  choose        Choose backend provider
-  backend       Configure or inspect the version-control backend
+  configure     Configure version-control backend (unified: replaces `px choose` + `px backend`)
+  completions   Generate shell completions for `px`
   doctor        Run diagnostics and repair
-  publish       Publish changes to remote
   status        Show system status
   sync          Sync with remote
   create        Create a new entity manifest
@@ -26,10 +25,8 @@ Commands:
   pull          Clone or pull a repository from a remote
   push          Push the current branch to its configured upstream remote
   remote        Manage remotes on a repository
-  sign          Sign a manifest (stub for v0)
-  verify        Verify a manifest signature (stub for v0)
   switch        Switch to a branch
-  head-hash     Show the current HEAD commit hash
+  head          Show the current HEAD commit hash
   validate      Validate a manifest against the PX schema
   schema        Print a JSON Schema for manifest or commit types
   diff          Show diff between two manifest files or versions

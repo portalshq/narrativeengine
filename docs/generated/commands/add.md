@@ -41,6 +41,10 @@ px add [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>
 | -h, --help | Print help |
 
 
+## Aliases
+- add-repr
+
+
 ## Examples
 ```bash
 # Save a generated scene clip as a video representation

@@ -1,0 +1,46 @@
+Configure version-control backend (unified: replaces `px choose` + `px backend`).
+
+Examples: px configure                          # show current config px configure status                   # show current config px configure local                    # switch to local daemon px configure remote --remote-url lore://192.168.0.27:41337 px configure portals-cloud --workspace-id my-ws px configure --provider remote --remote-url lore://host:41337 --reset
+
+Usage: px configure [OPTIONS] [PROVIDER] [COMMAND]
+
+Commands:
+  status  Show current backend configuration and connectivity (default when no provider is given)
+  help    Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [PROVIDER]
+          Provider type: local, portals-cloud, or remote. Positional for ergonomics; omit to show current config (or use `px configure status`)
+
+Options:
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset
+
+          [env: PX_DIR=]
+
+      --remote-url <URL>
+          Remote URL (required for `remote`). Aliases: --endpoint, --remote_url
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --workspace-id <ID>
+          Workspace ID (for `remote` and `portals-cloud`)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
+      --reset
+          Reset provider configuration before (re)configuring
+
+      --initial-commit
+          Bootstrap existing unversioned repositories with an initial commit without prompting
+
+      --no-initial-commit
+          Skip bootstrapping existing repositories
+
+  -h, --help
+          Print help (see a summary with '-h')

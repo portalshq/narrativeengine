@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+FORCE=false
+if [[ "${1:-}" == "--force" ]]; then
+    FORCE=true
+    shift
+fi
+if [[ $# -ne 0 ]]; then
+    echo "Usage: $0 [--force]" >&2
+    exit 2
+fi
 
 LOCAL_INSTALL_DIR="$HOME/.local/bin"
-existing="$(command -v px 2>/dev/null || true)"
-if [[ -n "$existing" || -e "$LOCAL_INSTALL_DIR/px" ]]; then
-    echo "Refusing to overwrite existing px executable (${existing:-$LOCAL_INSTALL_DIR/px})." >&2
-    echo "Remove it explicitly or choose a different installation directory." >&2
+target="$LOCAL_INSTALL_DIR/px"
+if [[ -e "$target" ]] && ! { [[ -x "$target" ]] && "$target" --version 2>/dev/null | grep -Eiq '^px([ -]|$)'; } && [[ "$FORCE" != true ]]; then
+    echo "Refusing to overwrite unknown executable '$target'." >&2
+    echo "Re-run with --force if this is intentional." >&2
     exit 1
 fi
 
 # Build and install the PX CLI.
 echo "Building portalshq-px-cli..."
 cargo build --release -p portalshq-px-cli
-
-echo "Installing px to cargo bin..."
-cargo install --path crates/px-cli
 
 echo "Copying to ~/.local/bin..."
 mkdir -p "$LOCAL_INSTALL_DIR"
