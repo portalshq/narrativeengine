@@ -668,6 +668,94 @@ fn test_local_lore_presign_redeems_binary_representation() {
     assert_eq!(redeemed.stdout, fs::read(asset).unwrap());
 }
 
+/// Test that presigned URLs include proper Content-Type headers for browser rendering.
+/// This regression test ensures the fix for missing content-type in presign requests.
+#[cfg(feature = "local-e2e")]
+#[test]
+fn test_local_lore_presign_includes_content_type_header() {
+    let tmp = TempDir::new().expect("Failed to create temp dir");
+    let repository = unique_universe_name("test-presign-content-type");
+
+    px_cmd()
+        .args(["init", "--provider", "local", "--base-dir"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    px_cmd()
+        .args(["init", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+    px_cmd()
+        .args(["create", "--base-dir"])
+        .arg(tmp.path())
+        .args([
+            "--repository",
+            &repository,
+            "character",
+            "testhero",
+            "--name",
+            "Test Hero",
+        ])
+        .assert()
+        .success();
+
+    // Add a PNG image representation
+    let asset = create_test_image(tmp.path(), "test_image.png");
+    let uri = format!("px://{repository}/character/testhero");
+    px_cmd()
+        .args(["add", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&uri)
+        .arg("character_sheet")
+        .arg(&asset)
+        .args(["--format", "png"])
+        .assert()
+        .success();
+    px_cmd()
+        .args(["push", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&repository)
+        .assert()
+        .success();
+
+    // Generate presigned URL (non-terminal context should output JSON)
+    let output = px_cmd()
+        .args(["presign", "--base-dir"])
+        .arg(tmp.path())
+        .arg(&uri)
+        .arg("character_sheet")
+        .args(["--branch", "main", "--ttl-seconds", "60"])
+        .output()
+        .expect("Failed to run px presign");
+    assert!(
+        output.status.success(),
+        "px presign failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Parse the JSON output (non-terminal context outputs JSON)
+    let response: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .expect("presign output should be JSON in non-terminal context");
+    let url = response["url"].as_str().expect("presign output URL");
+
+    // Check that the presigned URL includes content-type in response headers
+    let headers = std::process::Command::new("curl")
+        .args(["-I", "--silent", url])
+        .output()
+        .expect("curl is required for the content-type test");
+
+    let headers_str = String::from_utf8_lossy(&headers.stdout);
+    assert!(
+        headers_str
+            .to_lowercase()
+            .contains("content-type: image/png"),
+        "Presigned URL response should include Content-Type: image/png header. Got: {}",
+        headers_str
+    );
+}
+
 #[cfg(feature = "local-e2e")]
 #[test]
 fn test_local_lore_add_image_to_repository() {
