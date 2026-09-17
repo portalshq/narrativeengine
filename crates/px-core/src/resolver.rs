@@ -155,6 +155,43 @@ impl fmt::Debug for PresignedRepresentation {
 struct LorePresignRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     ttl_seconds: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_encoding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_disposition: Option<String>,
+}
+
+/// Map common representation formats to MIME types.
+fn format_to_mime_type(format: &str) -> Option<String> {
+    match format.to_lowercase().as_str() {
+        "png" => Some("image/png".to_string()),
+        "jpg" | "jpeg" => Some("image/jpeg".to_string()),
+        "gif" => Some("image/gif".to_string()),
+        "webp" => Some("image/webp".to_string()),
+        "svg" => Some("image/svg+xml".to_string()),
+        "glb" => Some("model/gltf-binary".to_string()),
+        "gltf" => Some("model/gltf+json".to_string()),
+        "obj" => Some("model/obj".to_string()),
+        "fbx" => Some("model/fbx".to_string()),
+        "usd" | "usda" => Some("model/usd".to_string()),
+        "usdc" => Some("model/usd-binary".to_string()),
+        "usdz" => Some("model/usd+zip".to_string()),
+        "onnx" => Some("model/onnx".to_string()),
+        "spz" => Some("application/octet-stream".to_string()),
+        "pdf" => Some("application/pdf".to_string()),
+        "json" => Some("application/json".to_string()),
+        "txt" => Some("text/plain".to_string()),
+        "md" => Some("text/markdown".to_string()),
+        "mp4" => Some("video/mp4".to_string()),
+        "webm" => Some("video/webm".to_string()),
+        "mov" => Some("video/quicktime".to_string()),
+        "mp3" => Some("audio/mpeg".to_string()),
+        "wav" => Some("audio/wav".to_string()),
+        "ogg" => Some("audio/ogg".to_string()),
+        _ => None,
+    }
 }
 
 #[derive(Deserialize)]
@@ -579,10 +616,17 @@ impl Resolver {
             .clone()
             .or_else(|| std::env::var("PX_LORE_HTTP_TOKEN").ok())
             .or_else(|| std::env::var("PX_LORE_GRPC_TOKEN").ok());
+
+        // Determine content type from representation format for proper browser rendering
+        let content_type = format_to_mime_type(&representation.format);
+
         let mut request = presign_http_client()?
             .post(endpoint)
             .json(&LorePresignRequest {
                 ttl_seconds: options.ttl_seconds,
+                content_type,
+                content_encoding: None,
+                content_disposition: None,
             });
         if let Some(token) = token.filter(|token| !token.is_empty()) {
             request = request.bearer_auth(token);
@@ -783,10 +827,17 @@ impl Resolver {
             .clone()
             .or_else(|| std::env::var("PX_LORE_HTTP_TOKEN").ok())
             .or_else(|| std::env::var("PX_LORE_GRPC_TOKEN").ok());
+
+        // Determine content type from representation format for proper browser rendering
+        let content_type = format_to_mime_type(&representation.format);
+
         let mut request = presign_http_client()?
             .post(endpoint)
             .json(&LorePresignRequest {
                 ttl_seconds: options.ttl_seconds,
+                content_type,
+                content_encoding: None,
+                content_disposition: None,
             });
         let explicit_token = bearer_token.as_ref().is_some_and(|token| !token.is_empty());
         if let Some(token) = bearer_token.filter(|token| !token.is_empty()) {
@@ -935,7 +986,7 @@ impl Resolver {
             address: uri.to_string(),
             message: format!(
                 "cannot resolve {what}: no version-control backend is configured. \
-                     Configure one with 'px backend configure' to use branch/commit selectors."
+                     Configure one with 'px configure' to use branch/commit selectors."
             ),
         };
 

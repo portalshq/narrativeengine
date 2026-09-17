@@ -33,20 +33,40 @@ Query a subtree:
 ```bash
 px query px://bears/character/atlas properties
 ```
- 
+
+## Repository Context
+
+Before creating an entity or establishing creative context for generation,
+resolve the repository's world manifest (`repository.yaml`) from the same
+target branch as the entity work. Read its `properties`, `representations`,
+and `references`, and resolve only the referenced resources relevant to the
+requested work.
+
+Treat repository context as the project-wide baseline. Apply entity-specific
+identity, behavior, and representation data as refinements. If the two contain
+a true contradiction, pause and ask the user for direction rather than choosing
+one. If the repository manifest cannot be read, warn the user and ask how to
+proceed; never silently substitute empty project context.
+
+Carry the resolved repository context and branch forward to `px-update` for
+any generated or revised representation. Do not write inferred project-wide
+facts to `repository.yaml`; present them as proposed updates and wait for user
+approval.
+
 ## Entity Creation
- 
+
 When creating a new entity:
- 
-1. Create the entity on the branch the user is working from (default `main` if none was specified — see "Target Branch" below).
-2. Report the exact URI.
-3. Establish active task context: URI, repository, entity type, entity ID, target branch, and default revision branch.
-4. Create or switch to the revision branch:
+
+1. Establish the target branch, then resolve and apply repository context from that branch.
+2. Create the entity on the target branch (default `main` if none was specified — see "Target Branch" below).
+3. Report the exact URI.
+4. Establish active task context: URI, repository, entity type, entity ID, target branch, default revision branch, and repository context.
+5. Create or switch to the revision branch:
    ```text
    revision-<entity-type>-<entity-id>
    ```
- 
-5. If the creation turn also generates a visual, text, audio, or other representation, immediately use `px-update` to commit that first accepted revision on the revision branch.
+
+6. If the creation turn also generates a visual, text, audio, or other representation, immediately use `px-update` to commit that first accepted revision on the revision branch.
 
 ## Target Branch
  
@@ -72,13 +92,14 @@ Carry forward stable representation keys and identity constraints. Examples:
 ## Generation Context
  
 Before generating from an entity:
- 
-1. Resolve the entity explicitly from the relevant branch (target branch for canonical state, revision branch for iterative work).
-2. Gather properties that affect identity, narrative role, style, behavior, continuity, and exclusions.
-3. Gather relevant `representations` and `references`.
-4. Treat image/video/audio representations as source-of-truth for observable appearance or sound. Text properties support and constrain them.
-5. Inspect flexible negative-constraint keys such as `negative_constraints`, `exclusions`, `avoid`, `forbidden`, or project-specific equivalents.
-6. Keep multi-entity context separated so attributes do not bleed between entities.
+
+1. Resolve the repository world manifest from the target branch and gather relevant global properties, representations, and references.
+2. Resolve the entity explicitly from the relevant branch (target branch for canonical state, revision branch for iterative work).
+3. Gather properties that affect identity, narrative role, style, behavior, continuity, and exclusions.
+4. Gather relevant entity `representations` and `references`.
+5. Treat project and entity image/video/audio representations as source-of-truth for observable appearance or sound. Text properties support and constrain them.
+6. Inspect flexible negative-constraint keys such as `negative_constraints`, `exclusions`, `avoid`, `forbidden`, or project-specific equivalents at both scopes.
+7. Keep multi-entity context separated so attributes do not bleed between entities.
 
 ## Branch Semantics
  
