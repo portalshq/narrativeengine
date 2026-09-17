@@ -3,9 +3,8 @@
 //!
 //! Commands:
 //!   init         — Initialize a repository repository and/or configure provider
-//!   choose       — Choose backend provider
+//!   configure    — Configure version-control backend (replaces choose/backend)
 //!   doctor       — Run diagnostics and repair
-//!   publish      — Publish changes to remote
 //!   status       — Show system status
 //!   sync         — Sync with remote
 //!   create       — Create an entity manifest
@@ -17,14 +16,16 @@
 //!   branch       — Create or list branches
 //!   tag          — Create or list tags
 //!   pull         — Clone or pull a repository from a remote
-//!   push         — Push a repository to a remote
+//!   push         — Push a repository to a remote (alias: publish)
 //!   remote       — Manage remotes on a repository
-//!   sign         — Sign a manifest (stub for v0)
-//!   verify       — Verify a manifest signature (stub for v0)
+//!   head         — Show current HEAD (alias: head-hash)
+//!   sign/verify  — Stub (hidden, future Ed25519)
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use px_cli::{AuthCmd, BackendCmd, ChooseCmd, Cli, Commands, RemoteCmd};
+use px_cli::{
+    AuthCmd, BackendCmd, ChooseCmd, Cli, Commands, ConfigureArgs, ConfigureCmd, RemoteCmd,
+};
 use px_core::{
     commit::Change,
     manifest::Representation,
@@ -149,7 +150,7 @@ fn main() -> Result<()> {
         .with_context(|| format!("failed to create base directory '{}'", base_dir.display()))?;
 
     let result = match cli.command {
-        Commands::Auth { cmd } => cmd_auth(cmd),
+        Commands::Auth { cmd } => cmd_auth(cmd, &base_dir),
         Commands::Init {
             repository,
             provider,
@@ -167,10 +168,17 @@ fn main() -> Result<()> {
             reset,
         ),
         Commands::Install { target } => cmd_install(&base_dir, &target),
-        Commands::Choose { cmd } => cmd_choose(&base_dir, cmd),
-        Commands::Backend { cmd } => cmd_backend(&base_dir, cmd),
+        Commands::Configure { args } => cmd_configure(&base_dir, args),
+        Commands::Completions { shell } => cmd_completions(shell),
+        Commands::Choose { cmd } => {
+            eprintln!("warning: `px choose` is deprecated — use `px configure`");
+            cmd_choose(&base_dir, cmd)
+        }
+        Commands::Backend { cmd } => {
+            eprintln!("warning: `px backend` is deprecated — use `px configure`");
+            cmd_backend(&base_dir, cmd)
+        }
         Commands::Doctor { repair } => cmd_doctor(&base_dir, repair),
-        Commands::Publish { repository } => cmd_publish(&base_dir, &repository),
         Commands::Status => cmd_status(&base_dir),
         Commands::Sync { repository } => cmd_sync(&base_dir, &repository),
         Commands::Create {
@@ -266,7 +274,7 @@ fn main() -> Result<()> {
         Commands::Sign { uri } => cmd_sign(&uri),
         Commands::Verify { uri } => cmd_verify(&uri),
         Commands::Switch { repository, name } => cmd_switch(&base_dir, &repository, &name),
-        Commands::HeadHash { repository } => cmd_head_hash(&base_dir, &repository),
+        Commands::Head { repository } => cmd_head_hash(&base_dir, &repository),
         Commands::Validate { uri, file } => {
             cmd_validate(&base_dir, uri.as_deref(), file.as_deref())
         }
@@ -308,10 +316,45 @@ fn main() -> Result<()> {
 /// Delegate authentication to Lore so Px and Lore share one OS-keyring-backed
 /// credential store. Login deliberately inherits stdio for browser/device-code
 /// interaction; repository commands remain noninteractive.
-fn cmd_auth(cmd: AuthCmd) -> Result<()> {
+///
+/// The remote is derived from the active provider, not hard-coded to Portals
+/// Cloud. Lore then discovers the advertised authentication endpoint from the
+/// server, keeping self-hosted and cloud login on the same protocol.
+fn interactive_login_args(remote: String, no_browser: bool) -> Vec<String> {
+    let mut args = vec!["auth".into(), "login".into(), remote];
+    if no_browser {
+        args.push("--no-browser".into());
+    }
+    args
+}
+
+fn api_key_login_args(remote: String) -> Vec<String> {
+    vec![
+        "auth".into(),
+        "login".into(),
+        "--token-type".into(),
+        "api-key".into(),
+        "--token-stdin".into(),
+        remote,
+    ]
+}
+
+fn logout_args(remote: String) -> Vec<String> {
+    vec![
+        "auth".into(),
+        "logout".into(),
+        "--remote-url".into(),
+        remote,
+    ]
+}
+
+fn cmd_auth(cmd: AuthCmd, base_dir: &Path) -> Result<()> {
     use px_core::provider::portals_cloud::PORTALS_CLOUD_URL as CLOUD_REMOTE;
-    let cloud_auth_url = std::env::var("PX_AUTH_URL")
-        .unwrap_or_else(|_| "ucs-auth://auth.portals.works".to_string());
+    let mut provider_manager = ProviderManager::new(base_dir);
+    let remote = provider_manager
+        .load_configured_provider()?
+        .and_then(|provider| provider.lore_url_base().ok())
+        .unwrap_or_else(|| CLOUD_REMOTE.to_string());
     let (args, stdin_secret): (Vec<String>, Option<String>) = match cmd {
         AuthCmd::Login {
             api_key,
@@ -324,38 +367,14 @@ fn cmd_auth(cmd: AuthCmd) -> Result<()> {
                         "{api_key_env} is not set; inject a revocable service-account API key into CI"
                     )
                 })?;
-                (
-                    vec![
-                        "auth".into(),
-                        "login".into(),
-                        "--token-type".into(),
-                        "api-key".into(),
-                        "--token-stdin".into(),
-                        "--auth-url".into(),
-                        cloud_auth_url.clone(),
-                        CLOUD_REMOTE.into(),
-                    ],
-                    Some(token),
-                )
+                (api_key_login_args(remote.clone()), Some(token))
             } else {
-                let mut args = vec!["auth".into(), "login".into(), CLOUD_REMOTE.into()];
-                if no_browser {
-                    args.push("--no-browser".into());
-                }
-                (args, None)
+                (interactive_login_args(remote, no_browser), None)
             }
         }
         // `list` deliberately omits --with-token.
         AuthCmd::Status => (vec!["auth".into(), "list".into()], None),
-        AuthCmd::Logout => (
-            vec![
-                "auth".into(),
-                "logout".into(),
-                "--auth-url".into(),
-                cloud_auth_url,
-            ],
-            None,
-        ),
+        AuthCmd::Logout => (logout_args(remote), None),
     };
     let operation = args.get(1).map(String::as_str).unwrap_or("unknown");
     let binary = px_core::vcs_lore::LoreProcessRunner::binary();
@@ -392,6 +411,44 @@ fn cmd_auth(cmd: AuthCmd) -> Result<()> {
         "Lore authentication failed (exit {}); run `px auth login` in an interactive terminal and retry",
         status.code().unwrap_or(-1)
     )
+}
+
+#[cfg(test)]
+mod auth_command_tests {
+    use super::*;
+
+    const REMOTE: &str = "lore://andresb.example:41337";
+
+    #[test]
+    fn interactive_login_uses_configured_remote() {
+        assert_eq!(
+            interactive_login_args(REMOTE.into(), true),
+            ["auth", "login", REMOTE, "--no-browser"]
+        );
+    }
+
+    #[test]
+    fn api_key_login_discovers_auth_from_configured_remote() {
+        assert_eq!(
+            api_key_login_args(REMOTE.into()),
+            [
+                "auth",
+                "login",
+                "--token-type",
+                "api-key",
+                "--token-stdin",
+                REMOTE
+            ]
+        );
+    }
+
+    #[test]
+    fn logout_discovers_auth_from_configured_remote() {
+        assert_eq!(
+            logout_args(REMOTE.into()),
+            ["auth", "logout", "--remote-url", REMOTE]
+        );
+    }
 }
 
 /// Prompt the user to select a provider type
@@ -790,11 +847,148 @@ fn cmd_backend(base_dir: &Path, cmd: BackendCmd) -> Result<()> {
                     emit("Version-control backend configured (no provider details).");
                 }
             } else {
-                emit("No version-control backend configured. Run 'px backend configure local'.");
+                emit("No version-control backend configured. Run 'px configure local'.");
                 std::process::exit(1);
             }
         }
     }
+    Ok(())
+}
+
+fn cmd_configure(base_dir: &Path, args: ConfigureArgs) -> Result<()> {
+    // Handle `px configure status` subcommand explicitly.
+    if let Some(ConfigureCmd::Status) = args.cmd {
+        return cmd_configure_status(base_dir);
+    }
+    // Bare `px configure` with no provider and no flags → show status.
+    let provider_raw = args.provider.clone().or_else(|| args.provider_flag.clone());
+    let has_set_flags = args.remote_url.is_some()
+        || args.workspace_id.is_some()
+        || args.reset
+        || args.initial_commit
+        || args.no_initial_commit;
+    if provider_raw.is_none() && !has_set_flags {
+        return cmd_configure_status(base_dir);
+    }
+    // Handle `px configure status` passed as positional `status`.
+    if let Some(p) = &provider_raw {
+        if p == "status" && !has_set_flags && args.cmd.is_none() {
+            return cmd_configure_status(base_dir);
+        }
+    }
+    if args.initial_commit && args.no_initial_commit {
+        anyhow::bail!("--initial-commit and --no-initial-commit are mutually exclusive");
+    }
+    let provider_str = provider_raw
+        .as_deref()
+        .context("provider type required: local, portals-cloud, or remote (e.g. `px configure local` or `px configure remote --remote-url lore://host:41337`)")?;
+    let provider_type = ProviderType::parse_from_str(provider_str)
+        .with_context(|| format!("invalid provider type '{provider_str}'"))?;
+    // Validate remote URL requirement.
+    if provider_type == ProviderType::Remote && args.remote_url.is_none() {
+        // Check if existing config has it when not resetting? Still require explicit for clarity.
+        anyhow::bail!(
+            "remote provider requires --remote-url <lore://host:41337> (alias: --endpoint)"
+        );
+    }
+    if provider_type != ProviderType::Remote && args.remote_url.is_some() {
+        emit(format!(
+            "warning: --remote-url is ignored for provider '{}'",
+            provider_type.as_str()
+        ));
+    }
+    // Validate every argument before touching the existing configuration. In
+    // particular, `px configure --reset` must not erase a working provider
+    // before reporting that a provider type is required.
+    if args.reset {
+        let config_path = base_dir.join("provider.toml");
+        if config_path.exists() {
+            std::fs::remove_file(&config_path).context("failed to reset provider configuration")?;
+            emit("✓ Reset provider configuration.");
+        }
+    }
+    let factory = ProviderFactory::new(base_dir);
+    let provider = match provider_type {
+        ProviderType::Local => factory.create_provider(ProviderType::Local)?,
+        ProviderType::PortalsCloud => {
+            if let Some(ws) = &args.workspace_id {
+                let p = px_core::provider::portals_cloud::PortalsCloudProvider::new()
+                    .with_workspace_id(ws);
+                std::sync::Arc::new(p) as std::sync::Arc<dyn px_core::provider::Provider>
+            } else {
+                factory.create_provider(ProviderType::PortalsCloud)?
+            }
+        }
+        ProviderType::Remote => {
+            let url = args.remote_url.as_ref().unwrap();
+            let ws_id = args
+                .workspace_id
+                .clone()
+                .unwrap_or_else(|| "default".to_string());
+            factory.create_remote_provider(url, &ws_id)?
+        }
+    };
+    let mut provider_manager = ProviderManager::new(base_dir);
+    provider_manager.set_active_provider(provider.clone());
+    provider_manager
+        .save_provider_config(provider.as_ref())
+        .context("failed to save provider configuration")?;
+    let rt = get_tokio_runtime();
+    rt.block_on(provider.initialize())
+        .context("failed to initialize provider")?;
+    emit(format!("✓ Configured {} backend.", provider_type.as_str()));
+    if let Ok(url) = provider.lore_url_base() {
+        emit(format!("  Lore URL: {}", url));
+    }
+    emit(format!("  Workspace ID: {}", provider.workspace_id()));
+    if let Some(url) = &args.remote_url {
+        if provider_type == ProviderType::Remote {
+            emit(format!("  Remote URL: {}", url));
+        }
+    }
+    if args.no_initial_commit {
+        emit("  Skipped initial commit for existing repositories (--no-initial-commit).");
+    } else {
+        bootstrap_repositories(base_dir, args.initial_commit)?;
+    }
+    Ok(())
+}
+
+fn cmd_configure_status(base_dir: &Path) -> Result<()> {
+    if px_core::provider::version_control_configured(base_dir) {
+        let mut provider_manager = ProviderManager::new(base_dir);
+        if let Some(provider) = provider_manager.load_configured_provider()? {
+            emit(format!(
+                "✓ Version-control backend configured: {}",
+                provider.name()
+            ));
+            emit(format!("  Type: {}", provider.provider_type().as_str()));
+            if let Ok(url) = provider.lore_url_base() {
+                emit(format!("  Lore URL: {}", url));
+            }
+            emit(format!("  Workspace ID: {}", provider.workspace_id()));
+            // Also show health via status check (best-effort, no exit code).
+            let rt = get_tokio_runtime();
+            if let Ok(healthy) = rt.block_on(provider.health_check()) {
+                emit(format!("  Healthy: {}", if healthy { "Yes" } else { "No" }));
+            }
+        } else {
+            emit("Version-control backend configured (no provider details).");
+        }
+    } else {
+        emit(
+            "No version-control backend configured. Run 'px configure local' or 'px configure remote --remote-url lore://host:41337'.",
+        );
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+fn cmd_completions(shell: clap_complete::Shell) -> Result<()> {
+    use clap::CommandFactory;
+    let mut cmd = Cli::command();
+    let bin_name = "px";
+    clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
     Ok(())
 }
 
@@ -878,21 +1072,9 @@ fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
         .map(|p| p.map(|p| p.provider_type()))
         .unwrap_or(None);
 
-    // Block repair for non-local providers
-    if repair {
-        if let Some(ProviderType::Local) = provider_type {
-            // Allow repair for local provider
-        } else {
-            anyhow::bail!(
-                "px doctor --repair is only available for the local provider. \
-                 Your configured provider is {}. \
-                 Repair operations are not needed for remote or cloud providers.",
-                provider_type
-                    .map(|t| t.as_str().to_string())
-                    .unwrap_or("none".to_string())
-            );
-        }
-    }
+    // Repair is now provider-aware: local repairs manage the daemon, remote
+    // repairs are limited to non-daemon checks (e.g. PX home creation, CLI
+    // install) and otherwise report actionable guidance per check.
 
     // Use shared tokio runtime for async doctor operations
     let rt = get_tokio_runtime();
@@ -909,17 +1091,14 @@ fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
         if let Some(pt) = provider_type {
             match pt {
                 ProviderType::Local => {
-                    emit("Provider: local (doctor checks apply)");
+                    emit("Provider: local");
                 }
                 ProviderType::Remote | ProviderType::PortalsCloud => {
-                    emit(format!(
-                        "Provider: {} (doctor checks apply only to local provider)",
-                        pt.as_str()
-                    ));
+                    emit(format!("Provider: {} (remote-aware checks)", pt.as_str()));
                 }
             }
         } else {
-            emit("Provider: not configured (doctor checks apply only to local provider)");
+            emit("Provider: not configured");
         }
         emit(String::new());
 
@@ -1160,12 +1339,74 @@ fn cmd_presign(
 
     if std::io::stdout().is_terminal() {
         println!("URL: {}", result.url);
-        println!("Expires at: {}", result.expires_at);
+        println!(
+            "Expires at: {} ({})",
+            result.expires_at,
+            format_presign_expiry(result.expires_at)
+        );
         println!("Revision: {}", result.revision);
+        // ponytail: one-line guard — an expired token redeems as 401
+        // text/plain "invalid or expired token", which browsers render as a
+        // text file instead of the image. Say so up front.
+        println!(
+            "Note: this bearer URL serves the image only until expiry; after that (or if the remote Lore server restarts/rotates its signing key) it serves 401 text instead. If the browser shows text, mint a fresh URL and open it promptly."
+        );
     } else {
         println!("{}", serde_json::to_string_pretty(&result)?);
     }
     Ok(())
+}
+
+/// Humanize a presign `expires_at` epoch against the local clock.
+///
+/// Returns `"in 59m 12s"`, `"in 45s"`, or `"ALREADY EXPIRED — mint a fresh URL"`.
+/// A coarse local-clock comparison is enough: Lore validates expiry on the
+/// server clock, and the HTTP `Date` header shows server/client agree within
+/// seconds, so a locally-expired token will redeem as 401 text.
+fn format_presign_expiry(expires_at: u64) -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if expires_at <= now {
+        return "ALREADY EXPIRED — mint a fresh URL and open it promptly".to_string();
+    }
+    let mut remaining = expires_at - now;
+    let hours = remaining / 3600;
+    remaining %= 3600;
+    let minutes = remaining / 60;
+    let seconds = remaining % 60;
+    if hours > 0 {
+        format!("in {hours}h {minutes}m")
+    } else if minutes > 0 {
+        format!("in {minutes}m {seconds}s")
+    } else {
+        format!("in {seconds}s")
+    }
+}
+
+#[cfg(test)]
+mod presign_expiry_tests {
+    use super::*;
+
+    fn now_epoch() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    }
+
+    #[test]
+    fn future_expiry_reports_remaining_time() {
+        let label = format_presign_expiry(now_epoch() + 3600 + 60);
+        assert_eq!(label, "in 1h 1m");
+    }
+
+    #[test]
+    fn past_expiry_is_flagged_not_silent() {
+        let label = format_presign_expiry(now_epoch().saturating_sub(1));
+        assert!(label.contains("ALREADY EXPIRED"), "got: {label}");
+    }
 }
 
 fn cmd_query(base_dir: &Path, uri_str: &str, path: &str, format: &str) -> Result<()> {

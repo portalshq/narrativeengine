@@ -26,6 +26,24 @@ For creating or resolving individual entities, use `px-resolve`. For revising en
   * Example: `px branch toystory classic`
 * **Clone/pull:** `px pull <remote> <universe_name>` — clones or pulls a repository from a remote.
 
+## Project Context
+
+`repository.yaml` is the repository's world manifest and the sole source of
+truth for project-wide context. It owns durable global canon, visual or
+narrative style, reusable asset conventions, global exclusions, and canonical
+references through its `properties`, `representations`, and `references`.
+
+After initializing or pulling a repository, preserve this manifest as the
+context that downstream PX workflows resolve from their target branch. Keep
+entity manifests focused on identity and entity-specific facts; do not add a
+repository-level summary or reference for every entity.
+
+Update `repository.yaml` only when the user explicitly defines or approves a
+project-wide property or reference. If entity work reveals a potentially
+reusable global fact, present it as a proposed repository update and wait for
+user approval before writing it. Preserve existing global context when adding
+an approved change.
+
 ## Guardrails
  
  Unless the user explicitly requests a different provider or storage location:
