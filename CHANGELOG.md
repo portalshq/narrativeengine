@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.23] - 2026-09-17
+
+### Fixed
+- **Presign Content-Type Headers**: Fixed `px presign` command to include `Content-Type` headers in presigned URL responses. Previously, presigned URLs lacked proper MIME type headers, causing browsers to treat images as text/binary data instead of rendering them properly.
+  - Extended `LorePresignRequest` to include `content_type`, `content_encoding`, and `content_disposition` fields
+  - Added `format_to_mime_type()` function to map representation formats (png, jpg, glb, etc.) to proper MIME types
+  - Modified both local and remote presign functions to send content type from representation format
+  - Added unit tests for `format_to_mime_type()` function and integration test to verify Content-Type headers
+
+### Changed
+- Bumped workspace version to 0.8.23
+
 # px-core Compilation Fixes and Enhancements Summary
 
 **Date:** 2026-07-10
