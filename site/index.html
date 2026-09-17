@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>px — the harness for AI creative work</title>
+  <meta name="description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
+  <link rel="canonical" href="https://portalshq.github.io/narrativeengine/" />
+  <meta property="og:title" content="px — the harness for AI creative work" />
+  <meta property="og:description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="px" />
+  <meta property="og:url" content="https://portalshq.github.io/narrativeengine/" />
+  <meta property="og:image" content="https://portalshq.github.io/narrativeengine/og-image.svg" />
+  <meta property="og:image:alt" content="PX — a harness for your AI creative work" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="px — the harness for AI creative work" />
+  <meta name="twitter:description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
+  <meta name="twitter:image" content="https://portalshq.github.io/narrativeengine/og-image.svg" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "PX",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux, Windows",
+        "url": "https://portalshq.github.io/narrativeengine/",
+        "description": "Create and use persistent narrative entities across creative tools, formats, and AI workflows.",
+        "isAccessibleForFree": true,
+        "license": "https://opensource.org/license/mit"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Portals", "item": "https://portals.works"},
+          {"@type": "ListItem", "position": 2, "name": "PX", "item": "https://portalshq.github.io/narrativeengine/"}
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <main class="px-page" id="top">
+    <div class="relative isolate">
+      <div class="px-aurora" aria-hidden="true"></div>
+      <div class="px-grid-noise" aria-hidden="true"></div>
+      <nav class="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-20 py-20 md:px-40" aria-label="PX">
+        <a href="#top" class="flex items-baseline gap-8 text-xl"><span class="t-h3-sans font-medium text-white">px</span></a>
+        <div class="hidden items-center gap-20 md:flex">
+          <a href="#how-it-works" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">Docs</a>
+          <a href="#bears" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">Examples</a>
+          <a href="https://github.com/portalshq/narrativeengine" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">GitHub</a>
+          <a href="#install" class="btn-primary inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans text-black rounded-sm transition">Install PX <span aria-hidden="true">↗</span></a>
+        </div>
+      </nav>
+
+      <section class="relative z-10 mx-auto grid min-h-[calc(100svh-80px)] max-w-[1440px] items-center gap-40 px-20 pb-68 pt-24 md:px-40 lg:grid-cols-[1.04fr_.96fr]">
+        <div class="max-w-3xl">
+          <h1 class="px-chrome-word text-[clamp(92px,18vw,260px)] font-medium leading-[1em]">px</h1>
+          <h2 class="mt-32 max-w-[10.5em] text-[clamp(36px,5vw,78px)] leading-[.94]">A harness for your <span class="px-serif text-[#dffc72]">AI creative work.</span></h2>
+          <p class="mt-28 max-w-xl t-p-sans">Create persistent characters, worlds, objects, and scenes with AI agents — then keep building on them across tools and formats.</p>
+          <div class="mt-34 flex flex-wrap gap-20">
+            <a href="https://github.com/portalshq/narrativeengine" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">View on GitHub</a>
+            <a href="#install" class="btn-primary inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans text-black rounded-sm transition">Install PX <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="lg:pt-38">
+          <div class="px-world-art" aria-label="An illustrated PX world with persistent bear characters" role="img">
+            <div class="px-mono absolute left-18 top-16 text-[10px] uppercase text-[#e7f5c0]">bears / scene_04 / dusk</div>
+            <div class="absolute right-[12%] top-[12%] h-48 w-48 rounded-full border border-[#e8f0eb]/45"></div>
+            <div class="absolute right-[12%] top-[12%] h-48 w-48 rounded-full border border-[#e8f0eb]/20 [transform:translate(22px,22px)]"></div>
+            <div class="px-bear left-[17%]"></div>
+            <div class="px-bear px-bear-small left-[45%]"></div>
+            <div class="px-bear px-bear-small right-[12%]"></div>
+            <div class="px-scan-line"></div>
+            <div class="absolute inset-x-18 bottom-16 flex items-end justify-between border-t border-[#e8f0eb]/30 pt-10 text-xs text-[#d3decf]">
+              <span class="px-mono">3 entities resolved</span><span>Lonnie appears in scene</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="px-saga-banner" data-header-theme="light" aria-label="PX creative canvas">
+      <div class="mx-auto flex max-w-[1440px] flex-col justify-between px-20 py-32 md:px-40 md:py-40">
+        <div class="max-w-4xl">
+          <p class="t-d2-sans leading-[.92]">A world keeps its shape<br /><span class="t-d2-serif">when the tool changes.</span></p>
+          <p class="mt-20 max-w-xl t-p-sm-sans">px keeps characters, locations, scenes, and representations resolvable for the next creative move.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-20 py-14 text-black md:px-40">
+      <div class="mx-auto flex max-w-[1440px] items-center justify-between gap-20 text-[clamp(22px,3vw,42px)] leading-none"><span>CREATE IT ONCE.</span><span class="px-serif">KEEP CREATING WITH IT.</span><span class="hidden lg:inline">✳</span></div>
+    </section>
+
+    <section class="mx-auto">
+      <div class="mx-auto px-20 py-28 md:px-40 md:py-40 max-w-[1440px]">
+        <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>01 / give your creative projects memory</p>
+        <div class="mt-28 grid gap-[2px] lg:grid-cols-3">
+          <article class="bg-black/4 rounded-sm min-h-72 p-24 md:p-30">
+            <p class="t-p-sm-sans">01 / Objects</p>
+            <h2 class="mt-32 max-w-[11em] t-h3-sans leading-[.95]">Generate in-world objects.</h2>
+            <p class="mt-20 max-w-sm t-p-sm-sans">Props, events, and products belong to the world and can be summoned again.</p>
+          </article>
+          <article class="bg-black/4 rounded-sm min-h-72 p-24 md:p-30">
+            <p class="t-p-sm-sans">02 / Characters</p>
+            <h2 class="mt-32 max-w-[11em] t-h3-sans leading-[.95]">Characters you can keep creating with.</h2>
+            <p class="mt-20 max-w-sm t-p-sm-sans">Give a character a stable identity, a readable manifest, and usable representations.</p>
+          </article>
+          <article class="bg-black/4 rounded-sm min-h-72 p-24 md:p-30">
+            <p class="t-p-sm-sans">03 / Scenes</p>
+            <h2 class="mt-32 max-w-[11em] t-h3-sans leading-[.95]">Put those characters and locations into new scenes.</h2>
+            <p class="mt-20 max-w-sm t-p-sm-sans">Resolve the entities that define a scene, then shape your narrative.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="bears" class="px-20 py-28 md:px-40 md:py-40">
+      <div class="mx-auto grid max-w-[1440px] gap-32 lg:grid-cols-[.8fr_1.2fr] lg:gap-60">
+        <div>
+          <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>02 / Bears</p>
+          <h2 class="mt-24 t-d2-sans">Stop starting over.</h2>
+          <p class="t-p-serif mt-24 max-w-md">Your creative work stops disappearing between generations.</p>
+          <p class="t-p-sm-sans mt-24 max-w-md">px entities have identity, history, and representations. Correct Lonnie once; reuse the evolving character anywhere your next agent can resolve PX.</p>
+        </div>
+        <div class="space-y-10">
+          <details open class="group p-18">
+            <summary class="cursor-pointer list-none marker:hidden t-p-sm-sans"><span class="mr-12">01</span> Create Lonnie <span class="float-right t-p-sm-sans group-open:rotate-45">+</span></summary>
+            <p class="mt-16 border-t-2 border-white/50 pt-16 text-white t-p-sm-sans">“Create a bear character named Lonnie. Lonnie is a black bear with an energetic, rebellious personality. He likes climbing trees and wears a baseball cap.”</p>
+          </details>
+          <details class="group p-18">
+            <summary class="cursor-pointer list-none marker:hidden t-p-sm-sans"><span class="mr-12">02</span> Keep the character <span class="float-right t-p-sm-sans group-open:rotate-45">+</span></summary>
+            <p class="mt-16 border-t-2 border-white/50 pt-16 text-white t-p-sm-sans">PX stores Lonnie as a character entity with a stable <code>px://</code> address and a durable manifest.</p>
+          </details>
+          <details class="group p-18">
+            <summary class="cursor-pointer list-none marker:hidden t-p-sm-sans"><span class="mr-12">03</span> Revise and reuse <span class="float-right t-p-sm-sans group-open:rotate-45">+</span></summary>
+            <p class="mt-16 border-t-2 border-white/50 pt-16 text-white t-p-sm-sans">“Actually — no baseball cap. Give him blue shorts.” Then bring the same Lonnie into a new scene, image, clip, or future iteration.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto">
+      <div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40">
+        <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>03 / entity, not a file</p>
+        <div class="mt-28 grid gap-28 lg:grid-cols-[.88fr_1.12fr] lg:items-center">
+          <div>
+            <h2 class="t-d2-sans leading-[.92]">One character.<br /><span class="t-d2-serif text-[#dffc72]">Many representations.</span></h2>
+            <p class="mt-24 max-w-lg t-p-sm-sans leading-[1.3]">Keep the entity. Change the representation. PX manifests can attach direct representations with their format and provenance — for example, a reference image or a scene clip.</p>
+          </div>
+          <div class="bg-black/2 rounded-sm p-20 md:p-30">
+            <p class="t-p-sm-sans">px://bears/character/lonnie</p>
+            <div class="mt-24 space-y-14 t-p-sm-sans leading-[1.3]">
+              <p><span>identity</span><br />Lonnie — black bear, restless climber</p>
+              <p><span>representation</span><br /><span class="text-[#dffc72]">reference_image</span> / png</p>
+              <p><span>representation</span><br /><span class="text-[#dffc72]">alternate_take</span> / png</p>
+              <p><span>scene appearance</span><br />Bears / scene_04 / dusk</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="px-20 py-28 md:px-40 md:py-40">
+      <div class="mx-auto max-w-[1440px]">
+        <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>04 / how px works</p>
+        <div class="mt-28 grid gap-[2px] md:grid-cols-4">
+          <div class="bg-black/4 rounded-sm p-20">
+            <p class="t-p-sm-sans">01</p>
+            <h3 class="mt-20 t-d2-sans">URI</h3>
+            <p class="mt-20 leading-[1.3] t-p-sm-sans">A px:// URI identifies a narrative resource.</p>
+          </div>
+          <div class="bg-black/4 rounded-sm p-20">
+            <p class="t-p-sm-sans">02</p>
+            <h3 class="mt-20 t-d2-sans">Manifest</h3>
+            <p class="mt-20 leading-[1.3] t-p-sm-sans">A readable, structured, versionable YAML representation.</p>
+          </div>
+          <div class="bg-black/4 rounded-sm p-20">
+            <p class="t-p-sm-sans">03</p>
+            <h3 class="mt-20 t-d2-sans">Commit</h3>
+            <p class="mt-20 leading-[1.3] t-p-sm-sans">Content-addressed snapshots and patch metadata.</p>
+          </div>
+          <div class="bg-black/4 rounded-sm p-20">
+            <p class="t-p-sm-sans">04</p>
+            <h3 class="mt-20 t-d2-sans">Resolver</h3>
+            <p class="mt-20 leading-[1.3] t-p-sm-sans">Resolve a URI or query a subtree for the next task.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="mx-auto">
+      <div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40">
+        <div class="grid gap-28 lg:grid-cols-[.72fr_1.28fr]">
+          <div>
+            <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>05 / the developer surface</p>
+            <h2 class="mt-24 t-d2-sans leading-[.92]">Install it.<br />Make something.</h2>
+            <p class="mt-22 max-w-md leading-[1.35] t-p-sm-sans">px ships with a CLI, agent skills, an on-demand MCP server, and a resolver for the narrative resources inside your project.</p>
+          </div>
+          <div class="space-y-14">
+            <div>
+              <p class="mb-8 t-p-sm-sans">Install px</p>
+              <div class="px-code-wrap">
+                <pre class="px-code p-18"><code id="code-install">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash</code></pre>
+                <button type="button" class="px-copy-button" data-copy="code-install" aria-label="Copy command">Copy</button>
+              </div>
+            </div>
+            <div class="grid gap-[2px] md:grid-cols-2">
+              <div>
+                <p class="mb-8 t-p-sm-sans">Start a world</p>
+                <div class="px-code-wrap">
+                  <pre class="px-code p-18"><code id="code-init">px init bears --provider local
+
+# Create a character that the world can resolve
+px create character lonnie -u bears -n "Lonnie"</code></pre>
+                  <button type="button" class="px-copy-button" data-copy="code-init" aria-label="Copy command">Copy</button>
+                </div>
+              </div>
+              <div>
+                <p class="mb-8 t-p-sm-sans">Teach px to an agent</p>
+                <div class="px-code-wrap">
+                  <pre class="px-code p-18"><code id="code-skills">npx skills add portalshq/narrativeengine</code></pre>
+                  <button type="button" class="px-copy-button" data-copy="code-skills" aria-label="Copy command">Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-40 grid gap-[2px] border-t-2 border-white/15 pt-28 lg:grid-cols-2">
+          <article>
+            <p class="t-p-sm-sans">Agents &amp; MCP</p>
+            <p class="mt-14 max-w-lg t-p-sm-sans leading-[1.35]">The standard PX installer bundles the native <code>px-mcp-server</code> binary with <code>px</code>. If the MCP command is missing or broken, rerun the standard PX installer from a host shell.</p>
+          </article>
+          <article>
+            <p class="t-p-sm-sans">Representations</p>
+            <div class="px-code-wrap">
+              <pre class="px-code p-18"><code id="code-repr">px create scene pizza-planet -u toystory -n "Pizza Planet"
+px add px://toystory/scene/pizza-planet clip-01 ./pizza-planet-clip-01.mp4 --format mp4 -m "Add pizza-planet scene clip"</code></pre>
+              <button type="button" class="px-copy-button" data-copy="code-repr" aria-label="Copy command">Copy</button>
+            </div>
+          </article>
+        </div>
+        <div class="mt-16 grid gap-[2px] lg:grid-cols-2">
+          <article>
+            <p class="mb-8 t-p-sm-sans">TypeScript SDK</p>
+            <div class="px-code-wrap">
+              <pre class="px-code p-18"><code id="code-ts">import {repoCreateEntity} from '@portalshq/px'
+
+const lonnie = repoCreateEntity('bears', 'character', 'lonnie', 'Lonnie')</code></pre>
+              <button type="button" class="px-copy-button" data-copy="code-ts" aria-label="Copy command">Copy</button>
+            </div>
+          </article>
+          <article>
+            <p class="mb-8 t-p-sm-sans">Python SDK</p>
+            <div class="px-code-wrap">
+              <pre class="px-code p-18"><code id="code-py">from px_sdk import repo_create_entity
+
+lonnie = repo_create_entity('bears', 'character', 'lonnie', 'Lonnie')</code></pre>
+              <button type="button" class="px-copy-button" data-copy="code-py" aria-label="Copy command">Copy</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-saga-banner" data-header-theme="light" aria-label="PX creative canvas">
+      <div class="mx-auto flex max-w-[1440px] flex-col justify-between px-20 py-32 md:px-40 md:py-40">
+        <div class="grid gap-24 lg:grid-cols-[1fr_.7fr] lg:items-end">
+          <div>
+            <p class="t-p-sm-sans">For filmmakers, writers, artists, creative developers, and the projects that grow into worlds.</p>
+            <h2 class="mt-20 t-d2-sans leading-[.96]">Make something weird.<br /><span class="px-serif">Keep building it.</span></h2>
+          </div>
+          <div class="lg:justify-self-end"><a href="https://github.com/portalshq/narrativeengine" class="btn-primary inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans text-black rounded-sm transition">Explore PX on GitHub <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="PX and Portals" class="px-footer mx-auto">
+      <div class="mx-auto max-w-[1440px] px-20 pt-40 pb-80 t-p-sm-sans md:px-40">
+        <p>PX is free and open source for creators and developers building locally.</p>
+        <a href="https://portals.works" class="mt-20 inline-block">Building with a production team? <span class="underline decoration-2 underline-offset-4">Explore Portals <span aria-hidden="true">↗</span></span></a>
+      </div>
+    </section>
+  </main>
+  <script src="./script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+/* ============================================================================
+ * PX standalone site stylesheet
+ *
+ * Single-file port of the Tailwind v4 design tokens + utilities used by the
+ * portals marketing page `frontend/app/(marketing)/px/page.tsx`
+ * (rendered through `frontend/src/components/px/PxLandingPage.tsx` with
+ * `chrome="standalone"`).
+ *
+ * Source mapping (portals-cloud repo, `frontend/`):
+ *   design tokens  <- app/globals.css `@theme inline`  (--spacing: .0625rem,
+ *                     so 1 spacing unit = 1px; --radius-sm: 3px) +
+ *                     src/saga-repro.css @font-face / --font-* vars
+ *   t-* type scale <- compiled from the Tailwind v4 theme (fluid clamp()s
+ *                     copied verbatim from src/saga.css)
+ *   px-* sections  <- src/components/px/PxLandingPage.module.css
+ *   utilities      <- the exact Tailwind utility subset the component uses,
+ *                     hand-resolved (no build step, no runtime)
+ * ========================================================================== */
+
+/* ---- Fonts (files in ./fonts/, renamed from frontend/public/fonts/) ---- */
+@font-face {
+  font-family: DieGroteskB;
+  src: url('./fonts/die-grotesk-b-regular.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 400;
+}
+@font-face {
+  font-family: DieGroteskB;
+  src: url('./fonts/die-grotesk-b-medium.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 500;
+}
+@font-face {
+  font-family: DieGroteskC;
+  src: url('./fonts/die-grotesk-c-regular.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 400;
+}
+@font-face {
+  font-family: AeonikFono;
+  src: url('./fonts/aeonik-fono-regular.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 400;
+}
+@font-face {
+  font-family: StkBureau;
+  src: url('./fonts/stk-bureau-book.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 400;
+}
+@font-face {
+  font-family: StkBureau;
+  src: url('./fonts/stk-bureau-light.woff2') format('woff2');
+  font-display: swap;
+  font-weight: 300;
+}
+
+:root {
+  --font-die-grotesk-b: 'DieGroteskB', Arial, sans-serif;
+  --font-die-grotesk-c: 'DieGroteskC', Arial, sans-serif;
+  --font-aeonik-fono: 'AeonikFono', Arial, sans-serif;
+  --font-stk-bureau: 'StkBureau', Georgia, serif;
+
+  --px-ink: #111111;
+  --px-dim: #656565;
+  --px-yellow: #efdc3d;
+  --px-lime: #dffc72;
+
+  /* Fluid type variables (verbatim from the Tailwind v4 build output). */
+  --tw-fluid-clamp-min_-0_16-clamp-max_-0_26: clamp(-.26px, calc(-.145714px + -.00446429vw), -.16px);
+  --tw-fluid-clamp-min_-0_3-clamp-max_-0_4: clamp(-.4px, calc(-.285714px + -.00446429vw), -.3px);
+  --tw-fluid-clamp-min_-0_33-clamp-max_-0_5: clamp(-.5px, calc(-.305714px + -.00758929vw), -.33px);
+  --tw-fluid-clamp-min_-0_51-clamp-max_-0_84: clamp(-.84px, calc(-.462857px + -.0147321vw), -.51px);
+  --tw-fluid-clamp-min_-0_52-clamp-max_-1_64: clamp(-1.64px, calc(-.36px + -.05vw), -.52px);
+  --tw-fluid-clamp-min_0_17-clamp-max_0_54: clamp(.17px, calc(.117143px + .0165179vw), .54px);
+  --tw-fluid-clamp-min_14_84-clamp-max_19_87: clamp(14.84px, calc(14.1214px + .224554vw), 19.87px);
+  --tw-fluid-clamp-min_15_69-clamp-max_25_73: clamp(15.69px, calc(14.2557px + .448214vw), 25.73px);
+  --tw-fluid-clamp-min_16_74-clamp-max_25_11: clamp(16.74px, calc(15.5443px + .373661vw), 25.11px);
+  --tw-fluid-clamp-min_25_48-clamp-max_42_22: clamp(25.48px, calc(23.0886px + .747321vw), 42.22px);
+  --tw-fluid-clamp-min_33_7-clamp-max_107_36: clamp(33.7px, calc(23.1771px + 3.28839vw), 107.36px);
+  --tw-fluid-clamp-min_34_65-clamp-max_109_98: clamp(34.65px, calc(23.8886px + 3.36295vw), 109.98px);
+}
+
+/* ---- Minimal reset (replaces Tailwind preflight for this page) ---- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  min-height: 100%;
+  background: #fff;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+code { font-family: var(--font-aeonik-fono), monospace; }
+summary { list-style: none; cursor: pointer; }
+summary::-webkit-details-marker { display: none; }
+summary::marker { display: none; content: ""; }
+
+/* ---- Type scale (verbatim rules from the Tailwind build) ---- */
+.t-h3-sans { font-family: var(--font-die-grotesk-b); font-size: var(--tw-fluid-clamp-min_25_48-clamp-max_42_22); letter-spacing: var(--tw-fluid-clamp-min_-0_51-clamp-max_-0_84); font-style: normal; font-weight: 400; line-height: 104%; }
+.t-p-sans { font-family: var(--font-die-grotesk-b); font-size: var(--tw-fluid-clamp-min_15_69-clamp-max_25_73); letter-spacing: var(--tw-fluid-clamp-min_-0_16-clamp-max_-0_26); font-style: normal; font-weight: 400; line-height: 120%; }
+.t-p-sm-sans { font-family: var(--font-die-grotesk-b); font-size: var(--tw-fluid-clamp-min_14_84-clamp-max_19_87); letter-spacing: var(--tw-fluid-clamp-min_-0_3-clamp-max_-0_4); font-style: normal; font-weight: 400; line-height: 120%; }
+.t-p-serif { font-family: var(--font-stk-bureau); font-size: var(--tw-fluid-clamp-min_16_74-clamp-max_25_11); letter-spacing: var(--tw-fluid-clamp-min_-0_33-clamp-max_-0_5); font-style: normal; font-weight: 400; line-height: 130%; }
+.t-d2-sans { font-family: var(--font-die-grotesk-c); font-size: var(--tw-fluid-clamp-min_33_7-clamp-max_107_36); letter-spacing: var(--tw-fluid-clamp-min_0_17-clamp-max_0_54); font-style: normal; font-weight: 300; line-height: 100%; }
+.t-d2-serif { font-family: var(--font-stk-bureau); font-size: var(--tw-fluid-clamp-min_34_65-clamp-max_109_98); letter-spacing: var(--tw-fluid-clamp-min_-0_52-clamp-max_-1_64); font-style: normal; font-weight: 400; line-height: 100%; }
+
+/* ---- Layout / display ---- */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.isolate { isolation: isolate; }
+.z-10 { z-index: 10; }
+.hidden { display: none; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+.inline-flex { display: inline-flex; }
+.flex { display: flex; }
+.grid { display: grid; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.items-baseline { align-items: baseline; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.cursor-pointer { cursor: pointer; }
+.list-none { list-style: none; }
+.marker\:hidden::marker { display: none; content: ""; }
+.float-right { float: right; }
+.uppercase { text-transform: uppercase; }
+.underline { text-decoration-line: underline; }
+.font-medium { font-weight: 500; }
+.inset-0 { inset: 0; }
+.transition { transition-property: color, background-color, border-color; transition-duration: 150ms; }
+
+/* ---- Borders / radius ---- */
+.border { border: 1px solid; }
+.border-t { border-top: 1px solid; }
+.border-t-2 { border-top: 2px solid; }
+.rounded-sm { border-radius: 3px; }
+.rounded-full { border-radius: 9999px; }
+.border-white\/15 { border-color: rgb(255 255 255 / .15); }
+.border-white\/50 { border-color: rgb(255 255 255 / .5); }
+.border-\[\#e8f0eb\]\/45 { border-color: rgb(232 240 235 / .45); }
+.border-\[\#e8f0eb\]\/20 { border-color: rgb(232 240 235 / .2); }
+.border-\[\#e8f0eb\]\/30 { border-color: rgb(232 240 235 / .3); }
+.decoration-2 { text-decoration-thickness: 2px; }
+.underline-offset-4 { text-underline-offset: 4px; }
+
+/* ---- Color / fill ---- */
+.text-white { color: #fff; }
+.text-black { color: #000; }
+.text-\[\#dffc72\] { color: var(--px-lime); }
+.text-\[\#e7f5c0\] { color: #e7f5c0; }
+.text-\[\#d3decf\] { color: #d3decf; }
+.text-white\/45 { color: rgb(255 255 255 / .45); }
+.bg-black\/4 { background-color: rgb(0 0 0 / .04); }
+.bg-black\/2 { background-color: rgb(0 0 0 / .02); }
+.hover\:border-black:hover { border-color: #000; }
+.hover\:text-black:hover { color: #000; }
+
+/* ---- Buttons (LinkButton in PxLandingPage.tsx) ----
+ * Quiet buttons carry no border width (Tailwind preflight default), so the
+ * hover:border-black / hover:text-black rules only affect text color. */
+.btn-quiet { /* intentionally chromeless; see note above */ }
+.btn-primary { background-color: var(--px-yellow); }
+.btn-primary:hover { background-color: color-mix(in srgb, var(--px-yellow) 80%, white); }
+
+/* ---- Spacing (theme --spacing: .0625rem, so 1 unit = 1px) ---- */
+.mx-auto { margin-left: auto; margin-right: auto; }
+.mt-14 { margin-top: 14px; } .mt-16 { margin-top: 16px; } .mt-20 { margin-top: 20px; }
+.mt-22 { margin-top: 22px; } .mt-24 { margin-top: 24px; } .mt-28 { margin-top: 28px; }
+.mt-32 { margin-top: 32px; } .mt-34 { margin-top: 34px; } .mt-40 { margin-top: 40px; }
+.mb-8 { margin-bottom: 8px; } .mb-20 { margin-bottom: 20px; }
+.mr-12 { margin-right: 12px; }
+.p-18 { padding: 18px; } .p-20 { padding: 20px; } .p-24 { padding: 24px; }
+.px-18 { padding-left: 18px; padding-right: 18px; }
+.px-20 { padding-left: 20px; padding-right: 20px; }
+.py-12 { padding-top: 12px; padding-bottom: 12px; }
+.py-14 { padding-top: 14px; padding-bottom: 14px; }
+.py-20 { padding-top: 20px; padding-bottom: 20px; }
+.py-28 { padding-top: 28px; padding-bottom: 28px; }
+.py-32 { padding-top: 32px; padding-bottom: 32px; }
+.pt-10 { padding-top: 10px; } .pt-16 { padding-top: 16px; } .pt-24 { padding-top: 24px; }
+.pt-28 { padding-top: 28px; } .pt-40 { padding-top: 40px; }
+.pb-16 { padding-bottom: 16px; } .pb-68 { padding-bottom: 68px; } .pb-80 { padding-bottom: 80px; }
+.inset-x-18 { left: 18px; right: 18px; }
+.top-16 { top: 16px; } .bottom-16 { bottom: 16px; } .left-18 { left: 18px; }
+.gap-8 { gap: 8px; } .gap-10 { gap: 10px; } .gap-12 { gap: 12px; } .gap-20 { gap: 20px; }
+.gap-24 { gap: 24px; } .gap-28 { gap: 28px; } .gap-32 { gap: 32px; } .gap-40 { gap: 40px; }
+.gap-\[2px\] { gap: 2px; }
+.space-y-10 > * + * { margin-top: 10px; }
+.space-y-14 > * + * { margin-top: 14px; }
+
+/* ---- Sizes ---- */
+.h-48 { height: 48px; } .w-48 { width: 48px; }
+.min-h-72 { min-height: 72px; }
+.min-h-\[calc\(100svh-80px\)\] { min-height: calc(100svh - 80px); }
+.max-w-3xl { max-width: 48rem; } .max-w-4xl { max-width: 56rem; }
+.max-w-xl { max-width: 36rem; } .max-w-lg { max-width: 32rem; }
+.max-w-md { max-width: 28rem; } .max-w-sm { max-width: 24rem; }
+.max-w-\[1440px\] { max-width: 1440px; }
+.max-w-\[10\.5em\] { max-width: 10.5em; }
+.max-w-\[11em\] { max-width: 11em; }
+.right-\[12\%\] { right: 12%; } .top-\[12\%\] { top: 12%; }
+.left-\[17\%\] { left: 17%; } .left-\[45\%\] { left: 45%; }
+
+/* ---- Arbitrary type / leading ---- */
+.text-xl { font-size: 20px; line-height: 1.4; }
+.text-xs { font-size: 12px; line-height: 1.4; }
+.text-\[10px\] { font-size: 10px; }
+.text-\[clamp\(92px\,18vw\,260px\)\] { font-size: clamp(92px, 18vw, 260px); }
+.text-\[clamp\(36px\,5vw\,78px\)\] { font-size: clamp(36px, 5vw, 78px); }
+.text-\[clamp\(22px\,3vw\,42px\)\] { font-size: clamp(22px, 3vw, 42px); }
+.leading-none { line-height: 1; }
+.leading-\[\.92\] { line-height: .92; }
+.leading-\[\.94\] { line-height: .94; }
+.leading-\[\.95\] { line-height: .95; }
+.leading-\[\.96\] { line-height: .96; }
+.leading-\[1em\] { line-height: 1em; }
+.leading-\[1\.3\] { line-height: 1.3; }
+.leading-\[1\.35\] { line-height: 1.35; }
+.\[transform\:translate\(22px\,22px\)\] { transform: translate(22px, 22px); }
+
+/* ---- Accordion plus marker ---- */
+details[open] .group-open\:rotate-45 { rotate: 45deg; }
+
+/* ============================================================================
+ * PX page module (port of PxLandingPage.module.css; .page -> .px-page etc.)
+ * Note: `styles.card` and `styles.sagaBannerFrame` are referenced in the
+ * component but have no rule in the CSS module (they resolve to undefined),
+ * so there is intentionally no styling for them here either.
+ * ========================================================================== */
+.px-page {
+  --px-ink: #111111;
+  --px-dim: #656565;
+  --px-line: #d8d8d8;
+  --px-panel: #f3f3f3;
+  --px-yellow: #efdc3d;
+  color: var(--px-ink);
+  background: transparent;
+  font-family: var(--font-die-grotesk-b), sans-serif;
+  overflow: hidden;
+}
+.px-page .px-mono {
+  font-family: var(--font-aeonik-fono), monospace;
+  letter-spacing: .06em;
+}
+.px-page .px-serif {
+  font-family: var(--font-stk-bureau), Georgia, serif;
+}
+.px-aurora { display: none; }
+.px-grid-noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .52;
+  background-image:
+    linear-gradient(rgb(17 17 17 / .08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(17 17 17 / .08) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 80%);
+}
+.px-chrome-word {
+  position: relative;
+  display: inline-block;
+  color: #000;
+}
+.px-chrome-word::after {
+  content: "px";
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  color: transparent;
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  width: 200%;
+  height: 200%;
+  text-shadow:
+    0.20rem 0.20rem 0px #d7d7d7,
+    0.45rem 0.45rem 0px #bcbcbc,
+    0.70rem 0.70rem 0px #efdc3d;
+}
+.px-world-art {
+  position: relative;
+  isolation: isolate;
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid rgb(231 245 192 / .3);
+  background:
+    radial-gradient(circle at 68% 20%, #dff78d 0 5%, transparent 5.5%),
+    linear-gradient(146deg, transparent 55%, rgb(44 79 43 / .88) 55.5% 63%, transparent 63.5%),
+    linear-gradient(27deg, transparent 40%, rgb(22 53 32 / .8) 40.5% 60%, transparent 60.5%),
+    linear-gradient(140deg, #233f2b 0%, #102418 52%, #09120d 100%);
+}
+.px-world-art::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: auto -18% -28% 5%;
+  height: 76%;
+  border-radius: 50% 50% 0 0;
+  background: repeating-radial-gradient(ellipse at 44% 100%, rgb(148 187 95 / .23) 0 1px, transparent 2px 28px);
+  transform: rotate(-7deg);
+}
+.px-bear {
+  position: absolute;
+  bottom: 6%;
+  width: 158px;
+  height: 188px;
+  border-radius: 46% 46% 40% 40% / 38% 38% 52% 52%;
+  background: linear-gradient(140deg, #191817, #513a27 65%, #0d0d0c);
+  box-shadow: inset 14px 8px 20px rgb(255 211 145 / .13), 0 18px 48px #030604;
+}
+.px-bear::before,
+.px-bear::after {
+  content: '';
+  position: absolute;
+  top: -17px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #2c2118;
+}
+.px-bear::before { left: 8px; }
+.px-bear::after { right: 8px; }
+.px-bear-small { transform: scale(.68); transform-origin: bottom center; filter: brightness(.74); }
+.px-scan-line {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 49.5%, rgb(223 255 141 / .75) 50%, transparent 50.5%);
+  background-size: 100% 160px;
+  mix-blend-mode: screen;
+  animation: px-scan 6s linear infinite;
+}
+.px-node {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  background: #111;
+  box-shadow: 0 0 0 5px rgb(239 220 61 / .42);
+}
+.px-code {
+  overflow-x: auto;
+  background: #eeeeee;
+  border-radius: 4px;
+  color: #111;
+  font: 13px/1.7 var(--font-aeonik-fono), monospace;
+  white-space: pre;
+}
+.px-code-wrap { position: relative; }
+.px-copy-button {
+  position: absolute;
+  border: 0;
+  border-radius: 4px;
+  top: 10px;
+  right: 10px;
+  background: #fff;
+  padding: 5px 9px;
+  color: #111;
+  font: 11px var(--font-aeonik-fono), monospace;
+  cursor: pointer;
+}
+
+/* Light opaque chapters; the saga banners stay transparent (matches the
+ * module's `.page > ...` + `.page > .sagaBanner` override pair). */
+.px-page > div:first-child,
+.px-page > section {
+  background: #fff;
+}
+.px-page > section.px-saga-banner {
+  background: transparent;
+}
+/* Forced-ink overrides from the module (:global text-color remaps). */
+.px-page [class*="text-white"],
+.px-page [class*="text-[#dffc72]"] {
+  color: #111;
+}
+.px-saga-banner {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  color: #fff;
+  background: transparent;
+}
+.px-saga-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(0 0 0 / .14);
+}
+.px-page .px-saga-banner [class*="text-white"] {
+  color: #fff;
+}
+.px-footer {
+  background: #fff;
+  color: #111;
+}
+.px-footer a { color: #111; }
+
+@keyframes px-scan { to { background-position: 0 160px; } }
+
+/* ---- Responsive (md: 48rem, lg: 64rem — per DESIGN.md) ---- */
+@media (min-width: 48rem) {
+  .md\:flex { display: flex; }
+  .md\:px-40 { padding-left: 40px; padding-right: 40px; }
+  .md\:py-40 { padding-top: 40px; padding-bottom: 40px; }
+  .md\:p-30 { padding: 30px; }
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 64rem) {
+  .lg\:inline { display: inline; }
+  .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lg\:grid-cols-\[1\.04fr_\.96fr\] { grid-template-columns: 1.04fr .96fr; }
+  .lg\:grid-cols-\[\.8fr_1\.2fr\] { grid-template-columns: .8fr 1.2fr; }
+  .lg\:grid-cols-\[\.88fr_1\.12fr\] { grid-template-columns: .88fr 1.12fr; }
+  .lg\:grid-cols-\[\.72fr_1\.28fr\] { grid-template-columns: .72fr 1.28fr; }
+  .lg\:grid-cols-\[1fr_\.7fr\] { grid-template-columns: 1fr .7fr; }
+  .lg\:items-center { align-items: center; }
+  .lg\:items-end { align-items: end; }
+  .lg\:gap-60 { gap: 60px; }
+  .lg\:pt-38 { padding-top: 38px; }
+  .lg\:justify-self-end { justify-self: end; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .px-scan-line { animation: none; }
+}
