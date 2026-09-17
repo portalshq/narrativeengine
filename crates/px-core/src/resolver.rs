@@ -194,6 +194,56 @@ fn format_to_mime_type(format: &str) -> Option<String> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::format_to_mime_type;
+
+    #[test]
+    fn test_format_to_mime_type_maps_common_formats() {
+        assert_eq!(format_to_mime_type("png"), Some("image/png".to_string()));
+        assert_eq!(format_to_mime_type("jpg"), Some("image/jpeg".to_string()));
+        assert_eq!(format_to_mime_type("jpeg"), Some("image/jpeg".to_string()));
+        assert_eq!(format_to_mime_type("gif"), Some("image/gif".to_string()));
+        assert_eq!(format_to_mime_type("webp"), Some("image/webp".to_string()));
+        assert_eq!(
+            format_to_mime_type("svg"),
+            Some("image/svg+xml".to_string())
+        );
+        assert_eq!(
+            format_to_mime_type("glb"),
+            Some("model/gltf-binary".to_string())
+        );
+        assert_eq!(
+            format_to_mime_type("gltf"),
+            Some("model/gltf+json".to_string())
+        );
+        assert_eq!(format_to_mime_type("onnx"), Some("model/onnx".to_string()));
+        assert_eq!(
+            format_to_mime_type("pdf"),
+            Some("application/pdf".to_string())
+        );
+        assert_eq!(
+            format_to_mime_type("json"),
+            Some("application/json".to_string())
+        );
+        assert_eq!(format_to_mime_type("txt"), Some("text/plain".to_string()));
+    }
+
+    #[test]
+    fn test_format_to_mime_type_case_insensitive() {
+        assert_eq!(format_to_mime_type("PNG"), Some("image/png".to_string()));
+        assert_eq!(format_to_mime_type("JPG"), Some("image/jpeg".to_string()));
+        assert_eq!(format_to_mime_type("WEBP"), Some("image/webp".to_string()));
+    }
+
+    #[test]
+    fn test_format_to_mime_type_unknown_format_returns_none() {
+        assert_eq!(format_to_mime_type("unknown"), None);
+        assert_eq!(format_to_mime_type("xyz"), None);
+        assert_eq!(format_to_mime_type(""), None);
+    }
+}
+
 #[derive(Deserialize)]
 struct LorePresignResponse {
     url_suffix: String,
