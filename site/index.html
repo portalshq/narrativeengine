@@ -206,29 +206,20 @@
           </div>
           <div class="space-y-14">
             <div>
-              <p class="mb-8 t-p-sm-sans">Install px</p>
+              <p class="mb-8 t-p-sm-sans">Install px + skills</p>
               <div class="px-code-wrap">
-                <pre class="px-code p-18"><code id="code-install">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash</code></pre>
+                <pre class="px-code p-18"><code id="code-install">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash && npx skills add portalshq/narrativeengine</code></pre>
                 <button type="button" class="px-copy-button" data-copy="code-install" aria-label="Copy command">Copy</button>
               </div>
             </div>
-            <div class="grid gap-[2px] md:grid-cols-2">
-              <div>
-                <p class="mb-8 t-p-sm-sans">Start a world</p>
-                <div class="px-code-wrap">
-                  <pre class="px-code p-18"><code id="code-init">px init bears --provider local
+            <div>
+              <p class="mb-8 t-p-sm-sans">Start a world</p>
+              <div class="px-code-wrap">
+                <pre class="px-code p-18"><code id="code-init">px init bears --provider local
 
 # Create a character that the world can resolve
 px create character lonnie -u bears -n "Lonnie"</code></pre>
-                  <button type="button" class="px-copy-button" data-copy="code-init" aria-label="Copy command">Copy</button>
-                </div>
-              </div>
-              <div>
-                <p class="mb-8 t-p-sm-sans">Teach px to an agent</p>
-                <div class="px-code-wrap">
-                  <pre class="px-code p-18"><code id="code-skills">npx skills add portalshq/narrativeengine</code></pre>
-                  <button type="button" class="px-copy-button" data-copy="code-skills" aria-label="Copy command">Copy</button>
-                </div>
+                <button type="button" class="px-copy-button" data-copy="code-init" aria-label="Copy command">Copy</button>
               </div>
             </div>
           </div>
