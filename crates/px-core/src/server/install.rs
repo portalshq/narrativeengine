@@ -281,7 +281,7 @@ impl LoreInstaller {
             .to_str()
             .context("Lore installation directory is not valid UTF-8")?;
 
-        let mut cmd = Command::new("powershell");
+        let mut cmd = Command::new(powershell_binary());
         cmd.args([
             "-NoProfile",
             "-NonInteractive",
@@ -516,6 +516,16 @@ impl LoreInstaller {
 
         info!("Added {} to PATH for current process", install_dir_str);
         Ok(())
+    }
+}
+
+/// Shell used to run `install.ps1`: prefer PowerShell 7 when installed,
+/// fall back to inbox Windows PowerShell 5.1 (the script supports both).
+fn powershell_binary() -> String {
+    if which::which("pwsh").is_ok() {
+        "pwsh".to_string()
+    } else {
+        "powershell".to_string()
     }
 }
 
