@@ -144,19 +144,23 @@ workspace_packages = [
     ]
 
 replacements = {
-    root / "Cargo.toml": [(f'version = "{current}"', f'version = "{new}"')],
-    root / "python/narrativeengine/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
-    root / "python/px-sdk/pyproject.toml": [(f'version = "{current}"', f'version = "{new}"')],
-    root / "typescript/narrativeengine/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
-    root / "typescript/px-sdk/package.json": [(f'  "version": "{current}",', f'  "version": "{new}",')],
+    root / "Cargo.toml": [r'version = "(\d+\.\d+\.\d+)"'],
+    root / "python/narrativeengine/pyproject.toml": [r'version = "(\d+\.\d+\.\d+)"'],
+    root / "python/px-sdk/pyproject.toml": [r'version = "(\d+\.\d+\.\d+)"'],
+    root / "typescript/narrativeengine/package.json": [r'"version": "(\d+\.\d+\.\d+)"'],
+    root / "typescript/px-sdk/package.json": [r'"version": "(\d+\.\d+\.\d+)"'],
 }
 
-for path, ops in replacements.items():
+for path, patterns in replacements.items():
     text = path.read_text()
-    for old, replacement in ops:
-        if old not in text:
-            raise SystemExit(f"Expected text not found in {path}: {old}")
-        text = text.replace(old, replacement, 1)
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            raise SystemExit(f"Expected version pattern not found in {path}: {pattern}")
+        old_version = match.group(1)
+        if old_version != current:
+            print(f"note: {path} is at {old_version} (workspace at {current}); bumping to {new}")
+        text = text[:match.start(1)] + new + text[match.end(1):]
     path.write_text(text)
 
 for path in [
@@ -164,8 +168,14 @@ for path in [
     root / "typescript/px-sdk/package-lock.json",
 ]:
     document = json.loads(path.read_text())
-    if document.get("version") != current or document.get("packages", {}).get("", {}).get("version") != current:
-        raise SystemExit(f"Expected root package version {current} in {path}")
+    old_version = document.get("version")
+    inner_version = document.get("packages", {}).get("", {}).get("version")
+    if old_version != inner_version:
+        raise SystemExit(f"Conflicting root package versions in {path}: {old_version} vs {inner_version}")
+    if old_version is None:
+        raise SystemExit(f"No root package version found in {path}")
+    if old_version != current:
+        print(f"note: {path} is at {old_version} (workspace at {current}); bumping to {new}")
     document["version"] = new
     document["packages"][""]["version"] = new
     path.write_text(json.dumps(document, indent=2) + "\n")
@@ -175,20 +185,25 @@ for path, package in [
     (root / "python/px-sdk/uv.lock", "px-sdk"),
 ]:
     text = path.read_text()
-    pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = "){re.escape(current)}(")'
-    text, count = re.subn(pattern, rf'\g<1>{new}\2', text, count=1)
-    if count != 1:
-        raise SystemExit(f"Expected package/version pair not found in {path}: {package} {current}")
+    pattern = rf'(\[\[package\]\]\nname = "{re.escape(package)}"\nversion = ")(\d+\.\d+\.\d+)(")'
+    match = re.search(pattern, text)
+    if not match:
+        raise SystemExit(f"Expected package/version pair not found in {path}: {package}")
+    if match.group(2) != current:
+        print(f"note: {package} in {path} is at {match.group(2)} (workspace at {current}); bumping to {new}")
+    text = text[:match.start(2)] + new + text[match.end(2):]
     path.write_text(text)
 
 cargo_lock = root / "Cargo.lock"
 text = cargo_lock.read_text()
 for package in workspace_packages:
-    old = f'name = "{package}"\nversion = "{current}"'
-    new_text = f'name = "{package}"\nversion = "{new}"'
-    if old not in text:
-        raise SystemExit(f"Expected package/version pair not found in Cargo.lock: {package} {current}")
-    text = text.replace(old, new_text, 1)
+    pattern = rf'(name = "{re.escape(package)}"\nversion = ")(\d+\.\d+\.\d+)(")'
+    match = re.search(pattern, text)
+    if not match:
+        raise SystemExit(f"Expected package/version pair not found in Cargo.lock: {package}")
+    if match.group(2) != current:
+        print(f"note: {package} in Cargo.lock is at {match.group(2)} (workspace at {current}); bumping to {new}")
+    text = text[:match.start(2)] + new + text[match.end(2):]
 cargo_lock.write_text(text)
 PY
 
