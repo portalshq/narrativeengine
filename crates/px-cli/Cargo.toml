@@ -24,6 +24,7 @@ workflow-e2e = []
 [dependencies]
 px-core = { workspace = true }
 clap = { workspace = true }
+clap_complete = "4"
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }

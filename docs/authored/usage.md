@@ -74,7 +74,7 @@ px query px://toystory/character/woody properties
 # Version control
 px history px://toystory/character/woody
 px branch toystory canon
-px tag toystory episode-4
+px head toystory
 
 # HTTP server
 px-server
@@ -96,7 +96,7 @@ px://toystory/character/woody#properties.homeworld
 ```
 
 **Key rules:**
-- Version, branch, and tag are **never** in the URI path — they are orthogonal selectors passed alongside (mirrors Git, OCI, package managers).
+- Branch and commit selectors are **never** in the URI path — pass them alongside the URI instead (mirrors Git and OCI tooling).
 - Fragment (`#`) carries the query path for subtree extraction.
 - Entity type is singular in the URI (`character`, not `characters`).
 
@@ -181,7 +181,7 @@ px resolve px://toystory/character/woody#references.appears_in \
 
 ### 1.4 Versioned Addressing for Canon Management
 
-Branch and tag are **orthogonal selectors** — never in the URI. Address the same resource at different points in its timeline:
+Branches and commits are **orthogonal selectors** — never in the URI. Address the same resource at different points in its timeline:
 
 ```bash
 # Create branches for alternate canon tracks
@@ -189,14 +189,8 @@ px branch toystory legends
 px branch toystory canon
 px branch toystory "what-if"
 
-# Tag major releases
-px tag toystory episode-4
-px tag toystory episode-5
-px tag toystory episode-6
-
 # Resolve at specific points in time
 px resolve px://toystory/character/woody --branch legends
-px resolve px://toystory/character/woody --tag episode-4
 px resolve px://toystory/character/woody --commit a72c9f3b
 ```
 
@@ -259,7 +253,7 @@ Manifests don't store files — they store **BLAKE3 hashes** pointing to assets.
 
 ```bash
 # Link a reference image by content hash
-px add-repr px://toystory/character/woody reference_image \
+px add px://toystory/character/woody reference_image \
   ./assets/woody_ref.png --format png
 # ✓ Added representation 'reference_image' (png)
 #   Hash: blake3:e3b0c44...
@@ -278,13 +272,13 @@ representations:
 You can attach any asset type — images, 3D meshes, audio, video, ONNX models:
 
 ```bash
-px add-repr px://toystory/character/woody voice_model \
+px add px://toystory/character/woody voice_model \
   ./assets/woody_voice.onnx --format onnx
 
-px add-repr px://toystory/location/andys-room concept_art \
+px add px://toystory/location/andys-room concept_art \
   ./assets/andys-room_concept.png --format png
 
-px add-repr px://toystory/prop/andy-hat mesh \
+px add px://toystory/prop/andy-hat mesh \
   ./assets/andy_hat.glb --format glb
 ```
 
@@ -431,7 +425,7 @@ PX_PORT=8080 PX_BASE_PATH=/path/to/repositorys px-server
 | `GET` | `/repositorys/{repository}/entities` | List entities in a repository |
 | `GET` | `/health` | Health check |
 
-Resolution query parameters: `branch`, `commit`, `tag`, `path` (subtree query).
+Resolution query parameters: `branch`, `commit`, and `path` (subtree query).
 
 #### Examples
 
@@ -590,7 +584,7 @@ px set px://myworld/scene/first-contact mood "tense"
 px set px://myworld/scene/first-contact outcome "alliance_formed"
 
 # Step 8: Add reference images
-px add-repr px://myworld/character/captain-rex reference_image \
+px add px://myworld/character/captain-rex reference_image \
   ./concept/rex.png --format png
 
 # Step 9: Commit everything
@@ -687,9 +681,8 @@ px list
 # px://toystory/
 # px://middleearth/
 
-# Each repository has its own Git history, branches, tags
+# Each repository has its own Git history and branches
 px branch middleearth canon
-px tag middleearth fellowship-of-the-ring
 ```
 
 **Repository directory layout (default: `~/.px/`):**
@@ -855,16 +848,14 @@ toystory/                    ← repository root (Git repo)
 | `px resolve <uri>` | Resolve a PX URI to a manifest or subtree |
 | `px query <uri> <path>` | Query a subtree from a manifest |
 | `px set <uri> <key> <value>` | Set a property on an entity |
-| `px add-repr <uri> <key> <file> --format <fmt>` | Add a content-addressed representation |
+| `px add <uri> <key> <file> --format <fmt>` | Add a content-addressed representation |
 | `px commit <repository> -m <message>` | Commit changes to the VCS |
 | `px history <uri>` | View commit history for an entity |
 | `px list [repository]` | List repositorys or entities |
 | `px branch <repository> [name]` | Create or list branches |
 | `px switch <repository> <branch>` | Switch to a branch |
-| `px tag <repository> [name]` | Create or list tags |
 | `px validate <uri>` | Validate a manifest against the PX schema |
-| `px publish <repository>` | Push current branch to origin (convenience shortcut) |
-| `px push <repository>` | Push to a configurable remote (use `--remote` and `--branch`) |
+| `px push <repository>` | Push the current branch to its upstream remote (alias: `px publish`) |
 | `px pull <url-or-name>` | Clone from URL or pull an existing repository |
 | `px sync <repository>` | Pull current branch from default remote |
 | `px remote add <repository> <name> <url>` | Add a remote |
@@ -875,21 +866,23 @@ toystory/                    ← repository root (Git repo)
 | `px merge <base> <current> <proposed>` | Three-way merge |
 | `px content-hash <file>` | Compute BLAKE3 content hash |
 | `px schema <name>` | Print JSON schema (manifest or commit) |
-| `px sign <uri>` | Sign a manifest (stub in v0) |
-| `px verify <uri>` | Verify a manifest signature (stub in v0) |
 | `px doctor [--repair]` | Run diagnostics and optionally auto-repair |
 | `px status` | Show system status and provider info |
-| `px choose backend --provider <type>` | Switch backend provider |
+| `px configure [provider]` | Inspect or change the version-control provider |
+| `px completions <bash|zsh|fish>` | Generate shell completion scripts |
+| `px head <repository>` | Show the current HEAD commit hash |
 
 ### Command Notes
 
-**`publish` vs `push`:** `publish` is a convenience alias that always pushes the current branch to the `origin` remote. `push` is the full form — use `--remote` and `--branch` to control the target.
+**`push` and `publish`:** `push` is the canonical command; `publish` is an alias. Use `--remote-name` to select a destination remote and `--branch` to select a branch.
 
 **`sync` vs `pull`:** `sync` pulls the current branch from the default remote. `pull` accepts either a repository name (same as `sync`) or a URL (which clones the repository).
 
-**`init` vs `choose`:** `init` can both create a repository and configure a provider. `choose` only switches providers — use it when you want to change providers without creating a repository.
+**`init` vs `configure`:** `init` can create a repository and configure a provider. Use `configure` to inspect or change a provider without creating a repository; `choose` and `backend` remain supported as deprecated compatibility commands.
 
-Global options: `-d/--base-dir <path>` (default `~/.px`), `-v/--verbose`, `-f/--format <yaml|json>`
+**Compatibility aliases:** `px config` aliases `px configure`; `px publish` aliases `px push`; and `px head-hash` (or `px head_hash`) aliases `px head`.
+
+Global options: `-d/--base-dir <path>` (default `~/.px`), `-v/--verbose`, `--remote`, and `--local`.
 
 Repository repositories are stored in `~/.px/<repository>/` by default. Use `-d` (or `--base-dir`) to point to a different directory.
 
@@ -898,7 +891,7 @@ Repository repositories are stored in `~/.px/<repository>/` by default. Use `-d`
 ## Design Principles
 
 - **Manifest is current state. History is external.** Manifests store only `head` — a pointer to the latest commit. Full history lives in the VCS, preventing unbounded manifest growth.
-- **Version/branch/tag are NEVER in the URI.** They are orthogonal selectors passed alongside the URI (mirrors Git, OCI, package managers).
+- **Branch and commit are NEVER in the URI.** They are orthogonal selectors passed alongside the URI (mirrors Git and OCI tooling).
 - **Content-address everything.** Every representation is identified by its BLAKE3 hash. Manifests are content-hashable for signing and verification.
 - **Subtree queries are first-class.** AI systems, CLI tools, and HTTP clients all use the same query engine. Fragment queries enable efficient data access without fetching entire manifests.
 

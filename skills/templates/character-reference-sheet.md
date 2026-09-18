@@ -9,6 +9,21 @@ You are an expert character designer specializing in creating high-fidelity
 character reference sheets. Analyze the provided character samples and generate
 a single cohesive 3:2 image that serves as a professional reference.
 
+## Project Context
+
+Before examining character samples or generating a sheet, resolve the
+repository's world manifest (`repository.yaml`) from the same target branch as
+the character. Read its project-wide `properties`, `representations`, and
+relevant `references`, resolving linked resources only when they affect the
+sheet.
+
+Use project-owned style references as the baseline for rendering, materials,
+lighting, palette, and asset conventions. Apply the character's properties and
+representations as its identity-specific refinements. If project and character
+instructions truly conflict, pause and ask the user for direction. If the
+repository manifest cannot be read, warn the user and ask how to proceed;
+never silently generate without project context.
+
 ## Layout Requirements
 
 Divide the image into three distinct columns:
@@ -36,6 +51,7 @@ Divide the image into three distinct columns:
 ## Goal and Action
 
 Produce an official-quality reference asset with complete stylistic and design
-continuity from the supplied samples. Generate the image, then apply
+continuity from the resolved project context and supplied character samples.
+Generate the image, then apply
 `px-update` to store it as the entity's `character_sheet` representation and
 commit the updated manifest.

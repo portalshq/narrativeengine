@@ -1,5 +1,6 @@
 mod cargo_meta;
 mod clap_walk;
+mod completion_snapshots;
 mod compose_readme;
 mod compose_skill;
 mod dot;
@@ -16,6 +17,7 @@ mod yaml_out;
 
 use anyhow::{Context, Result};
 use model::DocMeta;
+use std::collections::BTreeSet;
 use std::fs;
 
 fn main() -> Result<()> {
@@ -67,6 +69,15 @@ fn main() -> Result<()> {
             files_skipped += 1;
         }
     }
+
+    // The command tree is authoritative. Remove pages that were generated
+    // for commands which have since been hidden, renamed, or removed so the
+    // reference cannot keep advertising an obsolete CLI surface.
+    let expected_command_pages = command_page_names(&commands);
+    files_written += filesystem::remove_stale_command_pages(
+        &workspace_root.join("docs/generated/commands"),
+        &expected_command_pages,
+    )?;
 
     // 8. Generate sub-subcommand pages (e.g., remote add, remote ls, remote rm)
     for cmd in &commands {
@@ -165,7 +176,11 @@ fn main() -> Result<()> {
         Err(e) => eprintln!("px-docgen: help snapshots skipped: {e}"),
     }
 
-    // 18. Compose README.md
+    // 18. Generate distributable shell completions from the same Clap command
+    // tree used by the CLI reference and help snapshots.
+    files_written += completion_snapshots::generate_all(&workspace_root)?;
+
+    // 19. Compose README.md
     match compose_readme::compose_readme(&workspace_root, &cargo_meta, &doc_meta) {
         Ok(readme) => {
             let readme_path = workspace_root.join("README.md");
@@ -180,7 +195,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 19. Compose per-skill SKILL.md files from skills/templates/
+    // 20. Compose per-skill SKILL.md files from skills/templates/
     match compose_skill::compose_all_skills(&workspace_root, &cargo_meta, &doc_meta) {
         Ok(skills) => {
             for (skill_name, content) in skills {
@@ -208,4 +223,15 @@ fn main() -> Result<()> {
     );
 
     Ok(())
+}
+
+fn command_page_names(commands: &[model::CommandModel]) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    for command in commands {
+        names.insert(format!("{}.md", command.name));
+        for subcommand in &command.subcommands {
+            names.insert(format!("{}-{}.md", command.name, subcommand.name));
+        }
+    }
+    names
 }

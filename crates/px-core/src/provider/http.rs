@@ -48,7 +48,7 @@ pub fn default_origin(remote: &str) -> Result<String> {
     Ok(format!("{scheme}://{host}{port}"))
 }
 
-fn same_server(a: &str, b: &str) -> bool {
+pub(crate) fn same_server(a: &str, b: &str) -> bool {
     fn identity(value: &str) -> Option<(bool, String, u16)> {
         let url = Url::parse(value).ok()?;
         let secure = match url.scheme() {

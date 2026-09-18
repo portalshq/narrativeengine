@@ -262,7 +262,7 @@ impl Repository {
     ///
     /// Initializes the backend at the repository root and creates an initial
     /// commit capturing the current filesystem state. Used by
-    /// `px backend configure` when a backend is configured after the fact.
+    /// `px configure` when a backend is configured after the fact.
     ///
     /// Errors if no backend is available (unversioned mode).
     pub fn bootstrap_vcs(&self, message: &str, author: &str) -> Result<String, PxError> {
@@ -915,7 +915,7 @@ mod tests {
 
         // The error message guides the user toward configuration.
         let msg = err.to_string();
-        assert!(msg.contains("px backend configure"));
+        assert!(msg.contains("px configure"));
     }
 
     #[test]
@@ -951,7 +951,7 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, PxError::BackendNotConfigured { .. }));
         let msg = err.to_string();
-        assert!(msg.contains("px backend configure"));
+        assert!(msg.contains("px configure"));
     }
 }
 

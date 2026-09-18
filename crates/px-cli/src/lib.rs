@@ -80,7 +80,7 @@ pub enum ChooseCmd {
     },
 }
 
-/// Subcommands for `px backend`.
+/// Subcommands for `px backend` (deprecated: use `px configure`).
 #[derive(Subcommand, Debug)]
 pub enum BackendCmd {
     /// Configure the version-control backend.
@@ -88,12 +88,13 @@ pub enum BackendCmd {
     /// After configuration, existing unversioned repositories in this PX home
     /// are offered an initial commit so their current filesystem state becomes
     /// the repository baseline (unless --no-initial-commit is given).
+    #[command(alias = "set")]
     Configure {
         /// Backend type: local or remote.
         backend: String,
 
         /// Remote endpoint URL (required for remote backend).
-        #[arg(long)]
+        #[arg(long, alias = "remote-url", alias = "remote_url")]
         endpoint: Option<String>,
 
         /// Workspace ID (for remote backend).
@@ -113,7 +114,61 @@ pub enum BackendCmd {
     Status,
 }
 
-/// Interactive authentication commands for Portals Cloud.
+/// Unified backend configuration — merges `px choose` + `px backend`.
+///
+/// `px configure` is the single entry point for selecting and inspecting the
+/// version-control backend. It supports all provider types (`local`,
+/// `portals-cloud`, `remote`), `remote` URL aliases (`--remote-url` /
+/// `--endpoint`), workspace scoping, reset, and the bootstrap flags from
+/// `px backend`. Bare `px configure` or `px configure status` shows the
+/// current config (like `px status`); `px configure <provider>` sets it.
+#[derive(Subcommand, Debug)]
+pub enum ConfigureCmd {
+    /// Show current backend configuration and connectivity (default when no provider is given).
+    Status,
+}
+
+#[derive(Debug, Parser)]
+pub struct ConfigureArgs {
+    /// Provider type: local, portals-cloud, or remote. Positional for ergonomics;
+    /// omit to show current config (or use `px configure status`).
+    #[arg(value_name = "PROVIDER", conflicts_with = "provider_flag")]
+    pub provider: Option<String>,
+
+    /// Provider type flag (alternative to positional `PROVIDER`).
+    #[arg(
+        long = "provider",
+        value_name = "PROVIDER",
+        hide = true,
+        conflicts_with = "provider"
+    )]
+    pub provider_flag: Option<String>,
+
+    /// Remote URL (required for `remote`). Aliases: --endpoint, --remote_url.
+    #[arg(long, alias = "endpoint", alias = "remote_url", value_name = "URL")]
+    pub remote_url: Option<String>,
+
+    /// Workspace ID (for `remote` and `portals-cloud`).
+    #[arg(long, alias = "workspace", value_name = "ID")]
+    pub workspace_id: Option<String>,
+
+    /// Reset provider configuration before (re)configuring.
+    #[arg(long)]
+    pub reset: bool,
+
+    /// Bootstrap existing unversioned repositories with an initial commit without prompting.
+    #[arg(long)]
+    pub initial_commit: bool,
+
+    /// Skip bootstrapping existing repositories.
+    #[arg(long)]
+    pub no_initial_commit: bool,
+
+    #[command(subcommand)]
+    pub cmd: Option<ConfigureCmd>,
+}
+
+/// Interactive authentication commands for the configured Lore provider.
 #[derive(Subcommand, Debug)]
 pub enum AuthCmd {
     /// Sign in through the configured Lore authentication service.
@@ -138,7 +193,7 @@ pub enum AuthCmd {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Manage secure Portals Cloud authentication.
+    /// Manage secure authentication for the configured Lore provider.
     Auth {
         /// Authentication operation.
         #[command(subcommand)]
@@ -189,18 +244,47 @@ pub enum Commands {
         reset: bool,
     },
 
-    /// Choose backend provider.
+    /// Configure version-control backend (unified: replaces `px choose` + `px backend`).
+    ///
+    /// Examples:
+    ///   px configure                          # show current config
+    ///   px configure status                   # show current config
+    ///   px configure local                    # switch to local daemon
+    ///   px configure remote --remote-url lore://192.168.0.27:41337
+    ///   px configure portals-cloud --workspace-id my-ws
+    ///   px configure --provider remote --remote-url lore://host:41337 --reset
+    #[command(alias = "config")]
+    Configure {
+        #[command(flatten)]
+        args: ConfigureArgs,
+    },
+
+    /// Choose backend provider (deprecated: use `px configure`).
+    #[command(hide = true)]
     Choose {
         /// Subcommand for choose.
         #[command(subcommand)]
         cmd: ChooseCmd,
     },
 
-    /// Configure or inspect the version-control backend.
+    /// Configure or inspect the version-control backend (deprecated: use `px configure`).
+    #[command(hide = true)]
     Backend {
         /// Subcommand for backend.
         #[command(subcommand)]
         cmd: BackendCmd,
+    },
+
+    /// Generate shell completions for `px`.
+    ///
+    /// Usage:
+    ///   px completions bash > ~/.local/share/bash-completion/completions/px
+    ///   px completions zsh > ~/.zfunc/_px
+    ///   px completions fish > ~/.config/fish/completions/px.fish
+    ///   source <(px completions bash)   # ephemeral
+    Completions {
+        /// Shell to generate completions for.
+        shell: clap_complete::Shell,
     },
 
     /// Run diagnostics and repair.
@@ -208,12 +292,6 @@ pub enum Commands {
         /// Auto-repair detected issues.
         #[arg(long)]
         repair: bool,
-    },
-
-    /// Publish changes to remote.
-    Publish {
-        /// Repository name.
-        repository: String,
     },
 
     /// Show system status.
@@ -578,6 +656,7 @@ The SDKs return the same fields as the CLI JSON output.
     },
 
     /// Push the current branch to its configured upstream remote.
+    #[command(alias = "publish")]
     Push {
         /// Repository name.
         repository: String,
@@ -599,12 +678,14 @@ The SDKs return the same fields as the CLI JSON output.
     Remote(RemoteCmd),
 
     /// Sign a manifest (stub for v0).
+    #[command(hide = true)]
     Sign {
         /// PX URI.
         uri: String,
     },
 
     /// Verify a manifest signature (stub for v0).
+    #[command(hide = true)]
     Verify {
         /// PX URI.
         uri: String,
@@ -619,7 +700,8 @@ The SDKs return the same fields as the CLI JSON output.
     },
 
     /// Show the current HEAD commit hash.
-    HeadHash {
+    #[command(alias = "head-hash", alias = "head_hash")]
+    Head {
         /// Repository name.
         repository: String,
     },

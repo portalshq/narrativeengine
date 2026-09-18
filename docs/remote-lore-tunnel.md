@@ -2,6 +2,9 @@
 
 Connect PX to a remote lore server (or vice versa) using Chisel for TCP + UDP forwarding.
 
+For authentication after the transport path is working, use the canonical
+[self-hosted Lore authentication guide](authored/self-hosted-lore-auth.md).
+
 ## Lore Server Ports
 
 | Protocol | Port | Purpose |

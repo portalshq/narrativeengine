@@ -45,7 +45,16 @@ fn tool_for(command: &Value) -> Value {
         .as_array()
         .cloned()
         .unwrap_or_default();
-    let is_parent = !subcommands.is_empty();
+    // Most commands with children are grouping commands (for example,
+    // `px auth`), so their MCP tool should return CLI help. `px configure`
+    // is different: it accepts provider arguments itself *and* has a `status`
+    // subcommand. Keep such hybrid commands executable through MCP.
+    let has_invocable_inputs = ["arguments", "options", "flags"].iter().any(|key| {
+        command[*key]
+            .as_array()
+            .is_some_and(|params| params.iter().any(|param| param["name"] != "help"))
+    });
+    let is_parent = !subcommands.is_empty() && !has_invocable_inputs;
     let command_parts: Vec<Value> = full_path
         .split_whitespace()
         .map(|part| Value::String(part.to_string()))
@@ -266,7 +275,9 @@ fn annotations(full_path: &str, is_parent: bool) -> Value {
             | "query"
             | "history"
             | "list"
+            | "head"
             | "head-hash"
+            | "head_hash"
             | "status"
             | "schema"
             | "validate"
@@ -274,6 +285,7 @@ fn annotations(full_path: &str, is_parent: bool) -> Value {
             | "diff"
             | "content-hash"
     );
+    let read_only = read_only || full_path == "configure status";
     let destructive = matches!(base, "delete" | "revert");
     json!({
         "readOnlyHint": is_parent || read_only,

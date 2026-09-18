@@ -310,13 +310,10 @@ pub fn render_command_page(
         doc.table(&["Variable", "Description"], rows);
     }
 
-    if !cmd.visible_aliases.is_empty() {
+    if !cmd.aliases.is_empty() {
         doc.heading(2, "Aliases");
         doc.list(
-            &cmd.visible_aliases
-                .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<_>>(),
+            &cmd.aliases.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
             false,
         );
     }

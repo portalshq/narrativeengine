@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 px-cli = { package = "portalshq-px-cli", path = "../px-cli" }
 clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

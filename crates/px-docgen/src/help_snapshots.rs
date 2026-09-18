@@ -1,6 +1,7 @@
 use crate::model::CommandModel;
 use crate::util;
 use anyhow::Result;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -17,6 +18,38 @@ pub fn generate_all(workspace_root: &Path, commands: &[CommandModel]) -> Result<
         generate_subcommand_snapshots(&help_dir, cmd, &cmd.full_path);
     }
 
+    remove_stale_help_snapshots(&help_dir, &expected_snapshot_names(commands))?;
+
+    Ok(())
+}
+
+fn expected_snapshot_names(commands: &[CommandModel]) -> BTreeSet<String> {
+    let mut names = BTreeSet::from(["px.txt".to_string()]);
+    for command in commands {
+        collect_snapshot_names(command, &mut names);
+    }
+    names
+}
+
+fn collect_snapshot_names(command: &CommandModel, names: &mut BTreeSet<String>) {
+    names.insert(format!("px--{}.txt", command.full_path.replace(' ', "--")));
+    for subcommand in &command.subcommands {
+        collect_snapshot_names(subcommand, names);
+    }
+}
+
+fn remove_stale_help_snapshots(help_dir: &Path, expected: &BTreeSet<String>) -> Result<()> {
+    for entry in fs::read_dir(help_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        let filename = entry.file_name().to_string_lossy().to_string();
+        if filename.starts_with("px") && filename.ends_with(".txt") && !expected.contains(&filename)
+        {
+            fs::remove_file(entry.path())?;
+        }
+    }
     Ok(())
 }
 
@@ -67,4 +100,26 @@ fn generate_help_snapshot(help_dir: &Path, subcommand_args: &[&str]) -> Result<(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stale_help_snapshots_are_removed() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("px.txt"), "root").unwrap();
+        fs::write(tmp.path().join("px--push.txt"), "push").unwrap();
+        fs::write(tmp.path().join("px--publish.txt"), "publish").unwrap();
+        fs::write(tmp.path().join("notes.txt"), "keep").unwrap();
+
+        let expected = BTreeSet::from(["px.txt".to_string(), "px--push.txt".to_string()]);
+        remove_stale_help_snapshots(tmp.path(), &expected).unwrap();
+
+        assert!(tmp.path().join("px.txt").exists());
+        assert!(tmp.path().join("px--push.txt").exists());
+        assert!(!tmp.path().join("px--publish.txt").exists());
+        assert!(tmp.path().join("notes.txt").exists());
+    }
 }

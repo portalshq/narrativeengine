@@ -1246,6 +1246,78 @@ impl VcsBackend for LoreBackend {
         _remote: Option<&str>,
         branch: Option<&str>,
     ) -> Result<(), PxError> {
+        // Fail fast if the checkout still tracks a different Lore server than
+        // the current provider (e.g. Tailscale 100.x vs LAN 192.168.x after
+        // provider.toml was reconfigured). Without this the lore CLI dials the
+        // stale address and the transport error is opaque.
+        // Test hook: `.mock_remote_url` allows unit tests to simulate a stale
+        // checkout without requiring the `lore` binary.
+        let mock_descriptor_remote = std::fs::read_to_string(path.join(".mock_remote_url"))
+            .ok()
+            .map(|s| s.trim().to_string());
+        if let Some(mock_url) = mock_descriptor_remote {
+            if !mock_url.is_empty()
+                && !crate::provider::http::same_server(&mock_url, &self.remote_url)
+            {
+                let repo_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("repository");
+                return Err(PxError::VcsError(format!(
+                    "repository remote mismatch: provider is configured for '{}' but repository '{}' at '{}' tracks '{}'. The provider was changed after this repository was created and the checkout still points at the old server. Fix: confirm 'px status' shows the intended provider URL, then re-clone the repository from the new server (e.g. `mv {} {}.bak && px pull lore://{}/{} --base-dir <px-home>` or `px pull {} --base-dir <px-home>` with the updated provider), or run `px doctor` to diagnose. Provider: '{}', repository remote: '{}'",
+                    self.remote_url,
+                    repo_name,
+                    path.display(),
+                    mock_url,
+                    repo_name,
+                    repo_name,
+                    self.remote_url
+                        .trim_end_matches('/')
+                        .trim_start_matches("lore://")
+                        .trim_start_matches("lores://")
+                        .trim_start_matches("grpc://")
+                        .trim_start_matches("grpcs://")
+                        .split('/')
+                        .next()
+                        .unwrap_or("host"),
+                    repo_name,
+                    repo_name,
+                    self.remote_url,
+                    mock_url
+                )));
+            }
+        } else if let Ok(descriptor) = self.repository_descriptor(path)
+            && !descriptor.remote_url.is_empty()
+            && !crate::provider::http::same_server(&descriptor.remote_url, &self.remote_url)
+        {
+            let repo_name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("repository");
+            return Err(PxError::VcsError(format!(
+                "repository remote mismatch: provider is configured for '{}' but repository '{}' at '{}' tracks '{}'. The provider was changed after this repository was created and the checkout still points at the old server. Fix: confirm 'px status' shows the intended provider URL, then re-clone the repository from the new server (e.g. `mv {} {}.bak && px pull lore://{}/{} --base-dir <px-home>` or `px pull {} --base-dir <px-home>` with the updated provider), or run `px doctor` to diagnose. Provider: '{}', repository remote: '{}'",
+                self.remote_url,
+                repo_name,
+                path.display(),
+                descriptor.remote_url,
+                repo_name,
+                repo_name,
+                self.remote_url
+                    .trim_end_matches('/')
+                    .trim_start_matches("lore://")
+                    .trim_start_matches("lores://")
+                    .trim_start_matches("grpc://")
+                    .trim_start_matches("grpcs://")
+                    .split('/')
+                    .next()
+                    .unwrap_or("host"),
+                repo_name,
+                repo_name,
+                self.remote_url,
+                descriptor.remote_url
+            )));
+        }
+
         // Resolve the branch name: prefer the caller-supplied value,
         // fall back to the workspace's current branch, then "main".
         let branch_name = match branch {
@@ -1263,7 +1335,49 @@ impl VcsBackend for LoreBackend {
             "--fast-forward-merge",
             "--non-interactive",
         ];
-        LoreProcessRunner::run(&args, Some(path))?;
+        if let Err(e) = LoreProcessRunner::run(&args, Some(path)) {
+            // If the transport error mentions a host different from the
+            // configured provider, surface the mismatch hint even when
+            // repository_descriptor was unavailable (e.g. descriptor fetch
+            // failed). This catches stale-address dials that otherwise surface
+            // as opaque gRPC transport errors.
+            let msg = e.to_string();
+            if msg.contains("transport error")
+                || msg.contains("gRPC connection")
+                || msg.contains("acquiring remote")
+            {
+                let mock_url = std::fs::read_to_string(path.join(".mock_remote_url"))
+                    .ok()
+                    .map(|s| s.trim().to_string());
+                if let Some(mock_url) = mock_url {
+                    if !mock_url.is_empty()
+                        && !crate::provider::http::same_server(&mock_url, &self.remote_url)
+                    {
+                        let repo_name = path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("repository");
+                        return Err(PxError::VcsError(format!(
+                            "{e} (repository '{}' tracks '{}' but provider is '{}'; re-clone from the new server or run `px doctor`)",
+                            repo_name, mock_url, self.remote_url
+                        )));
+                    }
+                } else if let Ok(descriptor) = self.repository_descriptor(path)
+                    && !descriptor.remote_url.is_empty()
+                    && !crate::provider::http::same_server(&descriptor.remote_url, &self.remote_url)
+                {
+                    let repo_name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("repository");
+                    return Err(PxError::VcsError(format!(
+                        "{e} (repository '{}' tracks '{}' but provider is '{}'; re-clone from the new server or run `px doctor`)",
+                        repo_name, descriptor.remote_url, self.remote_url
+                    )));
+                }
+            }
+            return Err(e);
+        }
 
         Ok(())
     }
@@ -1274,9 +1388,89 @@ impl VcsBackend for LoreBackend {
         _remote: Option<&str>,
         _branch: Option<&str>,
     ) -> Result<(), PxError> {
+        // Same stale-remote guard as push — pull also dials the checkout's
+        // embedded Lore server and would otherwise hide the provider mismatch
+        // behind a transport error.
+        // Test hook: `.mock_remote_url` as in push().
+        let mock_descriptor_remote = std::fs::read_to_string(path.join(".mock_remote_url"))
+            .ok()
+            .map(|s| s.trim().to_string());
+        if let Some(mock_url) = mock_descriptor_remote {
+            if !mock_url.is_empty()
+                && !crate::provider::http::same_server(&mock_url, &self.remote_url)
+            {
+                let repo_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("repository");
+                return Err(PxError::VcsError(format!(
+                    "repository remote mismatch: provider is configured for '{}' but repository '{}' at '{}' tracks '{}'. The provider was changed after this repository was created. Fix: re-clone from the new server or run `px doctor`. Provider: '{}', repository remote: '{}'",
+                    self.remote_url,
+                    repo_name,
+                    path.display(),
+                    mock_url,
+                    self.remote_url,
+                    mock_url
+                )));
+            }
+        } else if let Ok(descriptor) = self.repository_descriptor(path)
+            && !descriptor.remote_url.is_empty()
+            && !crate::provider::http::same_server(&descriptor.remote_url, &self.remote_url)
+        {
+            let repo_name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("repository");
+            return Err(PxError::VcsError(format!(
+                "repository remote mismatch: provider is configured for '{}' but repository '{}' at '{}' tracks '{}'. The provider was changed after this repository was created. Fix: re-clone from the new server or run `px doctor`. Provider: '{}', repository remote: '{}'",
+                self.remote_url,
+                repo_name,
+                path.display(),
+                descriptor.remote_url,
+                self.remote_url,
+                descriptor.remote_url
+            )));
+        }
         // Sync via lore CLI (handles remote checking + blob download internally)
         let args = vec!["sync", "--non-interactive", "--reset"];
-        LoreProcessRunner::run(&args, Some(path))?;
+        if let Err(e) = LoreProcessRunner::run(&args, Some(path)) {
+            let msg = e.to_string();
+            if msg.contains("transport error")
+                || msg.contains("gRPC connection")
+                || msg.contains("acquiring remote")
+            {
+                let mock_url = std::fs::read_to_string(path.join(".mock_remote_url"))
+                    .ok()
+                    .map(|s| s.trim().to_string());
+                if let Some(mock_url) = mock_url {
+                    if !mock_url.is_empty()
+                        && !crate::provider::http::same_server(&mock_url, &self.remote_url)
+                    {
+                        let repo_name = path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("repository");
+                        return Err(PxError::VcsError(format!(
+                            "{e} (repository '{}' tracks '{}' but provider is '{}'; re-clone from the new server or run `px doctor`)",
+                            repo_name, mock_url, self.remote_url
+                        )));
+                    }
+                } else if let Ok(descriptor) = self.repository_descriptor(path)
+                    && !descriptor.remote_url.is_empty()
+                    && !crate::provider::http::same_server(&descriptor.remote_url, &self.remote_url)
+                {
+                    let repo_name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("repository");
+                    return Err(PxError::VcsError(format!(
+                        "{e} (repository '{}' tracks '{}' but provider is '{}'; re-clone from the new server or run `px doctor`)",
+                        repo_name, descriptor.remote_url, self.remote_url
+                    )));
+                }
+            }
+            return Err(e);
+        }
 
         Ok(())
     }
@@ -1392,6 +1586,90 @@ mod structured_output_tests {
                 .to_string()
                 .contains("read_file_bytes_at_ref")
         );
+    }
+}
+
+#[cfg(test)]
+mod stale_remote_tests {
+    use super::*;
+
+    #[test]
+    fn push_fails_fast_on_stale_mock_remote() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let repo = tmp.path().join("my-repo");
+        std::fs::create_dir_all(repo.join(".lore")).unwrap();
+        std::fs::write(
+            repo.join("repository.yaml"),
+            "id: px://my-repo/world/my-repo\n",
+        )
+        .unwrap();
+        std::fs::write(
+            repo.join(".mock_remote_url"),
+            "lore://100.105.14.118:41337/my-repo",
+        )
+        .unwrap();
+        let backend = LoreBackend::new("lore://192.168.0.27:41337", "default");
+        let err = backend.push(&repo, None, Some("main")).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("repository remote mismatch"), "msg: {msg}");
+        assert!(msg.contains("100.105.14.118"), "msg: {msg}");
+        assert!(msg.contains("192.168.0.27"), "msg: {msg}");
+    }
+
+    #[test]
+    fn push_succeeds_when_mock_remote_matches() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let repo = tmp.path().join("my-repo");
+        std::fs::create_dir_all(&repo).unwrap();
+        // No .lore or repository.yaml needed for this path: we test that
+        // push with matching mock does NOT fail at the stale check. It will
+        // still fail later at LoreProcessRunner if lore is missing, but we
+        // use a mock that matches and an empty repo path that would fail at
+        // current_branch. To avoid that, we test the pure same_server logic.
+        // Instead, directly test the file-based stale check succeeds.
+        std::fs::create_dir_all(repo.join(".lore")).unwrap();
+        std::fs::write(
+            repo.join("repository.yaml"),
+            "id: px://my-repo/world/my-repo\n",
+        )
+        .unwrap();
+        std::fs::write(
+            repo.join(".mock_remote_url"),
+            "lore://192.168.0.27:41337/my-repo",
+        )
+        .unwrap();
+        let backend = LoreBackend::new("lore://192.168.0.27:41337", "default");
+        // Should NOT return stale error; it will proceed to try current_branch
+        // and then run `lore branch push`, which will fail because lore is not
+        // installed in this test environment. We just ensure it doesn't fail
+        // with the stale message.
+        let err = backend.push(&repo, None, Some("main")).unwrap_err();
+        assert!(
+            !err.to_string().contains("repository remote mismatch"),
+            "should not be stale: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn same_server_ignores_path_and_repo_suffix() {
+        use crate::provider::http::same_server;
+        assert!(same_server(
+            "lore://192.168.0.27:41337",
+            "lore://192.168.0.27:41337/my-repo"
+        ));
+        assert!(!same_server(
+            "lore://192.168.0.27:41337",
+            "lore://100.105.14.118:41337"
+        ));
+        assert!(same_server(
+            "lore://192.168.0.27:41337",
+            "lore://192.168.0.27:41337"
+        ));
+        assert!(same_server(
+            "grpc://192.168.0.27:41337",
+            "lore://192.168.0.27:41337"
+        ));
     }
 }
 

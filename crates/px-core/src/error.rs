@@ -66,7 +66,7 @@ pub enum PxError {
     #[error(
         "cannot {operation}: no version-control backend is configured. \
          Filesystem state is preserved, but history/sync is unavailable. \
-         Configure one with 'px backend configure'."
+         Configure one with 'px configure'."
     )]
     BackendNotConfigured { operation: String },
 

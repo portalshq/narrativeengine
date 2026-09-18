@@ -525,7 +525,22 @@ mod tests {
 
         assert!(tools.iter().any(|tool| tool["name"] == "px_resolve"));
         assert!(tools.iter().any(|tool| tool["name"] == "px_remote_add"));
-        assert!(tools.iter().any(|tool| tool["name"] == "px_choose"));
+        assert!(tools.iter().any(|tool| tool["name"] == "px_configure"));
+        assert!(tools.iter().any(|tool| tool["name"] == "px_head"));
+
+        let generated = generated_tools();
+        let configure = generated
+            .iter()
+            .find(|tool| tool.name == "px_configure")
+            .unwrap();
+        assert_eq!(configure.command, vec!["configure"]);
+        assert_eq!(configure.annotations["readOnlyHint"], false);
+
+        let configure_status = generated
+            .iter()
+            .find(|tool| tool.name == "px_configure_status")
+            .unwrap();
+        assert_eq!(configure_status.annotations["readOnlyHint"], true);
     }
 
     #[test]

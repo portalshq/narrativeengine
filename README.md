@@ -1,8 +1,8 @@
-# px
+# px — PX protocol
 
-**px makes narrative entities addressable, resolvable, and interoperable across creative tools, formats, and AI workflows.**
+**PX is a protocol that makes narrative resources addressable, resolvable, and interoperable across tools, storage systems, formats, and AI workflows.**
 
-Characters, locations, scenes, props, and entire fictional repositories — px gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
+Characters, locations, scenes, props, and entire fictional repositories — PX gives each one a stable URI, a human-and-machine-readable manifest, a content-addressed history, and a resolver that connects them all.
 
 In the same way that IPFS content-addressed files and OCI container-addressed images, PX is **narrative-addressed** — a universal namespace for the building blocks of stories.
 

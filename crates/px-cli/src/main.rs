@@ -871,10 +871,12 @@ fn cmd_configure(base_dir: &Path, args: ConfigureArgs) -> Result<()> {
         return cmd_configure_status(base_dir);
     }
     // Handle `px configure status` passed as positional `status`.
-    if let Some(p) = &provider_raw {
-        if p == "status" && !has_set_flags && args.cmd.is_none() {
-            return cmd_configure_status(base_dir);
-        }
+    if let Some(p) = &provider_raw
+        && p == "status"
+        && !has_set_flags
+        && args.cmd.is_none()
+    {
+        return cmd_configure_status(base_dir);
     }
     if args.initial_commit && args.no_initial_commit {
         anyhow::bail!("--initial-commit and --no-initial-commit are mutually exclusive");
@@ -941,10 +943,10 @@ fn cmd_configure(base_dir: &Path, args: ConfigureArgs) -> Result<()> {
         emit(format!("  Lore URL: {}", url));
     }
     emit(format!("  Workspace ID: {}", provider.workspace_id()));
-    if let Some(url) = &args.remote_url {
-        if provider_type == ProviderType::Remote {
-            emit(format!("  Remote URL: {}", url));
-        }
+    if let Some(url) = &args.remote_url
+        && provider_type == ProviderType::Remote
+    {
+        emit(format!("  Remote URL: {}", url));
     }
     if args.no_initial_commit {
         emit("  Skipped initial commit for existing repositories (--no-initial-commit).");

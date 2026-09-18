@@ -25,6 +25,24 @@ Once a PX entity URI is established in a task, carry forward:
 - user-approved identity constraints and negative constraints
 Later turns that keep refining the same entity must still invoke this skill even when the user does not mention PX again.
 
+## Repository Context
+
+Before generating or editing a representation, resolve the repository's world
+manifest (`repository.yaml`) from the entity's target branch. Gather its
+project-wide `properties`, `representations`, and relevant `references`, then
+apply that context before the entity's identity and revision-branch state.
+
+Repository context supplies the baseline; entity-specific facts refine it. If
+the two contain a true contradiction, pause and ask the user for direction. If
+the repository manifest cannot be read, warn the user and ask how to proceed;
+do not silently generate without project context.
+
+Do not promote inferred project-wide facts into `repository.yaml` as part of
+an entity update. Present any such fact as a proposed repository update and
+wait for user approval. Explicitly approved project-wide changes belong in the
+repository manifest and must preserve its existing properties, representations,
+and references.
+
 ## Character Creation and Character Sheets
 
 Treat a request to create a character, character sheet, reference sheet, or
@@ -145,22 +163,23 @@ If a reply is ambiguous as acceptance (e.g., it's unclear whether "yes" answers 
 If the user says not yet, keep working on the revision branch and re-ask at the next natural checkpoint (points 1–5 above). Never promote to the target branch without a yes from one of these five paths.
  
 ## Update Pipeline
- 
-1. Resolve the entity explicitly from the active revision branch, not from implicit defaults:
+
+1. Resolve the repository world manifest from the target branch and gather the relevant project context.
+2. Resolve the entity explicitly from the active revision branch, not from implicit defaults:
    ```bash
    px resolve px://repo/type/id --branch revision-type-id
    ```
- 
-2. Gather every relevant property, representation, reference, and negative constraint that affects identity, continuity, style, exclusions, or the requested medium.
-3. Generate or edit the requested content using the resolved entity as the source of truth.
-4. Persist the result in the same turn:
+
+3. Gather every relevant project and entity property, representation, reference, and negative constraint that affects identity, continuity, style, exclusions, or the requested medium.
+4. Generate or edit the requested content using the resolved project and entity context as the source of truth.
+5. Persist the result in the same turn:
    - `px add --format <format> -m "<revision summary>" <URI> <representation_key> <asset>` for asset revisions
    - `px set <URI> <property_key> <value>` for simple property-only updates
    - when several files/properties form one logical revision, update the structured manifest and make one `px commit -m "<revision summary>" <repository>`
-5. Store assets by BLAKE3 content hash, not SHA-256 — `px content-hash` should return a `blake3:` value.
-6. Record generation provenance with the revision: `model`, `prompt_hash`, `parameters` (when relevant), `derived_from` (source URIs/commits/hashes), `created_at` (when available).
-7. Verify branch-specific resolution after the commit — check that the representation key, hash, and description match the accepted revision.
-8. In the final response, report persistence in one concise line, then apply the relevant acceptance checkpoint from above.
+6. Store assets by BLAKE3 content hash, not SHA-256 — `px content-hash` should return a `blake3:` value.
+7. Record generation provenance with the revision: `model`, `prompt_hash`, `parameters` (when relevant), `derived_from` (source URIs/commits/hashes), `created_at` (when available).
+8. Verify branch-specific resolution after the commit — check that the representation key, hash, and description match the accepted revision.
+9. In the final response, report persistence in one concise line, then apply the relevant acceptance checkpoint from above.
 ## Data Placement
  
 - `properties` — narrative facts and durable identity constraints.

@@ -92,8 +92,8 @@ Portals Cloud uses `grpcs://lore.portals.works` on standard TLS port 443. Login 
 the only interactive VCS step; repository operations remain noninteractive and
 return an actionable `px auth login` error when credentials are missing or
 expired. Lore automatically exchanges the eight-hour login session for a
-five-minute token scoped to the single repository used by init, clone, push,
-pull, sync, publish, and locking. CI uses a revocable service-account API key
+five-minute token scoped to the single repository used by init, clone, pull,
+sync, push, and locking. CI uses a revocable service-account API key
 exchange; do not store long-lived bearer tokens in CI variables.
 
 `px install lore` installs the exact `portalshq/lore` release compiled into
@@ -160,8 +160,8 @@ px branch toystory canon
 # Sync with remote
 px sync toystory
 
-# Publish to remote
-px publish toystory
+# Push to remote
+px push toystory
 ```
 
 ### Output Formats

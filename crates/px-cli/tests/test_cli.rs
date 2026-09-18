@@ -208,3 +208,151 @@ fn test_remote_source_and_push_remote_name_flags_coexist() {
         .failure()
         .stderr(predicate::str::contains("cannot be used with"));
 }
+
+#[test]
+fn test_configure_unified_command() {
+    // Bare `px configure --help` should succeed and mention providers.
+    let mut help = Command::cargo_bin("px").expect("Failed to find px binary");
+    help.args(["configure", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Configure version-control backend",
+        ))
+        .stdout(predicate::str::contains("local"))
+        .stdout(predicate::str::contains("remote"));
+
+    // `px configure status --help` should also succeed.
+    let mut status_help = Command::cargo_bin("px").expect("Failed to find px binary");
+    status_help
+        .args(["configure", "status", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Usage:"));
+
+    // Deprecated aliases must still be invocable (hidden but functional).
+    let mut choose_help = Command::cargo_bin("px").expect("Failed to find px binary");
+    choose_help
+        .args(["choose", "backend", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Provider type"));
+
+    let mut backend_help = Command::cargo_bin("px").expect("Failed to find px binary");
+    backend_help
+        .args(["backend", "configure", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Backend type"));
+
+    for args in [
+        vec!["config", "--help"],
+        vec!["publish", "example", "--help"],
+        vec!["head-hash", "example", "--help"],
+        vec!["head_hash", "example", "--help"],
+    ] {
+        let mut alias = Command::cargo_bin("px").expect("Failed to find px binary");
+        alias.args(args).assert().success();
+    }
+}
+
+#[test]
+fn test_configure_sets_provider_local_and_remote() {
+    // `px configure local` should create a provider.toml with local type.
+    let tmp = TempDir::new().unwrap();
+    let mut cfg = Command::cargo_bin("px").expect("Failed to find px binary");
+    cfg.args([
+        "configure",
+        "local",
+        "--base-dir",
+        tmp.path().to_str().unwrap(),
+    ])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("Configured local"));
+
+    let provider_toml = std::fs::read_to_string(tmp.path().join("provider.toml")).unwrap();
+    assert!(provider_toml.contains("provider_type = \"local\""));
+
+    // `px configure remote --remote-url` should work and persist.
+    let tmp2 = TempDir::new().unwrap();
+    let mut cfg2 = Command::cargo_bin("px").expect("Failed to find px binary");
+    cfg2.args([
+        "configure",
+        "remote",
+        "--remote-url",
+        "lore://192.168.0.27:41337",
+        "--base-dir",
+        tmp2.path().to_str().unwrap(),
+    ])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("Configured remote"));
+
+    let provider_toml2 = std::fs::read_to_string(tmp2.path().join("provider.toml")).unwrap();
+    assert!(provider_toml2.contains("remote"));
+    assert!(provider_toml2.contains("192.168.0.27"));
+
+    // Alias --endpoint should also work.
+    let tmp3 = TempDir::new().unwrap();
+    let mut cfg3 = Command::cargo_bin("px").expect("Failed to find px binary");
+    cfg3.args([
+        "configure",
+        "remote",
+        "--endpoint",
+        "lore://10.0.0.1:41337",
+        "--base-dir",
+        tmp3.path().to_str().unwrap(),
+    ])
+    .assert()
+    .success();
+    let provider_toml3 = std::fs::read_to_string(tmp3.path().join("provider.toml")).unwrap();
+    assert!(provider_toml3.contains("10.0.0.1"));
+}
+
+#[test]
+fn test_configure_validates_before_resetting_existing_provider() {
+    let tmp = TempDir::new().unwrap();
+    let config_path = tmp.path().join("provider.toml");
+    let original = "provider_type = \"remote\"\nremote_url = \"lore://old.example:41337\"\nworkspace_id = \"default\"\n";
+    fs::write(&config_path, original).unwrap();
+
+    let mut missing_provider = Command::cargo_bin("px").expect("Failed to find px binary");
+    missing_provider
+        .args([
+            "configure",
+            "--reset",
+            "--base-dir",
+            tmp.path().to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("provider type required"));
+    assert_eq!(fs::read_to_string(&config_path).unwrap(), original);
+
+    let mut conflicting_providers = Command::cargo_bin("px").expect("Failed to find px binary");
+    conflicting_providers
+        .args([
+            "configure",
+            "local",
+            "--provider",
+            "remote",
+            "--base-dir",
+            tmp.path().to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cannot be used with"));
+    assert_eq!(fs::read_to_string(&config_path).unwrap(), original);
+}
+
+#[test]
+fn test_completions_generate() {
+    for shell in ["bash", "zsh", "fish"] {
+        let mut cmd = Command::cargo_bin("px").expect("Failed to find px binary");
+        cmd.args(["completions", shell])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("px"));
+    }
+}
