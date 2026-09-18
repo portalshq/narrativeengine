@@ -185,11 +185,11 @@ toystory/                    ← repository root (Git repo)
 
 ## Repository Context (`repository.yaml`)
 
-`repository.yaml` is the repository's world manifest and the sole source of truth for project-wide context. It owns durable global canon, visual or narrative style, reusable asset conventions, global exclusions, and canonical references through its `properties`, `representations`, and `references`.
+`repository.yaml` is the repository's manifest and the sole source of truth for project-wide context. It owns durable global visual or narrative style, reusable asset conventions, global exclusions, and canonical references through its `properties`, `representations`, and `references`.
 
-Before creating an entity or generating content, resolve the repository's world manifest from the same target branch as the entity work (via `px_resolve` on the repository URI). Read its `properties`, `representations`, and `references`, and resolve only the referenced resources relevant to the requested work. Treat repository context as the project-wide baseline; entity-specific identity, behavior, and representation data apply as refinements. Keep entity manifests focused on identity and entity-specific facts; do not add a repository-level summary or reference for every entity.
+Before creating an entity or generating content, resolve the repository.yaml from the same target branch as the entity work (via `px_resolve` on the repository URI). Read its `properties`, `representations`, and `references`, and resolve only the referenced resources relevant to the requested work. Treat repository context as the project-wide baseline; entity-specific identity, behavior, and representation data apply as refinements. Keep entity manifests focused on identity and entity-specific facts; do not add a repository-level summary or reference for every entity.
 
-If project and entity instructions truly conflict, pause and ask the user for direction rather than choosing one. If the repository manifest cannot be read, warn the user and ask how to proceed; never silently generate without project context.
+If project and entity instructions truly conflict, pause and ask the user for direction rather than choosing one. If the repository.yaml cannot be read, warn the user and ask how to proceed; never silently generate without project context.
 
 Update `repository.yaml` only when the user explicitly defines or approves a project-wide property or reference. If entity work reveals a potentially reusable global fact, present it as a proposed repository update and wait for user approval before writing it. Preserve existing global context when adding an approved change. Never promote inferred project-wide facts into `repository.yaml` as part of an entity update.
 
@@ -206,7 +206,7 @@ The **target branch** is whichever branch the entity's accepted work is meant to
 
 1. If the user named a branch for this work (e.g., "we're doing this on the `classic` branch"), that branch is the target.
 2. Otherwise, the branch the entity was created on or first resolved from is the target.
-3. Otherwise, default to `main`.
+3. Otherwise, default to `main`. when a branch is not specified, px defaults to `main`.
 
 Establish the target branch at creation/first-resolve time and carry it forward for the rest of the task. Every promotion promotes to the **resolved target branch**, never a hardcoded `main`. When reporting or asking about promotion, name the target branch explicitly (e.g., "promote to `classic`") rather than saying "main" generically.
 
@@ -228,7 +228,7 @@ Later turns that keep refining the same entity are continuity work. They must tr
 When creating a new entity:
 
 1. Establish the target branch (see `target-branch.md`), then resolve and apply repository context from that branch (see `repository-stewardship.md`).
-2. Create the entity on the target branch via `px_create` (`entity_type`, `entity_id`, `repository`, `name`; default to `main` if no branch was specified).
+2. Create the entity on the target branch via `px_create` (`entity_type`, `entity_id`, `repository`, `name`; px defaults to `main` if no branch is specified).
 3. Report the exact URI.
 4. Establish active task context: URI, repository, entity type, entity ID, target branch, default revision branch, and repository context (see `continuity.md`).
 5. Create or switch to the revision branch via `px_branch` / `px_switch`:
@@ -241,7 +241,7 @@ When creating a new entity:
 
 Before generating from an entity:
 
-1. Resolve the repository world manifest from the target branch and gather relevant global properties, representations, and references.
+1. Resolve repository.yaml from the target branch and gather relevant global properties, representations, and references.
 2. Resolve the entity explicitly from the relevant branch via `px_resolve` (`uri`, plus `branch`): the target branch for canonical state, the revision branch for iterative work.
 3. Gather properties that affect identity, narrative role, style, behavior, continuity, and exclusions.
 4. Gather relevant entity `representations` and `references` (use `px_query` with `uri` and `path` for subtrees).

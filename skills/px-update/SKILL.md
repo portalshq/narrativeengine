@@ -41,11 +41,11 @@ Per-tool parameters are documented under `docs/generated/mcp/<tool>.md` (generat
 
 ## Repository Context (`repository.yaml`)
 
-`repository.yaml` is the repository's world manifest and the sole source of truth for project-wide context. It owns durable global canon, visual or narrative style, reusable asset conventions, global exclusions, and canonical references through its `properties`, `representations`, and `references`.
+`repository.yaml` is the repository's manifest and the sole source of truth for project-wide context. It owns durable global visual or narrative style, reusable asset conventions, global exclusions, and canonical references through its `properties`, `representations`, and `references`.
 
-Before creating an entity or generating content, resolve the repository's world manifest from the same target branch as the entity work (via `px_resolve` on the repository URI). Read its `properties`, `representations`, and `references`, and resolve only the referenced resources relevant to the requested work. Treat repository context as the project-wide baseline; entity-specific identity, behavior, and representation data apply as refinements. Keep entity manifests focused on identity and entity-specific facts; do not add a repository-level summary or reference for every entity.
+Before creating an entity or generating content, resolve the repository.yaml from the same target branch as the entity work (via `px_resolve` on the repository URI). Read its `properties`, `representations`, and `references`, and resolve only the referenced resources relevant to the requested work. Treat repository context as the project-wide baseline; entity-specific identity, behavior, and representation data apply as refinements. Keep entity manifests focused on identity and entity-specific facts; do not add a repository-level summary or reference for every entity.
 
-If project and entity instructions truly conflict, pause and ask the user for direction rather than choosing one. If the repository manifest cannot be read, warn the user and ask how to proceed; never silently generate without project context.
+If project and entity instructions truly conflict, pause and ask the user for direction rather than choosing one. If the repository.yaml cannot be read, warn the user and ask how to proceed; never silently generate without project context.
 
 Update `repository.yaml` only when the user explicitly defines or approves a project-wide property or reference. If entity work reveals a potentially reusable global fact, present it as a proposed repository update and wait for user approval before writing it. Preserve existing global context when adding an approved change. Never promote inferred project-wide facts into `repository.yaml` as part of an entity update.
 
@@ -62,7 +62,7 @@ The **target branch** is whichever branch the entity's accepted work is meant to
 
 1. If the user named a branch for this work (e.g., "we're doing this on the `classic` branch"), that branch is the target.
 2. Otherwise, the branch the entity was created on or first resolved from is the target.
-3. Otherwise, default to `main`.
+3. Otherwise, default to `main`. when a branch is not specified, px defaults to `main`.
 
 Establish the target branch at creation/first-resolve time and carry it forward for the rest of the task. Every promotion promotes to the **resolved target branch**, never a hardcoded `main`. When reporting or asking about promotion, name the target branch explicitly (e.g., "promote to `classic`") rather than saying "main" generically.
 
@@ -179,17 +179,18 @@ PX persistence failed: Atlas revision was generated but not committed.
 
 ## Update Pipeline
 
-1. Resolve the repository world manifest from the target branch and gather the relevant project context (see `repository-stewardship.md`).
-2. Resolve the entity explicitly from the active revision branch via `px_resolve` (`uri`, `branch`), not from implicit defaults.
-3. Gather every relevant project and entity property, representation, reference, and negative constraint that affects identity, continuity, style, exclusions, or the requested medium (use `px_query` with `uri` and `path` for subtrees).
-4. Generate or edit the requested content using the resolved project and entity context as the source of truth.
-5. Persist the result in the same turn:
+1. Switch to the target branch if not already there.
+2. Resolve the repository.yaml and gather the relevant project context (see `repository-stewardship.md`).
+3. Resolve the entity explicitly from the active revision branch via `px_resolve` (`uri`, `branch`), not from implicit defaults.
+4. Gather every relevant project and entity property, representation, reference, and negative constraint that affects identity, continuity, style, exclusions, or the requested medium (use `px_query` with `uri` and `path` for subtrees).
+5. Generate or edit the requested content using the resolved project and entity context as the source of truth.
+6. Persist the result in the same turn:
    - `px_add` (`uri`, `key`, `file`, `format`, `message`) for asset revisions
    - `px_set` (`uri`, `key`, `value`) for simple property-only updates
    - when several files/properties form one logical revision, update the structured manifest and make one `px_commit` (`repository`, `message`) after updating
-6. Store assets by BLAKE3 content hash, not SHA-256 — `px_content_hash` (`file`) should return a `blake3:` value.
-7. Record generation provenance with the revision: `model`, `prompt_hash`, `parameters` (when relevant), `derived_from` (source URIs/commits/hashes), `created_at` (when available).
-8. Verify branch-specific resolution after the commit — check that the representation key, hash, and description match the accepted revision.
+7. Store assets by BLAKE3 content hash, not SHA-256 — `px_content_hash` (`file`) should return a `blake3:` value.
+8. Record generation provenance with the revision: `model`, `prompt_hash`, `parameters` (when relevant), `derived_from` (source URIs/commits/hashes), `created_at` (when available).
+9. Verify branch-specific resolution after the commit — check that the representation key, hash, and description match the accepted revision.
 9. In the final response, report persistence in one concise line, then apply the relevant acceptance checkpoint (see `promotion.md`).
 
 ## Data Placement

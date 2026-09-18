@@ -3,7 +3,7 @@
 When creating a new entity:
 
 1. Establish the target branch (see `target-branch.md`), then resolve and apply repository context from that branch (see `repository-stewardship.md`).
-2. Create the entity on the target branch via `px_create` (`entity_type`, `entity_id`, `repository`, `name`; default to `main` if no branch was specified).
+2. Create the entity on the target branch via `px_create` (`entity_type`, `entity_id`, `repository`, `name`; px defaults to `main` if no branch is specified).
 3. Report the exact URI.
 4. Establish active task context: URI, repository, entity type, entity ID, target branch, default revision branch, and repository context (see `continuity.md`).
 5. Create or switch to the revision branch via `px_branch` / `px_switch`:
@@ -16,7 +16,7 @@ When creating a new entity:
 
 Before generating from an entity:
 
-1. Resolve the repository world manifest from the target branch and gather relevant global properties, representations, and references.
+1. Resolve repository.yaml from the target branch and gather relevant global properties, representations, and references.
 2. Resolve the entity explicitly from the relevant branch via `px_resolve` (`uri`, plus `branch`): the target branch for canonical state, the revision branch for iterative work.
 3. Gather properties that affect identity, narrative role, style, behavior, continuity, and exclusions.
 4. Gather relevant entity `representations` and `references` (use `px_query` with `uri` and `path` for subtrees).
