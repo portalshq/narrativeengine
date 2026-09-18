@@ -189,7 +189,7 @@ wheels = [
 
 [[package]]
 name = "narrativeengine"
-version = "0.8.22"
+version = "0.8.24"
 source = { editable = "." }
 
 [package.optional-dependencies]

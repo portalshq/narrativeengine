@@ -32,21 +32,11 @@ px://toystory/prop/andy-hat
 
 ## Installation
 
-### Installation Script
-
 ```bash
-curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash && npx skills add portalshq/narrativeengine
 ```
 
-The installation script installs both `px` and `px-mcp-server`. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use PX through host-side CLI proxy calls.
-
-### Skills Install
-
-Install these skills to use PX with agent workflows, including entity-aware prompts, generation templates, and the resolve/update steps that keep character and scene output consistent.
-
-```bash
-npx skills add portalshq/narrativeengine
-```
+The one-liner installs the `px` CLI, the bundled `px-mcp-server`, and the agent skills. The MCP server is dormant by default; agent clients start it on demand over stdio so sandboxed agents can use PX through host-side CLI proxy calls.
 
 <!-- ### CLI & Server (Rust — compile from source)
 
@@ -461,7 +451,7 @@ Inside sandboxes, use the MCP tools instead of shelling out to `px` directly for
 
 
 # PX CLI Reference
-The `px` command-line interface (v0.8.23) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
+The `px` command-line interface (v0.8.24) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview
