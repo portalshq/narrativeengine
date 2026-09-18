@@ -60,4 +60,4 @@ Example host-side launch command:
 
 Use the same command/args form in any client that supports stdio MCP servers.
 
-Inside sandboxes, use the MCP tools instead of shelling out to `px` directly for network-backed operations. Direct `px` CLI commands remain the right choice for humans and host-local shells.
+Inside sandboxes, use the MCP tools for all PX operations. Direct `px` CLI commands are for humans in host-local shells only and MUST NOT be used as agent instructions.

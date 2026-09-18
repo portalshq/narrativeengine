@@ -106,6 +106,35 @@ fn main() -> Result<()> {
         files_skipped += 1;
     }
 
+    // 9b. Generate per-tool MCP reference pages (mechanical projection of the
+    // same command tree the MCP server builds its tools from — tool names and
+    // parameters only, no CLI synopsis or examples).
+    let mcp_tools = markdown::collect_mcp_tools(&commands);
+    let mut expected_mcp_pages = BTreeSet::new();
+    for tool in &mcp_tools {
+        let tool_name = markdown::mcp_tool_name(tool);
+        let page = markdown::render_mcp_tool_page(tool, &doc_meta);
+        let filename = format!("{tool_name}.md");
+        expected_mcp_pages.insert(filename.clone());
+        let path = workspace_root.join("docs/generated/mcp").join(&filename);
+        if filesystem::write_if_changed(&path, &page)? {
+            files_written += 1;
+        } else {
+            files_skipped += 1;
+        }
+    }
+    files_written += filesystem::remove_stale_command_pages(
+        &workspace_root.join("docs/generated/mcp"),
+        &expected_mcp_pages,
+    )?;
+    let mcp_index = markdown::render_mcp_index(&mcp_tools, &doc_meta);
+    let mcp_index_path = workspace_root.join("docs/generated/mcp.md");
+    if filesystem::write_if_changed(&mcp_index_path, &mcp_index)? {
+        files_written += 1;
+    } else {
+        files_skipped += 1;
+    }
+
     // 10. Generate CLI summary
     let cli_summary =
         markdown::render_cli_summary(&commands, &cargo_meta, &global_options, &doc_meta);

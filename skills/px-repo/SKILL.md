@@ -1,182 +1,277 @@
 ---
 name: px-repo
-description: Initialize PX repositories, clone/pull repositories, and create branches at the repository level. Use for repository-lifecycle operations (px init, px pull, px branch) — not for creating or revising individual entities; see px-resolve and px-update for those.
+description: Initialize PX repositories, clone/pull repositories, and create branches at the repository level via px-mcp-server (px_init, px_pull, px_branch). The px CLI is not available for agentic use — not for creating or revising individual entities; see px-resolve and px-update for those.
 metadata:
   author: portals
   version: "0.8.24"
 ---
 
 # PX Skill: Repository Management
- 
+
 A repository is the top-level container that holds entities (characters, locations, assets, etc.) and their PX/Lore version history.
- 
+
 ## When to Apply
- 
+
 Reference these guidelines when:
+
 - Initializing a new PX repository
 - Cloning or pulling an existing repository
 - Creating a new branch at the repository level
-For creating or resolving individual entities, use `px-resolve`. For revising entity content and persisting iterations, use `px-update`.
- 
-## Core Commands
- 
-* **Initialize:** `px init <universe_name>` — creates a directory with a `.px/` config folder, a `repository.yaml` manifest, and subdirectories per entity type.
-  * Example: `px init toystory`
-* **Branch:** `px branch <universe_name> <branch_name>` — creates a new timeline/snapshot.
-  * Example: `px branch toystory classic`
-* **Clone/pull:** `px pull <remote> <universe_name>` — clones or pulls a repository from a remote.
+For creating or resolving individual entities, use `px-resolve`. For revising entity content and persisting iterations, use `px-update`. For questions about `px` CLI syntax from humans, use `px-cli-reference` (read-only; never execute CLI commands).
 
-## Project Context
+## MCP Server (mandatory for agents)
 
-`repository.yaml` is the repository's world manifest and the sole source of
-truth for project-wide context. It owns durable global canon, visual or
-narrative style, reusable asset conventions, global exclusions, and canonical
-references through its `properties`, `representations`, and `references`.
+Agents MUST issue all PX operations exclusively through the `px-mcp-server` MCP tools (`px_<command>`). The `px` CLI is NOT available for agentic use — never shell out, never follow `px ...` shell examples.
 
-After initializing or pulling a repository, preserve this manifest as the
-context that downstream PX workflows resolve from their target branch. Keep
-entity manifests focused on identity and entity-specific facts; do not add a
-repository-level summary or reference for every entity.
+The standard PX installer bundles the native `px-mcp-server` binary with `px`. If the MCP server is missing or broken, rerun the standard PX installer from a host shell.
 
-Update `repository.yaml` only when the user explicitly defines or approves a
-project-wide property or reference. If entity work reveals a potentially
-reusable global fact, present it as a proposed repository update and wait for
-user approval before writing it. Preserve existing global context when adding
-an approved change.
-
-## Guardrails
- 
- Unless the user explicitly requests a different provider or storage location:
-- Run px init <repository> with no --provider and no --base-dir.
-- Preserve the configured provider and default PX directory.
-- Never infer --provider local from an example.
-- Never choose a workspace-local --base-dir merely to isolate a repository.
-Use --provider only when the user explicitly requests a provider change.
-Use --base-dir only when the user explicitly names a storage location.
-
-* **No tagging.** Do not use `px tag` or append tags to URIs — Lore VCS has no native tag support. Branches are the only mechanism for human-readable names on a revision point.
-
-
-# PX CLI Reference
-The `px` command-line interface (v0.8.24) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
-
-
-## Command Overview
-
-| Command | Description |
-|---|---|
-| [\`px add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
-| [\`px auth\`](docs/generated/commands/auth.md) | Manage secure authentication for the configured Lore provider |
-| [\`px branch\`](docs/generated/commands/branch.md) | Create or list branches |
-| [\`px commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
-| [\`px completions\`](docs/generated/commands/completions.md) | Generate shell completions for \`px\` |
-| [\`px configure\`](docs/generated/commands/configure.md) | Configure version-control backend (unified: replaces \`px choose\` + \`px backend\`) |
-| [\`px content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
-| [\`px create\`](docs/generated/commands/create.md) | Create a new entity manifest |
-| [\`px diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
-| [\`px doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
-| [\`px head\`](docs/generated/commands/head.md) | Show the current HEAD commit hash |
-| [\`px history\`](docs/generated/commands/history.md) | View commit history for an entity |
-| [\`px init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
-| [\`px install\`](docs/generated/commands/install.md) | Install required dependencies |
-| [\`px list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
-| [\`px merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
-| [\`px presign\`](docs/generated/commands/presign.md) | Create a time-limited public URL for a committed representation |
-| [\`px pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
-| [\`px push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
-| [\`px query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
-| [\`px remote\`](docs/generated/commands/remote.md) | Manage remotes on a repository |
-| [\`px resolve\`](docs/generated/commands/resolve.md) | Resolve a PX URI to its manifest or a subtree |
-| [\`px revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
-| [\`px schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
-| [\`px set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
-| [\`px status\`](docs/generated/commands/status.md) | Show system status |
-| [\`px switch\`](docs/generated/commands/switch.md) | Switch to a branch |
-| [\`px sync\`](docs/generated/commands/sync.md) | Sync with remote |
-| [\`px validate\`](docs/generated/commands/validate.md) | Validate a manifest against the PX schema |
-
-
-## Global Options
-
-| Flag | Description | Default |
-|---|---|---|
-|     --local | Resolve repository reads from an explicitly checked-out local working tree |  |
-|     --remote | Resolve repository reads through the configured Lore server (the default) |  |
-| -d, --base-dir | Base directory for repository repositories. Defaults to $PX\_DIR, or ~/.px if unset |  |
-| -v, --verbose | Enable verbose debug logging |  |
-
-
-## Output Formats
-Most commands support `--format` (`-f`) with values `yaml` (default) or `json`.
-
-When stdout is not a terminal, JSON is used automatically. Override with `$PX_OUTPUT`.
-
-
-## Common Examples
-```bash
-# Initialize a repository
-px init toystory
-
-# Create an entity
-px create character woody -u toystory -n "Woody"
-
-# Resolve a manifest
-px resolve px://toystory/character/woody
-
-# Query a subtree
-px query px://toystory/character/woody properties
-
-# View commit history
-px history px://toystory/character/woody
-```
-
-
-
-
-## MCP Server
-
-The standard PX installer bundles the native `px-mcp-server` binary with `px`. If the MCP command is missing or broken, rerun the standard PX installer from a host shell.
-
-The MCP server is not a daemon; agent clients start it on demand over stdio, and it proxies tool calls to the host `px` CLI.
-
-## Agent Sandbox Integration
-
-When running inside a sandboxed environment (e.g., Codex) without outbound network access, use MCP tools instead of shelling out to the `px` CLI directly. The MCP server runs on the host machine, starts only when the agent/MCP client launches it over stdio, and proxies tool calls to the host `px` CLI.
-
-Direct `px` CLI examples in this skill are for humans, host-local shells, and non-sandboxed scripts. In an agent sandbox, use the MCP tools for any operation that may need Lore/cloud/network access.
+The MCP server is not a daemon; agent clients start it on demand over stdio (see `docs/authored/mcp/install.md` for client configuration), and it proxies tool calls to the host PX installation.
 
 ## Available MCP Tools
 
-All px CLI commands are available as MCP tools with `px_` prefix. For example:
-- `px resolve` -> `px_resolve` tool
-- `px create` -> `px_create` tool
-- `px set` -> `px_set` tool
+Every PX command is available as an MCP tool with a `px_` prefix and dashes/spaces converted to underscores. For example:
 
-Prefer MCP tools over shell commands when in a sandbox.
+- `px_resolve` — resolve a PX URI to its manifest or a subtree
+- `px_create` — create a new entity manifest
+- `px_query` — query a subtree from a manifest
+- `px_set` — set a property on an entity manifest
+- `px_add` — add a file representation to an entity manifest
+- `px_commit` — commit changes to a repository
+
+Per-tool parameters are documented under `docs/generated/mcp/<tool>.md` (generated from the same command definitions as the MCP server itself). Tool arguments use MCP field names (for example `branch`, `commit`, `format`, `include_blobs`); pass the branch explicitly on every call that accepts one — do not rely on whichever branch happens to be checked out. The CLI reference (`docs/generated/cli.md`, `docs/generated/commands/`) and shell examples elsewhere in these docs are for humans in host shells only and MUST NOT be used as agent instructions.
 
 
+## Core Primitives
 
-# Global Options
-These options are available on all `px` commands.
+PX is built on four primitives:
 
+### 1. URI — Identity
 
-| Flag | Description | Default |
+A `px://` URI identifies any narrative resource. Version and branch are **orthogonal selectors** passed alongside the URI — never encoded in the path (mirrors Git, OCI, and package managers).
+
+```text
+px://toystory/character/woody#references.appears_in
+────┬── ───┬──── ────┬──── ──────┬────── ─────────────┬───────────
+ scheme repository  entity_type entity_id          fragment (query)
+```
+
+### 2. Manifest — Current State
+
+A YAML manifest is the durable representation of a narrative resource. It is simultaneously:
+
+- **Human-editable** — readable by toybox-builders
+- **Machine-editable** — structured, schema-validated
+- **Agent-readable** — subtree-queryable for AI workflows
+- **Portable** — no runtime dependency, just a file
+- **Signable** — hash the content, sign the hash (Ed25519 in v0+)
+- **Versionable** — the manifest *is* what gets committed
+
+```yaml
+id: "px://toystory/character/woody"
+name: "Woody"
+entity_type: character
+version: 17
+properties:
+  homeworld: "px://toystory/location/andys-room"
+  toy_type: human
+representations:
+  reference_image:
+    hash: "blake3:e3b0c44..."
+    format: png
+provenance:
+  model: "midjourney-v6"
+  prompt_hash: "blake3:abc123..."
+```
+
+### 3. Commit — History
+
+Commits are content-addressed (BLAKE3) snapshots with patch metadata. Full history and revision identity live in the VCS, keeping manifests bounded and avoiding self-referential revision pointers.
+
+### 4. Resolver — URI → Manifest
+
+The resolver turns a `px://` URI into a manifest (or a subtree of one). With optional selectors for branch or commit hash, it supports versioned resolution and fragment-based queries for efficient data access.
+
+### Scene Clips as Representations
+
+Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it. A scene clip is stored as a content-addressed representation (for example `clip-01`, identified by its BLAKE3 hash), not as a field on any single character.
+
+The scene manifest remains simple and durable:
+
+```yaml
+id: "px://toystory/scene/pizza-planet"
+name: "Pizza Planet"
+entity_type: scene
+version: 3
+properties:
+  summary: "Woody and Buzz enter a crowded pizza-planet while searching for passage off Andy's Room."
+  time_of_day: night
+  mood: tense
+references:
+  characters:
+    - "px://toystory/character/woody"
+    - "px://toystory/character/buzzlightyear"
+  location: "px://toystory/location/pizza-planet"
+representations:
+  clip-01:
+    hash: "blake3:af1349b9..."
+    format: mp4
+    uri: "clip-01.mp4"
+```
+
+When resolved with provenance, PX returns versioned per-file provenance for the manifest and each direct representation. This keeps generation metadata attached to the committed files without requiring users to manage the underlying VCS directly.
+
+```yaml
+manifest:
+  id: "px://toystory/scene/pizza-planet"
+  name: "Pizza Planet"
+  entity_type: scene
+  version: 3
+  representations:
+    clip-01:
+      hash: "blake3:af1349b9..."
+      format: mp4
+      uri: "clip-01.mp4"
+provenance:
+  revision: "a72c9f3b..."
+  files:
+    - role: manifest
+      path: "scene/pizza-planet.yaml"
+      provenance:
+        px.provenance.kind: edit
+        px.provenance.author: toybox-builder
+    - role: representation
+      name: clip-01
+      path: "scene/clip-01.mp4"
+      uri: "clip-01.mp4"
+      hash: "blake3:af1349b9..."
+      format: mp4
+      provenance:
+        px.provenance.kind: generation
+        px.provenance.model: video-generator
+        px.provenance.prompt.address: "blake3:b4d2..."
+```
+
+---
+
+## Entity Types
+
+| Type | Example URI | Description |
 |---|---|---|
-|     --local | Resolve repository reads from an explicitly checked-out local working tree |  |
-|     --remote | Resolve repository reads through the configured Lore server (the default) |  |
-| -d, --base-dir | Base directory for repository repositories. Defaults to $PX\_DIR, or ~/.px if unset |  |
-| -v, --verbose | Enable verbose debug logging |  |
+| `character` | `px://toystory/character/woody` | Persistent character with identity across scenes/episodes |
+| `location` | `px://toystory/location/andys-room` | Spatial location within a fictional repository |
+| `scene` | `px://toystory/scene/pizza-planet` | Narrative scene — participants, timeline, events |
+| `prop` | `px://toystory/prop/andy-hat` | Physical object with materials, variants, ownership |
+| `group` | `px://toystory/group/buzz-and-woody-flying` | Mixed-media groups |
+| `world` | `px://toystory/world/toystory` | The repository itself — rules, canon, top-level metadata |
+
+---
+
+## Repository Layout
+
+Each repository is a Git repository on disk:
+
+```text
+toystory/                    ← repository root (Git repo)
+├── .px/
+│   └── config.yaml          ← repository configuration
+├── repository.yaml            ← world manifest
+├── characters/
+│   ├── woody.yaml
+│   └── slinky.yaml
+├── locations/
+│   └── andys-room.yaml
+├── scenes/
+│   └── pizza-planet.yaml
+└── props/
+```
+
+
+## Repository Context (`repository.yaml`)
+
+`repository.yaml` is the repository's world manifest and the sole source of truth for project-wide context. It owns durable global canon, visual or narrative style, reusable asset conventions, global exclusions, and canonical references through its `properties`, `representations`, and `references`.
+
+Before creating an entity or generating content, resolve the repository's world manifest from the same target branch as the entity work (via `px_resolve` on the repository URI). Read its `properties`, `representations`, and `references`, and resolve only the referenced resources relevant to the requested work. Treat repository context as the project-wide baseline; entity-specific identity, behavior, and representation data apply as refinements. Keep entity manifests focused on identity and entity-specific facts; do not add a repository-level summary or reference for every entity.
+
+If project and entity instructions truly conflict, pause and ask the user for direction rather than choosing one. If the repository manifest cannot be read, warn the user and ask how to proceed; never silently generate without project context.
+
+Update `repository.yaml` only when the user explicitly defines or approves a project-wide property or reference. If entity work reveals a potentially reusable global fact, present it as a proposed repository update and wait for user approval before writing it. Preserve existing global context when adding an approved change. Never promote inferred project-wide facts into `repository.yaml` as part of an entity update.
+
+Unless the user explicitly requests a different provider or storage location, call `px_init` with no provider argument and preserve the configured provider and default PX directory. Never infer a local provider from an example. Never choose an isolated storage location merely to isolate a repository. Pass a provider only when the user explicitly requests a provider change, and a storage location only when the user explicitly names one.
+
+**No tagging.** Lore VCS has no native tag support — branches are the only mechanism for human-readable names on a revision point. Do not append tags to URIs.
+
+Checking the current workspace is not required: PX usually stores all repositories in a centralized directory unless configured otherwise.
+
+
+
+# px_init
+Initialize a repository repository and/or configure the backend provider
+
+
+## Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| provider | string | No |  | Provider type: local, portals-cloud, or remote |
+| remote | string | No |  | Remote URL to add as origin after init |
+| remote\_url | string | No |  | Remote URL (required for remote provider) |
+| repository | string | No |  | Repository name. If provided, initializes a new repository repository |
+| reset | boolean | No | false | Reset the provider configuration file |
+| workspace\_id | string | No |  | Workspace ID (for remote provider) |
 
 
 
 
+# px_branch
+Create or list branches
 
-# Environment Variables
-The following environment variables are recognized by `px`.
+
+## Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| name | string | No |  | Branch name to create. Omit to list all branches |
+| repository | string | Yes |  | Repository name |
 
 
-| Variable | Description |
-|---|---|
-| PX\_OUTPUT | Override for --format |
+
+
+# px_pull
+Clone or pull a repository from a remote
+
+
+## Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| url\_or\_name | string | Yes |  | URL (clone) or repository name (pull existing) |
+
+
+
+
+# px_list
+List repositories or entities within a repository
+
+
+## Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| entity\_type | string | No |  | Entity type to list (if repository is specified) |
+| repository | string | No |  | Repository name. Omit to list all repositories |
+
+
+
+
+# px_switch
+Switch to a branch
+
+
+## Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| name | string | Yes |  | Branch name to switch to |
+| repository | string | Yes |  | Repository name |
 
 

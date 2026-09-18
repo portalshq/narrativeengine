@@ -1,0 +1,22 @@
+---
+generated: "true"
+generator: px-docgen
+version: 0.8.24
+source: mcp
+---
+
+
+# px_create
+Create a new entity manifest
+
+
+## Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| author | string | No | px | Author identifier |
+| entity\_id | string | Yes |  | Entity ID (slug). e.g., "woody" |
+| entity\_type | string | Yes |  | Entity type (any non-empty string, e.g. character, location, custom-type) |
+| name | string | Yes |  | Human-readable name |
+| repository | string | Yes |  | Repository name |
+

@@ -250,12 +250,7 @@ The resolver turns a `px://` URI into a manifest (or a subtree of one). With opt
 
 ### Scene Clips as Representations
 
-Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it.
-
-```bash
-px create scene pizza-planet -u toystory -n "Pizza Planet"
-px add px://toystory/scene/pizza-planet clip-01 ./pizza-planet-clip-01.mp4 --format mp4 -m "Add pizza-planet scene clip"
-```
+Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it. A scene clip is stored as a content-addressed representation (for example `clip-01`, identified by its BLAKE3 hash), not as a field on any single character.
 
 The scene manifest remains simple and durable:
 
@@ -281,10 +276,6 @@ representations:
 ```
 
 When resolved with provenance, PX returns versioned per-file provenance for the manifest and each direct representation. This keeps generation metadata attached to the committed files without requiring users to manage the underlying VCS directly.
-
-```bash
-px resolve px://toystory/scene/pizza-planet --provenance
-```
 
 ```yaml
 manifest:
@@ -354,6 +345,22 @@ toystory/                    ← repository root (Git repo)
 
 ---
 
+## Primitives CLI Examples
+
+Command-line examples for the [core primitives](./primitives.md), intended for humans working in a host shell. Agents must not execute these — agentic execution goes exclusively through `px-mcp-server` (see `px-repo`, `px-resolve`, `px-update`).
+
+```bash
+px create scene pizza-planet -u toystory -n "Pizza Planet"
+px add px://toystory/scene/pizza-planet clip-01 ./pizza-planet-clip-01.mp4 --format mp4 -m "Add pizza-planet scene clip"
+```
+
+```bash
+px resolve px://toystory/scene/pizza-planet --provenance
+```
+
+
+---
+
 ## Representation downloads and presigned URLs
 
 Create a temporary download URL with
@@ -363,26 +370,27 @@ and representation arguments, file lookup, configuration, and SDK examples.
 
 ---
 
-## MCP Server
+## MCP Server (mandatory for agents)
 
-The standard PX installer bundles the native `px-mcp-server` binary with `px`. If the MCP command is missing or broken, rerun the standard PX installer from a host shell.
+Agents MUST issue all PX operations exclusively through the `px-mcp-server` MCP tools (`px_<command>`). The `px` CLI is NOT available for agentic use — never shell out, never follow `px ...` shell examples.
 
-The MCP server is not a daemon; agent clients start it on demand over stdio, and it proxies tool calls to the host `px` CLI.
+The standard PX installer bundles the native `px-mcp-server` binary with `px`. If the MCP server is missing or broken, rerun the standard PX installer from a host shell.
 
-## Agent Sandbox Integration
-
-When running inside a sandboxed environment (e.g., Codex) without outbound network access, use MCP tools instead of shelling out to the `px` CLI directly. The MCP server runs on the host machine, starts only when the agent/MCP client launches it over stdio, and proxies tool calls to the host `px` CLI.
-
-Direct `px` CLI examples in this skill are for humans, host-local shells, and non-sandboxed scripts. In an agent sandbox, use the MCP tools for any operation that may need Lore/cloud/network access.
+The MCP server is not a daemon; agent clients start it on demand over stdio (see `docs/authored/mcp/install.md` for client configuration), and it proxies tool calls to the host PX installation.
 
 ## Available MCP Tools
 
-All px CLI commands are available as MCP tools with `px_` prefix. For example:
-- `px resolve` -> `px_resolve` tool
-- `px create` -> `px_create` tool
-- `px set` -> `px_set` tool
+Every PX command is available as an MCP tool with a `px_` prefix and dashes/spaces converted to underscores. For example:
 
-Prefer MCP tools over shell commands when in a sandbox.
+- `px_resolve` — resolve a PX URI to its manifest or a subtree
+- `px_create` — create a new entity manifest
+- `px_query` — query a subtree from a manifest
+- `px_set` — set a property on an entity manifest
+- `px_add` — add a file representation to an entity manifest
+- `px_commit` — commit changes to a repository
+
+Per-tool parameters are documented under `docs/generated/mcp/<tool>.md` (generated from the same command definitions as the MCP server itself). Tool arguments use MCP field names (for example `branch`, `commit`, `format`, `include_blobs`); pass the branch explicitly on every call that accepts one — do not rely on whichever branch happens to be checked out. The CLI reference (`docs/generated/cli.md`, `docs/generated/commands/`) and shell examples elsewhere in these docs are for humans in host shells only and MUST NOT be used as agent instructions.
+
 
 ## MCP Server Configuration
 
@@ -446,7 +454,7 @@ Example host-side launch command:
 
 Use the same command/args form in any client that supports stdio MCP servers.
 
-Inside sandboxes, use the MCP tools instead of shelling out to `px` directly for network-backed operations. Direct `px` CLI commands remain the right choice for humans and host-local shells.
+Inside sandboxes, use the MCP tools for all PX operations. Direct `px` CLI commands are for humans in host-local shells only and MUST NOT be used as agent instructions.
 
 
 ---

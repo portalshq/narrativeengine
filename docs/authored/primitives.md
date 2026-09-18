@@ -50,12 +50,7 @@ The resolver turns a `px://` URI into a manifest (or a subtree of one). With opt
 
 ### Scene Clips as Representations
 
-Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it.
-
-```bash
-px create scene pizza-planet -u toystory -n "Pizza Planet"
-px add px://toystory/scene/pizza-planet clip-01 ./pizza-planet-clip-01.mp4 --format mp4 -m "Add pizza-planet scene clip"
-```
+Scenes can own generated video clips the same way characters own reference images. A generated clip is not usually a representation of one character; it is a representation of a scene, with references back to the characters, locations, props, and style guides that shaped it. A scene clip is stored as a content-addressed representation (for example `clip-01`, identified by its BLAKE3 hash), not as a field on any single character.
 
 The scene manifest remains simple and durable:
 
@@ -81,10 +76,6 @@ representations:
 ```
 
 When resolved with provenance, PX returns versioned per-file provenance for the manifest and each direct representation. This keeps generation metadata attached to the committed files without requiring users to manage the underlying VCS directly.
-
-```bash
-px resolve px://toystory/scene/pizza-planet --provenance
-```
 
 ```yaml
 manifest:

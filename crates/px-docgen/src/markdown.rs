@@ -66,11 +66,15 @@ impl MarkdownDoc {
     }
 
     pub fn front_matter(&mut self, meta: &DocMeta) {
+        self.front_matter_with_source(meta, "clap");
+    }
+
+    pub fn front_matter_with_source(&mut self, meta: &DocMeta, source: &str) {
         let mut fm = IndexMap::new();
         fm.insert("generated".to_string(), "true".to_string());
         fm.insert("generator".to_string(), meta.generator_name.clone());
         fm.insert("version".to_string(), meta.crate_version.clone());
-        fm.insert("source".to_string(), "clap".to_string());
+        fm.insert("source".to_string(), source.to_string());
         self.sections.push(Section::FrontMatter(fm));
     }
 
@@ -502,4 +506,156 @@ fn collect_env_vars(commands: &[CommandModel], out: &mut IndexMap<String, String
         }
         collect_env_vars(&cmd.subcommands, out);
     }
+}
+
+/// MCP tool name for a command, mirroring `px-mcp-server/build.rs`:
+/// `px_` prefix with dashes/spaces converted to underscores.
+pub fn mcp_tool_name(cmd: &CommandModel) -> String {
+    format!("px_{}", cmd.full_path.replace(['-', ' '], "_"))
+}
+
+/// MCP parameter name, mirroring `px-mcp-server/build.rs` (`-` → `_`).
+pub fn mcp_param_name(name: &str) -> String {
+    name.replace('-', "_")
+}
+
+/// MCP parameter type, mirroring `px-mcp-server/build.rs::schema_for_param`.
+/// No CLI flag spellings are emitted — names only.
+fn mcp_param_type(name: &str, is_flag: bool) -> &'static str {
+    if is_flag {
+        "boolean"
+    } else if name == "limit" || name.ends_with("limit") {
+        "integer"
+    } else {
+        "string"
+    }
+}
+
+/// Collect all non-hidden commands (including subcommands) that the MCP
+/// server exposes as tools. Mirrors `px-mcp-server/build.rs::collect_tools`.
+pub fn collect_mcp_tools(commands: &[CommandModel]) -> Vec<&CommandModel> {
+    let mut out = Vec::new();
+    for cmd in commands {
+        collect_mcp_tools_inner(cmd, &mut out);
+    }
+    out
+}
+
+fn collect_mcp_tools_inner<'a>(cmd: &'a CommandModel, out: &mut Vec<&'a CommandModel>) {
+    if cmd.hidden {
+        return;
+    }
+    out.push(cmd);
+    for sub in &cmd.subcommands {
+        collect_mcp_tools_inner(sub, out);
+    }
+}
+
+/// Render one MCP tool reference page. Content is a mechanical projection of
+/// the command definition: tool name, about text verbatim, and a parameter
+/// table with MCP field names. No CLI synopsis, flag spellings, or examples.
+pub fn render_mcp_tool_page(cmd: &CommandModel, meta: &DocMeta) -> String {
+    let mut doc = MarkdownDoc::new();
+    doc.front_matter_with_source(meta, "mcp");
+
+    let tool = mcp_tool_name(cmd);
+    doc.heading(1, &tool);
+
+    if !cmd.about.is_empty() {
+        doc.paragraph(&cmd.about);
+    }
+
+    if !cmd.subcommands.is_empty() {
+        let mut subs: Vec<String> = cmd
+            .subcommands
+            .iter()
+            .filter(|s| !s.hidden)
+            .map(|s| s.name.clone())
+            .collect();
+        subs.sort();
+        if !subs.is_empty() {
+            doc.paragraph(&format!("Subcommands: {}", subs.join(", ")));
+        }
+    }
+
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    for a in &cmd.arguments {
+        rows.push(vec![
+            mcp_param_name(&a.name),
+            mcp_param_type(&a.name, false).to_string(),
+            if a.required {
+                "Yes".to_string()
+            } else {
+                "No".to_string()
+            },
+            a.default_value.clone().unwrap_or_default(),
+            a.about.clone(),
+        ]);
+    }
+    for o in &cmd.options {
+        if o.name == "help" {
+            continue;
+        }
+        let name = mcp_param_name(&o.name);
+        rows.push(vec![
+            name.clone(),
+            mcp_param_type(&name, false).to_string(),
+            if o.required {
+                "Yes".to_string()
+            } else {
+                "No".to_string()
+            },
+            o.default_value.clone().unwrap_or_default(),
+            o.about.clone(),
+        ]);
+    }
+    for f in &cmd.flags {
+        if f.name == "help" {
+            continue;
+        }
+        let name = mcp_param_name(&f.name);
+        rows.push(vec![
+            name,
+            mcp_param_type("", true).to_string(),
+            "No".to_string(),
+            "false".to_string(),
+            f.about.clone(),
+        ]);
+    }
+    rows.sort_by(|a, b| a[0].cmp(&b[0]));
+
+    if rows.is_empty() {
+        doc.paragraph("Parameters: none.");
+    } else {
+        doc.heading(2, "Parameters");
+        doc.table(
+            &["Name", "Type", "Required", "Default", "Description"],
+            rows,
+        );
+    }
+
+    doc.render()
+}
+
+/// Render the MCP tool index table linking to per-tool pages.
+pub fn render_mcp_index(tools: &[&CommandModel], meta: &DocMeta) -> String {
+    let mut doc = MarkdownDoc::new();
+    doc.front_matter_with_source(meta, "mcp");
+    doc.heading(1, "PX MCP Tool Reference");
+    doc.paragraph("MCP tools exposed by `px-mcp-server`. Agents MUST use these tools; the `px` CLI is not available for agentic use.");
+
+    let mut rows: Vec<Vec<String>> = tools
+        .iter()
+        .map(|c| {
+            let tool = mcp_tool_name(c);
+            vec![
+                format!("[`{tool}`](docs/generated/mcp/{tool}.md)"),
+                c.about.clone(),
+            ]
+        })
+        .collect();
+    rows.sort_by(|a, b| a[0].cmp(&b[0]));
+    doc.table(&["Tool", "Description"], rows);
+
+    doc.render()
 }

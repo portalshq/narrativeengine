@@ -12,6 +12,10 @@
 
 ---
 
+{{include docs/authored/primitives-examples.md}}
+
+---
+
 ## Representation downloads and presigned URLs
 
 Create a temporary download URL with
