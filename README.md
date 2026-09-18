@@ -442,6 +442,16 @@ enabled = true
 
 Use the same block in `.codex/config.toml` inside a trusted project if you want the server scoped to that repository.
 
+## Connect with Claude Code
+
+Register the server for your user account with the Claude Code CLI:
+
+```bash
+claude mcp add px --env PX_DIR="$HOME/.px" --scope user -- /bin/sh -lc 'exec px-mcp-server'
+```
+
+If `px-mcp-server` is not on `PATH`, use the full installed path instead, usually `~/.local/bin/px-mcp-server` or `/usr/local/bin/px-mcp-server`.
+
 ## Other MCP Clients
 
 Claude Desktop and other MCP clients use the same stdio pattern. Add a server entry that runs the bundled `px-mcp-server` command on demand, and keep `PX_DIR` pointed at your PX workspace if you need a non-default data directory.
