@@ -32,6 +32,8 @@ px://toystory/prop/andy-hat
 
 ## Installation
 
+### Installation Script
+
 ```bash
 curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash && npx skills add portalshq/narrativeengine
 ```
