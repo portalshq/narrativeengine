@@ -235,24 +235,55 @@ impl LoreInstaller {
     }
 
     /// Download install script to temporary location
+    ///
+    /// Runs on a dedicated OS thread: `reqwest::blocking` owns a Tokio
+    /// runtime that must be created *and dropped* outside any async
+    /// context, but installers run inside `Runtime::block_on`
+    /// (`px configure local`, `px doctor`, …). Dropping it on a runtime
+    /// thread panics with "Cannot drop a runtime…".
     fn download_script(&self, url: &str) -> Result<std::path::PathBuf> {
-        let response = reqwest::blocking::get(url).context(format!(
-            "[{}] Failed to download Lore install script",
-            error_ids::ERR_LORE_DOWNLOAD_FAILED
-        ))?;
+        let url = url.to_string();
+        // Consume the whole response on the spawned thread and move only
+        // owned data back: every `reqwest::blocking` call (including
+        // `Response::bytes`) builds and drops a throwaway runtime in debug
+        // builds, which panics on a Tokio thread.
+        let (status, script_content) = std::thread::Builder::new()
+            .name("px-lore-download".to_string())
+            .spawn(move || {
+                let response = reqwest::blocking::get(&url).map_err(|e| {
+                    anyhow::anyhow!(
+                        "[{}] Failed to download Lore install script: {e}",
+                        error_ids::ERR_LORE_DOWNLOAD_FAILED
+                    )
+                })?;
+                let status = response.status();
+                let bytes = response.bytes().map_err(|e| {
+                    anyhow::anyhow!(
+                        "[{}] Failed to read installer bytes: {e}",
+                        error_ids::ERR_LORE_DOWNLOAD_FAILED
+                    )
+                })?;
+                Ok::<_, anyhow::Error>((status, bytes))
+            })
+            .context(format!(
+                "[{}] Failed to spawn Lore download thread",
+                error_ids::ERR_LORE_DOWNLOAD_FAILED
+            ))?
+            .join()
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "[{}] Lore download thread panicked",
+                    error_ids::ERR_LORE_DOWNLOAD_FAILED
+                )
+            })??;
 
-        if !response.status().is_success() {
+        if !status.is_success() {
             anyhow::bail!(
                 "[{}] Failed to download script: HTTP {}",
                 error_ids::ERR_LORE_DOWNLOAD_FAILED,
-                response.status()
+                status
             );
         }
-
-        let script_content = response.bytes().context(format!(
-            "[{}] Failed to read installer bytes",
-            error_ids::ERR_LORE_DOWNLOAD_FAILED
-        ))?;
 
         let actual_sha256 = hex::encode(Sha256::digest(&script_content));
         if actual_sha256 != self.installer_sha256 {
@@ -490,6 +521,43 @@ mod tests {
             .with_version("v1.0.0");
         assert_eq!(installer.repo, "custom/repo");
         assert_eq!(installer.version, "v1.0.0");
+    }
+
+    #[test]
+    fn test_download_script_inside_tokio_runtime() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+
+        // `px configure local` / `px doctor` run provider init inside
+        // `Runtime::block_on`. The installer download must survive that
+        // context instead of panicking with "Cannot drop a runtime in a
+        // context where blocking is not allowed".
+        let body = b"fake-installer-script";
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 4096];
+            let _ = stream.read(&mut buf);
+            let header = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            stream.write_all(header.as_bytes()).unwrap();
+            stream.write_all(body).unwrap();
+        });
+
+        let sha = hex::encode(Sha256::digest(body));
+        let installer = LoreInstaller::new(None).with_installer_sha256(&sha);
+        let url = format!("http://{addr}/install.sh");
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let path = rt
+            .block_on(async { installer.download_script(&url) })
+            .expect("download inside a tokio runtime must not panic");
+        let saved = std::fs::read(&path).unwrap();
+        assert_eq!(saved, body);
+        std::fs::remove_file(&path).unwrap();
     }
 
     #[test]
