@@ -65,14 +65,6 @@ jobs:
             typescript/narrativeengine/package-lock.json
             typescript/px-sdk/package-lock.json
       - run: pip install maturin mypy pytest ruff pydantic
-      - if: runner.os == 'Windows'
-        name: Diagnose PowerShell inventory (temporary)
-        run: |
-          $PSVersionTable.PSVersion
-          $ExecutionContext.SessionState.LanguageMode
-          Get-Command pwsh,powershell -ErrorAction SilentlyContinue | Format-Table Name,Source
-          Get-Command Get-FileHash -ErrorAction SilentlyContinue
-          powershell -NoProfile -NonInteractive -Command "$PSVersionTable.PSVersion; $ExecutionContext.SessionState.LanguageMode; Get-Command Get-FileHash"
       - run: python -c "import shutil, pathlib; p = pathlib.Path('target/wheels'); shutil.rmtree(p, ignore_errors=True); p.mkdir(parents=True, exist_ok=True)"
       - run: maturin build --release --out ../../target/wheels
         working-directory: python/narrativeengine
