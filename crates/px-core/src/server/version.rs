@@ -28,6 +28,12 @@ pub const PINNED_LORE_REPOSITORY: &str = "portalshq/lore";
 pub const PINNED_LORE_INSTALLER_SHA256: &str =
     "8e7cc96d1b9100610af6c1bd15ec2febbcb48d26cc7f19de3862496897810b74";
 
+/// SHA-256 of `scripts/install.ps1` at the pinned Lore release tag — the
+/// Windows counterpart of [`PINNED_LORE_INSTALLER_SHA256`], enforced the
+/// same way before execution.
+pub const PINNED_LORE_INSTALLER_PS1_SHA256: &str =
+    "55598cc196a779e9f7a0072e1330ee27b2cec2d3d6fe3b9ebd165221c77cca5e";
+
 /// Digest and Sigstore bundle for the Lore release's binary checksum
 /// manifest. Empty means this Px source is not eligible for a secure cloud
 /// release even though local development can still use the pinned installer.
@@ -404,5 +410,21 @@ mod tests {
         // "0.8.4-portals.9".  If you intentionally change it, update this
         // test and the integration test as well.
         assert_eq!(PINNED_LORE_VERSION, "0.8.4-portals.9");
+    }
+
+    #[test]
+    fn test_pinned_installer_hashes_are_sha256_hex() {
+        // Both installer pins must be 64 lowercase hex chars: a malformed
+        // pin fails every install on its platform before executing anything.
+        for pin in [
+            PINNED_LORE_INSTALLER_SHA256,
+            PINNED_LORE_INSTALLER_PS1_SHA256,
+        ] {
+            assert_eq!(pin.len(), 64);
+            assert!(
+                pin.chars()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+            );
+        }
     }
 }

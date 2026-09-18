@@ -7,8 +7,8 @@
 
 use crate::server::error_ids;
 use crate::server::{
-    PINNED_LORE_ARTIFACT_MANIFEST_SHA256, PINNED_LORE_INSTALLER_SHA256, PINNED_LORE_REPOSITORY,
-    PINNED_LORE_VERSION,
+    PINNED_LORE_ARTIFACT_MANIFEST_SHA256, PINNED_LORE_INSTALLER_PS1_SHA256,
+    PINNED_LORE_INSTALLER_SHA256, PINNED_LORE_REPOSITORY, PINNED_LORE_VERSION,
 };
 use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
@@ -105,7 +105,7 @@ impl LoreInstaller {
             self.repo, self.version
         );
 
-        self.run_install_script(&["--version", &self.tag_version()])?;
+        self.run_installer(false)?;
 
         info!("Lore CLI installed successfully");
         Ok(())
@@ -141,7 +141,7 @@ impl LoreInstaller {
             self.repo, self.version
         );
 
-        self.run_install_script(&["--server", "--version", &self.tag_version()])?;
+        self.run_installer(true)?;
 
         info!("Lore server installed successfully");
         Ok(())
@@ -165,8 +165,22 @@ impl LoreInstaller {
         Ok(())
     }
 
+    /// Run the official Lore installer for this platform: `install.sh`
+    /// via bash on unix, `install.ps1` via PowerShell on Windows.
+    fn run_installer(&self, server_only: bool) -> Result<()> {
+        if cfg!(windows) {
+            return self.run_install_ps1(server_only);
+        }
+        let tag = self.tag_version();
+        if server_only {
+            self.run_install_sh(&["--server", "--version", &tag])
+        } else {
+            self.run_install_sh(&["--version", &tag])
+        }
+    }
+
     /// Run the official Lore install script
-    fn run_install_script(&self, args: &[&str]) -> Result<()> {
+    fn run_install_sh(&self, args: &[&str]) -> Result<()> {
         let script_url = format!(
             "https://raw.githubusercontent.com/{}/{}/scripts/install.sh",
             self.repo,
@@ -174,7 +188,7 @@ impl LoreInstaller {
         );
 
         // Download script
-        let script_path = self.download_script(&script_url)?;
+        let script_path = self.download_script(&script_url, &self.installer_sha256, "sh")?;
 
         // Make script executable
         #[cfg(unix)]
@@ -234,6 +248,87 @@ impl LoreInstaller {
         Ok(())
     }
 
+    /// Run the official Lore `install.ps1` via inbox PowerShell.
+    ///
+    /// Mirrors `run_install_sh`: same pinned tag, same signed-manifest
+    /// digest (already `sha256:`-prefixed, as the script requires), same
+    /// CLI-vs-server selection — only the script language and its flags
+    /// differ (`-Version` / `-ManifestSha256` / `-Server`).
+    fn run_install_ps1(&self, server_only: bool) -> Result<()> {
+        let script_url = format!(
+            "https://raw.githubusercontent.com/{}/{}/scripts/install.ps1",
+            self.repo,
+            self.tag_version(),
+        );
+
+        let script_path =
+            self.download_script(&script_url, PINNED_LORE_INSTALLER_PS1_SHA256, "ps1")?;
+        let script_arg = script_path
+            .to_str()
+            .context("Lore installer temporary path is not valid UTF-8")?;
+        // Without an explicit dir the script defaults to %USERPROFILE%\bin
+        // and persists it to the User PATH; px additionally prepends it to
+        // this process's PATH below so post-install verification resolves.
+        let install_dir = self
+            .install_dir
+            .clone()
+            .or_else(default_windows_install_dir)
+            .context(format!(
+                "[{}] Cannot determine Lore install directory on Windows",
+                error_ids::ERR_LORE_INSTALL_FAILED
+            ))?;
+        let install_dir_str = install_dir
+            .to_str()
+            .context("Lore installation directory is not valid UTF-8")?;
+
+        let mut cmd = Command::new("powershell");
+        cmd.args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            script_arg,
+            "-Version",
+            &self.tag_version(),
+            "-ManifestSha256",
+            &self.manifest_sha256,
+            "-InstallDir",
+            install_dir_str,
+        ]);
+        if server_only {
+            cmd.arg("-Server");
+        }
+        let output_result = cmd.output();
+
+        // Remove the downloaded program even when process creation fails, and
+        // before examining the exit status, so executable material is never
+        // left in a shared temp directory.
+        fs::remove_file(&script_path).context("Failed to remove Lore installer script")?;
+        let output = output_result.context(format!(
+            "[{}] Failed to execute Lore install script",
+            error_ids::ERR_LORE_INSTALL_FAILED
+        ))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            error!(
+                "[{}] Lore install script failed: {}",
+                error_ids::ERR_LORE_INSTALL_FAILED,
+                stderr
+            );
+            anyhow::bail!(
+                "[{}] Lore install script failed with status: {}",
+                error_ids::ERR_LORE_INSTALL_FAILED,
+                output.status
+            );
+        }
+
+        prepend_to_process_path(&install_dir)?;
+
+        Ok(())
+    }
+
     /// Download install script to temporary location
     ///
     /// Runs on a dedicated OS thread: `reqwest::blocking` owns a Tokio
@@ -241,7 +336,12 @@ impl LoreInstaller {
     /// context, but installers run inside `Runtime::block_on`
     /// (`px configure local`, `px doctor`, …). Dropping it on a runtime
     /// thread panics with "Cannot drop a runtime…".
-    fn download_script(&self, url: &str) -> Result<std::path::PathBuf> {
+    fn download_script(
+        &self,
+        url: &str,
+        expected_sha256: &str,
+        extension: &str,
+    ) -> Result<std::path::PathBuf> {
         let url = url.to_string();
         // Consume the whole response on the spawned thread and move only
         // owned data back: every `reqwest::blocking` call (including
@@ -286,13 +386,13 @@ impl LoreInstaller {
         }
 
         let actual_sha256 = hex::encode(Sha256::digest(&script_content));
-        if actual_sha256 != self.installer_sha256 {
+        if actual_sha256 != expected_sha256 {
             anyhow::bail!(
                 "[{}] Lore installer checksum mismatch for {} {}: expected {}, got {}",
                 error_ids::ERR_LORE_DOWNLOAD_FAILED,
                 self.repo,
                 self.tag_version(),
-                self.installer_sha256,
+                expected_sha256,
                 actual_sha256,
             );
         }
@@ -302,7 +402,7 @@ impl LoreInstaller {
         // concurrent-use collisions without trusting a predictable filename.
         let nonce = rand::random::<u64>();
         let script_path = std::env::temp_dir().join(format!(
-            "px-lore-install-{}-{nonce:016x}.sh",
+            "px-lore-install-{}-{nonce:016x}.{extension}",
             std::process::id(),
         ));
         let mut script_file = OpenOptions::new()
@@ -417,6 +517,45 @@ impl LoreInstaller {
         info!("Added {} to PATH for current process", install_dir_str);
         Ok(())
     }
+}
+
+/// Default Lore install directory on Windows, matching `install.ps1`
+/// (`%USERPROFILE%\bin`). Unix keeps `None` (the shell script default,
+/// already on PATH).
+#[cfg(windows)]
+fn default_windows_install_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("USERPROFILE").map(|p| std::path::PathBuf::from(p).join("bin"))
+}
+
+#[cfg(not(windows))]
+fn default_windows_install_dir() -> Option<std::path::PathBuf> {
+    None
+}
+
+/// Prepend a directory to this process's PATH using the platform separator.
+///
+/// `install.ps1` persists its directory to the User PATH registry key, but
+/// that never reaches the running px process, so post-install verification
+/// (`which lore`) needs the prepend here.
+fn prepend_to_process_path(dir: &std::path::Path) -> Result<()> {
+    let dir_str = dir
+        .to_str()
+        .context("Install directory path is not valid UTF-8")?;
+    let sep = if cfg!(windows) { ';' } else { ':' };
+    if let Ok(current) = std::env::var("PATH")
+        && current.split(sep).any(|p| p == dir_str)
+    {
+        return Ok(());
+    }
+    let new_path = format!(
+        "{dir_str}{sep}{}",
+        std::env::var("PATH").unwrap_or_default()
+    );
+    unsafe {
+        std::env::set_var("PATH", &new_path);
+    }
+    info!("Added {} to PATH for current process", dir_str);
+    Ok(())
 }
 
 /// Parse the output of `lore --version` (or `loreserver --version`).
@@ -553,7 +692,7 @@ mod tests {
 
         let rt = tokio::runtime::Runtime::new().unwrap();
         let path = rt
-            .block_on(async { installer.download_script(&url) })
+            .block_on(async { installer.download_script(&url, &sha, "sh") })
             .expect("download inside a tokio runtime must not panic");
         let saved = std::fs::read(&path).unwrap();
         assert_eq!(saved, body);
