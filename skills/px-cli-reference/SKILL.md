@@ -3,7 +3,7 @@ name: px-cli-reference
 description: Read-only reference for px CLI syntax, for humans asking what the command for something is (e.g. how to resolve a URI from a host shell). Never use for execution — agents MUST still execute all PX operations via px-mcp-server (see px-repo, px-resolve, px-update).
 metadata:
   author: portals
-  version: "0.8.24"
+  version: "0.8.25"
 ---
 
 # PX CLI Reference (read-only)
@@ -32,7 +32,7 @@ px resolve px://toystory/scene/pizza-planet --provenance
 
 
 # PX CLI Reference
-The `px` command-line interface (v0.8.24) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
+The `px` command-line interface (v0.8.25) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview

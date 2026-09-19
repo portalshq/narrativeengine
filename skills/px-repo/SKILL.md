@@ -3,7 +3,7 @@ name: px-repo
 description: Initialize PX repositories, clone/pull repositories, and create branches at the repository level via px-mcp-server (px_init, px_pull, px_branch). The px CLI is not available for agentic use — not for creating or revising individual entities; see px-resolve and px-update for those.
 metadata:
   author: portals
-  version: "0.8.24"
+  version: "0.8.25"
 ---
 
 # PX Skill: Repository Management
