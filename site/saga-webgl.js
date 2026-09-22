@@ -43,6 +43,19 @@
 // SECTION 2: MODULE IMPORTS
 // =============================================================================
 
+// Publish the page-scoped theme bridge before the CDN imports begin. This
+// keeps the PX theme contract available even when a browser blocks external
+// module fetches; once Three.js is available, the engine below attaches to the
+// same bridge and drives the actual canvas animation.
+if (typeof window !== "undefined" && !window.__sagaPxTheme) {
+  window.__sagaPxTheme = {
+    setActive(on) {
+      window.__sagaPendingPxTheme = !!on;
+      if (sagaEngineInstance) sagaEngineInstance.setPxThemeActive(!!on);
+    },
+  };
+}
+
 const THREE = await import('three');
 const { GLTFLoader }   = await import('three/addons/loaders/GLTFLoader.js');
 const { DRACOLoader }   = await import('three/addons/loaders/DRACOLoader.js');
