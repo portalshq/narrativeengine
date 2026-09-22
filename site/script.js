@@ -14,15 +14,23 @@
         setLabel(button, ok ? 'Copied' : 'Copy');
         if (ok) window.setTimeout(function () { setLabel(button, 'Copy'); }, 1600);
       }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
-      } else {
+      function legacyCopy() {
         var ta = document.createElement('textarea');
         ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
         document.body.appendChild(ta);
         ta.select();
-        try { done(document.execCommand('copy')); } catch (e) { done(false); }
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
         document.body.removeChild(ta);
+        return ok;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(legacyCopy()); });
+      } else {
+        done(legacyCopy());
       }
     });
   });
