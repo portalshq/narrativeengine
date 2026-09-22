@@ -44,23 +44,14 @@ function replaceCode(html, id, value) {
   return html.replace(pattern, `$1${escapeHtml(value)}$2`)
 }
 
-function replaceText(html, id, value) {
-  const pattern = new RegExp(`(<p id="${id}"[^>]*>)[\\s\\S]*?(</p>)`)
-  if (!pattern.test(html)) throw new Error(`Missing site text block: ${id}`)
-  const formatted = escapeHtml(value).replaceAll(/`([^`]+)`/g, '<code>$1</code>')
-  return html.replace(pattern, `$1${formatted}$2`)
-}
-
 const installation = read('docs/authored/installation.md')
+const mcpInstall = read('docs/authored/mcp/install.md')
 const primitives = read('docs/authored/primitives.md')
 const mcpOverview = read('docs/authored/mcp/overview.md')
 const packageJson = JSON.parse(read('typescript/px-sdk/package.json'))
 
 const install = firstCodeBlockAfter(installation, '### Installation Script')
-const skillsHeading = installation.indexOf('### Skills Install')
-const skills = skillsHeading === -1
-  ? install.split('&&').at(-1).trim()
-  : firstCodeBlockAfter(installation, '### Skills Install')
+const codexMcp = firstCodeBlockAfter(mcpInstall, '## Connect with Codex')
 const initialize = [
   'px init bears --provider local',
   '',
@@ -71,7 +62,6 @@ const representations = firstCodeBlockAfter(primitives, '### Scene Clips as Repr
   .split('\n')
   .slice(0, 2)
   .join('\n')
-const mcpSummary = firstParagraphAfter(mcpOverview, '## MCP Server')
 const typescriptSdk = [
   `import {repoCreateEntity} from '${packageJson.name}'`,
   '',
@@ -84,13 +74,22 @@ const pythonSdk = [
 ].join('\n')
 
 let html = read(path.relative(repoRoot, sitePath))
-html = replaceCode(html, 'code-install', install)
-html = replaceCode(html, 'code-skills', skills)
-html = replaceCode(html, 'code-init', initialize)
-html = replaceCode(html, 'code-repr', representations)
-html = replaceCode(html, 'code-ts', typescriptSdk)
-html = replaceCode(html, 'code-py', pythonSdk)
-html = replaceText(html, 'mcp-summary', mcpSummary)
+html = html.replace(
+  '<span class="underline decoration-2 underline-offset-4">Explore Portals</span>',
+  '<a href="https://portals.works" class="underline decoration-2 underline-offset-4">Explore Portals</a>',
+)
+html = replaceCode(html, 'px-code-1', install)
+html = replaceCode(html, 'px-code-2', codexMcp)
+html = replaceCode(html, 'px-code-3', initialize)
+html = replaceCode(html, 'px-code-4', representations)
+html = replaceCode(html, 'px-code-5', typescriptSdk)
+html = replaceCode(html, 'px-code-6', pythonSdk)
+const mcpSummary = escapeHtml(firstParagraphAfter(mcpOverview, '## MCP Server'))
+const skillsSource = installation.includes('### Skills Install')
+  ? firstCodeBlockAfter(installation, '### Skills Install')
+  : install.split('&&').at(-1).trim()
+const skills = escapeHtml(skillsSource)
+html = html.replace('</head>', `  <meta name="px-mcp-summary" content="${mcpSummary.replaceAll('"', '&quot;')}" />\n  <meta name="px-skills-install" content="${skills.replaceAll('"', '&quot;')}" />\n</head>`)
 fs.writeFileSync(sitePath, html)
 
-console.log('Updated PX site technical content from docs/authored/.')
+console.log('Updated PX technical examples from docs/authored/.')

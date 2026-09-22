@@ -1,295 +1,57 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>px — the harness for AI creative work</title>
   <meta name="description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
   <meta name="keywords" content="px protocol, AI film, AI creative, AI production tools, AI series, AI characters, create AI tv, AI creative tools, persistent characters, autonomous characters, AI creative agents" />
+  <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://portals.works/px" />
-  <meta property="og:title" content="px — the harness for AI creative work" />
+  <meta property="og:title" content="px — the harness for AI creative work | portals" />
   <meta property="og:description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="px" />
   <meta property="og:url" content="https://portals.works/px" />
+  <meta property="og:site_name" content="portals" />
   <meta property="og:image" content="https://portals.works/px/og-image.svg" />
-  <meta property="og:image:alt" content="PX — a harness for your AI creative work" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="px — the harness for AI creative work" />
+  <meta name="twitter:title" content="px — the harness for AI creative work | portals" />
   <meta name="twitter:description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
   <meta name="twitter:image" content="https://portals.works/px/og-image.svg" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <link rel="stylesheet" href="./styles.css" />
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "SoftwareApplication",
-        "name": "PX",
-        "applicationCategory": "DeveloperApplication",
-        "operatingSystem": "macOS, Linux, Windows",
-        "url": "https://portals.works/px",
-        "description": "Create and use persistent narrative entities across creative tools, formats, and AI workflows.",
-        "isAccessibleForFree": true,
-        "license": "https://opensource.org/license/mit"
-      },
-      {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {"@type": "ListItem", "position": 1, "name": "Portals", "item": "https://portals.works"},
-          {"@type": "ListItem", "position": 2, "name": "PX", "item": "https://portals.works/px"}
-        ]
-      }
-    ]
-  }
-  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"PX","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","url":"https://portals.works/px","description":"Create and use persistent narrative entities across creative tools, formats, and AI workflows.","isAccessibleForFree":true,"license":"https://opensource.org/license/mit"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Portals","item":"https://portals.works"},{"@type":"ListItem","position":2,"name":"PX","item":"https://portals.works/px"}]}]}</script>
+  <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.184.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.184.0/examples/jsm/"}}</script>
+  <meta name="px-mcp-summary" content="Agents MUST issue all PX operations exclusively through the `px-mcp-server` MCP tools (`px_&lt;command&gt;`). The `px` CLI is NOT available for agentic use — never shell out, never follow `px ...` shell examples." />
+  <meta name="px-skills-install" content="npx skills add portalshq/narrativeengine" />
+  <meta name="px-mcp-summary" content="Agents MUST issue all PX operations exclusively through the `px-mcp-server` MCP tools (`px_&lt;command&gt;`). The `px` CLI is NOT available for agentic use — never shell out, never follow `px ...` shell examples." />
+  <meta name="px-skills-install" content="npx skills add portalshq/narrativeengine" />
 </head>
 <body>
-  <main class="px-page" id="top">
-    <div class="relative isolate">
-      <div class="px-aurora" aria-hidden="true"></div>
-      <div class="px-grid-noise" aria-hidden="true"></div>
-      <nav class="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-20 py-20 md:px-40" aria-label="PX">
-        <a href="#top" class="flex items-baseline gap-8 text-xl"><span class="t-h3-sans font-medium text-white">px</span></a>
-        <div class="hidden items-center gap-20 md:flex">
-          <a href="#how-it-works" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">Docs</a>
-          <a href="#bears" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">Examples</a>
-          <a href="https://github.com/portalshq/narrativeengine" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">GitHub</a>
-          <a href="#install" class="btn-primary inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans text-black rounded-sm transition">Install PX <span aria-hidden="true">↗</span></a>
-        </div>
-      </nav>
-
-      <section class="relative z-10 mx-auto grid min-h-[calc(100svh-80px)] max-w-[1440px] items-center gap-40 px-20 pb-68 pt-24 md:px-40 lg:grid-cols-[1.04fr_.96fr]">
-        <div class="max-w-3xl">
-          <h1 class="px-chrome-word text-[clamp(92px,18vw,260px)] font-medium leading-[1em]">px</h1>
-          <h2 class="mt-32 max-w-[10.5em] text-[clamp(36px,5vw,78px)] leading-[.94]">A harness for your <span class="px-serif text-[#dffc72]">AI creative work.</span></h2>
-          <p class="mt-28 max-w-xl t-p-sans">Create persistent characters, worlds, objects, and scenes with AI agents — then keep building on them across tools and formats.</p>
-          <div class="mt-34 flex flex-wrap gap-20">
-            <a href="https://github.com/portalshq/narrativeengine" class="btn-quiet inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black">View on GitHub</a>
-            <a href="#install" class="btn-primary inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans text-black rounded-sm transition">Install PX <span aria-hidden="true">↗</span></a>
-          </div>
-        </div>
-        <div class="lg:pt-38">
-          <div class="px-world-art" aria-label="An illustrated PX world with persistent bear characters" role="img">
-            <div class="px-mono absolute left-18 top-16 text-[10px] uppercase text-[#e7f5c0]">bears / scene_04 / dusk</div>
-            <div class="absolute right-[12%] top-[12%] h-48 w-48 rounded-full border border-[#e8f0eb]/45"></div>
-            <div class="absolute right-[12%] top-[12%] h-48 w-48 rounded-full border border-[#e8f0eb]/20 [transform:translate(22px,22px)]"></div>
-            <div class="px-bear left-[17%]"></div>
-            <div class="px-bear px-bear-small left-[45%]"></div>
-            <div class="px-bear px-bear-small right-[12%]"></div>
-            <div class="px-scan-line"></div>
-            <div class="absolute inset-x-18 bottom-16 flex items-end justify-between border-t border-[#e8f0eb]/30 pt-10 text-xs text-[#d3decf]">
-              <span class="px-mono">3 entities resolved</span><span>Lonnie appears in scene</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <section class="px-saga-banner" data-header-theme="light" aria-label="PX creative canvas">
-      <div class="mx-auto flex max-w-[1440px] flex-col justify-between px-20 py-32 md:px-40 md:py-40">
-        <div class="max-w-4xl">
-          <p class="t-d2-sans leading-[.92]">A world keeps its shape<br /><span class="t-d2-serif">when the tool changes.</span></p>
-          <p class="mt-20 max-w-xl t-p-sm-sans">px keeps characters, locations, scenes, and representations resolvable for the next creative move.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="px-20 py-14 text-black md:px-40">
-      <div class="mx-auto flex max-w-[1440px] items-center justify-between gap-20 text-[clamp(22px,3vw,42px)] leading-none"><span>CREATE IT ONCE.</span><span class="px-serif">KEEP CREATING WITH IT.</span><span class="hidden lg:inline">✳</span></div>
-    </section>
-
-    <section class="mx-auto">
-      <div class="mx-auto px-20 py-28 md:px-40 md:py-40 max-w-[1440px]">
-        <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>01 / give your creative projects memory</p>
-        <div class="mt-28 grid gap-[2px] lg:grid-cols-3">
-          <article class="bg-black/4 rounded-sm min-h-72 p-24 md:p-30">
-            <p class="t-p-sm-sans">01 / Objects</p>
-            <h2 class="mt-32 max-w-[11em] t-h3-sans leading-[.95]">Generate in-world objects.</h2>
-            <p class="mt-20 max-w-sm t-p-sm-sans">Props, events, and products belong to the world and can be summoned again.</p>
-          </article>
-          <article class="bg-black/4 rounded-sm min-h-72 p-24 md:p-30">
-            <p class="t-p-sm-sans">02 / Characters</p>
-            <h2 class="mt-32 max-w-[11em] t-h3-sans leading-[.95]">Characters you can keep creating with.</h2>
-            <p class="mt-20 max-w-sm t-p-sm-sans">Give a character a stable identity, a readable manifest, and usable representations.</p>
-          </article>
-          <article class="bg-black/4 rounded-sm min-h-72 p-24 md:p-30">
-            <p class="t-p-sm-sans">03 / Scenes</p>
-            <h2 class="mt-32 max-w-[11em] t-h3-sans leading-[.95]">Put those characters and locations into new scenes.</h2>
-            <p class="mt-20 max-w-sm t-p-sm-sans">Resolve the entities that define a scene, then shape your narrative.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="bears" class="px-20 py-28 md:px-40 md:py-40">
-      <div class="mx-auto grid max-w-[1440px] gap-32 lg:grid-cols-[.8fr_1.2fr] lg:gap-60">
-        <div>
-          <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>02 / Bears</p>
-          <h2 class="mt-24 t-d2-sans">Stop starting over.</h2>
-          <p class="t-p-serif mt-24 max-w-md">Your creative work stops disappearing between generations.</p>
-          <p class="t-p-sm-sans mt-24 max-w-md">px entities have identity, history, and representations. Correct Lonnie once; reuse the evolving character anywhere your next agent can resolve PX.</p>
-        </div>
-        <div class="space-y-10">
-          <details open class="group p-18">
-            <summary class="cursor-pointer list-none marker:hidden t-p-sm-sans"><span class="mr-12">01</span> Create Lonnie <span class="float-right t-p-sm-sans group-open:rotate-45">+</span></summary>
-            <p class="mt-16 border-t-2 border-white/50 pt-16 text-white t-p-sm-sans">“Create a bear character named Lonnie. Lonnie is a black bear with an energetic, rebellious personality. He likes climbing trees and wears a baseball cap.”</p>
-          </details>
-          <details class="group p-18">
-            <summary class="cursor-pointer list-none marker:hidden t-p-sm-sans"><span class="mr-12">02</span> Keep the character <span class="float-right t-p-sm-sans group-open:rotate-45">+</span></summary>
-            <p class="mt-16 border-t-2 border-white/50 pt-16 text-white t-p-sm-sans">PX stores Lonnie as a character entity with a stable <code>px://</code> address and a durable manifest.</p>
-          </details>
-          <details class="group p-18">
-            <summary class="cursor-pointer list-none marker:hidden t-p-sm-sans"><span class="mr-12">03</span> Revise and reuse <span class="float-right t-p-sm-sans group-open:rotate-45">+</span></summary>
-            <p class="mt-16 border-t-2 border-white/50 pt-16 text-white t-p-sm-sans">“Actually — no baseball cap. Give him blue shorts.” Then bring the same Lonnie into a new scene, image, clip, or future iteration.</p>
-          </details>
-        </div>
-      </div>
-    </section>
-
-    <section class="mx-auto">
-      <div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40">
-        <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>03 / entity, not a file</p>
-        <div class="mt-28 grid gap-28 lg:grid-cols-[.88fr_1.12fr] lg:items-center">
-          <div>
-            <h2 class="t-d2-sans leading-[.92]">One character.<br /><span class="t-d2-serif text-[#dffc72]">Many representations.</span></h2>
-            <p class="mt-24 max-w-lg t-p-sm-sans leading-[1.3]">Keep the entity. Change the representation. PX manifests can attach direct representations with their format and provenance — for example, a reference image or a scene clip.</p>
-          </div>
-          <div class="bg-black/2 rounded-sm p-20 md:p-30">
-            <p class="t-p-sm-sans">px://bears/character/lonnie</p>
-            <div class="mt-24 space-y-14 t-p-sm-sans leading-[1.3]">
-              <p><span>identity</span><br />Lonnie — black bear, restless climber</p>
-              <p><span>representation</span><br /><span class="text-[#dffc72]">reference_image</span> / png</p>
-              <p><span>representation</span><br /><span class="text-[#dffc72]">alternate_take</span> / png</p>
-              <p><span>scene appearance</span><br />Bears / scene_04 / dusk</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="how-it-works" class="px-20 py-28 md:px-40 md:py-40">
-      <div class="mx-auto max-w-[1440px]">
-        <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>04 / how px works</p>
-        <div class="mt-28 grid gap-[2px] md:grid-cols-4">
-          <div class="bg-black/4 rounded-sm p-20">
-            <p class="t-p-sm-sans">01</p>
-            <h3 class="mt-20 t-d2-sans">URI</h3>
-            <p class="mt-20 leading-[1.3] t-p-sm-sans">A px:// URI identifies a narrative resource.</p>
-          </div>
-          <div class="bg-black/4 rounded-sm p-20">
-            <p class="t-p-sm-sans">02</p>
-            <h3 class="mt-20 t-d2-sans">Manifest</h3>
-            <p class="mt-20 leading-[1.3] t-p-sm-sans">A readable, structured, versionable YAML representation.</p>
-          </div>
-          <div class="bg-black/4 rounded-sm p-20">
-            <p class="t-p-sm-sans">03</p>
-            <h3 class="mt-20 t-d2-sans">Commit</h3>
-            <p class="mt-20 leading-[1.3] t-p-sm-sans">Content-addressed snapshots and patch metadata.</p>
-          </div>
-          <div class="bg-black/4 rounded-sm p-20">
-            <p class="t-p-sm-sans">04</p>
-            <h3 class="mt-20 t-d2-sans">Resolver</h3>
-            <p class="mt-20 leading-[1.3] t-p-sm-sans">Resolve a URI or query a subtree for the next task.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="install" class="mx-auto">
-      <div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40">
-        <div class="grid gap-28 lg:grid-cols-[.72fr_1.28fr]">
-          <div>
-            <p class="flex items-center gap-12 t-p-sm-sans"><span class="px-node"></span>05 / the developer surface</p>
-            <h2 class="mt-24 t-d2-sans leading-[.92]">Install it.<br />Make something.</h2>
-            <p class="mt-22 max-w-md leading-[1.35] t-p-sm-sans">px ships with a CLI, agent skills, an on-demand MCP server, and a resolver for the narrative resources inside your project.</p>
-          </div>
-          <div class="space-y-14">
-            <div>
-              <p class="mb-8 t-p-sm-sans">Install px + skills</p>
-              <div class="px-code-wrap">
-                <pre class="px-code p-18"><code id="code-install">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash &amp;&amp; npx skills add portalshq/narrativeengine</code></pre>
-                <button type="button" class="px-copy-button" data-copy="code-install" aria-label="Copy command">Copy</button>
-              </div>
-            </div>
-            <div>
-              <p class="mb-8 t-p-sm-sans">Start a world</p>
-              <div class="px-code-wrap">
-                <pre class="px-code p-18"><code id="code-init">px init bears --provider local
+  <div class="saga-webgl-viewport fixed z-(--z-webgl)" aria-hidden="true"><canvas class="size-full"></canvas></div>
+  <main id="top" class="PxLandingPage-module__wVGVFq__page" data-webgl-theme="px"><div class="relative isolate"><div class="PxLandingPage-module__wVGVFq__aurora" aria-hidden="true"></div><div class="PxLandingPage-module__wVGVFq__gridNoise" aria-hidden="true"></div><nav class="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-20 py-20 md:px-40" aria-label="PX"><a href="#top" class="flex items-baseline gap-8 text-xl"><span class="t-h3-sans font-medium text-white">px</span></a><div class="items-center gap-20 flex"><a href="#how-it-works" class="items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black !hidden md:!inline-flex inline-flex">Docs<!-- --> </a><a href="#eye-candy" class="items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black !hidden md:!inline-flex inline-flex">Examples<!-- --> </a><a href="https://github.com/portalshq/narrativeengine" class="items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black !hidden md:!inline-flex inline-flex">GitHub<!-- --> </a><a href="#install" class="items-center gap-10 bg-[var(--px-yellow)] px-18 py-12 t-p-sm-sans text-black rounded-sm transition hover:bg-[style:color-mix(in_srgb,_var(--px-yellow)_80%,_white)] inline-flex">Install<!-- --> <span aria-hidden="true">↗</span></a></div></nav><section id="hero" class="relative z-10 mx-auto grid min-h-[calc(100svh-80px)] max-w-[1440px] gap-40 px-20 md:pt-24 md:px-40 md:grid-cols-2 overflow-visible"><div class="max-w-3xl"><h1 class="PxLandingPage-module__wVGVFq__chromeWord text-[clamp(92px,18vw,260px)] font-medium leading-[1.2em] !mx-0 !px-0 cursor-default pointer-events-none">px</h1><h2 class="mt-32 max-w-[10.5em] text-[clamp(36px,5vw,60px)] leading-[.94]">The AI agent for <span class="px-serif text-[#dffc72]">creative work</span></h2><p class="mt-28 max-w-xl t-p-sans">Create persistent characters, worlds, objects, and scenes with AI agents — then keep building on them across tools and formats.</p><div class="mt-34 flex flex-wrap gap-20 hidden sm:block"><a href="https://github.com/portalshq/narrativeengine" class="items-center gap-10 px-18 py-12 t-p-sm-sans rounded-sm transition hover:border-black hover:text-black inline-flex">View on GitHub<!-- --> </a><a href="#install" class="items-center gap-10 bg-[var(--px-yellow)] px-18 py-12 t-p-sm-sans text-black rounded-sm transition hover:bg-[style:color-mix(in_srgb,_var(--px-yellow)_80%,_white)] inline-flex">Install<!-- --> <span aria-hidden="true">↗</span></a></div></div><div class="lg:pt-38 overflow-visible"><img src="https://portals.works/eye-candy/optimized/dua-hero.webp" alt="Dua base outfit, katana, and Orbit hero image" class="h-full w-full overflow-visible object-cover rounded-sm pointer-events-none"/></div></section></div><section class="PxLandingPage-module__wVGVFq__sagaBanner" data-header-theme="light" aria-label="PX creative canvas"><div class="mx-auto flex max-w-[1440px] flex-col justify-between px-20 py-32 md:px-40 md:py-40 cursor-default"><div class="max-w-5xl"><p class="t-d2-sans leading-[.92]">A world keeps its <span class="t-d2-serif">shape</span><br/>when the tool changes.</p><p class="mt-20 max-w-lg t-p-sm-sans">px keeps characters, locations, scenes, and representations resolvable for the next creative move.</p></div></div></section><section class="px-20 py-14 text-black md:px-40"><div class="mx-auto flex max-w-[1440px] items-center justify-between gap-20 text-[clamp(22px,3vw,42px)] leading-none"><span>BUILD ONCE.</span><span class="px-serif">CREATE INFINITELY.</span><span class="hidden lg:inline">✳</span></div></section><section id="memory" class="mx-auto"><div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40"><p class="flex items-center gap-12 t-p-sm-sans"><span class="PxLandingPage-module__wVGVFq__node"></span>01<!-- --> / <!-- -->give your creative projects memory</p><div class="mt-28 grid gap-[2px] lg:grid-cols-3"><article class="rounded-sm bg-black/4 p-18 pt-24 md:pt-30"><p class="t-p-sm-sans">0<!-- -->1<!-- --> / <!-- -->Objects</p><div class="mt-16 max-h-[500px] h-[500px] flex flex-col overflow-hidden"><img src="https://portals.works/eye-candy/optimized/orbit-front.webp" alt="Orbit hero image" class="w-full h-auto max-h-[280px] aspect-square object-contain transition-opacity duration-300"/><div class="mt-10 grid grid-cols-3 gap-10 flex-1"><img src="https://portals.works/eye-candy/optimized/orbit-v1.webp" alt="Orbit v1" class="w-full h-full object-contain rounded-sm"/><img src="https://portals.works/eye-candy/optimized/orbit-v2.webp" alt="Orbit v2" class="w-full h-full object-contain rounded-sm"/><img src="https://portals.works/eye-candy/optimized/orbit.webp" alt="Orbit" class="w-full h-full object-contain rounded-sm"/></div></div><h2 class="mt-24 max-w-[12em] sm:max-w-[16em] lg:max-w-[12em] t-h3-sans leading-[.95]">Generate in-world objects.</h2><p class="mt-20 max-w-sm t-p-sm-sans">Orbit remains available as an approved product or prop anywhere the world needs it.</p></article><article class="rounded-sm bg-black/4 p-18 pt-24 md:pt-30"><p class="t-p-sm-sans">0<!-- -->2<!-- --> / <!-- -->Characters</p><div class="mt-16 max-h-[500px] h-[500px] grid grid-cols-1 md:grid-cols-[1.2fr_1fr] lg:grid-cols-1 2xl:grid-cols-[1.5fr_1fr] gap-10 overflow-clip rounded-sm"><img src="https://portals.works/eye-candy/optimized/dua-wide.webp" alt="Dua" class="h-[500px] opacity-98 overflow-visible object-cover rounded-sm"/><img src="https://portals.works/eye-candy/optimized/dua-back-2.webp" alt="Dua back" class="hidden md:block lg:hidden 2xl:block overflow-clip rounded-sm transform scale-150 origin-[60%_10%] top-0 object-top"/></div><h2 class="mt-24 max-w-[12em] sm:max-w-[16em] lg:max-w-[12em] t-h3-sans leading-[.95]">Characters you can keep creating with.</h2><p class="mt-20 max-w-sm t-p-sm-sans">Dua keeps her identity across a character sheet, portrait, action pose, and wardrobe variants.</p></article><article class="rounded-sm bg-black/4 p-18 pt-24 md:pt-30"><p class="t-p-sm-sans">0<!-- -->3<!-- --> / <!-- -->Scenes</p><img src="https://portals.works/eye-candy/optimized/dua-orbit-station.webp" alt="Dua, Orbit, and Underground Station scene" class="mt-16 max-h-[500px] h-[500px] w-full object-cover rounded-sm object-[60%_0%]"/><h2 class="mt-24 max-w-[12em] sm:max-w-[16em] lg:max-w-[12em] t-h3-sans leading-[.95]">Put those characters and locations into new scenes.</h2><p class="mt-20 max-w-sm t-p-sm-sans">Resolve Dua, Orbit, and Underground Station together for the next scene or campaign.</p></article></div></div></section><section id="eye-candy"><div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40"><p class="flex items-center gap-12 t-p-sm-sans"><span class="PxLandingPage-module__wVGVFq__node"></span>02<!-- --> / <!-- -->&quot;Eye Candy&quot;</p><h2 class="mt-24 t-d2-sans">Stop starting over.</h2><div class="mt-28 gap-[2px]"><div><p class="t-p-serif mt-24 max-w-lg">The same character, product, wardrobe, and location remain available to every new scene, campaign, or tool.</p><p class="t-p-sm-sans mt-24 max-w-lg">Dua starts in a performance-fashion sport top and technical pants. Her coat is a reusable variant; her katana stays part of the character context.</p></div><div class="mt-28 grid md:grid-cols-2 xl:grid-cols-[auto_auto_auto] gap-[2px]"><article class="rounded-sm bg-black/4 p-18 pt-24 md:pt-30 flex flex-col"><p class="t-p-sm-sans">01 / Create Dua</p><p class="mt-10 max-w-lg t-p-sm-sans">Establish a character once, then keep her face, base outfit, and narrative attributes intact.</p><div class="mt-16 h-full w-full overflow-hidden"><img src="https://portals.works/eye-candy/optimized/dua-sheet-2.webp" alt="Dua character sheet" class="h-full object-cover object-left rounded-sm"/></div></article><article class="rounded-sm bg-black/4 p-18 pt-24 md:pt-30"><p class="t-p-sm-sans">02 / Keep the character</p><p class="mt-10 max-w-lg t-p-sm-sans">Use the same Dua in the base outfit, the technical coat variant, or a katana action pose.</p><div class="mt-16 grid grid-cols-2 xl:grid-cols-[max-content_max-content_max-content] gap-1"><div class="overflow-visible flex flex-col items-center justify-center"><img src="https://portals.works/eye-candy/optimized/dua-front-1-3.webp" alt="Dua base sport top and pants" class="h-[45vh] lg:h-auto max-h-[450px] object-cover overflow-visible rounded-sm"/><p class="mt-8 t-p-sm-sans text-center">Base outfit</p></div><div class="overflow-visible flex flex-col items-center justify-center"><img src="https://portals.works/eye-candy/optimized/dua-coat-1-3.webp" alt="Dua coat variant" class="h-[45vh] lg:h-auto max-h-[450px] object-cover overflow-visible rounded-sm"/><p class="mt-8 t-p-sm-sans text-center">Coat variant</p></div><div class="hidden xl:block overflow-visible flex flex-col items-center justify-center"><img src="https://portals.works/eye-candy/optimized/dua-coat-detail-1-3.webp" alt="Dua coat detail" class="h-[45vh] lg:h-auto max-h-[450px] object-cover overflow-visible rounded-sm"/></div></div></article><article class="rounded-sm bg-black/4 p-18 pt-24 md:pt-30"><p class="t-p-sm-sans">03 / Revise and reuse</p><p class="mt-10 max-w-lg t-p-sm-sans">Resolve Dua + Orbit + Underground Station for a new cinematic scene, editorial campaign, or video sequence.</p><div class="mt-16 h-[450px]"><img src="https://portals.works/eye-candy/optimized/dua-orbit-station-coat.webp" alt="Dua, coat variant, katana, Orbit, and Underground Station campaign scene" class="h-full w-full object-cover object-[57%_50%] rounded-sm"/></div></article></div></div></div></section><section class="mx-auto"><div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40"><p class="flex items-center gap-12 t-p-sm-sans"><span class="PxLandingPage-module__wVGVFq__node"></span>03<!-- --> / <!-- -->entity, not a file</p><div class="mt-28 grid gap-28 xl:grid-cols-[.88fr_1.12fr] lg:items-center relative"><div><h2 class="t-d2-sans leading-[.92]">One character.<br/><span class="t-d2-serif text-[#dffc72]">Many representations.</span></h2><p class="mt-24 max-w-xs sm:max-w-lg t-p-sm-sans leading-[1.3]">Keep the entity. Change the representation. px keeps every usable form connected to Dua’s source identity and relationships.</p></div><img src="https://portals.works/eye-candy/optimized/dua-pose.webp" alt="Dua representation" class="z-5 absolute h-[500px] lg:h-[700px] xl:h-[600px] aspect-[1/3] drop-shadow-lg object-cover right-[5vw] md:right-[10vw] xl:left-[36%] -top-[5%] xl:-top-[25%]"/><div class="rounded-sm bg-[#fbfbfb] p-20 md:p-30 grid gap-28 lg:grid-cols-[.9fr_1.1fr] lg:z-5 xl:z-0"><div><p class="t-p-sm-sans">px://eye-candy/character/dua</p><div class="mt-24"><pre class="text-[12px] leading-[1.2] font-mono whitespace-pre-wrap break-all">id: px://eye-candy/character/dua
+name: Dua
+entity_type: character
+version: 23
+properties:
+  occupation: sentinel officer
+  wardrobe: highest-tech dark sentinel officer suit; precision-tailored, adaptive technical fabric, integrated armor-weave, subtle engineered seams; no cape
+  negative_constraints: no cape; no insignia; no logos; no fantasy armor; no firearms; no extra characters; no text; no watermark
+  role: protagonist
+  species: human
+  visual_constraints: mature; cinematic; hyperwarm highlights against contr...</pre></div></div><div class="grid grid-cols-3 gap-10"><div><img src="https://portals.works/eye-candy/optimized/dua-face-1-1.webp" alt="Dua portrait representation" class="w-full aspect-square object-cover bg-black/4 rounded-sm"/><p class="mt-6 t-p-sm-sans">Portrait</p></div><div><img src="https://portals.works/eye-candy/optimized/dua-action-pose.webp" alt="Dua katana action representation" class="w-full aspect-square object-cover bg-black/4 rounded-sm"/><p class="mt-6 t-p-sm-sans">Action</p></div><div><img src="https://portals.works/eye-candy/optimized/dua-model.webp" alt="Orbit 3D representation" class="w-full aspect-square object-cover bg-black/4 rounded-sm"/><p class="mt-6 t-p-sm-sans">3D</p></div><div><img src="https://portals.works/eye-candy/optimized/wave.webp" alt="Dua voice representation" class="w-full aspect-square object-cover bg-black/4 rounded-sm"/><p class="mt-6 t-p-sm-sans">Audio</p></div><div><img src="https://portals.works/eye-candy/optimized/frame.webp" alt="Dua character sheet" class="w-full aspect-square object-cover bg-black/4 rounded-sm"/><p class="mt-6 t-p-sm-sans">Sheet</p></div><div><img src="https://portals.works/eye-candy/optimized/coat-1-1.webp" alt="Technical coat reference" class="w-full aspect-square object-cover bg-black/4 rounded-sm"/><p class="mt-6 t-p-sm-sans">Coat</p></div></div></div></div></div></section><section id="how-it-works" class="px-20 py-28 md:px-40 md:py-40"><div class="mx-auto max-w-[1440px]"><p class="flex items-center gap-12 t-p-sm-sans"><span class="PxLandingPage-module__wVGVFq__node"></span>04<!-- --> / <!-- -->how px works</p><div class="mt-28 grid gap-[2px] md:grid-cols-2 lg:grid-cols-4"><div class="rounded-sm bg-[var(--px-yellow)] p-20"><p class="t-p-sm-sans">0<!-- -->1</p><h3 class="mt-20 t-d2-sans">URI</h3><p class="mt-20 leading-[1.3] t-p-sm-sans">A px:// URI identifies a narrative resource.</p></div><div class="rounded-sm bg-[var(--px-yellow)] p-20"><p class="t-p-sm-sans">0<!-- -->2</p><h3 class="mt-20 t-d2-sans">Manifest</h3><p class="mt-20 leading-[1.3] t-p-sm-sans">A readable, versionable YAML manifest.</p></div><div class="rounded-sm bg-[var(--px-yellow)] p-20"><p class="t-p-sm-sans">0<!-- -->3</p><h3 class="mt-20 t-d2-sans">Commit</h3><p class="mt-20 leading-[1.3] t-p-sm-sans">Content-addressed snapshots.</p></div><div class="rounded-sm bg-[var(--px-yellow)] p-20"><p class="t-p-sm-sans">0<!-- -->4</p><h3 class="mt-20 t-d2-sans">Resolver</h3><p class="mt-20 leading-[1.3] t-p-sm-sans">Resolve a resource or representation for the next task.</p></div></div></div></section><section class="px-20 py-28 md:px-40 md:py-40"><div class="mx-auto max-w-[1440px]"><p class="flex items-center gap-12 t-p-sm-sans"><span class="PxLandingPage-module__wVGVFq__node"></span>05<!-- --> / <!-- -->for brand teams</p><div class="mt-24 grid gap-32 lg:grid-cols-[.72fr_1.28fr] lg:gap-60"><div><h2 class="t-d2-sans leading-[.92]">Produce more.<br/><span class="t-d2-serif text-[#dffc72]">Rebuild less.</span></h2><p class="t-p-serif mt-24 max-w-md">Keep approved products, talent, styling, and campaign context consistent across every tool, format, market, and deliverable.</p><p class="t-p-sm-sans mt-24 max-w-md">One source of truth. Hundreds of on-brand outputs.</p><div class="mt-28"><a href="https://portals.works/assessment" class="items-center gap-10 bg-[var(--px-yellow)] px-18 py-12 t-p-sm-sans text-black rounded-sm transition hover:bg-[style:color-mix(in_srgb,_var(--px-yellow)_80%,_white)] inline-flex">Bring PX to your team<!-- --> <span aria-hidden="true">↗</span></a></div></div><div class=""><div class="grid gap-[2px] lg:grid-cols-[.9fr_.9fr_.42fr]"><div class="rounded-sm bg-black/4 p-18"><p class="t-p-sm-sans">Approved Versions</p><div class="mt-12 grid grid-cols-2 gap-10"><div><img src="https://portals.works/eye-candy/optimized/dua.webp" alt="Approved Dua character" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Dua</p></div><div><img src="https://portals.works/eye-candy/optimized/katana.webp" alt="Approved katana" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Katana</p></div><div><img src="https://portals.works/eye-candy/optimized/orbit-product.webp" alt="Approved Orbit product object" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Orbit</p></div><div><img src="https://portals.works/eye-candy/optimized/station-emergency.webp" alt="Approved Underground Station location" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Station</p></div></div></div><div class="rounded-sm bg-black/4 p-18"><p class="t-p-sm-sans">Campaign Ouputs</p><div class="mt-12 grid grid-cols-2 gap-10"><div><img src="https://portals.works/eye-candy/optimized/dua-ugc.webp" alt="Dua UGC campaign output" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Dua UGC</p></div><div><img src="https://portals.works/eye-candy/optimized/orbit-product.webp" alt="Orbit product campaign output" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Orbit Product</p></div><div><img src="https://portals.works/eye-candy/optimized/sensei-battle.webp" alt="Sensei battle campaign output" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Sensei Battle</p></div><div><img src="https://portals.works/eye-candy/optimized/sensei-battle.webp" alt="Sensei battle campaign output" class="aspect-square object-cover rounded-sm"/><p class="mt-6 t-p-sm-sans">Sensei Battle</p></div></div></div><div class="rounded-sm bg-black/4 p-18"><p class="t-p-sm-sans">Workflow Tools</p><div class="mt-10 grid grid-cols-4 md:grid-cols-6 lg:grid-cols-1 gap-8 text-[12px]"><div class="flex aspect-square lg:aspect-auto bg-white rounded-[12px] lg:rounded-sm shadow items-center justify-center border-b border-black/15 p-8 h-fit"><div class="w-[50%] flex flex-col lg:flex-row items-center gap-4 shrink-0"><span class="inline-flex items-center justify-center w-[50%] h-[50%] lg:w-[25%] lg:h-[25%] shrink-0 text-black/70"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg></span><span>Image</span></div></div><div class="flex aspect-square lg:aspect-auto bg-white rounded-[12px] lg:rounded-sm shadow items-center justify-center border-b border-black/15 p-8 h-fit"><div class="w-[50%] flex flex-col lg:flex-row items-center gap-4 shrink-0"><span class="inline-flex items-center justify-center w-[50%] h-[50%] lg:w-[25%] lg:h-[25%] shrink-0 text-black/70"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-video" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg></span><span>Video</span></div></div><div class="flex aspect-square lg:aspect-auto bg-white rounded-[12px] lg:rounded-sm shadow items-center justify-center border-b border-black/15 p-8 h-fit"><div class="w-[50%] flex flex-col lg:flex-row items-center gap-4 shrink-0"><span class="inline-flex items-center justify-center w-[50%] h-[50%] lg:w-[25%] lg:h-[25%] shrink-0 text-black/70"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-box" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg></span><span>3D</span></div></div><div class="flex aspect-square lg:aspect-auto bg-white rounded-[12px] lg:rounded-sm shadow items-center justify-center border-b border-black/15 p-8 h-fit"><div class="w-[50%] flex flex-col lg:flex-row items-center gap-4 shrink-0"><span class="inline-flex items-center justify-center w-[50%] h-[50%] lg:w-[25%] lg:h-[25%] shrink-0 text-black/70"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg></span><span>Social</span></div></div><div class="flex aspect-square lg:aspect-auto bg-white rounded-[12px] lg:rounded-sm shadow items-center justify-center border-b border-black/15 p-8 h-fit"><div class="w-[50%] flex flex-col lg:flex-row items-center gap-4 shrink-0"><span class="inline-flex items-center justify-center w-[50%] h-[50%] lg:w-[25%] lg:h-[25%] shrink-0 text-black/70"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-bag" aria-hidden="true"><path d="M16 10a4 4 0 0 1-8 0"></path><path d="M3.103 6.034h17.794"></path><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"></path></svg></span><span>Retail</span></div></div><div class="flex aspect-square lg:aspect-auto bg-white rounded-[12px] lg:rounded-sm shadow items-center justify-center border-b border-black/15 p-8 h-fit"><div class="w-[50%] flex flex-col lg:flex-row items-center gap-4 shrink-0"><span class="inline-flex items-center justify-center w-[50%] h-[50%] lg:w-[25%] lg:h-[25%] shrink-0 text-black/70"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-pen" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg></span><span>Editor</span></div></div></div></div></div></div></div></div></section><section id="install" class="mx-auto"><div class="mx-auto max-w-[1440px] px-20 py-28 md:px-40 md:py-40"><div class="grid gap-[2px] lg:grid-cols-2"><div><p class="flex items-center gap-12 t-p-sm-sans"><span class="PxLandingPage-module__wVGVFq__node"></span>06<!-- --> / <!-- -->the developer surface</p><h2 class="mt-24 t-d2-sans leading-[.92]">Install it.<br/>Make something.</h2><p class="mt-22 max-w-md leading-[1.35] t-p-sm-sans">px ships with an MCP server, agent skills, and a command line tool for resolving and editing resources inside your project.</p></div><div class="min-w-0 space-y-14"><div><p class="mb-8 t-p-sm-sans">1. Install px + skills</p><div class="PxLandingPage-module__wVGVFq__codeWrap"><pre class="PxLandingPage-module__wVGVFq__code p-18"><code id="px-code-1">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash &amp;&amp; npx skills add portalshq/narrativeengine</code></pre><button type="button" class="PxLandingPage-module__wVGVFq__copyButton" data-copy="px-code-1" aria-label="Copy command">Copy</button></div></div><div><p class="mb-8 t-p-sm-sans">a. Connect MCP with Codex</p><div class="PxLandingPage-module__wVGVFq__codeWrap"><pre class="PxLandingPage-module__wVGVFq__code p-18"><code id="px-code-2">codex mcp add px --env PX_DIR=&quot;$HOME/.px&quot; -- /bin/sh -lc &#39;exec px-mcp-server&#39;</code></pre><button type="button" class="PxLandingPage-module__wVGVFq__copyButton" data-copy="px-code-2" aria-label="Copy command">Copy</button></div></div><div><p class="mb-8 t-p-sm-sans">2. Start the Eye-Candy world</p><div class="PxLandingPage-module__wVGVFq__codeWrap"><pre class="PxLandingPage-module__wVGVFq__code p-18"><code id="px-code-3">px init bears --provider local
 
 # Create a character that the world can resolve
-px create character lonnie -u bears -n &quot;Lonnie&quot;</code></pre>
-                <button type="button" class="px-copy-button" data-copy="code-init" aria-label="Copy command">Copy</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="mt-40 grid gap-[2px] border-t-2 border-white/15 pt-28 lg:grid-cols-2">
-          <article>
-            <p class="t-p-sm-sans">Agents &amp; MCP</p>
-            <p id="mcp-summary" class="mt-14 max-w-lg t-p-sm-sans leading-[1.35]">Agents MUST issue all PX operations exclusively through the <code>px-mcp-server</code> MCP tools (<code>px_&lt;command&gt;</code>). The <code>px</code> CLI is NOT available for agentic use — never shell out, never follow <code>px ...</code> shell examples.</p>
-          </article>
-          <article>
-            <p class="t-p-sm-sans">Representations</p>
-            <div class="px-code-wrap">
-              <pre class="px-code p-18"><code id="code-repr">id: &quot;px://toystory/scene/pizza-planet&quot;
-name: &quot;Pizza Planet&quot;</code></pre>
-              <button type="button" class="px-copy-button" data-copy="code-repr" aria-label="Copy command">Copy</button>
-            </div>
-          </article>
-        </div>
-        <div class="mt-16 grid gap-[2px] lg:grid-cols-2">
-          <article>
-            <p class="mb-8 t-p-sm-sans">TypeScript SDK</p>
-            <div class="px-code-wrap">
-              <pre class="px-code p-18"><code id="code-ts">import {repoCreateEntity} from &#39;@portalshq/px&#39;
+px create character lonnie -u bears -n &quot;Lonnie&quot;</code></pre><button type="button" class="PxLandingPage-module__wVGVFq__copyButton" data-copy="px-code-3" aria-label="Copy command">Copy</button></div></div><div><p class="mb-8 t-p-sm-sans">3. Add a representation</p><div class="PxLandingPage-module__wVGVFq__codeWrap"><pre class="PxLandingPage-module__wVGVFq__code p-18"><code id="px-code-4">id: &quot;px://toystory/scene/pizza-planet&quot;
+name: &quot;Pizza Planet&quot;</code></pre><button type="button" class="PxLandingPage-module__wVGVFq__copyButton" data-copy="px-code-4" aria-label="Copy command">Copy</button></div></div></div></div><div class="mt-16 grid gap-[2px] space-y-14 lg:grid-cols-2"><article><p class="mb-8 t-p-sm-sans">TypeScript SDK</p><div class="PxLandingPage-module__wVGVFq__codeWrap"><pre class="PxLandingPage-module__wVGVFq__code p-18"><code id="px-code-5">import {repoCreateEntity} from &#39;@portalshq/px&#39;
 
-const lonnie = repoCreateEntity(&#39;bears&#39;, &#39;character&#39;, &#39;lonnie&#39;, &#39;Lonnie&#39;)</code></pre>
-              <button type="button" class="px-copy-button" data-copy="code-ts" aria-label="Copy command">Copy</button>
-            </div>
-          </article>
-          <article>
-            <p class="mb-8 t-p-sm-sans">Python SDK</p>
-            <div class="px-code-wrap">
-              <pre class="px-code p-18"><code id="code-py">from px_sdk import repo_create_entity
+const lonnie = repoCreateEntity(&#39;bears&#39;, &#39;character&#39;, &#39;lonnie&#39;, &#39;Lonnie&#39;)</code></pre><button type="button" class="PxLandingPage-module__wVGVFq__copyButton" data-copy="px-code-5" aria-label="Copy command">Copy</button></div></article><article><p class="mb-8 t-p-sm-sans">Python SDK</p><div class="PxLandingPage-module__wVGVFq__codeWrap"><pre class="PxLandingPage-module__wVGVFq__code p-18"><code id="px-code-6">from px_sdk import repo_create_entity
 
-lonnie = repo_create_entity(&#39;bears&#39;, &#39;character&#39;, &#39;lonnie&#39;, &#39;Lonnie&#39;)</code></pre>
-              <button type="button" class="px-copy-button" data-copy="code-py" aria-label="Copy command">Copy</button>
-            </div>
-          </article>
-        </div>
-        <div class="mt-16 grid gap-[2px] lg:grid-cols-2">
-          <article>
-            <p class="mb-8 t-p-sm-sans">Skills install</p>
-            <div class="px-code-wrap">
-              <pre class="px-code p-18"><code id="code-skills">npx skills add portalshq/narrativeengine</code></pre>
-              <button type="button" class="px-copy-button" data-copy="code-skills" aria-label="Copy command">Copy</button>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="px-saga-banner" data-header-theme="light" aria-label="PX creative canvas">
-      <div class="mx-auto flex max-w-[1440px] flex-col justify-between px-20 py-32 md:px-40 md:py-40">
-        <div class="grid gap-24 lg:grid-cols-[1fr_.7fr] lg:items-end">
-          <div>
-            <p class="t-p-sm-sans">For filmmakers, writers, artists, creative developers, and the projects that grow into worlds.</p>
-            <h2 class="mt-20 t-d2-sans leading-[.96]">Make something weird.<br /><span class="px-serif">Keep building it.</span></h2>
-          </div>
-          <div class="lg:justify-self-end"><a href="https://github.com/portalshq/narrativeengine" class="btn-primary inline-flex items-center gap-10 px-18 py-12 t-p-sm-sans text-black rounded-sm transition">Explore PX on GitHub <span aria-hidden="true">↗</span></a></div>
-        </div>
-      </div>
-    </section>
-
-    <section aria-label="PX and Portals" class="px-footer mx-auto">
-      <div class="mx-auto max-w-[1440px] px-20 pt-40 pb-80 t-p-sm-sans md:px-40">
-        <p>PX is free and open source for creators and developers building locally.</p>
-        <a href="https://portals.works" class="mt-20 inline-block">Building with a production team? <span class="underline decoration-2 underline-offset-4">Explore Portals <span aria-hidden="true">↗</span></span></a>
-      </div>
-    </section>
-  </main>
+lonnie = repo_create_entity(&#39;bears&#39;, &#39;character&#39;, &#39;lonnie&#39;, &#39;Lonnie&#39;)</code></pre><button type="button" class="PxLandingPage-module__wVGVFq__copyButton" data-copy="px-code-6" aria-label="Copy command">Copy</button></div></article></div></div></section><section class="PxLandingPage-module__wVGVFq__sagaBanner" data-header-theme="light" aria-label="PX creative canvas"><div class="mx-auto flex max-w-[1440px] flex-col justify-between px-20 py-32 md:px-40 md:py-40 cursor-default"><div class="grid gap-24 lg:grid-cols-[1fr_.7fr] lg:items-end"><div><p class="t-p-sm-sans">For filmmakers, writers, artists, creative developers, production teams, and the projects that grow into worlds.</p><h2 class="mt-20 t-d2-sans leading-[.96]">Make something weird.<br/><span>Build with <span class="t-d2-sans text-white PxLandingPage-module__wVGVFq__chromeWord text-[clamp(92px,18vw,120px)] font-bold leading-[1.2em] !mx-0 !px-0 cursor-default pointer-events-none">px</span></span> <!-- -->.</h2></div><div class="lg:justify-self-end"><a href="https://github.com/portalshq/narrativeengine" class="items-center gap-10 bg-[var(--px-yellow)] px-18 py-12 t-p-sm-sans text-black rounded-sm transition hover:bg-[style:color-mix(in_srgb,_var(--px-yellow)_80%,_white)] inline-flex">Explore px on GitHub<!-- --> <span aria-hidden="true">↗</span></a></div></div></div></section><section aria-label="PX and Portals" class="!bg-black mx-auto"><div class="mx-auto max-w-[1440px] px-20 pb-80 pt-40 t-p-sm-sans !text-white md:px-40"><div class="max-w-lg xl:max-w-3xl"><p>px is free and open source. Use it for personal projects, AI experiments, and production workflows. No subscription required.</p><p class="mt-20 inline-block !text-white">If you&#x27;re building with a production team, <br/>Portals adds team workspaces, shared repositories, production history, and organizational workflows. <a href="https://portals.works" class="underline decoration-2 underline-offset-4">Explore Portals</a><span aria-hidden="true">↘</span></p></div></div></section></main>
+  <footer class="ui-grid relative z-(--z-footer) min-h-[52vh] pb-50 text-white lg:pt-50" style="background-color:#000;isolation:isolate"><div class="col-span-full relative z-10 mb-12 flex flex-col gap-y-fluid-[32,40]"><div class="col-span-full m-0 grid h-full grid-cols-1 space-y-fluid-[32,40] p-0 ui-grid lg:grid-cols-5"><div class="col-span-full mb-24 lg:col-span-2 lg:mb-0"><a href="https://portals.works/" class="t-d1-sans !font-medium">portals</a><p class="mt-24 max-w-md t-p-sans">Production memory for AI-native creative teams.</p></div><div class="col-span-full grid gap-y-32 sm:grid-cols-3 lg:col-span-3"><nav aria-label="Explore" class="space-y-12"><h2 class="t-p-sm-sans text-white/60">explore</h2><ul class="space-y-8 t-p-sans text-white/80"><li><a href="https://portals.works/use-cases" class="transition-colors hover:text-white">use cases</a></li><li><a href="https://portals.works/production-memory" class="transition-colors hover:text-white">production memory</a></li><li><a href="https://portals.works/blog" class="transition-colors hover:text-white">blog</a></li><li><a href="https://portals.works/px" class="transition-colors hover:text-white">px</a></li><li><a href="https://portals.works/resources/production-memory-brief" class="transition-colors hover:text-white">production memory brief</a></li><li><a href="https://portals.works/assessment" class="transition-colors hover:text-white">assess your workflow</a></li></ul></nav><nav aria-label="Work with Portals" class="space-y-12"><h2 class="t-p-sm-sans text-white/60">get started</h2><ul class="space-y-8 t-p-sans text-white/80"><li><a href="https://portals.works/pilot" class="transition-colors hover:text-white">paid pilot</a></li><li><a href="https://portals.works/security-and-architecture" class="transition-colors hover:text-white">security</a></li><li><a href="https://portals.works/contact" class="transition-colors hover:text-white">contact us</a></li></ul></nav><nav aria-label="Legal" class="space-y-12"><h2 class="t-p-sm-sans text-white/60">legal</h2><ul class="space-y-8 t-p-sans text-white/80"><li><a href="https://portals.works/privacy-policy" class="transition-colors hover:text-white">privacy</a></li><li><a href="https://portals.works/terms-of-service" class="transition-colors hover:text-white">terms of service</a></li></ul></nav></div></div><div class="relative z-10 col-span-full row-start-last flex flex-col items-center pt-12 t-p-sm-sans text-white lg:col-span-3 lg:col-start-3 lg:items-start"><span>© 2026 portals.works</span></div></div></footer>
   <script src="./script.js" defer></script>
+  <script type="module" src="./saga-webgl.js"></script>
 </body>
 </html>
