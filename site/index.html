@@ -5,18 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>px — the harness for AI creative work</title>
   <meta name="description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
-  <link rel="canonical" href="https://portalshq.github.io/narrativeengine/" />
+  <meta name="keywords" content="px protocol, AI film, AI creative, AI production tools, AI series, AI characters, create AI tv, AI creative tools, persistent characters, autonomous characters, AI creative agents" />
+  <link rel="canonical" href="https://portals.works/px" />
   <meta property="og:title" content="px — the harness for AI creative work" />
   <meta property="og:description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="px" />
-  <meta property="og:url" content="https://portalshq.github.io/narrativeengine/" />
-  <meta property="og:image" content="https://portalshq.github.io/narrativeengine/og-image.svg" />
+  <meta property="og:url" content="https://portals.works/px" />
+  <meta property="og:image" content="https://portals.works/px/og-image.svg" />
   <meta property="og:image:alt" content="PX — a harness for your AI creative work" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="px — the harness for AI creative work" />
   <meta name="twitter:description" content="px gives creators and AI agents persistent worlds, characters, scenes, and representations they can keep building on." />
-  <meta name="twitter:image" content="https://portalshq.github.io/narrativeengine/og-image.svg" />
+  <meta name="twitter:image" content="https://portals.works/px/og-image.svg" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <link rel="stylesheet" href="./styles.css" />
   <script type="application/ld+json">
@@ -28,7 +29,7 @@
         "name": "PX",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "macOS, Linux, Windows",
-        "url": "https://portalshq.github.io/narrativeengine/",
+        "url": "https://portals.works/px",
         "description": "Create and use persistent narrative entities across creative tools, formats, and AI workflows.",
         "isAccessibleForFree": true,
         "license": "https://opensource.org/license/mit"
@@ -37,7 +38,7 @@
         "@type": "BreadcrumbList",
         "itemListElement": [
           {"@type": "ListItem", "position": 1, "name": "Portals", "item": "https://portals.works"},
-          {"@type": "ListItem", "position": 2, "name": "PX", "item": "https://portalshq.github.io/narrativeengine/"}
+          {"@type": "ListItem", "position": 2, "name": "PX", "item": "https://portals.works/px"}
         ]
       }
     ]
@@ -208,7 +209,7 @@
             <div>
               <p class="mb-8 t-p-sm-sans">Install px + skills</p>
               <div class="px-code-wrap">
-                <pre class="px-code p-18"><code id="code-install">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash && npx skills add portalshq/narrativeengine</code></pre>
+                <pre class="px-code p-18"><code id="code-install">curl -fsSL https://github.com/portalshq/narrativeengine/releases/latest/download/install.sh | bash &amp;&amp; npx skills add portalshq/narrativeengine</code></pre>
                 <button type="button" class="px-copy-button" data-copy="code-install" aria-label="Copy command">Copy</button>
               </div>
             </div>
@@ -218,7 +219,7 @@
                 <pre class="px-code p-18"><code id="code-init">px init bears --provider local
 
 # Create a character that the world can resolve
-px create character lonnie -u bears -n "Lonnie"</code></pre>
+px create character lonnie -u bears -n &quot;Lonnie&quot;</code></pre>
                 <button type="button" class="px-copy-button" data-copy="code-init" aria-label="Copy command">Copy</button>
               </div>
             </div>
@@ -227,13 +228,13 @@ px create character lonnie -u bears -n "Lonnie"</code></pre>
         <div class="mt-40 grid gap-[2px] border-t-2 border-white/15 pt-28 lg:grid-cols-2">
           <article>
             <p class="t-p-sm-sans">Agents &amp; MCP</p>
-            <p class="mt-14 max-w-lg t-p-sm-sans leading-[1.35]">The standard PX installer bundles the native <code>px-mcp-server</code> binary with <code>px</code>. If the MCP command is missing or broken, rerun the standard PX installer from a host shell.</p>
+            <p id="mcp-summary" class="mt-14 max-w-lg t-p-sm-sans leading-[1.35]">Agents MUST issue all PX operations exclusively through the <code>px-mcp-server</code> MCP tools (<code>px_&lt;command&gt;</code>). The <code>px</code> CLI is NOT available for agentic use — never shell out, never follow <code>px ...</code> shell examples.</p>
           </article>
           <article>
             <p class="t-p-sm-sans">Representations</p>
             <div class="px-code-wrap">
-              <pre class="px-code p-18"><code id="code-repr">px create scene pizza-planet -u toystory -n "Pizza Planet"
-px add px://toystory/scene/pizza-planet clip-01 ./pizza-planet-clip-01.mp4 --format mp4 -m "Add pizza-planet scene clip"</code></pre>
+              <pre class="px-code p-18"><code id="code-repr">id: &quot;px://toystory/scene/pizza-planet&quot;
+name: &quot;Pizza Planet&quot;</code></pre>
               <button type="button" class="px-copy-button" data-copy="code-repr" aria-label="Copy command">Copy</button>
             </div>
           </article>
@@ -242,9 +243,9 @@ px add px://toystory/scene/pizza-planet clip-01 ./pizza-planet-clip-01.mp4 --for
           <article>
             <p class="mb-8 t-p-sm-sans">TypeScript SDK</p>
             <div class="px-code-wrap">
-              <pre class="px-code p-18"><code id="code-ts">import {repoCreateEntity} from '@portalshq/px'
+              <pre class="px-code p-18"><code id="code-ts">import {repoCreateEntity} from &#39;@portalshq/px&#39;
 
-const lonnie = repoCreateEntity('bears', 'character', 'lonnie', 'Lonnie')</code></pre>
+const lonnie = repoCreateEntity(&#39;bears&#39;, &#39;character&#39;, &#39;lonnie&#39;, &#39;Lonnie&#39;)</code></pre>
               <button type="button" class="px-copy-button" data-copy="code-ts" aria-label="Copy command">Copy</button>
             </div>
           </article>
@@ -253,8 +254,17 @@ const lonnie = repoCreateEntity('bears', 'character', 'lonnie', 'Lonnie')</code>
             <div class="px-code-wrap">
               <pre class="px-code p-18"><code id="code-py">from px_sdk import repo_create_entity
 
-lonnie = repo_create_entity('bears', 'character', 'lonnie', 'Lonnie')</code></pre>
+lonnie = repo_create_entity(&#39;bears&#39;, &#39;character&#39;, &#39;lonnie&#39;, &#39;Lonnie&#39;)</code></pre>
               <button type="button" class="px-copy-button" data-copy="code-py" aria-label="Copy command">Copy</button>
+            </div>
+          </article>
+        </div>
+        <div class="mt-16 grid gap-[2px] lg:grid-cols-2">
+          <article>
+            <p class="mb-8 t-p-sm-sans">Skills install</p>
+            <div class="px-code-wrap">
+              <pre class="px-code p-18"><code id="code-skills">npx skills add portalshq/narrativeengine</code></pre>
+              <button type="button" class="px-copy-button" data-copy="code-skills" aria-label="Copy command">Copy</button>
             </div>
           </article>
         </div>

@@ -7,7 +7,7 @@ source: clap
 
 
 # px configure
-Configure version-control backend (unified: replaces `px choose` + `px backend`)
+Configure version-control backend
 
 
 ## Synopsis
@@ -17,7 +17,7 @@ px configure [OPTIONS] [PROVIDER] [COMMAND]
 
 
 ## Description
-Configure version-control backend (unified: replaces `px choose` + `px backend`).
+Configure version-control backend.
 
 Examples: px configure                          # show current config px configure status                   # show current config px configure local                    # switch to local daemon px configure remote --remote-url lore://192.168.0.27:41337 px configure portals-cloud --workspace-id my-ws px configure --provider remote --remote-url lore://host:41337 --reset
 

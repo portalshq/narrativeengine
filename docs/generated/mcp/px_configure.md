@@ -7,7 +7,7 @@ source: mcp
 
 
 # px_configure
-Configure version-control backend (unified: replaces `px choose` + `px backend`)
+Configure version-control backend
 
 Subcommands: status
 

@@ -1,31 +1,35 @@
 # PX standalone site
 
-Static export of the `px` landing page for GitHub Pages. No build step, no
-runtime dependencies — any static file server (or `npx serve site`) renders it.
+This is the zero-build static export of the PX landing page. Preview it with
+`npx serve site`; the Pages workflow deploys the same files on every commit to
+`main`.
 
 ## Source mapping
 
-Ported from `portals-cloud/frontend` (no framework, no Tailwind toolchain):
+Ported from the portals marketing app (`cloud/frontend`):
 
-| This file | Portals source |
+| Target in `site/` | Source in `cloud/frontend/` |
 |---|---|
-| `index.html` | `app/(marketing)/px/page.tsx` (metadata, JSON-LD) + `src/components/px/PxLandingPage.tsx` with `chrome="standalone"`, copy flattened into HTML |
-| `styles.css` | design tokens from `app/globals.css` `@theme` + `src/saga-repro.css` fonts; `t-*` type scale copied verbatim from the Tailwind v4 build (`src/saga.css`); sections from `src/components/px/PxLandingPage.module.css` |
-| `script.js` | `src/components/px/PxCodeBlock.tsx` copy button |
-| `fonts/` | `public/fonts/*.woff2` (renamed for clean URLs) |
-| `favicon.svg` | new minimal PX mark (the portals favicon is product chrome, not reused) |
-| `og-image.svg` | static port of `app/(marketing)/px/opengraph-image.tsx` |
+| `index.html` | `app/(marketing)/px/page.tsx` metadata/JSON-LD + `src/components/px/PxLandingPage.tsx` with `chrome="standalone"`, flattened to HTML |
+| `styles.css` | `app/globals.css` `@theme`, `src/saga.css` type rules, `src/components/px/PxLandingPage.module.css`, and the component's hand-resolved Tailwind utility subset |
+| `script.js` | `src/components/px/PxCodeBlock.tsx` clipboard behavior, including the `execCommand` fallback |
+| `fonts/*.woff2` | `public/fonts/` — the six PX font files, renamed for stable relative URLs |
+| `favicon.svg` | New minimal PX mark; the portals product favicon is not reused |
+| `og-image.svg` | Static SVG port of `app/(marketing)/px/opengraph-image.tsx` |
+| `.nojekyll` | Empty marker required for verbatim Pages serving |
 
-The code samples in `#install` mirror `src/lib/px-content.ts`
-(`getPxTechnicalContent()`), which reads them from `docs/authored/` in this
-repo. If those docs change, update the matching `<code>` blocks here.
+The install, skills, initialize, representations, MCP, TypeScript SDK, and
+Python SDK content is refreshed by `scripts/update-site-content.mjs`. Update the
+matching `<code>` blocks whenever `../px/docs/authored/` changes.
+
+`portalshq.github.io` is only the GitHub Pages deployment origin; the public
+canonical URL is always `https://portals.works/px`.
 
 Two dead references were intentionally dropped: `styles.card` and
-`styles.sagaBannerFrame` are read in the component but have no rule in the CSS
-module, so they contribute no styling.
+`styles.sagaBannerFrame` are read in the former component but have no rule in
+the CSS module, so they contribute no styling.
 
 ## Deploy
 
-Pushing to `main` runs `.github/workflows/pages.yml`, which uploads `site/`
-to GitHub Pages. First-time setup needs one click: repo
-**Settings → Pages → Build and deployment → Source: GitHub Actions**.
+`.github/workflows/pages.yml` refreshes authored content, validates the static
+site, and uploads `site/` to GitHub Pages on every push to `main`.

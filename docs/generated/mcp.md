@@ -21,7 +21,7 @@ MCP tools exposed by `px-mcp-server`. Agents MUST use these tools; the `px` CLI 
 | [\`px\_commit\`](docs/generated/mcp/px\_commit.md) | Commit changes to a repository repository |
 | [\`px\_completions\`](docs/generated/mcp/px\_completions.md) | Generate shell completions for \`px\` |
 | [\`px\_configure\_status\`](docs/generated/mcp/px\_configure\_status.md) | Show current backend configuration and connectivity (default when no provider is given) |
-| [\`px\_configure\`](docs/generated/mcp/px\_configure.md) | Configure version-control backend (unified: replaces \`px choose\` + \`px backend\`) |
+| [\`px\_configure\`](docs/generated/mcp/px\_configure.md) | Configure version-control backend |
 | [\`px\_content\_hash\`](docs/generated/mcp/px\_content\_hash.md) | Compute the BLAKE3 content hash of a file |
 | [\`px\_create\`](docs/generated/mcp/px\_create.md) | Create a new entity manifest |
 | [\`px\_diff\`](docs/generated/mcp/px\_diff.md) | Show diff between two manifest files or versions |

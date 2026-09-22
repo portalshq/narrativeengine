@@ -19,7 +19,7 @@ The `px` command-line interface (v0.8.25) provides tools for creating, resolving
 | [\`px branch\`](docs/generated/commands/branch.md) | Create or list branches |
 | [\`px commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
 | [\`px completions\`](docs/generated/commands/completions.md) | Generate shell completions for \`px\` |
-| [\`px configure\`](docs/generated/commands/configure.md) | Configure version-control backend (unified: replaces \`px choose\` + \`px backend\`) |
+| [\`px configure\`](docs/generated/commands/configure.md) | Configure version-control backend |
 | [\`px content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
 | [\`px create\`](docs/generated/commands/create.md) | Create a new entity manifest |
 | [\`px diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |

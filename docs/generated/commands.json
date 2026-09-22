@@ -334,8 +334,8 @@
     {
       "name": "configure",
       "full_path": "configure",
-      "about": "Configure version-control backend (unified: replaces `px choose` + `px backend`)",
-      "long_about": "Configure version-control backend (unified: replaces `px choose` + `px backend`).\n\nExamples: px configure                          # show current config px configure status                   # show current config px configure local                    # switch to local daemon px configure remote --remote-url lore://192.168.0.27:41337 px configure portals-cloud --workspace-id my-ws px configure --provider remote --remote-url lore://host:41337 --reset",
+      "about": "Configure version-control backend",
+      "long_about": "Configure version-control backend.\n\nExamples: px configure                          # show current config px configure status                   # show current config px configure local                    # switch to local daemon px configure remote --remote-url lore://192.168.0.27:41337 px configure portals-cloud --workspace-id my-ws px configure --provider remote --remote-url lore://host:41337 --reset",
       "usage": "Usage: configure [OPTIONS] [PROVIDER] [COMMAND]",
       "aliases": [
         "config"

@@ -3,9 +3,6 @@ name: Deploy site to GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - 'site/**'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -31,6 +28,10 @@ jobs:
         with:
           # Enables Pages (Actions source) on first run; no-op afterwards.
           enablement: true
+      - name: Refresh authored PX content
+        run: node scripts/update-site-content.mjs
+      - name: Validate static site
+        run: node scripts/validate-site.mjs
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

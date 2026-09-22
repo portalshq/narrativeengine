@@ -208,6 +208,8 @@ Do not use commit `parent` fields as validation truth unless the current PX/Lore
 
 Some PX tools auto-commit (`px_add`, `px_set`). Do not call `px_commit` afterward unless you intentionally made additional uncommitted changes.
 
+Note: `px_add` and `px_set` auto-commit to the local working tree only, not to the remote server. The `px_add` command writes to the local working tree. `px_resolve` reads from the configured server by default. Without pushing, the server doesn't see your commits. This is just the normal distributed version control workflow where local changes need to be pushed to the server to become visible to other clients (including the `px_resolve` in the default remote mode). To resolve local files, use `px resolve --local <uri>` or set `PX_RESOLVE_SOURCE=local` as an environment variable.
+
 ## Character Creation and Character Sheets
 
 Treat a request to create a character, character sheet, reference sheet, or other character visual as a persistence workflow. Do not leave generated assets only in the conversation or on a local filesystem.

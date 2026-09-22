@@ -6,15 +6,13 @@
  * (rendered through `frontend/src/components/px/PxLandingPage.tsx` with
  * `chrome="standalone"`).
  *
- * Source mapping (portals-cloud repo, `frontend/`):
- *   design tokens  <- app/globals.css `@theme inline`  (--spacing: .0625rem,
- *                     so 1 spacing unit = 1px; --radius-sm: 3px) +
- *                     src/saga-repro.css @font-face / --font-* vars
- *   t-* type scale <- compiled from the Tailwind v4 theme (fluid clamp()s
- *                     copied verbatim from src/saga.css)
- *   px-* sections  <- src/components/px/PxLandingPage.module.css
- *   utilities      <- the exact Tailwind utility subset the component uses,
- *                     hand-resolved (no build step, no runtime)
+ * Source mapping table (portals-cloud repo, `frontend/`):
+ *   design tokens <- app/globals.css `@theme inline`
+ *                    (--spacing: .0625rem = 1px; --radius-sm: 3px)
+ *   t-* type rules <- compiled `src/saga.css` (fluid clamp() vars copied verbatim)
+ *   px-* sections <- src/components/px/PxLandingPage.module.css
+ *   utilities    <- hand-resolved Tailwind subset used by the component
+ *                   (no build step, no runtime)
  * ========================================================================== */
 
 /* ---- Fonts (files in ./fonts/, renamed from frontend/public/fonts/) ---- */
