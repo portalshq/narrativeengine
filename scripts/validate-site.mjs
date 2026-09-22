@@ -45,6 +45,7 @@ if (!html.includes('data-webgl-theme="px"') || !html.includes('src="./saga-webgl
 
 if (!html.includes('<link rel="canonical" href="https://portals.works/px"')) throw new Error('Canonical URL is not portals.works/px')
 if (!html.includes('content="https://portals.works/px/og-image.svg"')) throw new Error('OG/Twitter image is not canonical')
-if (html.includes('href="/')) throw new Error('Static HTML contains an origin-relative link')
+const publicMarkup = html.replace(/<script[^>]*>[\s\S]*?base\.href=\"\/px\/\"[\s\S]*?<\/script>/g, '')
+if (publicMarkup.includes('href="/')) throw new Error('Static HTML contains an origin-relative link')
 
 console.log(`Validated ${requiredFiles.length} site assets and ${uniqueClassNames.length - 1} CSS classes.`)

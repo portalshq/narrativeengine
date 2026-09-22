@@ -74,6 +74,8 @@ const pythonSdk = [
 ].join('\n')
 
 let html = read(path.relative(repoRoot, sitePath))
+html = html.replace(/\s*<meta name="px-(?:mcp-summary|skills-install)"[^>]*\/>/g, '')
+html = html.replace(/\s*<script[^>]*>[\s\S]*?base\.href=\"\/px\/\"[\s\S]*?<\/script>/g, '')
 html = html.replace(
   '<span class="underline decoration-2 underline-offset-4">Explore Portals</span>',
   '<a href="https://portals.works" class="underline decoration-2 underline-offset-4">Explore Portals</a>',
@@ -89,6 +91,8 @@ const skillsSource = installation.includes('### Skills Install')
   ? firstCodeBlockAfter(installation, '### Skills Install')
   : install.split('&&').at(-1).trim()
 const skills = escapeHtml(skillsSource)
+const runtimeBase = `<script data-px-base>(function(){if(location.hostname==="portals.works"||location.hostname==="www.portals.works"){var base=document.createElement("base");base.href="/px/";document.head.insertBefore(base,document.head.firstChild);}})();</script>`
+html = html.replace('<link rel="icon"', `${runtimeBase}\n  <link rel="icon"`)
 html = html.replace('</head>', `  <meta name="px-mcp-summary" content="${mcpSummary.replaceAll('"', '&quot;')}" />\n  <meta name="px-skills-install" content="${skills.replaceAll('"', '&quot;')}" />\n</head>`)
 fs.writeFileSync(sitePath, html)
 
