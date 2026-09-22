@@ -21,10 +21,14 @@ always `https://portals.works/px`.
 | `og-image.svg` | Static SVG port of `app/(marketing)/px/opengraph-image.tsx` |
 | `.nojekyll` | Empty marker required for verbatim Pages serving |
 
-The workflow refreshes the technical code blocks from `../px/docs/authored/`
-on every commit to `main`. When authored docs change, the generated install,
-MCP, initialize, representation, TypeScript, and Python examples update in
-the same Pages deployment.
+The workflow refreshes the technical code blocks at build time from
+`docs/authored/` on every commit to `main`. `README.md` is checked as the
+public documentation mirror for the installation, Codex MCP, representation,
+and MCP-summary examples; a drift between the authored docs and README fails
+the Pages build. When the authored docs or their README mirror change, the
+generated install, MCP, initialize, representation, TypeScript, and Python
+examples update in the same Pages deployment. The published HTML is static
+after deployment; it does not fetch snippets at runtime.
 
 Two dead references were intentionally dropped: `styles.card` and
 `styles.sagaBannerFrame` have no CSS-module rules, so omitting them is

@@ -29,6 +29,12 @@ function firstParagraphAfter(markdown, heading) {
   return paragraph.replaceAll('\n', ' ')
 }
 
+function assertSame(label, expected, actual) {
+  if (expected !== actual) {
+    throw new Error(`${label} is out of sync with docs/authored/`)
+  }
+}
+
 function escapeHtml(value) {
   return value
     .replaceAll('&', '&amp;')
@@ -48,6 +54,7 @@ const installation = read('docs/authored/installation.md')
 const mcpInstall = read('docs/authored/mcp/install.md')
 const primitives = read('docs/authored/primitives.md')
 const mcpOverview = read('docs/authored/mcp/overview.md')
+const readme = read('README.md')
 const packageJson = JSON.parse(read('typescript/px-sdk/package.json'))
 
 const install = firstCodeBlockAfter(installation, '### Installation Script')
@@ -91,6 +98,23 @@ const skillsSource = installation.includes('### Skills Install')
   ? firstCodeBlockAfter(installation, '### Skills Install')
   : install.split('&&').at(-1).trim()
 const skills = escapeHtml(skillsSource)
+
+// README.md is the public mirror of the authored documentation. Generate from
+// docs/authored (the canonical source), but fail the build if the README's
+// public examples drift. This prevents the static page, docs, and README from
+// quietly teaching different commands.
+assertSame('README installation example', install, firstCodeBlockAfter(readme, '### Installation Script'))
+assertSame('README Codex MCP example', codexMcp, firstCodeBlockAfter(readme, '## Connect with Codex'))
+assertSame(
+  'README representation example',
+  representations,
+  firstCodeBlockAfter(readme, '### Scene Clips as Representations').split('\n').slice(0, 2).join('\n'),
+)
+assertSame(
+  'README MCP summary',
+  firstParagraphAfter(mcpOverview, '## MCP Server'),
+  firstParagraphAfter(readme, '## MCP Server (mandatory for agents)'),
+)
 const runtimeBase = `<script data-px-base>(function(){if(location.hostname==="portals.works"||location.hostname==="www.portals.works"){var base=document.createElement("base");base.href="/px/";document.head.insertBefore(base,document.head.firstChild);}})();</script>`
 html = html.replace('<link rel="icon"', `${runtimeBase}\n  <link rel="icon"`)
 html = html.replace('</head>', `  <meta name="px-mcp-summary" content="${mcpSummary.replaceAll('"', '&quot;')}" />\n  <meta name="px-skills-install" content="${skills.replaceAll('"', '&quot;')}" />\n</head>`)
