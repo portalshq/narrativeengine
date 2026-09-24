@@ -12,7 +12,7 @@ Resolve a PX URI to its manifest or a subtree
 
 ## Synopsis
 ```bash
-px resolve [OPTIONS] <URI>
+px resolve [OPTIONS] <URI> [PATH]
 ```
 
 
@@ -26,6 +26,7 @@ Fragment queries are supported via the URI: px resolve px://toystory/character/w
 
 | Name | Description | Required |
 |---|---|---|
+| path | Optional manifest subtree selector. URI fragments take precedence | No |
 | uri | PX URI. e.g., "px://toystory/character/woody" | Yes |
 
 

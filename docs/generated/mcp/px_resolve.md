@@ -18,6 +18,7 @@ Resolve a PX URI to its manifest or a subtree
 | commit | string | No |  | Resolve at a specific commit hash |
 | format | string | No | yaml | Output format: yaml, json |
 | include\_blobs | boolean | No | false | Hydrate known readable provenance artifacts such as prompts and run records |
+| path | string | No |  | Optional manifest subtree selector. URI fragments take precedence |
 | provenance | boolean | No | false | Include condensed per-file provenance for the manifest and direct representations |
 | uri | string | Yes |  | PX URI. e.g., "px://toystory/character/woody" |
 

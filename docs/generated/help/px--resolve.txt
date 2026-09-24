@@ -2,11 +2,14 @@ Resolve a PX URI to its manifest or a subtree.
 
 Fragment queries are supported via the URI: px resolve px://toystory/character/woody#references.appears_in
 
-Usage: px resolve [OPTIONS] <URI>
+Usage: px resolve [OPTIONS] <URI> [PATH]
 
 Arguments:
   <URI>
           PX URI. e.g., "px://toystory/character/woody"
+
+  [PATH]
+          Optional manifest subtree selector. URI fragments take precedence
 
 Options:
       --branch <BRANCH>

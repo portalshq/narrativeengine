@@ -1,14 +1,32 @@
-View commit history for an entity
+View commit history for an entity or repository file.
+
+The target follows the normal repository/entity convention: `px history repo/type/id` shows the entity manifest, while `px history repo/type/id/asset.png` shows an asset in that entity's directory. A `.yaml` suffix on the entity form is accepted.
 
 Usage: px history [OPTIONS] <URI>
 
 Arguments:
-  <URI>  PX URI
+  <URI>
+          PX URI or repository-relative entity/file target
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
-  -n, --limit <LIMIT>        Maximum number of commits to show [default: 20]
-  -v, --verbose              Enable verbose debug logging
-      --remote               Resolve repository reads through the configured Lore server (the default)
-      --local                Resolve repository reads from an explicitly checked-out local working tree
-  -h, --help                 Print help
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset
+
+          [env: PX_DIR=]
+
+  -n, --limit <LIMIT>
+          Maximum number of commits to show
+
+          [default: 20]
+
+  -v, --verbose
+          Enable verbose debug logging
+
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+
+  -h, --help
+          Print help (see a summary with '-h')

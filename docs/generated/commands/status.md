@@ -7,13 +7,20 @@ source: clap
 
 
 # px status
-Show system status
+Show system status, or working-tree status for one repository
 
 
 ## Synopsis
 ```bash
-px status
+px status [REPOSITORY]
 ```
+
+
+## Arguments
+
+| Name | Description | Required |
+|---|---|---|
+| repository | Repository name | No |
 
 
 ## Flags

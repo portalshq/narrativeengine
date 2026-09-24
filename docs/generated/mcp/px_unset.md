@@ -6,8 +6,8 @@ source: mcp
 ---
 
 
-# px_set
-Set one or more properties on an entity manifest
+# px_unset
+Remove one or more properties or representations from an entity manifest
 
 
 ## Parameters
@@ -15,7 +15,7 @@ Set one or more properties on an entity manifest
 | Name | Type | Required | Default | Description |
 |---|---|---|---|---|
 | author | string | No | px | Author identifier |
+| keys | string | Yes |  | Keys to remove. \`representations.<key>\` removes a representation |
 | message | string | No |  | Commit message |
 | uri | string | Yes |  | PX URI |
-| values | string | Yes |  | Repeating key/value pairs. Keys support dot-notation |
 

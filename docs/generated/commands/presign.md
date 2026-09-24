@@ -177,7 +177,9 @@ The SDKs return the same fields as the CLI JSON output.
 |---|---|---|
 |     --branch | Resolve at a specific branch |  |
 |     --commit | Resolve at a specific commit hash |  |
+|     --download | Download the representation after creating its presigned URL. Optionally set its destination |  |
 |     --http-url | Explicit Lore HTTP origin, such as http://127.0.0.1:41339 |  |
+|     --output | Destination for --download. Defaults to the entity asset directory |  |
 |     --token-env | Environment variable containing a repository-scoped bearer token |  |
 |     --ttl-seconds | Requested lifetime in seconds; Lore enforces its configured bounds |  |
 

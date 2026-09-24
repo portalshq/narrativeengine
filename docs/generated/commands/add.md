@@ -31,13 +31,14 @@ px add [OPTIONS] --format <FORMAT> <URI> <KEY> <FILE>
 |---|---|---|
 |     --format | Asset format. e.g., "png", "glb" |  |
 | -a, --author | Author identifier | px |
-| -m, --message | Commit message | add representation |
+| -m, --message | Commit message |  |
 
 
 ## Flags
 
 | Flag | Description |
 |---|---|
+|     --replace | Replace an existing representation only when its content differs |
 | -h, --help | Print help |
 
 

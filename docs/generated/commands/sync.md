@@ -7,7 +7,7 @@ source: clap
 
 
 # px sync
-Sync with remote
+Fetch remote manifests and push local commits
 
 
 ## Synopsis

@@ -14,6 +14,6 @@ Create or list branches
 
 | Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| name | string | No |  | Branch name to create. Omit to list all branches |
+| name | string | No |  | Branch name to create. Omit to list local branches |
 | repository | string | Yes |  | Repository name |
 

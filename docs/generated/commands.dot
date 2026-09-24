@@ -16,8 +16,6 @@ digraph px_commands {
     "px" -> "branch";
     "commit" [label="px commit"];
     "px" -> "commit";
-    "completions" [label="px completions"];
-    "px" -> "completions";
     "configure" [label="px configure"];
     "px" -> "configure";
     "configure_status" [label="px configure status"];
@@ -48,8 +46,6 @@ digraph px_commands {
     "px" -> "pull";
     "push" [label="px push"];
     "px" -> "push";
-    "query" [label="px query"];
-    "px" -> "query";
     "remote" [label="px remote"];
     "px" -> "remote";
     "remote_add" [label="px remote add"];
@@ -72,6 +68,8 @@ digraph px_commands {
     "px" -> "switch";
     "sync" [label="px sync"];
     "px" -> "sync";
+    "unset" [label="px unset"];
+    "px" -> "unset";
     "validate" [label="px validate"];
     "px" -> "validate";
 }

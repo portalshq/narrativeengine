@@ -4,7 +4,7 @@ Usage: px branch [OPTIONS] <REPOSITORY> [NAME]
 
 Arguments:
   <REPOSITORY>  Repository name
-  [NAME]        Branch name to create. Omit to list all branches
+  [NAME]        Branch name to create. Omit to list local branches
 
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]

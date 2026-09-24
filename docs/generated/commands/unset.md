@@ -6,13 +6,13 @@ source: clap
 ---
 
 
-# px set
-Set one or more properties on an entity manifest
+# px unset
+Remove one or more properties or representations from an entity manifest
 
 
 ## Synopsis
 ```bash
-px set [OPTIONS] <URI> <KEY> <VALUE>...
+px unset [OPTIONS] <URI> <KEYS>...
 ```
 
 
@@ -20,8 +20,8 @@ px set [OPTIONS] <URI> <KEY> <VALUE>...
 
 | Name | Description | Required |
 |---|---|---|
+| keys | Keys to remove. \`representations.<key>\` removes a representation | Yes |
 | uri | PX URI | Yes |
-| values | Repeating key/value pairs. Keys support dot-notation | Yes |
 
 
 ## Options
@@ -40,5 +40,5 @@ px set [OPTIONS] <URI> <KEY> <VALUE>...
 
 
 ## Source
-`crates/px-cli/src/main.rs` — `set` command
+`crates/px-cli/src/main.rs` — `unset` command
 

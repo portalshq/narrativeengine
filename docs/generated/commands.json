@@ -54,7 +54,7 @@
           "name": "message",
           "about": "Commit message",
           "required": false,
-          "default_value": "add representation",
+          "default_value": null,
           "short": "m",
           "long": "message",
           "takes_value": true
@@ -70,6 +70,15 @@
         }
       ],
       "flags": [
+        {
+          "name": "replace",
+          "about": "Replace an existing representation only when its content differs",
+          "required": false,
+          "default_value": "false",
+          "short": null,
+          "long": "replace",
+          "takes_value": false
+        },
         {
           "name": "help",
           "about": "Print help",
@@ -223,7 +232,7 @@
         },
         {
           "name": "name",
-          "about": "Branch name to create. Omit to list all branches",
+          "about": "Branch name to create. Omit to list local branches",
           "required": false,
           "default_value": null,
           "short": null,
@@ -249,14 +258,14 @@
     {
       "name": "commit",
       "full_path": "commit",
-      "about": "Commit changes to a repository repository",
+      "about": "Commit all repository changes, or only one entity when given its URI",
       "long_about": null,
-      "usage": "Usage: commit [OPTIONS] --message <MESSAGE> <REPOSITORY>",
+      "usage": "Usage: commit [OPTIONS] --message <MESSAGE> <TARGET>",
       "aliases": [],
       "arguments": [
         {
-          "name": "repository",
-          "about": "Repository name",
+          "name": "target",
+          "about": "Repository name or PX entity URI",
           "required": true,
           "default_value": null,
           "short": null,
@@ -288,39 +297,6 @@
         {
           "name": "help",
           "about": "Print help",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [],
-      "hidden": false
-    },
-    {
-      "name": "completions",
-      "full_path": "completions",
-      "about": "Generate shell completions for `px`",
-      "long_about": "Generate shell completions for `px`.\n\nUsage: px completions bash > ~/.local/share/bash-completion/completions/px px completions zsh > ~/.zfunc/_px px completions fish > ~/.config/fish/completions/px.fish source <(px completions bash)   # ephemeral",
-      "usage": "Usage: completions <SHELL>",
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "shell",
-          "about": "Shell to generate completions for",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        }
-      ],
-      "options": [],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help (see more with '--help')",
           "required": false,
           "default_value": null,
           "short": "h",
@@ -523,6 +499,24 @@
           "short": "a",
           "long": "author",
           "takes_value": true
+        },
+        {
+          "name": "properties",
+          "about": "Initial property, as key=value. May be repeated",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "set",
+          "takes_value": true
+        },
+        {
+          "name": "message",
+          "about": "Commit message",
+          "required": false,
+          "default_value": null,
+          "short": "m",
+          "long": "message",
+          "takes_value": true
         }
       ],
       "flags": [
@@ -542,23 +536,14 @@
     {
       "name": "diff",
       "full_path": "diff",
-      "about": "Show diff between two manifest files or versions",
+      "about": "Show a manifest diff for an entity URI",
       "long_about": null,
-      "usage": "Usage: diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>",
+      "usage": "Usage: diff [OPTIONS] <URI>",
       "aliases": [],
       "arguments": [
         {
-          "name": "base_file",
-          "about": "Base (left) manifest file",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        },
-        {
-          "name": "candidate_file",
-          "about": "Candidate (right) manifest file",
+          "name": "uri",
+          "about": "PX URI. The px:// prefix is optional",
           "required": true,
           "default_value": null,
           "short": null,
@@ -567,6 +552,42 @@
         }
       ],
       "options": [
+        {
+          "name": "base_branch",
+          "about": "Base branch",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "base-branch",
+          "takes_value": true
+        },
+        {
+          "name": "candidate_branch",
+          "about": "Candidate branch",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "candidate-branch",
+          "takes_value": true
+        },
+        {
+          "name": "base_commit",
+          "about": "Base commit",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "base-commit",
+          "takes_value": true
+        },
+        {
+          "name": "candidate_commit",
+          "about": "Candidate commit",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "candidate-commit",
+          "takes_value": true
+        },
         {
           "name": "format",
           "about": "Output format: json, yaml",
@@ -662,14 +683,14 @@
     {
       "name": "history",
       "full_path": "history",
-      "about": "View commit history for an entity",
-      "long_about": null,
+      "about": "View commit history for an entity or repository file",
+      "long_about": "View commit history for an entity or repository file.\n\nThe target follows the normal repository/entity convention: `px history repo/type/id` shows the entity manifest, while `px history repo/type/id/asset.png` shows an asset in that entity's directory. A `.yaml` suffix on the entity form is accepted.",
       "usage": "Usage: history [OPTIONS] <URI>",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
-          "about": "PX URI",
+          "about": "PX URI or repository-relative entity/file target",
           "required": true,
           "default_value": null,
           "short": null,
@@ -691,7 +712,7 @@
       "flags": [
         {
           "name": "help",
-          "about": "Print help",
+          "about": "Print help (see more with '--help')",
           "required": false,
           "default_value": null,
           "short": "h",
@@ -990,6 +1011,24 @@
           "short": null,
           "long": "token-env",
           "takes_value": true
+        },
+        {
+          "name": "download",
+          "about": "Download the representation after creating its presigned URL. Optionally set its destination",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "download",
+          "takes_value": false
+        },
+        {
+          "name": "output",
+          "about": "Destination for --download. Defaults to the entity asset directory",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": "output",
+          "takes_value": true
         }
       ],
       "flags": [
@@ -1009,8 +1048,8 @@
     {
       "name": "pull",
       "full_path": "pull",
-      "about": "Clone or pull a repository from a remote",
-      "long_about": "Clone or pull a repository from a remote.\n\nIf the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via pull.",
+      "about": "Clone or pull PX manifests from a remote (representation files stay remote)",
+      "long_about": "Clone or pull PX manifests from a remote (representation files stay remote).\n\nIf the argument is a URL, the repo is cloned (name is read from the repo's own config). If it's a repository name, the repo must already exist locally and its manifests will be updated without downloading assets.",
       "usage": "Usage: pull <URL_OR_NAME>",
       "aliases": [],
       "arguments": [
@@ -1083,58 +1122,6 @@
         {
           "name": "help",
           "about": "Print help (see more with '--help')",
-          "required": false,
-          "default_value": null,
-          "short": "h",
-          "long": "help",
-          "takes_value": false
-        }
-      ],
-      "subcommands": [],
-      "hidden": false
-    },
-    {
-      "name": "query",
-      "full_path": "query",
-      "about": "Query a subtree from a manifest",
-      "long_about": null,
-      "usage": "Usage: query [OPTIONS] <URI> <PATH>",
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "uri",
-          "about": "PX URI",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        },
-        {
-          "name": "path",
-          "about": "Dot-notation path. e.g., \"appearances.audienceVotes\"",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        }
-      ],
-      "options": [
-        {
-          "name": "format",
-          "about": "Output format: yaml, json",
-          "required": false,
-          "default_value": "json",
-          "short": "f",
-          "long": "format",
-          "takes_value": true
-        }
-      ],
-      "flags": [
-        {
-          "name": "help",
-          "about": "Print help",
           "required": false,
           "default_value": null,
           "short": "h",
@@ -1300,13 +1287,22 @@
       "full_path": "resolve",
       "about": "Resolve a PX URI to its manifest or a subtree",
       "long_about": "Resolve a PX URI to its manifest or a subtree.\n\nFragment queries are supported via the URI: px resolve px://toystory/character/woody#references.appears_in",
-      "usage": "Usage: resolve [OPTIONS] <URI>",
+      "usage": "Usage: resolve [OPTIONS] <URI> [PATH]",
       "aliases": [],
       "arguments": [
         {
           "name": "uri",
           "about": "PX URI. e.g., \"px://toystory/character/woody\"",
           "required": true,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        },
+        {
+          "name": "path",
+          "about": "Optional manifest subtree selector. URI fragments take precedence",
+          "required": false,
           "default_value": null,
           "short": null,
           "long": null,
@@ -1472,9 +1468,9 @@
     {
       "name": "set",
       "full_path": "set",
-      "about": "Set a property on an entity manifest",
+      "about": "Set one or more properties on an entity manifest",
       "long_about": null,
-      "usage": "Usage: set [OPTIONS] <URI> <KEY> <VALUE>",
+      "usage": "Usage: set [OPTIONS] <URI> <KEY> <VALUE>...",
       "aliases": [],
       "arguments": [
         {
@@ -1487,17 +1483,8 @@
           "takes_value": true
         },
         {
-          "name": "key",
-          "about": "Property key (dot-notation)",
-          "required": true,
-          "default_value": null,
-          "short": null,
-          "long": null,
-          "takes_value": true
-        },
-        {
-          "name": "value",
-          "about": "Property value",
+          "name": "values",
+          "about": "Repeating key/value pairs. Keys support dot-notation",
           "required": true,
           "default_value": null,
           "short": null,
@@ -1510,7 +1497,7 @@
           "name": "message",
           "about": "Commit message",
           "required": false,
-          "default_value": "set property",
+          "default_value": null,
           "short": "m",
           "long": "message",
           "takes_value": true
@@ -1542,11 +1529,21 @@
     {
       "name": "status",
       "full_path": "status",
-      "about": "Show system status",
+      "about": "Show system status, or working-tree status for one repository",
       "long_about": null,
-      "usage": "Usage: status",
+      "usage": "Usage: status [REPOSITORY]",
       "aliases": [],
-      "arguments": [],
+      "arguments": [
+        {
+          "name": "repository",
+          "about": "Repository name",
+          "required": false,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        }
+      ],
       "options": [],
       "flags": [
         {
@@ -1607,7 +1604,7 @@
     {
       "name": "sync",
       "full_path": "sync",
-      "about": "Sync with remote",
+      "about": "Fetch remote manifests and push local commits",
       "long_about": null,
       "usage": "Usage: sync <REPOSITORY>",
       "aliases": [],
@@ -1623,6 +1620,67 @@
         }
       ],
       "options": [],
+      "flags": [
+        {
+          "name": "help",
+          "about": "Print help",
+          "required": false,
+          "default_value": null,
+          "short": "h",
+          "long": "help",
+          "takes_value": false
+        }
+      ],
+      "subcommands": [],
+      "hidden": false
+    },
+    {
+      "name": "unset",
+      "full_path": "unset",
+      "about": "Remove one or more properties or representations from an entity manifest",
+      "long_about": null,
+      "usage": "Usage: unset [OPTIONS] <URI> <KEYS>...",
+      "aliases": [],
+      "arguments": [
+        {
+          "name": "uri",
+          "about": "PX URI",
+          "required": true,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        },
+        {
+          "name": "keys",
+          "about": "Keys to remove. `representations.<key>` removes a representation",
+          "required": true,
+          "default_value": null,
+          "short": null,
+          "long": null,
+          "takes_value": true
+        }
+      ],
+      "options": [
+        {
+          "name": "message",
+          "about": "Commit message",
+          "required": false,
+          "default_value": null,
+          "short": "m",
+          "long": "message",
+          "takes_value": true
+        },
+        {
+          "name": "author",
+          "about": "Author identifier",
+          "required": false,
+          "default_value": "px",
+          "short": "a",
+          "long": "author",
+          "takes_value": true
+        }
+      ],
       "flags": [
         {
           "name": "help",

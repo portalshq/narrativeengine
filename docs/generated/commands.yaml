@@ -21,11 +21,12 @@ commands:
         about: "Asset format. e.g., \"png\", \"glb\""
       - name: "message"
         about: "Commit message"
-        default: "add representation"
       - name: "author"
         about: "Author identifier"
         default: "px"
     flags:
+      - name: "replace"
+        about: "Replace an existing representation only when its content differs"
       - name: "help"
         about: "Print help"
   - name: "auth"
@@ -79,19 +80,19 @@ commands:
         about: "Repository name"
         required: true
       - name: "name"
-        about: "Branch name to create. Omit to list all branches"
+        about: "Branch name to create. Omit to list local branches"
         required: false
     flags:
       - name: "help"
         about: "Print help"
   - name: "commit"
     full_path: "commit"
-    about: "Commit changes to a repository repository"
-    usage: "Usage: commit [OPTIONS] --message <MESSAGE> <REPOSITORY>"
+    about: "Commit all repository changes, or only one entity when given its URI"
+    usage: "Usage: commit [OPTIONS] --message <MESSAGE> <TARGET>"
     hidden: false
     arguments:
-      - name: "repository"
-        about: "Repository name"
+      - name: "target"
+        about: "Repository name or PX entity URI"
         required: true
     options:
       - name: "message"
@@ -102,22 +103,6 @@ commands:
     flags:
       - name: "help"
         about: "Print help"
-  - name: "completions"
-    full_path: "completions"
-    about: "Generate shell completions for `px`"
-    long_about: |
-      Generate shell completions for `px`.
-
-      Usage: px completions bash > ~/.local/share/bash-completion/completions/px px completions zsh > ~/.zfunc/_px px completions fish > ~/.config/fish/completions/px.fish source <(px completions bash)   # ephemeral
-    usage: "Usage: completions <SHELL>"
-    hidden: false
-    arguments:
-      - name: "shell"
-        about: "Shell to generate completions for"
-        required: true
-    flags:
-      - name: "help"
-        about: "Print help (see more with '--help')"
   - name: "configure"
     full_path: "configure"
     about: "Configure version-control backend"
@@ -186,22 +171,31 @@ commands:
       - name: "author"
         about: "Author identifier"
         default: "px"
+      - name: "properties"
+        about: "Initial property, as key=value. May be repeated"
+      - name: "message"
+        about: "Commit message"
     flags:
       - name: "help"
         about: "Print help"
   - name: "diff"
     full_path: "diff"
-    about: "Show diff between two manifest files or versions"
-    usage: "Usage: diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>"
+    about: "Show a manifest diff for an entity URI"
+    usage: "Usage: diff [OPTIONS] <URI>"
     hidden: false
     arguments:
-      - name: "base_file"
-        about: "Base (left) manifest file"
-        required: true
-      - name: "candidate_file"
-        about: "Candidate (right) manifest file"
+      - name: "uri"
+        about: "PX URI. The px:// prefix is optional"
         required: true
     options:
+      - name: "base_branch"
+        about: "Base branch"
+      - name: "candidate_branch"
+        about: "Candidate branch"
+      - name: "base_commit"
+        about: "Base commit"
+      - name: "candidate_commit"
+        about: "Candidate commit"
       - name: "format"
         about: "Output format: json, yaml"
         default: "yaml"
@@ -232,12 +226,16 @@ commands:
         about: "Print help"
   - name: "history"
     full_path: "history"
-    about: "View commit history for an entity"
+    about: "View commit history for an entity or repository file"
+    long_about: |
+      View commit history for an entity or repository file.
+
+      The target follows the normal repository/entity convention: `px history repo/type/id` shows the entity manifest, while `px history repo/type/id/asset.png` shows an asset in that entity's directory. A `.yaml` suffix on the entity form is accepted.
     usage: "Usage: history [OPTIONS] <URI>"
     hidden: false
     arguments:
       - name: "uri"
-        about: "PX URI"
+        about: "PX URI or repository-relative entity/file target"
         required: true
     options:
       - name: "limit"
@@ -245,7 +243,7 @@ commands:
         default: "20"
     flags:
       - name: "help"
-        about: "Print help"
+        about: "Print help (see more with '--help')"
   - name: "init"
     full_path: "init"
     about: "Initialize a repository repository and/or configure the backend provider"
@@ -492,16 +490,20 @@ commands:
         about: "Explicit Lore HTTP origin, such as http://127.0.0.1:41339"
       - name: "token_env"
         about: "Environment variable containing a repository-scoped bearer token"
+      - name: "download"
+        about: "Download the representation after creating its presigned URL. Optionally set its destination"
+      - name: "output"
+        about: "Destination for --download. Defaults to the entity asset directory"
     flags:
       - name: "help"
         about: "Print help (see more with '--help')"
   - name: "pull"
     full_path: "pull"
-    about: "Clone or pull a repository from a remote"
+    about: "Clone or pull PX manifests from a remote (representation files stay remote)"
     long_about: |
-      Clone or pull a repository from a remote.
+      Clone or pull PX manifests from a remote (representation files stay remote).
 
-      If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via pull.
+      If the argument is a URL, the repo is cloned (name is read from the repo's own config). If it's a repository name, the repo must already exist locally and its manifests will be updated without downloading assets.
     usage: "Usage: pull <URL_OR_NAME>"
     hidden: false
     arguments:
@@ -529,25 +531,6 @@ commands:
     flags:
       - name: "help"
         about: "Print help (see more with '--help')"
-  - name: "query"
-    full_path: "query"
-    about: "Query a subtree from a manifest"
-    usage: "Usage: query [OPTIONS] <URI> <PATH>"
-    hidden: false
-    arguments:
-      - name: "uri"
-        about: "PX URI"
-        required: true
-      - name: "path"
-        about: "Dot-notation path. e.g., \"appearances.audienceVotes\""
-        required: true
-    options:
-      - name: "format"
-        about: "Output format: yaml, json"
-        default: "json"
-    flags:
-      - name: "help"
-        about: "Print help"
   - name: "remote"
     full_path: "remote"
     about: "Manage remotes on a repository"
@@ -609,12 +592,15 @@ commands:
       Resolve a PX URI to its manifest or a subtree.
 
       Fragment queries are supported via the URI: px resolve px://toystory/character/woody#references.appears_in
-    usage: "Usage: resolve [OPTIONS] <URI>"
+    usage: "Usage: resolve [OPTIONS] <URI> [PATH]"
     hidden: false
     arguments:
       - name: "uri"
         about: "PX URI. e.g., \"px://toystory/character/woody\""
         required: true
+      - name: "path"
+        about: "Optional manifest subtree selector. URI fragments take precedence"
+        required: false
     options:
       - name: "branch"
         about: "Resolve at a specific branch"
@@ -666,23 +652,19 @@ commands:
         about: "Print help"
   - name: "set"
     full_path: "set"
-    about: "Set a property on an entity manifest"
-    usage: "Usage: set [OPTIONS] <URI> <KEY> <VALUE>"
+    about: "Set one or more properties on an entity manifest"
+    usage: "Usage: set [OPTIONS] <URI> <KEY> <VALUE>..."
     hidden: false
     arguments:
       - name: "uri"
         about: "PX URI"
         required: true
-      - name: "key"
-        about: "Property key (dot-notation)"
-        required: true
-      - name: "value"
-        about: "Property value"
+      - name: "values"
+        about: "Repeating key/value pairs. Keys support dot-notation"
         required: true
     options:
       - name: "message"
         about: "Commit message"
-        default: "set property"
       - name: "author"
         about: "Author identifier"
         default: "px"
@@ -691,9 +673,13 @@ commands:
         about: "Print help"
   - name: "status"
     full_path: "status"
-    about: "Show system status"
-    usage: "Usage: status"
+    about: "Show system status, or working-tree status for one repository"
+    usage: "Usage: status [REPOSITORY]"
     hidden: false
+    arguments:
+      - name: "repository"
+        about: "Repository name"
+        required: false
     flags:
       - name: "help"
         about: "Print help"
@@ -714,13 +700,34 @@ commands:
         about: "Print help"
   - name: "sync"
     full_path: "sync"
-    about: "Sync with remote"
+    about: "Fetch remote manifests and push local commits"
     usage: "Usage: sync <REPOSITORY>"
     hidden: false
     arguments:
       - name: "repository"
         about: "Repository name"
         required: true
+    flags:
+      - name: "help"
+        about: "Print help"
+  - name: "unset"
+    full_path: "unset"
+    about: "Remove one or more properties or representations from an entity manifest"
+    usage: "Usage: unset [OPTIONS] <URI> <KEYS>..."
+    hidden: false
+    arguments:
+      - name: "uri"
+        about: "PX URI"
+        required: true
+      - name: "keys"
+        about: "Keys to remove. `representations.<key>` removes a representation"
+        required: true
+    options:
+      - name: "message"
+        about: "Commit message"
+      - name: "author"
+        about: "Author identifier"
+        default: "px"
     flags:
       - name: "help"
         about: "Print help"

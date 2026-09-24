@@ -7,7 +7,7 @@ source: clap
 
 
 # px history
-View commit history for an entity
+View commit history for an entity or repository file
 
 
 ## Synopsis
@@ -16,11 +16,17 @@ px history [OPTIONS] <URI>
 ```
 
 
+## Description
+View commit history for an entity or repository file.
+
+The target follows the normal repository/entity convention: `px history repo/type/id` shows the entity manifest, while `px history repo/type/id/asset.png` shows an asset in that entity's directory. A `.yaml` suffix on the entity form is accepted.
+
+
 ## Arguments
 
 | Name | Description | Required |
 |---|---|---|
-| uri | PX URI | Yes |
+| uri | PX URI or repository-relative entity/file target | Yes |
 
 
 ## Options
@@ -34,7 +40,7 @@ px history [OPTIONS] <URI>
 
 | Flag | Description |
 |---|---|
-| -h, --help | Print help |
+| -h, --help | Print help (see more with '--help') |
 
 
 ## Source

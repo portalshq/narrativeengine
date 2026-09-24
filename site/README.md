@@ -18,7 +18,7 @@ always `https://portals.works/px`.
 | `eye-candy` image URLs | Optimized WebP assets in `cloud/frontend/public/eye-candy/optimized/`, served from `https://portals.works` so the marketing site remains the image origin |
 | `fonts/*.woff2` | `public/fonts/` — six PX font files, renamed for stable relative URLs |
 | `favicon.svg` | Minimal PX mark; the portals product favicon is not reused |
-| `og-image.svg` | Static SVG port of `app/(marketing)/px/opengraph-image.tsx` |
+| OG image (`og:image`, `twitter:image`) | Absolute FQDN asset in `cloud/frontend/public/og-image-px.png`, served from `https://portals.works` |
 | `.nojekyll` | Empty marker required for verbatim Pages serving |
 
 The workflow refreshes the technical code blocks at build time from

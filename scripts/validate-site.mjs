@@ -12,7 +12,6 @@ const requiredFiles = [
   'styles.css',
   'script.js',
   'favicon.svg',
-  'og-image.svg',
   '.nojekyll',
   'saga-webgl.js',
   'models/scene.glb',
@@ -44,7 +43,7 @@ if (html.includes('class="undefined') || html.includes('portalshq.github.io')) t
 if (!html.includes('data-webgl-theme="px"') || !html.includes('src="./saga-webgl.js"')) throw new Error('WebGL runtime is not wired into the static page')
 
 if (!html.includes('<link rel="canonical" href="https://portals.works/px"')) throw new Error('Canonical URL is not portals.works/px')
-if (!html.includes('content="https://portals.works/px/og-image.svg"')) throw new Error('OG/Twitter image is not canonical')
+if (!html.includes('content="https://portals.works/og-image-px.png"')) throw new Error('OG/Twitter image is not canonical')
 const publicMarkup = html.replace(/<script[^>]*>[\s\S]*?base\.href=\"\/px\/\"[\s\S]*?<\/script>/g, '')
 if (publicMarkup.includes('href="/')) throw new Error('Static HTML contains an origin-relative link')
 

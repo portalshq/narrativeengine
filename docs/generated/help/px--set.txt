@@ -1,15 +1,14 @@
-Set a property on an entity manifest
+Set one or more properties on an entity manifest
 
-Usage: px set [OPTIONS] <URI> <KEY> <VALUE>
+Usage: px set [OPTIONS] <URI> <KEY> <VALUE>...
 
 Arguments:
-  <URI>    PX URI
-  <KEY>    Property key (dot-notation)
-  <VALUE>  Property value
+  <URI>             PX URI
+  <KEY> <VALUE>...  Repeating key/value pairs. Keys support dot-notation
 
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
-  -m, --message <MESSAGE>    Commit message [default: "set property"]
+  -m, --message <MESSAGE>    Commit message
   -a, --author <AUTHOR>      Author identifier [default: px]
   -v, --verbose              Enable verbose debug logging
       --remote               Resolve repository reads through the configured Lore server (the default)

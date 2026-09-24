@@ -7,7 +7,7 @@ source: clap
 
 
 # px pull
-Clone or pull a repository from a remote
+Clone or pull PX manifests from a remote (representation files stay remote)
 
 
 ## Synopsis
@@ -17,9 +17,9 @@ px pull <URL_OR_NAME>
 
 
 ## Description
-Clone or pull a repository from a remote.
+Clone or pull PX manifests from a remote (representation files stay remote).
 
-If the argument is a URL, the repo is cloned (name is read from the repo's own config).  If it's a repository name, the repo must already exist locally and will be updated via pull.
+If the argument is a URL, the repo is cloned (name is read from the repo's own config). If it's a repository name, the repo must already exist locally and its manifests will be updated without downloading assets.
 
 
 ## Arguments

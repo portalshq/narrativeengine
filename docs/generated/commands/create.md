@@ -28,7 +28,9 @@ px create [OPTIONS] --repository <REPOSITORY> --name <NAME> <ENTITY_TYPE> <ENTIT
 
 | Flag | Description | Default |
 |---|---|---|
+|     --set | Initial property, as key=value. May be repeated |  |
 | -a, --author | Author identifier | px |
+| -m, --message | Commit message |  |
 | -n, --name | Human-readable name |  |
 | -u, --repository | Repository name |  |
 

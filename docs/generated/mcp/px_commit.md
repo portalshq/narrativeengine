@@ -7,7 +7,7 @@ source: mcp
 
 
 # px_commit
-Commit changes to a repository repository
+Commit all repository changes, or only one entity when given its URI
 
 
 ## Parameters
@@ -16,5 +16,5 @@ Commit changes to a repository repository
 |---|---|---|---|---|
 | author | string | No | px | Author identifier |
 | message | string | Yes |  | Commit message |
-| repository | string | Yes |  | Repository name |
+| target | string | Yes |  | Repository name or PX entity URI |
 

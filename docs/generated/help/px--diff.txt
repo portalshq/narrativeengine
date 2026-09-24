@@ -1,15 +1,28 @@
-Show diff between two manifest files or versions
+Show a manifest diff for an entity URI
 
-Usage: px diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
+Usage: px diff [OPTIONS] <URI>
 
 Arguments:
-  <BASE_FILE>       Base (left) manifest file
-  <CANDIDATE_FILE>  Candidate (right) manifest file
+  <URI>  PX URI. The px:// prefix is optional
 
 Options:
-  -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
-  -f, --format <FORMAT>      Output format: json, yaml [default: yaml]
-  -v, --verbose              Enable verbose debug logging
-      --remote               Resolve repository reads through the configured Lore server (the default)
-      --local                Resolve repository reads from an explicitly checked-out local working tree
-  -h, --help                 Print help
+      --base-branch <BASE_BRANCH>
+          Base branch
+  -d, --base-dir <BASE_DIR>
+          Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
+      --candidate-branch <CANDIDATE_BRANCH>
+          Candidate branch
+  -v, --verbose
+          Enable verbose debug logging
+      --base-commit <BASE_COMMIT>
+          Base commit
+      --remote
+          Resolve repository reads through the configured Lore server (the default)
+      --candidate-commit <CANDIDATE_COMMIT>
+          Candidate commit
+      --local
+          Resolve repository reads from an explicitly checked-out local working tree
+  -f, --format <FORMAT>
+          Output format: json, yaml [default: yaml]
+  -h, --help
+          Print help

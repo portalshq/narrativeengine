@@ -7,12 +7,12 @@ source: clap
 
 
 # px diff
-Show diff between two manifest files or versions
+Show a manifest diff for an entity URI
 
 
 ## Synopsis
 ```bash
-px diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
+px diff [OPTIONS] <URI>
 ```
 
 
@@ -20,14 +20,17 @@ px diff [OPTIONS] <BASE_FILE> <CANDIDATE_FILE>
 
 | Name | Description | Required |
 |---|---|---|
-| base\_file | Base (left) manifest file | Yes |
-| candidate\_file | Candidate (right) manifest file | Yes |
+| uri | PX URI. The px:// prefix is optional | Yes |
 
 
 ## Options
 
 | Flag | Description | Default |
 |---|---|---|
+|     --base-branch | Base branch |  |
+|     --base-commit | Base commit |  |
+|     --candidate-branch | Candidate branch |  |
+|     --candidate-commit | Candidate commit |  |
 | -f, --format | Output format: json, yaml | yaml |
 
 

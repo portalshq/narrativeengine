@@ -7,7 +7,7 @@ source: mcp
 
 
 # px_pull
-Clone or pull a repository from a remote
+Clone or pull PX manifests from a remote (representation files stay remote)
 
 
 ## Parameters

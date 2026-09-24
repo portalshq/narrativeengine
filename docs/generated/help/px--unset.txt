@@ -1,14 +1,15 @@
-Query a subtree from a manifest
+Remove one or more properties or representations from an entity manifest
 
-Usage: px query [OPTIONS] <URI> <PATH>
+Usage: px unset [OPTIONS] <URI> <KEYS>...
 
 Arguments:
-  <URI>   PX URI
-  <PATH>  Dot-notation path. e.g., "appearances.audienceVotes"
+  <URI>      PX URI
+  <KEYS>...  Keys to remove. `representations.<key>` removes a representation
 
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
-  -f, --format <FORMAT>      Output format: yaml, json [env: PX_OUTPUT=] [default: json]
+  -m, --message <MESSAGE>    Commit message
+  -a, --author <AUTHOR>      Author identifier [default: px]
   -v, --verbose              Enable verbose debug logging
       --remote               Resolve repository reads through the configured Lore server (the default)
       --local                Resolve repository reads from an explicitly checked-out local working tree

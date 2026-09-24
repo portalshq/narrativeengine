@@ -183,5 +183,11 @@ Options:
       --token-env <TOKEN_ENV>
           Environment variable containing a repository-scoped bearer token
 
+      --download[=<OUTPUT>]
+          Download the representation after creating its presigned URL. Optionally set its destination
+
+      --output <OUTPUT>
+          Destination for --download. Defaults to the entity asset directory
+
   -h, --help
           Print help (see a summary with '-h')

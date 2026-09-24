@@ -1,6 +1,9 @@
-Show system status
+Show system status, or working-tree status for one repository
 
-Usage: px status [OPTIONS]
+Usage: px status [OPTIONS] [REPOSITORY]
+
+Arguments:
+  [REPOSITORY]  Repository name
 
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]

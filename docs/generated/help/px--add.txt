@@ -10,9 +10,10 @@ Arguments:
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]
       --format <FORMAT>      Asset format. e.g., "png", "glb"
-  -m, --message <MESSAGE>    Commit message [default: "add representation"]
+      --replace              Replace an existing representation only when its content differs
   -v, --verbose              Enable verbose debug logging
-  -a, --author <AUTHOR>      Author identifier [default: px]
+  -m, --message <MESSAGE>    Commit message
       --remote               Resolve repository reads through the configured Lore server (the default)
+  -a, --author <AUTHOR>      Author identifier [default: px]
       --local                Resolve repository reads from an explicitly checked-out local working tree
   -h, --help                 Print help

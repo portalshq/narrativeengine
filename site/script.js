@@ -35,3 +35,18 @@
     });
   });
 })();
+
+// Smooth scroll for same-page anchors (e.g. #how-it-works, #install).
+(function () {
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if (!a) return;
+    var id = a.getAttribute('href');
+    if (id.length < 2) return;
+    var target = document.getElementById(id.slice(1));
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    history.replaceState(null, '', id);
+  });
+})();

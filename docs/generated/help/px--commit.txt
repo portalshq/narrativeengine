@@ -1,9 +1,9 @@
-Commit changes to a repository repository
+Commit all repository changes, or only one entity when given its URI
 
-Usage: px commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
+Usage: px commit [OPTIONS] --message <MESSAGE> <TARGET>
 
 Arguments:
-  <REPOSITORY>  Repository name
+  <TARGET>  Repository name or PX entity URI
 
 Options:
   -d, --base-dir <BASE_DIR>  Base directory for repository repositories. Defaults to $PX_DIR, or ~/.px if unset [env: PX_DIR=]

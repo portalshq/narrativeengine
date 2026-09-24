@@ -208,7 +208,7 @@ Do not use commit `parent` fields as validation truth unless the current PX/Lore
 
 Some PX tools auto-commit (`px_add`, `px_set`). Do not call `px_commit` afterward unless you intentionally made additional uncommitted changes.
 
-Note: `px_add` and `px_set` auto-commit to the local working tree only, not to the remote server. The `px_add` command writes to the local working tree. `px_resolve` reads from the configured server by default. Without pushing, the server doesn't see your commits. This is just the normal distributed version control workflow where local changes need to be pushed to the server to become visible to other clients (including the `px_resolve` in the default remote mode). To resolve local files, use `px resolve --local <uri>` or set `PX_RESOLVE_SOURCE=local` as an environment variable.
+Note: `px_add`, `px_set`, `px_create`, and `px_unset` stage, commit, and push automatically. `px_resolve` reads the configured server by default, so successful mutations are immediately visible to other clients. If a push fails, the commit remains local and PX reports the recovery command. Use `px resolve --local <uri>` only to inspect uncommitted filesystem changes.
 
 ## Character Creation and Character Sheets
 
@@ -350,5 +350,4 @@ Switch to a branch
 |---|---|---|---|---|
 | name | string | Yes |  | Branch name to switch to |
 | repository | string | Yes |  | Repository name |
-
 

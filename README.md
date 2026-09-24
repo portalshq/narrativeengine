@@ -168,8 +168,8 @@ px resolve px://toystory/character/woody
 px resolve px://toystory/character/woody#properties.toy_type
 # → human
 
-# Query a subtree
-px query px://toystory/character/woody properties
+# Resolve a subtree
+px resolve px://toystory/character/woody properties
 ```
 
 ### Version Control
@@ -481,31 +481,30 @@ The `px` command-line interface (v0.8.25) provides tools for creating, resolving
 | [\`px add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
 | [\`px auth\`](docs/generated/commands/auth.md) | Manage secure authentication for the configured Lore provider |
 | [\`px branch\`](docs/generated/commands/branch.md) | Create or list branches |
-| [\`px commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
-| [\`px completions\`](docs/generated/commands/completions.md) | Generate shell completions for \`px\` |
+| [\`px commit\`](docs/generated/commands/commit.md) | Commit all repository changes, or only one entity when given its URI |
 | [\`px configure\`](docs/generated/commands/configure.md) | Configure version-control backend |
 | [\`px content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
 | [\`px create\`](docs/generated/commands/create.md) | Create a new entity manifest |
-| [\`px diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
+| [\`px diff\`](docs/generated/commands/diff.md) | Show a manifest diff for an entity URI |
 | [\`px doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
 | [\`px head\`](docs/generated/commands/head.md) | Show the current HEAD commit hash |
-| [\`px history\`](docs/generated/commands/history.md) | View commit history for an entity |
+| [\`px history\`](docs/generated/commands/history.md) | View commit history for an entity or repository file |
 | [\`px init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
 | [\`px install\`](docs/generated/commands/install.md) | Install required dependencies |
 | [\`px list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
 | [\`px merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
 | [\`px presign\`](docs/generated/commands/presign.md) | Create a time-limited public URL for a committed representation |
-| [\`px pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
+| [\`px pull\`](docs/generated/commands/pull.md) | Clone or pull PX manifests from a remote (representation files stay remote) |
 | [\`px push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
-| [\`px query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
 | [\`px remote\`](docs/generated/commands/remote.md) | Manage remotes on a repository |
 | [\`px resolve\`](docs/generated/commands/resolve.md) | Resolve a PX URI to its manifest or a subtree |
 | [\`px revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
 | [\`px schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
-| [\`px set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
-| [\`px status\`](docs/generated/commands/status.md) | Show system status |
+| [\`px set\`](docs/generated/commands/set.md) | Set one or more properties on an entity manifest |
+| [\`px status\`](docs/generated/commands/status.md) | Show system status, or working-tree status for one repository |
 | [\`px switch\`](docs/generated/commands/switch.md) | Switch to a branch |
-| [\`px sync\`](docs/generated/commands/sync.md) | Sync with remote |
+| [\`px sync\`](docs/generated/commands/sync.md) | Fetch remote manifests and push local commits |
+| [\`px unset\`](docs/generated/commands/unset.md) | Remove one or more properties or representations from an entity manifest |
 | [\`px validate\`](docs/generated/commands/validate.md) | Validate a manifest against the PX schema |
 
 
@@ -630,31 +629,30 @@ Complete reference for all `px` CLI commands.
 | [\`px add\`](docs/generated/commands/add.md) | Add a file representation to an entity manifest |
 | [\`px auth\`](docs/generated/commands/auth.md) | Manage secure authentication for the configured Lore provider |
 | [\`px branch\`](docs/generated/commands/branch.md) | Create or list branches |
-| [\`px commit\`](docs/generated/commands/commit.md) | Commit changes to a repository repository |
-| [\`px completions\`](docs/generated/commands/completions.md) | Generate shell completions for \`px\` |
+| [\`px commit\`](docs/generated/commands/commit.md) | Commit all repository changes, or only one entity when given its URI |
 | [\`px configure\`](docs/generated/commands/configure.md) | Configure version-control backend |
 | [\`px content-hash\`](docs/generated/commands/content-hash.md) | Compute the BLAKE3 content hash of a file |
 | [\`px create\`](docs/generated/commands/create.md) | Create a new entity manifest |
-| [\`px diff\`](docs/generated/commands/diff.md) | Show diff between two manifest files or versions |
+| [\`px diff\`](docs/generated/commands/diff.md) | Show a manifest diff for an entity URI |
 | [\`px doctor\`](docs/generated/commands/doctor.md) | Run diagnostics and repair |
 | [\`px head\`](docs/generated/commands/head.md) | Show the current HEAD commit hash |
-| [\`px history\`](docs/generated/commands/history.md) | View commit history for an entity |
+| [\`px history\`](docs/generated/commands/history.md) | View commit history for an entity or repository file |
 | [\`px init\`](docs/generated/commands/init.md) | Initialize a repository repository and/or configure the backend provider |
 | [\`px install\`](docs/generated/commands/install.md) | Install required dependencies |
 | [\`px list\`](docs/generated/commands/list.md) | List repositories or entities within a repository |
 | [\`px merge\`](docs/generated/commands/merge.md) | Three-way merge of JSON/YAML values |
 | [\`px presign\`](docs/generated/commands/presign.md) | Create a time-limited public URL for a committed representation |
-| [\`px pull\`](docs/generated/commands/pull.md) | Clone or pull a repository from a remote |
+| [\`px pull\`](docs/generated/commands/pull.md) | Clone or pull PX manifests from a remote (representation files stay remote) |
 | [\`px push\`](docs/generated/commands/push.md) | Push the current branch to its configured upstream remote |
-| [\`px query\`](docs/generated/commands/query.md) | Query a subtree from a manifest |
 | [\`px remote\`](docs/generated/commands/remote.md) | Manage remotes on a repository |
 | [\`px resolve\`](docs/generated/commands/resolve.md) | Resolve a PX URI to its manifest or a subtree |
 | [\`px revert\`](docs/generated/commands/revert.md) | Revert a commit by hash (undoes all changes in that commit) |
 | [\`px schema\`](docs/generated/commands/schema.md) | Print a JSON Schema for manifest or commit types |
-| [\`px set\`](docs/generated/commands/set.md) | Set a property on an entity manifest |
-| [\`px status\`](docs/generated/commands/status.md) | Show system status |
+| [\`px set\`](docs/generated/commands/set.md) | Set one or more properties on an entity manifest |
+| [\`px status\`](docs/generated/commands/status.md) | Show system status, or working-tree status for one repository |
 | [\`px switch\`](docs/generated/commands/switch.md) | Switch to a branch |
-| [\`px sync\`](docs/generated/commands/sync.md) | Sync with remote |
+| [\`px sync\`](docs/generated/commands/sync.md) | Fetch remote manifests and push local commits |
+| [\`px unset\`](docs/generated/commands/unset.md) | Remove one or more properties or representations from an entity manifest |
 | [\`px validate\`](docs/generated/commands/validate.md) | Validate a manifest against the PX schema |
 
 

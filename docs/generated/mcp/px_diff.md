@@ -7,14 +7,17 @@ source: mcp
 
 
 # px_diff
-Show diff between two manifest files or versions
+Show a manifest diff for an entity URI
 
 
 ## Parameters
 
 | Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| base\_file | string | Yes |  | Base (left) manifest file |
-| candidate\_file | string | Yes |  | Candidate (right) manifest file |
+| base\_branch | string | No |  | Base branch |
+| base\_commit | string | No |  | Base commit |
+| candidate\_branch | string | No |  | Candidate branch |
+| candidate\_commit | string | No |  | Candidate commit |
 | format | string | No | yaml | Output format: json, yaml |
+| uri | string | Yes |  | PX URI. The px:// prefix is optional |
 

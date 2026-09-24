@@ -7,7 +7,7 @@ source: mcp
 
 
 # px_sync
-Sync with remote
+Fetch remote manifests and push local commits
 
 
 ## Parameters

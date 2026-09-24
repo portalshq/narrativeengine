@@ -20,7 +20,7 @@ px branch <REPOSITORY> [NAME]
 
 | Name | Description | Required |
 |---|---|---|
-| name | Branch name to create. Omit to list all branches | No |
+| name | Branch name to create. Omit to list local branches | No |
 | repository | Repository name | Yes |
 
 

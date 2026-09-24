@@ -7,7 +7,7 @@ source: mcp
 
 
 # px_history
-View commit history for an entity
+View commit history for an entity or repository file
 
 
 ## Parameters
@@ -15,5 +15,5 @@ View commit history for an entity
 | Name | Type | Required | Default | Description |
 |---|---|---|---|---|
 | limit | integer | No | 20 | Maximum number of commits to show |
-| uri | string | Yes |  | PX URI |
+| uri | string | Yes |  | PX URI or repository-relative entity/file target |
 

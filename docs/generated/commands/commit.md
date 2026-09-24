@@ -7,12 +7,12 @@ source: clap
 
 
 # px commit
-Commit changes to a repository repository
+Commit all repository changes, or only one entity when given its URI
 
 
 ## Synopsis
 ```bash
-px commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
+px commit [OPTIONS] --message <MESSAGE> <TARGET>
 ```
 
 
@@ -20,7 +20,7 @@ px commit [OPTIONS] --message <MESSAGE> <REPOSITORY>
 
 | Name | Description | Required |
 |---|---|---|
-| repository | Repository name | Yes |
+| target | Repository name or PX entity URI | Yes |
 
 
 ## Options

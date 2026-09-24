@@ -6,30 +6,29 @@ Commands:
   auth          Manage secure authentication for the configured Lore provider
   install       Install required dependencies
   init          Initialize a repository repository and/or configure the backend provider
-  configure     Configure version-control backend (unified: replaces `px choose` + `px backend`)
-  completions   Generate shell completions for `px`
+  configure     Configure version-control backend
   doctor        Run diagnostics and repair
-  status        Show system status
-  sync          Sync with remote
+  status        Show system status, or working-tree status for one repository
+  sync          Fetch remote manifests and push local commits
   create        Create a new entity manifest
   resolve       Resolve a PX URI to its manifest or a subtree
   presign       Create a time-limited public URL for a committed representation
-  query         Query a subtree from a manifest
-  commit        Commit changes to a repository repository
-  history       View commit history for an entity
+  commit        Commit all repository changes, or only one entity when given its URI
+  history       View commit history for an entity or repository file
   list          List repositories or entities within a repository
   branch        Create or list branches
-  set           Set a property on an entity manifest
+  set           Set one or more properties on an entity manifest
+  unset         Remove one or more properties or representations from an entity manifest
   add           Add a file representation to an entity manifest
   revert        Revert a commit by hash (undoes all changes in that commit)
-  pull          Clone or pull a repository from a remote
+  pull          Clone or pull PX manifests from a remote (representation files stay remote)
   push          Push the current branch to its configured upstream remote
   remote        Manage remotes on a repository
   switch        Switch to a branch
   head          Show the current HEAD commit hash
   validate      Validate a manifest against the PX schema
   schema        Print a JSON Schema for manifest or commit types
-  diff          Show diff between two manifest files or versions
+  diff          Show a manifest diff for an entity URI
   merge         Three-way merge of JSON/YAML values
   content-hash  Compute the BLAKE3 content hash of a file
   help          Print this message or the help of the given subcommand(s)
