@@ -180,6 +180,18 @@ pub trait VcsBackend: Send + Sync {
     /// Stage all files and create a commit.
     fn commit(&self, path: &Path, message: &str, author: &str) -> Result<String, PxError>;
 
+    /// Stage only the supplied repository-relative paths and create a commit.
+    /// Backends without path staging retain the whole-repository behavior.
+    fn commit_paths(
+        &self,
+        path: &Path,
+        _paths: &[String],
+        message: &str,
+        author: &str,
+    ) -> Result<String, PxError> {
+        self.commit(path, message, author)
+    }
+
     /// Read a file's content at a specific ref (branch, tag, or commit hash).
     /// If `reference` is None, reads from the current working tree.
     fn read_file_at_ref(

@@ -542,15 +542,11 @@ impl LoreGrpcClient {
                 &path,
             ))
             .await
-            .map_err(|status| map_grpc_status("RevisionTree", status))?
+            .map_err(map_revision_tree_status)?
             .into_inner();
         let mut signature = Vec::new();
         let mut address = None;
-        while let Some(item) = stream
-            .message()
-            .await
-            .map_err(|status| map_grpc_status("RevisionTree", status))?
-        {
+        while let Some(item) = stream.message().await.map_err(map_revision_tree_status)? {
             match item.payload {
                 Some(
                     proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Header(
@@ -669,15 +665,11 @@ impl LoreGrpcClient {
                 &path,
             ))
             .await
-            .map_err(|status| map_grpc_status("RevisionTree", status))?
+            .map_err(map_revision_tree_status)?
             .into_inner();
         let mut signature = Vec::new();
         let mut address = None;
-        while let Some(item) = stream
-            .message()
-            .await
-            .map_err(|status| map_grpc_status("RevisionTree", status))?
-        {
+        while let Some(item) = stream.message().await.map_err(map_revision_tree_status)? {
             match item.payload {
                 Some(
                     proto_gen::lore::thin_client::v1::revision_tree_response::Payload::Header(
@@ -1047,5 +1039,20 @@ fn map_grpc_status(context: &str, status: tonic::Status) -> PxError {
             PxError::PermissionDenied(format!("{context}: {message}"))
         }
         _ => PxError::GrpcError(format!("{context} ({code}): {message}")),
+    }
+}
+
+/// A file lookup against a revision before the file was created is reported by
+/// Lore as an invalid RevisionTree request because its parent directory is
+/// absent. At the PX layer this is an ordinary missing file, which callers
+/// such as history must be able to skip.
+fn map_revision_tree_status(status: tonic::Status) -> PxError {
+    if status
+        .message()
+        .contains("A node in the tree could not be found")
+    {
+        PxError::ManifestNotFound(status.message().to_string())
+    } else {
+        map_grpc_status("RevisionTree", status)
     }
 }

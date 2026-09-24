@@ -18,7 +18,10 @@
 //!     └── pizza-planet-scene.yaml
 //! ```
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use tracing::{debug, info};
 
@@ -376,10 +379,43 @@ impl Repository {
         name: &str,
         author: &str,
     ) -> Result<(Manifest, String), PxError> {
+        self.create_entity_with_properties(entity_type, entity_id, name, author, BTreeMap::new())
+    }
+
+    /// Create an entity with its initial properties in the same commit.
+    pub fn create_entity_with_properties(
+        &self,
+        entity_type: &EntityType,
+        entity_id: &str,
+        name: &str,
+        author: &str,
+        properties: BTreeMap<String, serde_yaml::Value>,
+    ) -> Result<(Manifest, String), PxError> {
+        self.create_entity_with_properties_and_message(
+            entity_type,
+            entity_id,
+            name,
+            author,
+            properties,
+            None,
+        )
+    }
+
+    /// Create an entity with initial properties and an optional commit message.
+    pub fn create_entity_with_properties_and_message(
+        &self,
+        entity_type: &EntityType,
+        entity_id: &str,
+        name: &str,
+        author: &str,
+        properties: BTreeMap<String, serde_yaml::Value>,
+        message: Option<&str>,
+    ) -> Result<(Manifest, String), PxError> {
         // Ensure entity type directory exists
         self.ensure_entity_type_dir(entity_type)?;
 
         let mut manifest = Manifest::new(&self.repository, entity_type.clone(), entity_id, name);
+        manifest.properties = properties;
 
         // Check if entity already exists (idempotency guard)
         let path = self.manifest_path(entity_type, entity_id);
@@ -402,8 +438,17 @@ impl Repository {
         // above is the only durable change (unversioned mode).
         let commit_hash = match self.vcs.as_ref() {
             Some(vcs) => {
-                let commit_message = format!("Create {entity_type} '{name}' ({entity_id})");
-                vcs.commit(&self.root, &commit_message, author)?
+                let commit_message = message
+                    .map(ToOwned::to_owned)
+                    .unwrap_or_else(|| format!("create {entity_type} {entity_id}"));
+                let hash = vcs.commit(&self.root, &commit_message, author)?;
+                vcs.push(&self.root, None, None).map_err(|error| {
+                    PxError::VcsError(format!(
+                        "push failed after local commit {hash}: {error}; run px push {} when connectivity is restored",
+                        self.repository
+                    ))
+                })?;
+                hash
             }
             None => UNVERSIONED_COMMIT.to_string(),
         };
@@ -442,10 +487,17 @@ impl Repository {
         // configured (unversioned mode), there is no history to record and the
         // filesystem write above is the only durable change.
         let (parent, vcs_hash) = match self.vcs.as_ref() {
-            Some(vcs) => (
-                Some(vcs.head_hash(&self.root)?),
-                vcs.commit(&self.root, message, author)?,
-            ),
+            Some(vcs) => {
+                let parent = Some(vcs.head_hash(&self.root)?);
+                let hash = vcs.commit(&self.root, message, author)?;
+                vcs.push(&self.root, None, None).map_err(|error| {
+                    PxError::VcsError(format!(
+                        "push failed after local commit {hash}: {error}; run px push {} when connectivity is restored",
+                        self.repository
+                    ))
+                })?;
+                (parent, hash)
+            }
             None => (None, UNVERSIONED_COMMIT.to_string()),
         };
 
@@ -471,9 +523,17 @@ impl Repository {
         limit: usize,
     ) -> Result<Vec<crate::vcs::CommitInfo>, PxError> {
         let uri = PxUri::new(&self.repository, entity_type.clone(), entity_id);
-        let file_path = uri.manifest_path();
+        self.history_path(&uri.manifest_path(), limit)
+    }
+
+    /// Get commit history for any repository-relative file.
+    pub fn history_path(
+        &self,
+        file_path: &str,
+        limit: usize,
+    ) -> Result<Vec<crate::vcs::CommitInfo>, PxError> {
         self.require_vcs("view history")?
-            .log(&self.root, Some(&file_path), limit)
+            .log(&self.root, Some(file_path), limit)
     }
 
     /// List all entity IDs of a given type in the repository.

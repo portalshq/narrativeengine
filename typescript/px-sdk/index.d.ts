@@ -32,7 +32,9 @@ export declare function commitNew(parent: string | undefined | null, author: str
 export declare function commitVerifyId(jsonStr: string): boolean
 export declare function repoInit(basePath: string, repository: string): string
 export declare function repoOpen(basePath: string, repository: string): string
+export declare function repoStatus(basePath: string, repository: string): string
 export declare function repoCreateEntity(basePath: string, repository: string, entityType: string, entityId: string, name: string, author: string): string
+export declare function repoCreateEntityWithProperties(basePath: string, repository: string, entityType: string, entityId: string, name: string, author: string, propertiesJson: string): string
 export declare function repoReadManifest(basePath: string, repository: string, entityType: string, entityId: string): string
 export declare function repoReadManifestAtRef(basePath: string, repository: string, entityType: string, entityId: string, reference: string): string
 export declare function repoWriteManifest(basePath: string, repository: string, manifestJson: string): string
@@ -52,7 +54,6 @@ export declare function repoPush(basePath: string, repository: string, remote?: 
 export declare function repoPull(basePath: string, repository: string, remote?: string | undefined | null, branch?: string | undefined | null): string
 export declare function resolve(uriStr: string, repoBasePath: string): string
 export declare function resolveWithOptions(uriStr: string, repoBasePath: string, branch?: string | undefined | null, commit?: string | undefined | null, path?: string | undefined | null, source?: string | undefined | null): string
-export declare function resolveQuery(uriStr: string, repoBasePath: string, path: string): string
 export declare function presignRepresentation(uri: string, representation: string, repoBasePath: string, branch?: string | undefined | null, commit?: string | undefined | null, ttlSeconds?: number | undefined | null, httpUrl?: string | undefined | null, bearerToken?: string | undefined | null): Promise<string>
 export declare function listRepositories(repoBasePath: string): string
 export declare function manifestSchema(): string

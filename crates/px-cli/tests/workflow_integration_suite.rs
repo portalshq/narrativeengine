@@ -13,7 +13,7 @@
 //!     `grpc://` is used for test CLI operations as a reliable transport.
 //!
 //! Run with:
-//!   cargo test -p portalshq-px-cli --test workflow_integration_suite --features lore-e2e -- --test-threads=1
+//!   cargo test -p portalshq-px-cli --test workflow_integration_suite --features workflow-e2e -- --test-threads=1
 
 #[cfg(feature = "workflow-e2e")]
 use assert_cmd::Command;

@@ -136,8 +136,8 @@ px resolve px://toystory/character/woody
 px resolve px://toystory/character/woody#properties.toy_type
 # → human
 
-# Query a subtree
-px query px://toystory/character/woody properties
+# Resolve a subtree
+px resolve px://toystory/character/woody properties
 ```
 
 ### Version Control

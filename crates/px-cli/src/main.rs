@@ -31,7 +31,7 @@ use px_core::{
     manifest::Representation,
     provider::{ProviderFactory, ProviderManager, ProviderType},
     repository::Repository,
-    resolver::{PresignOptions, ResolveOptions, ResolveResult, Resolver},
+    resolver::{PresignOptions, ResolveOptions, ResolveResult, ResolveSource, Resolver},
     server::{LoreInstaller, PxDoctor, ServerManager},
     types::EntityType,
     uri::PxUri,
@@ -59,6 +59,19 @@ fn expand_path(path: &Path) -> PathBuf {
         }
     }
     path.to_path_buf()
+}
+
+fn command_label(command: &Commands) -> String {
+    let debug = format!("{command:?}");
+    let variant = debug.split([' ', '{']).next().unwrap_or("px");
+    let mut label = String::new();
+    for (index, character) in variant.chars().enumerate() {
+        if character.is_uppercase() && index != 0 {
+            label.push('-');
+        }
+        label.extend(character.to_lowercase());
+    }
+    label
 }
 
 /// Return `true` if `s` looks like a URL rather than a repository name.
@@ -112,8 +125,14 @@ fn emit(msg: impl AsRef<str>) {
     }
 }
 
+/// Report a completed mutation without contaminating structured stdout.
+fn emit_action(msg: impl AsRef<str>) {
+    eprintln!("{}", msg.as_ref());
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let command = command_label(&cli.command);
     let is_piped = !std::io::stdout().is_terminal();
 
     // Initialize tracing — silent by default, verbose with -v
@@ -169,7 +188,6 @@ fn main() -> Result<()> {
         ),
         Commands::Install { target } => cmd_install(&base_dir, &target),
         Commands::Configure { args } => cmd_configure(&base_dir, args),
-        Commands::Completions { shell } => cmd_completions(shell),
         Commands::Choose { cmd } => {
             eprintln!("warning: `px choose` is deprecated — use `px configure`");
             cmd_choose(&base_dir, cmd)
@@ -179,7 +197,7 @@ fn main() -> Result<()> {
             cmd_backend(&base_dir, cmd)
         }
         Commands::Doctor { repair } => cmd_doctor(&base_dir, repair),
-        Commands::Status => cmd_status(&base_dir),
+        Commands::Status { repository } => cmd_status(&base_dir, repository.as_deref()),
         Commands::Sync { repository } => cmd_sync(&base_dir, &repository),
         Commands::Create {
             entity_type,
@@ -187,6 +205,8 @@ fn main() -> Result<()> {
             repository,
             name,
             author,
+            properties,
+            message,
         } => cmd_create(
             &base_dir,
             &repository,
@@ -194,9 +214,12 @@ fn main() -> Result<()> {
             &entity_id,
             &name,
             &author,
+            &properties,
+            message.as_deref(),
         ),
         Commands::Resolve {
             uri,
+            path,
             branch,
             commit,
             //     tag,
@@ -206,6 +229,7 @@ fn main() -> Result<()> {
         } => cmd_resolve(
             &base_dir,
             &uri,
+            path,
             branch,
             commit,
             &format,
@@ -220,6 +244,8 @@ fn main() -> Result<()> {
             ttl_seconds,
             http_url,
             token_env,
+            download,
+            output,
         } => cmd_presign(
             &base_dir,
             &uri,
@@ -229,13 +255,15 @@ fn main() -> Result<()> {
             ttl_seconds,
             http_url,
             token_env,
+            download,
+            output,
         ),
         Commands::Query { uri, path, format } => cmd_query(&base_dir, &uri, &path, &format),
         Commands::Commit {
-            repository,
+            target,
             message,
             author,
-        } => cmd_commit(&base_dir, &repository, &message, &author),
+        } => cmd_commit(&base_dir, &target, &message, &author),
         Commands::History { uri, limit } => cmd_history(&base_dir, &uri, limit),
         Commands::List {
             repository,
@@ -246,19 +274,34 @@ fn main() -> Result<()> {
         }
         Commands::Set {
             uri,
-            key,
-            value,
+            values,
             message,
             author,
-        } => cmd_set(&base_dir, &uri, &key, &value, &message, &author),
+        } => cmd_set(&base_dir, &uri, &values, message.as_deref(), &author),
+        Commands::Unset {
+            uri,
+            keys,
+            message,
+            author,
+        } => cmd_unset(&base_dir, &uri, &keys, message.as_deref(), &author),
         Commands::Add {
             uri,
             key,
             file,
             format,
+            replace,
             message,
             author,
-        } => cmd_add_repr(&base_dir, &uri, &key, &file, &format, &message, &author),
+        } => cmd_add_repr(
+            &base_dir,
+            &uri,
+            &key,
+            &file,
+            &format,
+            replace,
+            message.as_deref(),
+            &author,
+        ),
         Commands::Revert {
             repository,
             commit,
@@ -280,10 +323,21 @@ fn main() -> Result<()> {
         }
         Commands::Schema { name, format } => cmd_schema(&name, &format),
         Commands::Diff {
-            base_file,
-            candidate_file,
+            uri,
+            base_branch,
+            candidate_branch,
+            base_commit,
+            candidate_commit,
             format,
-        } => cmd_diff(&base_file, &candidate_file, &format),
+        } => cmd_diff(
+            &base_dir,
+            &uri,
+            base_branch,
+            candidate_branch,
+            base_commit,
+            candidate_commit,
+            &format,
+        ),
         Commands::Merge {
             base,
             current,
@@ -305,7 +359,7 @@ fn main() -> Result<()> {
             if cli.verbose {
                 eprintln!("{:?}", err);
             } else {
-                eprintln!("Error: {err:#}");
+                eprintln!("✗ {command} failed: {err:#}");
             }
         }
         std::process::exit(1);
@@ -986,14 +1040,6 @@ fn cmd_configure_status(base_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn cmd_completions(shell: clap_complete::Shell) -> Result<()> {
-    use clap::CommandFactory;
-    let mut cmd = Cli::command();
-    let bin_name = "px";
-    clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
-    Ok(())
-}
-
 /// Offer to create an initial commit for repositories that exist on the
 /// filesystem but were created before a version-control backend was configured.
 fn bootstrap_repositories(base_dir: &Path, assume_yes: bool) -> Result<()> {
@@ -1096,7 +1142,7 @@ fn cmd_doctor(base_dir: &Path, repair: bool) -> Result<()> {
                     emit("Provider: local");
                 }
                 ProviderType::Remote | ProviderType::PortalsCloud => {
-                    emit(format!("Provider: {} (remote-aware checks)", pt.as_str()));
+                    emit(format!("Provider: {}", pt.as_str()));
                 }
             }
         } else {
@@ -1183,11 +1229,162 @@ fn cmd_publish(base_dir: &Path, repository: &str) -> Result<()> {
     let repo = open_repo(base_dir, repository)?;
     repo.push(Some("origin"), None)
         .context("failed to publish to remote")?;
-    emit(format!("✓ Published '{repository}'."));
+    emit_action(format!("✓ Published '{repository}'."));
     Ok(())
 }
 
-fn cmd_status(base_dir: &Path) -> Result<()> {
+#[derive(Default, serde::Serialize)]
+struct RepositoryStatusReport {
+    new: Vec<String>,
+    modified: Vec<String>,
+    deleted: Vec<String>,
+    representation_only: Vec<String>,
+    pending_outbound_commits: bool,
+    #[serde(skip)]
+    current_revision: Option<String>,
+}
+
+fn status_flag(data: &serde_json::Value, name: &str) -> bool {
+    data.get(name).is_some_and(|value| match value {
+        serde_json::Value::Bool(value) => *value,
+        serde_json::Value::Number(value) => value.as_u64().unwrap_or_default() > 0,
+        serde_json::Value::String(value) => value == "true" || value == "1",
+        _ => false,
+    })
+}
+
+fn status_path(data: &serde_json::Value) -> Option<String> {
+    ["path", "targetPath", "file", "name"]
+        .iter()
+        .find_map(|key| data.get(key).and_then(serde_json::Value::as_str))
+        .map(ToOwned::to_owned)
+}
+
+fn parse_repository_status(output: &str) -> RepositoryStatusReport {
+    let mut report = RepositoryStatusReport::default();
+    for line in output.lines() {
+        let Ok(event) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let Some(tag) = event.get("tagName").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let data = event.get("data").unwrap_or(&serde_json::Value::Null);
+        if tag == "repositoryStatusRevision" {
+            report.pending_outbound_commits = status_flag(data, "isLocalAhead");
+            report.current_revision = data
+                .get("revision")
+                .and_then(serde_json::Value::as_str)
+                .map(ToOwned::to_owned);
+        } else if tag == "repositoryStatusFile" {
+            let Some(path) = status_path(data) else {
+                continue;
+            };
+            if status_flag(data, "flagAdded") {
+                report.new.push(path);
+            } else if status_flag(data, "flagDeleted") {
+                report.deleted.push(path);
+            } else if status_flag(data, "flagModified") {
+                report.modified.push(path);
+            }
+        }
+    }
+    report
+}
+
+fn is_representation_only_change(repo: &Repository, path: &str, revision: Option<&str>) -> bool {
+    let Some((entity_type, entity_id)) = path
+        .strip_suffix(".yaml")
+        .and_then(|path| path.split_once('/'))
+    else {
+        return false;
+    };
+    let Some(revision) = revision else {
+        return false;
+    };
+    let entity_type = EntityType::new(entity_type);
+    let Ok(current) = repo.read_manifest(&entity_type, entity_id) else {
+        return false;
+    };
+    let Ok(committed) = repo.read_manifest_at_ref(&entity_type, entity_id, revision) else {
+        return false;
+    };
+    let Ok(mut current) = serde_json::to_value(current) else {
+        return false;
+    };
+    let Ok(mut committed) = serde_json::to_value(committed) else {
+        return false;
+    };
+    let current_representations = current
+        .as_object_mut()
+        .and_then(|manifest| manifest.remove("representations"));
+    let committed_representations = committed
+        .as_object_mut()
+        .and_then(|manifest| manifest.remove("representations"));
+    current_representations != committed_representations && current == committed
+}
+
+#[cfg(test)]
+mod repository_status_tests {
+    use super::*;
+
+    #[test]
+    fn classifies_lore_status_events() {
+        let report = parse_repository_status(
+            r#"{"tagName":"repositoryStatusRevision","data":{"isLocalAhead":1}}
+{"tagName":"repositoryStatusFile","data":{"path":"character/woody.yaml","flagModified":true}}
+{"tagName":"repositoryStatusFile","data":{"path":"character/buzz.yaml","flagAdded":true}}
+{"tagName":"repositoryStatusFile","data":{"path":"character/bo.yaml","flagDeleted":true}}"#,
+        );
+        assert_eq!(report.new, ["character/buzz.yaml"]);
+        assert_eq!(report.modified, ["character/woody.yaml"]);
+        assert_eq!(report.deleted, ["character/bo.yaml"]);
+        assert!(report.pending_outbound_commits);
+    }
+}
+
+fn cmd_status(base_dir: &Path, repository: Option<&str>) -> Result<()> {
+    if let Some(repository) = repository {
+        let repo = open_repo(base_dir, repository)?;
+        let output = px_core::vcs_lore::LoreProcessRunner::run(
+            ["--json", "status", "--scan", "--non-interactive"],
+            Some(&repo.root),
+        )
+        .context("failed to scan repository status")?;
+        let mut report = parse_repository_status(&output);
+        let revision = report.current_revision.clone();
+        let representation_only: Vec<_> = report
+            .modified
+            .iter()
+            .filter(|path| is_representation_only_change(&repo, path, revision.as_deref()))
+            .cloned()
+            .collect();
+        report
+            .modified
+            .retain(|path| !representation_only.contains(path));
+        report.representation_only = representation_only;
+        if std::io::stdout().is_terminal() {
+            for (label, paths) in [
+                ("New", &report.new),
+                ("Modified", &report.modified),
+                ("Deleted", &report.deleted),
+                ("Representation-only", &report.representation_only),
+            ] {
+                if !paths.is_empty() {
+                    println!("{label}:");
+                    for path in paths {
+                        println!("  {path}");
+                    }
+                }
+            }
+            if report.pending_outbound_commits {
+                println!("Pending outbound commits");
+            }
+        } else {
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        return Ok(());
+    }
     let mut provider_manager = ProviderManager::new(base_dir);
 
     if let Some(provider) = provider_manager.load_configured_provider()? {
@@ -1232,10 +1429,13 @@ fn cmd_status(base_dir: &Path) -> Result<()> {
 }
 
 fn cmd_sync(base_dir: &Path, repository: &str) -> Result<()> {
+    // Keep sync consistent with `px pull`: reconcile manifests only, then
+    // publish any local commits. Representation blobs stay on the server.
+    cmd_pull(base_dir, repository).context("failed to sync manifests from remote")?;
     let repo = open_repo(base_dir, repository)?;
-    repo.pull(None, None)
-        .context("failed to sync from remote")?;
-    emit(format!("✓ Synced '{repository}'."));
+    repo.push(None, None)
+        .context("failed to push local changes during sync")?;
+    emit_action(format!("✓ Synced '{repository}'."));
     Ok(())
 }
 
@@ -1245,6 +1445,7 @@ fn get_tokio_runtime() -> &'static tokio::runtime::Runtime {
     RT.get_or_init(|| tokio::runtime::Runtime::new().expect("failed to create tokio runtime"))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn cmd_create(
     base_dir: &Path,
     repository: &str,
@@ -1252,21 +1453,37 @@ fn cmd_create(
     entity_id: &str,
     name: &str,
     author: &str,
+    properties: &[(String, String)],
+    message: Option<&str>,
 ) -> Result<()> {
     let entity_type = EntityType::new(entity_type_str);
     let repo = open_repo(base_dir, repository)?;
-    let (manifest, hash) = repo
-        .create_entity(&entity_type, entity_id, name, author)
+    let properties = properties
+        .iter()
+        .map(|(key, value)| (key.clone(), yaml_from_json_or_string(value)))
+        .collect();
+    let (_manifest, hash) = repo
+        .create_entity_with_properties_and_message(
+            &entity_type,
+            entity_id,
+            name,
+            author,
+            properties,
+            message,
+        )
         .context("failed to create entity")?;
-    emit(format!("✓ Created {entity_type} '{name}'."));
-    emit(format!("  URI:    {}", manifest.id));
-    emit(format!("  Commit: {}", &hash[..hash.len().min(12)]));
+    emit_action(format!(
+        "✓ created {entity_type} {entity_id}  [{}]",
+        &hash[..hash.len().min(12)]
+    ));
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn cmd_resolve(
     base_dir: &Path,
     uri_str: &str,
+    path: Option<String>,
     branch: Option<String>,
     commit: Option<String>,
     format: &str,
@@ -1279,7 +1496,7 @@ fn cmd_resolve(
         source: None,
         branch,
         commit,
-        path: None,
+        path,
         recursive: Some(!wants_provenance),
         max_depth: None,
         provenance: Some(wants_provenance),
@@ -1320,6 +1537,8 @@ fn cmd_presign(
     ttl_seconds: Option<u64>,
     http_url: Option<String>,
     token_env: Option<String>,
+    download: Option<PathBuf>,
+    output: Option<PathBuf>,
 ) -> Result<()> {
     let bearer_token = token_env
         .as_deref()
@@ -1338,6 +1557,45 @@ fn cmd_presign(
     let result = get_tokio_runtime()
         .block_on(Resolver::new(base_dir).presign_representation(uri, representation, &options))
         .with_context(|| format!("failed to presign '{uri}' representation '{representation}'"))?;
+
+    if let Some(download_destination) = download {
+        let entity = parse_entity_uri(uri)?;
+        let manifest = match Resolver::new(base_dir).resolve(uri, &ResolveOptions::default())? {
+            ResolveResult::Full(manifest) => manifest,
+            _ => anyhow::bail!("representation download requires a full entity manifest"),
+        };
+        let asset_uri = manifest
+            .representations
+            .get(representation)
+            .and_then(|value| value.uri.as_deref())
+            .ok_or_else(|| anyhow::anyhow!("representation '{representation}' has no local URI"))?;
+        let destination = output
+            .or_else(|| {
+                (!download_destination.as_os_str().is_empty()).then_some(download_destination)
+            })
+            .unwrap_or_else(|| {
+                base_dir
+                    .join(&entity.repository)
+                    .join(entity.entity_type.directory_name())
+                    .join(&entity.entity_id)
+                    .join(asset_uri)
+            });
+        let present = destination.is_file()
+            && px_core::ContentHash::from_file(&destination)
+                .map(|hash| hash.as_str() == result.address.split('-').next().unwrap_or_default())
+                .unwrap_or(false);
+        if !present {
+            let bytes = get_tokio_runtime()
+                .block_on(async { reqwest::get(&result.url).await?.bytes().await })
+                .context("failed to download presigned representation")?;
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&destination, bytes)?;
+        }
+        println!("{}", destination.display());
+        return Ok(());
+    }
 
     if std::io::stdout().is_terminal() {
         println!("URL: {}", result.url);
@@ -1412,6 +1670,7 @@ mod presign_expiry_tests {
 }
 
 fn cmd_query(base_dir: &Path, uri_str: &str, path: &str, format: &str) -> Result<()> {
+    eprintln!("px query is deprecated; use px resolve <uri>#<path> or px resolve <uri> <path>");
     let resolver = Resolver::new(base_dir);
     let result = resolver
         .query(uri_str, path)
@@ -1428,23 +1687,186 @@ fn cmd_query(base_dir: &Path, uri_str: &str, path: &str, format: &str) -> Result
     Ok(())
 }
 
-fn cmd_commit(base_dir: &Path, repository: &str, message: &str, author: &str) -> Result<()> {
+fn cmd_commit(base_dir: &Path, target: &str, message: &str, author: &str) -> Result<()> {
+    let entity = target
+        .contains('/')
+        .then(|| parse_entity_uri(target))
+        .transpose()?;
+    let repository = entity
+        .as_ref()
+        .map(|uri| uri.repository.as_str())
+        .unwrap_or(target);
     let repo_path = base_dir.join(repository);
+    let repo = open_repo(base_dir, repository)?;
+    if let Some(uri) = &entity {
+        validate_manifest_for_commit(&repo, &uri.entity_type, &uri.entity_id)?;
+    } else {
+        for entity_type in repo.list_entity_types()? {
+            for entity_id in repo.list_entities(&entity_type)? {
+                validate_manifest_for_commit(&repo, &entity_type, &entity_id)?;
+            }
+        }
+    }
     let vcs = require_backend(base_dir, "commit changes")?;
-    let hash = px_core::vcs::VcsBackend::commit(&*vcs, &repo_path, message, author)
-        .context("failed to commit")?;
-    emit(format!("✓ Committed: {} ({})", message, &hash[..12]));
+    let hash = if let Some(uri) = entity {
+        px_core::vcs::VcsBackend::commit_paths(
+            &*vcs,
+            &repo_path,
+            &[
+                uri.manifest_path(),
+                format!("{}/{}", uri.entity_type, uri.entity_id),
+            ],
+            message,
+            author,
+        )
+    } else {
+        px_core::vcs::VcsBackend::commit(&*vcs, &repo_path, message, author)
+    }
+    .context("failed to commit")?;
+    emit_action(format!("✓ Committed: {} ({})", message, &hash[..12]));
     Ok(())
 }
 
-fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
-    let uri: PxUri = uri_str.parse().context("invalid URI")?;
-    let history = if std::env::var("PX_RESOLVE_SOURCE").ok().as_deref() == Some("local") {
-        open_repo(base_dir, &uri.repository)?.history(&uri.entity_type, &uri.entity_id, limit)
+fn validate_manifest_for_commit(
+    repo: &Repository,
+    entity_type: &EntityType,
+    entity_id: &str,
+) -> Result<()> {
+    let manifest = repo.read_manifest(entity_type, entity_id)?;
+    px_core::schema::validate_manifest(&manifest).map_err(|errors| {
+        anyhow::anyhow!(
+            "manifest validation error in {entity_type}/{entity_id}.yaml: {}",
+            errors.join("; ")
+        )
+    })
+}
+
+#[derive(Debug)]
+struct HistoryTarget {
+    uri: PxUri,
+    path: String,
+    fragment: Option<String>,
+}
+
+fn parse_history_target(input: &str) -> Result<HistoryTarget> {
+    let trimmed = input.trim();
+    let (without_fragment, fragment) = trimmed
+        .split_once('#')
+        .map_or((trimmed, None), |(path, fragment)| {
+            (path, Some(fragment.to_string()))
+        });
+    let has_scheme =
+        without_fragment.starts_with("px://") || without_fragment.starts_with("nap://");
+    if without_fragment.contains("://") && !has_scheme {
+        anyhow::bail!("invalid history target '{input}': unsupported URI scheme; expected px://")
+    }
+    let path = without_fragment
+        .strip_prefix("px://")
+        .or_else(|| without_fragment.strip_prefix("nap://"))
+        .unwrap_or(without_fragment);
+    let segments: Vec<&str> = path
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+
+    if segments.len() < 3 {
+        anyhow::bail!(
+            "invalid history target '{input}': expected repository/entity-type/entity or repository/entity-type/entity/asset"
+        )
+    }
+
+    let repository = segments[0];
+    let entity_type = segments[1];
+    let mut entity_id = segments[2].to_string();
+    if entity_id.ends_with(".yaml") {
+        entity_id.truncate(entity_id.len() - ".yaml".len());
+    }
+    if entity_id.is_empty() {
+        anyhow::bail!("invalid history target '{input}': entity ID cannot be empty")
+    }
+
+    let asset = if segments.len() > 3 {
+        Some(segments[3..].join("/"))
     } else {
-        Resolver::new(base_dir).remote_history(&uri, limit)
+        None
+    };
+    if let Some(asset) = &asset
+        && (asset.is_empty() || asset.split('/').any(|part| part == "." || part == ".."))
+    {
+        anyhow::bail!("invalid history target '{input}': asset path must be repository-relative")
+    }
+
+    let uri: PxUri = format!("px://{repository}/{entity_type}/{entity_id}")
+        .parse()
+        .context("invalid history URI")?;
+    let path = asset.as_ref().map_or_else(
+        || uri.manifest_path(),
+        |asset| {
+            format!(
+                "{}/{}/{}",
+                uri.entity_type.directory_name(),
+                uri.entity_id,
+                asset
+            )
+        },
+    );
+
+    if asset.is_some() && fragment.is_some() {
+        anyhow::bail!("history fragments only apply to manifest targets")
+    }
+
+    Ok(HistoryTarget {
+        uri,
+        path,
+        fragment,
+    })
+}
+
+fn cmd_history(base_dir: &Path, uri_str: &str, limit: usize) -> Result<()> {
+    let target = parse_history_target(uri_str)?;
+    let uri = target.uri;
+    let mut history = if std::env::var("PX_RESOLVE_SOURCE").ok().as_deref() == Some("local") {
+        open_repo(base_dir, &uri.repository)?.history_path(&target.path, limit)
+    } else {
+        Resolver::new(base_dir).remote_history_path(&uri, &target.path, limit)
     }
     .context("failed to get history")?;
+
+    if let Some(fragment) = target.fragment {
+        let filtered_uri = format!("{}#{fragment}", uri.identity());
+        let resolver = Resolver::new(base_dir);
+        history.retain(|entry| {
+            let current = resolver
+                .resolve(
+                    &filtered_uri,
+                    &ResolveOptions {
+                        commit: Some(entry.id.clone()),
+                        ..Default::default()
+                    },
+                )
+                .ok()
+                .and_then(|result| match result {
+                    ResolveResult::Subtree(value) => Some(value),
+                    _ => None,
+                });
+            let previous = entry.parent.as_ref().and_then(|parent| {
+                resolver
+                    .resolve(
+                        &filtered_uri,
+                        &ResolveOptions {
+                            commit: Some(parent.clone()),
+                            ..Default::default()
+                        },
+                    )
+                    .ok()
+                    .and_then(|result| match result {
+                        ResolveResult::Subtree(value) => Some(value),
+                        _ => None,
+                    })
+            });
+            current != previous
+        });
+    }
 
     if history.is_empty() {
         emit(format!("No history found for {uri_str}"));
@@ -1568,8 +1990,53 @@ fn cmd_list(base_dir: &Path, repository: Option<&str>, entity_type: Option<&str>
     Ok(())
 }
 
+#[cfg(test)]
+mod history_target_tests {
+    use super::{
+        parse_history_target, set_manifest_value, unset_manifest_value, yaml_from_json_or_string,
+    };
+    use px_core::{manifest::Manifest, types::EntityType};
+
+    #[test]
+    fn bare_entity_yaml_targets_the_manifest() {
+        let target = parse_history_target("anu/character/anu.yaml").unwrap();
+        assert_eq!(target.uri.to_string(), "px://anu/character/anu");
+        assert_eq!(target.path, "character/anu.yaml");
+    }
+
+    #[test]
+    fn asset_suffix_targets_a_repository_file() {
+        let target = parse_history_target("bears/character/papa/portrait.png").unwrap();
+        assert_eq!(target.uri.to_string(), "px://bears/character/papa");
+        assert_eq!(target.path, "character/papa/portrait.png");
+    }
+
+    #[test]
+    fn fragments_are_manifest_subtree_selectors() {
+        let target = parse_history_target("px://bears/character/papa#properties").unwrap();
+        assert_eq!(target.fragment.as_deref(), Some("properties"));
+    }
+
+    #[test]
+    fn set_and_unset_support_nested_manifest_paths() {
+        let mut manifest = Manifest::new("anu", EntityType::new("character"), "anu", "Anu");
+        set_manifest_value(
+            &mut manifest,
+            "references.homeworld",
+            yaml_from_json_or_string("px://anu/location/home"),
+        )
+        .unwrap();
+        assert_eq!(
+            manifest.references["homeworld"],
+            serde_yaml::Value::String("px://anu/location/home".to_string())
+        );
+        unset_manifest_value(&mut manifest, "references.homeworld").unwrap();
+        assert!(!manifest.references.contains_key("homeworld"));
+    }
+}
+
 fn cmd_branch(base_dir: &Path, repository: &str, name: Option<&str>) -> Result<()> {
-    if name.is_none() && std::env::var("PX_RESOLVE_SOURCE").ok().as_deref() != Some("local") {
+    if name.is_none() && std::env::var("PX_RESOLVE_SOURCE").ok().as_deref() == Some("remote") {
         let branches = Resolver::new(base_dir).list_remote_branches(repository)?;
         if !std::io::stdout().is_terminal() {
             println!("{}", serde_json::to_string_pretty(&branches)?);
@@ -1672,6 +2139,16 @@ fn clone_px_pull(remote_url: &str, target: &Path, required: Vec<String>) -> Resu
     Ok(())
 }
 
+fn repository_manifest_roots(base_dir: &Path, repository: &str) -> Result<Vec<String>> {
+    let mut roots = vec!["repository.yaml".to_string()];
+    roots.extend(
+        Resolver::new(base_dir)
+            .list_remote_manifest_paths(repository)
+            .context("failed to list remote PX manifests")?,
+    );
+    Ok(roots)
+}
+
 fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
     let entity = pull_entity_uri(url_or_name);
     if let Some(uri) = entity {
@@ -1688,7 +2165,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
             LoreBackend::sync_root_files(&target, &required)
                 .context("failed to synchronize requested entity manifests")?;
             validate_pulled_manifests(&target, &required)?;
-            emit(format!(
+            emit_action(format!(
                 "✓ Pulled '{}' into {}",
                 uri.identity(),
                 target.display()
@@ -1697,7 +2174,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         }
         emit(format!("  Cloning {} from {remote_url} …", uri.identity()));
         clone_px_pull(&remote_url, &target, required)?;
-        emit(format!(
+        emit_action(format!(
             "✓ Pulled '{}' to {}",
             uri.identity(),
             target.display()
@@ -1783,17 +2260,13 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
         ));
     } else {
         // ── Pull existing repo OR clone by name ───────────────────
+        let required = repository_manifest_roots(base_dir, url_or_name)?;
         let target_dir = base_dir.join(url_or_name);
         if target_dir.exists() {
-            // A full Lore sync resolves one remote revision and materializes
-            // its complete working tree, including repository.yaml. Do not
-            // first perform a selective sync: two remote operations can
-            // otherwise observe different branch tips.
-            let backend = get_lore_backend(base_dir);
-            px_core::vcs::VcsBackend::pull(&backend, &target_dir, None, None)
-                .context("failed to pull latest changes")?;
-            validate_pulled_manifests(&target_dir, &["repository.yaml".to_string()])?;
-            emit(format!("✓ Pulled latest changes for '{url_or_name}'"));
+            LoreBackend::sync_root_files(&target_dir, &required)
+                .context("failed to synchronize PX manifests")?;
+            validate_pulled_manifests(&target_dir, &required)?;
+            emit_action(format!("✓ Pulled latest changes for '{url_or_name}'"));
         } else {
             // Doesn't exist locally, construct URL and clone
             require_backend(base_dir, "clone repository")?;
@@ -1802,7 +2275,7 @@ fn cmd_pull(base_dir: &Path, url_or_name: &str) -> Result<()> {
 
             emit(format!("  Cloning from {remote_url} …"));
             let target = base_dir.join(url_or_name);
-            clone_px_pull(&remote_url, &target, vec!["repository.yaml".to_string()])?;
+            clone_px_pull(&remote_url, &target, required)?;
 
             emit(format!(
                 "✓ Cloned repository '{url_or_name}' to {}",
@@ -1819,8 +2292,8 @@ fn cmd_push(base_dir: &Path, repository: &str, remote: &str, branch: Option<&str
     repo.push(Some(remote), branch)
         .context("failed to push to remote")?;
     match branch {
-        Some(b) => emit(format!("✓ Pushed '{repository}' ({b}) → {remote}")),
-        None => emit(format!("✓ Pushed '{repository}' → {remote}")),
+        Some(b) => emit_action(format!("✓ Pushed '{repository}' ({b}) → {remote}")),
+        None => emit_action(format!("✓ Pushed '{repository}' → {remote}")),
     }
     Ok(())
 }
@@ -1867,48 +2340,174 @@ fn cmd_remote(base_dir: &Path, cmd: RemoteCmd) -> Result<()> {
     Ok(())
 }
 
+fn parse_entity_uri(input: &str) -> Result<PxUri> {
+    let normalized = if input.starts_with("px://") || input.starts_with("nap://") {
+        input.to_string()
+    } else {
+        format!("px://{}", input.trim_start_matches('/'))
+    };
+    normalized.parse().context("invalid entity URI")
+}
+
+fn yaml_from_json_or_string(value: &str) -> serde_yaml::Value {
+    serde_json::from_str::<serde_json::Value>(value)
+        .ok()
+        .and_then(|value| serde_yaml::to_value(value).ok())
+        .unwrap_or_else(|| serde_yaml::Value::String(value.to_string()))
+}
+
+fn normalized_manifest_path(key: &str) -> String {
+    if matches!(
+        key.split('.').next(),
+        Some("properties" | "references" | "representations" | "provenance" | "metadata")
+    ) {
+        key.to_string()
+    } else {
+        format!("properties.{key}")
+    }
+}
+
+fn set_manifest_value(
+    manifest: &mut px_core::manifest::Manifest,
+    key: &str,
+    value: serde_yaml::Value,
+) -> Result<()> {
+    let path = normalized_manifest_path(key);
+    let mut document = serde_json::to_value(&*manifest)?;
+    let mut current = document
+        .as_object_mut()
+        .context("manifest must be an object")?;
+    let parts: Vec<_> = path.split('.').collect();
+    for part in &parts[..parts.len() - 1] {
+        current = current
+            .entry((*part).to_string())
+            .or_insert_with(|| serde_json::json!({}))
+            .as_object_mut()
+            .with_context(|| format!("'{part}' is not an object"))?;
+    }
+    current.insert(
+        parts.last().unwrap().to_string(),
+        serde_json::to_value(value)?,
+    );
+    *manifest = serde_json::from_value(document).context("invalid manifest update")?;
+    Ok(())
+}
+
+fn unset_manifest_value(manifest: &mut px_core::manifest::Manifest, key: &str) -> Result<()> {
+    let path = normalized_manifest_path(key);
+    let mut document = serde_json::to_value(&*manifest)?;
+    let mut current = document
+        .as_object_mut()
+        .context("manifest must be an object")?;
+    let parts: Vec<_> = path.split('.').collect();
+    for part in &parts[..parts.len() - 1] {
+        current = current
+            .get_mut(*part)
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| anyhow::anyhow!("key not found: {key}"))?;
+    }
+    if current.remove(*parts.last().unwrap()).is_none() {
+        anyhow::bail!("key not found: {key}");
+    }
+    *manifest = serde_json::from_value(document).context("invalid manifest update")?;
+    Ok(())
+}
+
 fn cmd_set(
     base_dir: &Path,
     uri_str: &str,
-    key: &str,
-    value: &str,
-    message: &str,
+    values: &[String],
+    message: Option<&str>,
     author: &str,
 ) -> Result<()> {
-    let uri: PxUri = uri_str.parse().context("invalid URI")?;
+    if !values.len().is_multiple_of(2) {
+        anyhow::bail!("set expects key/value pairs");
+    }
+    let uri = parse_entity_uri(uri_str)?;
     let repo = open_repo(base_dir, &uri.repository)?;
     let mut manifest = repo
         .read_manifest(&uri.entity_type, &uri.entity_id)
         .context("failed to read manifest")?;
 
-    // Parse value — try as YAML for structured values, fallback to string
-    let yaml_value: serde_yaml::Value = serde_yaml::from_str(value)
-        .unwrap_or_else(|_| serde_yaml::Value::String(value.to_string()));
+    let mut changes = Vec::new();
+    for pair in values.chunks_exact(2) {
+        set_manifest_value(&mut manifest, &pair[0], yaml_from_json_or_string(&pair[1]))?;
+        changes.push(Change::set(
+            &normalized_manifest_path(&pair[0]),
+            None,
+            pair[1].clone(),
+        ));
+    }
+    let message = message.map(str::to_string).unwrap_or_else(|| {
+        if values.len() == 2 {
+            format!("set {} on {}", values[0], uri.entity_id)
+        } else {
+            format!("set {} properties on {}", values.len() / 2, uri.entity_id)
+        }
+    });
 
-    manifest.set_property(key, yaml_value);
-    let changes = vec![Change::set(
-        &format!("properties.{key}"),
-        None,
-        value.to_string(),
-    )];
-
-    repo.commit_manifest(&mut manifest, message, author, changes)
+    let commit = repo
+        .commit_manifest(&mut manifest, &message, author, changes)
         .context("failed to commit property change")?;
 
-    emit(format!("✓ Set {key} = {value} on {uri_str}"));
+    emit_action(format!(
+        "✓ set {} properties on {}  [{}]",
+        values.len() / 2,
+        uri.entity_id,
+        &commit.id[..commit.id.len().min(12)]
+    ));
     Ok(())
 }
 
+fn cmd_unset(
+    base_dir: &Path,
+    uri_str: &str,
+    keys: &[String],
+    message: Option<&str>,
+    author: &str,
+) -> Result<()> {
+    let uri = parse_entity_uri(uri_str)?;
+    let repo = open_repo(base_dir, &uri.repository)?;
+    let mut manifest = repo.read_manifest(&uri.entity_type, &uri.entity_id)?;
+    for key in keys {
+        unset_manifest_value(&mut manifest, key)?;
+    }
+    let message = message.map(str::to_string).unwrap_or_else(|| {
+        if keys.len() == 1 {
+            format!("unset {} on {}", keys[0], uri.entity_id)
+        } else {
+            format!("unset {} properties on {}", keys.len(), uri.entity_id)
+        }
+    });
+    let commit = repo.commit_manifest(
+        &mut manifest,
+        &message,
+        author,
+        keys.iter()
+            .map(|key| Change::delete(&normalized_manifest_path(key), String::new()))
+            .collect(),
+    )?;
+    emit_action(format!(
+        "✓ unset {} properties on {}  [{}]",
+        keys.len(),
+        uri.entity_id,
+        &commit.id[..commit.id.len().min(12)]
+    ));
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 fn cmd_add_repr(
     base_dir: &Path,
     uri_str: &str,
     key: &str,
     file: &Path,
     format: &str,
-    message: &str,
+    replace: bool,
+    message: Option<&str>,
     author: &str,
 ) -> Result<()> {
-    let uri: PxUri = uri_str.parse().context("invalid URI")?;
+    let uri = parse_entity_uri(uri_str)?;
     let repo = open_repo(base_dir, &uri.repository)?;
     let mut manifest = repo
         .read_manifest(&uri.entity_type, &uri.entity_id)
@@ -1917,6 +2516,16 @@ fn cmd_add_repr(
     // Compute content hash
     let hash = px_core::ContentHash::from_file(file)
         .context(format!("failed to hash file '{}'", file.display()))?;
+    if let Some(existing) = manifest.representations.get(key) {
+        if existing.hash == hash.as_str() {
+            return Ok(());
+        }
+        if !replace {
+            anyhow::bail!(
+                "representation '{key}' already exists with different content; pass --replace to overwrite"
+            );
+        }
+    }
 
     // Copy file to repository and stage it for commit
     // Lore stores files in the immutable store when they're committed
@@ -1936,21 +2545,6 @@ fn cmd_add_repr(
         asset_path.display()
     ))?;
 
-    // Stage the asset file in the repository (versioned mode only; the copy
-    // above is the durable change in unversioned mode).
-    let asset_path_str = asset_path.display().to_string();
-    if px_core::provider::version_control_configured(base_dir) {
-        let args = vec![
-            "file",
-            "stage",
-            "--scan",
-            &asset_path_str,
-            "--non-interactive",
-        ];
-        px_core::vcs_lore::LoreProcessRunner::run(&args, Some(&repo.root))
-            .context("failed to stage asset file in repository")?;
-    }
-
     // Store content hash directly (Lore's immutable store is content-addressed)
     let repr = Representation {
         hash: hash.as_str().to_string(),
@@ -1966,16 +2560,17 @@ fn cmd_add_repr(
         hash.as_str().to_string(),
     )];
 
-    repo.commit_manifest(&mut manifest, message, author, changes)
+    let message = message
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("add representation {key} to {}", uri.entity_id));
+    let commit = repo
+        .commit_manifest(&mut manifest, &message, author, changes)
         .context("failed to commit representation")?;
 
-    emit(format!(
-        "✓ Added representation '{key}' ({format}) to {uri_str}"
-    ));
-    emit(format!("  Hash: {hash}"));
-    emit(format!(
-        "  Stored in Lore immutable store: {}",
-        hash.as_str()
+    emit_action(format!(
+        "✓ added representation {key} to {}  [{}]",
+        uri.entity_id,
+        &commit.id[..commit.id.len().min(12)]
     ));
     Ok(())
 }
@@ -1985,13 +2580,15 @@ fn cmd_revert(base_dir: &Path, repository: &str, commit: &str, author: &str) -> 
     let new_hash = repo
         .revert_commit(commit, author)
         .context(format!("failed to revert commit '{commit}'"))?;
+    repo.push(None, None)
+        .context("failed to push revert commit")?;
     let short_old = if commit.len() > 12 {
         &commit[..12]
     } else {
         commit
     };
     let short_new = &new_hash[..12.min(new_hash.len())];
-    emit(format!(
+    emit_action(format!(
         "✓ Reverted commit {short_old} — new commit: {short_new}"
     ));
     Ok(())
@@ -2132,24 +2729,44 @@ fn cmd_schema(name: &str, format: &str) -> Result<()> {
     Ok(())
 }
 
-fn cmd_diff(base_file: &Path, candidate_file: &Path, format: &str) -> Result<()> {
-    // Read and parse both files
-    let base_content = std::fs::read_to_string(base_file)
-        .context(format!("failed to read '{}'", base_file.display()))?;
-    let candidate_content = std::fs::read_to_string(candidate_file)
-        .context(format!("failed to read '{}'", candidate_file.display()))?;
-
-    // Parse as YAML then convert to JSON Value
-    let base_yaml: serde_yaml::Value = serde_yaml::from_str(&base_content)
-        .context(format!("failed to parse YAML in '{}'", base_file.display()))?;
-    let candidate_yaml: serde_yaml::Value = serde_yaml::from_str(&candidate_content).context(
-        format!("failed to parse YAML in '{}'", candidate_file.display()),
-    )?;
-
-    let base_value: serde_json::Value = serde_json::to_value(base_yaml)
-        .map_err(|e| anyhow::anyhow!("YAML→JSON conversion failed: {e}"))?;
-    let candidate_value: serde_json::Value = serde_json::to_value(candidate_yaml)
-        .map_err(|e| anyhow::anyhow!("YAML→JSON conversion failed: {e}"))?;
+fn cmd_diff(
+    base_dir: &Path,
+    uri: &str,
+    base_branch: Option<String>,
+    candidate_branch: Option<String>,
+    base_commit: Option<String>,
+    candidate_commit: Option<String>,
+    format: &str,
+) -> Result<()> {
+    let resolver = Resolver::new(base_dir);
+    let manifest_value = |result: ResolveResult| -> Result<serde_json::Value> {
+        match result {
+            ResolveResult::Full(manifest) => Ok(serde_json::to_value(manifest)?),
+            ResolveResult::Subtree(value) => Ok(value),
+            ResolveResult::Provenance(envelope) => Ok(serde_json::to_value(envelope.manifest)?),
+        }
+    };
+    let base_value = manifest_value(resolver.resolve(
+        uri,
+        &ResolveOptions {
+            branch: base_branch,
+            commit: base_commit,
+            ..Default::default()
+        },
+    )?)?;
+    let candidate_options = if candidate_branch.is_none() && candidate_commit.is_none() {
+        ResolveOptions {
+            source: Some(ResolveSource::Local),
+            ..Default::default()
+        }
+    } else {
+        ResolveOptions {
+            branch: candidate_branch,
+            commit: candidate_commit,
+            ..Default::default()
+        }
+    };
+    let candidate_value = manifest_value(resolver.resolve(uri, &candidate_options)?)?;
 
     // Build a minimal SDL for diffing
     use px_core::merge::sdl::SdlDocument;

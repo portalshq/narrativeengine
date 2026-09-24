@@ -1,4 +1,4 @@
-_px() {
+_px_generated() {
     local i cur prev opts cmd
     COMPREPLY=()
     if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
@@ -33,9 +33,6 @@ _px() {
                 ;;
             px,commit)
                 cmd="px__subcmd__commit"
-                ;;
-            px,completions)
-                cmd="px__subcmd__completions"
                 ;;
             px,configure)
                 cmd="px__subcmd__configure"
@@ -111,6 +108,9 @@ _px() {
                 ;;
             px,sync)
                 cmd="px__subcmd__sync"
+                ;;
+            px,unset)
+                cmd="px__subcmd__unset"
                 ;;
             px,validate)
                 cmd="px__subcmd__validate"
@@ -202,9 +202,6 @@ _px() {
             px__subcmd__help,commit)
                 cmd="px__subcmd__help__subcmd__commit"
                 ;;
-            px__subcmd__help,completions)
-                cmd="px__subcmd__help__subcmd__completions"
-                ;;
             px__subcmd__help,configure)
                 cmd="px__subcmd__help__subcmd__configure"
                 ;;
@@ -280,6 +277,9 @@ _px() {
             px__subcmd__help,sync)
                 cmd="px__subcmd__help__subcmd__sync"
                 ;;
+            px__subcmd__help,unset)
+                cmd="px__subcmd__help__subcmd__unset"
+                ;;
             px__subcmd__help,validate)
                 cmd="px__subcmd__help__subcmd__validate"
                 ;;
@@ -347,7 +347,7 @@ _px() {
 
     case "${cmd}" in
         px)
-            opts="-d -v -h -V --base-dir --verbose --remote --local --help --version auth install init configure choose backend completions doctor status sync create resolve presign query commit history list branch set add revert pull push remote sign verify switch head validate schema diff merge content-hash help"
+            opts="-d -v -h -V --base-dir --verbose --remote --local --help --version auth install init configure choose backend doctor status sync create resolve presign query commit history list branch set unset add revert pull push remote sign verify switch head validate schema diff merge content-hash help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -369,7 +369,7 @@ _px() {
             return 0
             ;;
         px__subcmd__add)
-            opts="-m -a -d -v -h --format --message --author --base-dir --verbose --remote --local --help"
+            opts="-m -a -d -v -h --format --replace --message --author --base-dir --verbose --remote --local --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -856,28 +856,6 @@ _px() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        px__subcmd__completions)
-            opts="-d -v -h --base-dir --verbose --remote --local --help bash elvish fish powershell zsh"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                --base-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                -d)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         px__subcmd__configure)
             opts="-d -v -h --provider --remote-url --workspace-id --reset --initial-commit --no-initial-commit --base-dir --verbose --remote --local --help status help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -999,7 +977,7 @@ _px() {
             return 0
             ;;
         px__subcmd__create)
-            opts="-u -n -a -d -v -h --repository --name --author --base-dir --verbose --remote --local --help"
+            opts="-u -n -a -m -d -v -h --repository --name --author --set --message --base-dir --verbose --remote --local --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1029,6 +1007,18 @@ _px() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                --set)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --message)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -m)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --base-dir)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -1045,12 +1035,28 @@ _px() {
             return 0
             ;;
         px__subcmd__diff)
-            opts="-f -d -v -h --format --base-dir --verbose --remote --local --help"
+            opts="-f -d -v -h --base-branch --candidate-branch --base-commit --candidate-commit --format --base-dir --verbose --remote --local --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --base-branch)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --candidate-branch)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --base-commit)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --candidate-commit)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --format)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -1119,7 +1125,7 @@ _px() {
             return 0
             ;;
         px__subcmd__help)
-            opts="auth install init configure choose backend completions doctor status sync create resolve presign query commit history list branch set add revert pull push remote sign verify switch head validate schema diff merge content-hash help"
+            opts="auth install init configure choose backend doctor status sync create resolve presign query commit history list branch set unset add revert pull push remote sign verify switch head validate schema diff merge content-hash help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1287,20 +1293,6 @@ _px() {
             return 0
             ;;
         px__subcmd__help__subcmd__commit)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        px__subcmd__help__subcmd__completions)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1720,6 +1712,20 @@ _px() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        px__subcmd__help__subcmd__unset)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         px__subcmd__help__subcmd__validate)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -1899,7 +1905,7 @@ _px() {
             return 0
             ;;
         px__subcmd__presign)
-            opts="-d -v -h --branch --commit --ttl-seconds --http-url --token-env --base-dir --verbose --remote --local --help"
+            opts="-d -v -h --branch --commit --ttl-seconds --http-url --token-env --download --output --base-dir --verbose --remote --local --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1922,6 +1928,14 @@ _px() {
                     return 0
                     ;;
                 --token-env)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --download)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --output)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2412,6 +2426,44 @@ _px() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        px__subcmd__unset)
+            opts="-m -a -d -v -h --message --author --base-dir --verbose --remote --local --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --message)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -m)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --author)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -a)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --base-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -d)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         px__subcmd__validate)
             opts="-d -v -h --file --base-dir --verbose --remote --local --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -2464,7 +2516,32 @@ _px() {
 }
 
 if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 || "${BASH_VERSINFO[0]}" -gt 4 ]]; then
-    complete -F _px -o nosort -o bashdefault -o default px
+    complete -F _px_generated -o nosort -o bashdefault -o default px
 else
-    complete -F _px -o bashdefault -o default px
+    complete -F _px_generated -o bashdefault -o default px
 fi
+
+
+_px_uri_candidates() {
+    local base="${PX_DIR:-$HOME/.px}" manifest path
+    [[ -d "$base" ]] || return
+    while IFS= read -r manifest; do
+        path="${manifest#$base/}"
+        [[ "$path" == */*/*.yaml ]] || continue
+        path="${path%.yaml}"
+        printf '%s\npx://%s\n' "$path" "$path"
+    done < <(find "$base" -type f -name '*.yaml' ! -path '*/.px/*' 2>/dev/null)
+}
+
+_px() {
+    local i command="" cur="${COMP_WORDS[COMP_CWORD]}"
+    for ((i=1; i<COMP_CWORD; i++)); do
+        case "${COMP_WORDS[i]}" in resolve|query|set|unset|add|presign|diff|history) command="${COMP_WORDS[i]}"; break;; esac
+    done
+    if [[ -n "$command" && "$cur" != -* ]]; then
+        COMPREPLY=( $(compgen -W "$(_px_uri_candidates)" -- "$cur") )
+        return 0
+    fi
+    _px_generated "$@"
+}
+complete -F _px -o bashdefault -o default px

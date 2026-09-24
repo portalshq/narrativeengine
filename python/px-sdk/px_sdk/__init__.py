@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+from pathlib import Path
 from typing import Any, cast
+from urllib.request import urlopen
 
 from . import _native
 
@@ -52,7 +55,10 @@ def uri_new(
     Returns:
         A dict with the parsed URI components.
     """
-    return cast(dict[str, Any], json.loads(_native.uri_new(repository, entity_type, entity_id, fragment)))
+    return cast(
+        dict[str, Any],
+        json.loads(_native.uri_new(repository, entity_type, entity_id, fragment)),
+    )
 
 
 def uri_identity(uri: str) -> str:
@@ -172,7 +178,10 @@ def manifest_new(
     Returns:
         The new manifest as a dict.
     """
-    return cast(dict[str, Any], json.loads(_native.manifest_new(repository, entity_type, entity_id, name)))
+    return cast(
+        dict[str, Any],
+        json.loads(_native.manifest_new(repository, entity_type, entity_id, name)),
+    )
 
 
 def manifest_to_yaml(manifest: dict[str, Any]) -> str:
@@ -211,7 +220,9 @@ def manifest_content_hash(manifest: dict[str, Any]) -> str:
     return _native.manifest_content_hash(json.dumps(manifest))
 
 
-def manifest_set_property(manifest: dict[str, Any], key: str, value: str) -> dict[str, Any]:
+def manifest_set_property(
+    manifest: dict[str, Any], key: str, value: str
+) -> dict[str, Any]:
     """Add or update a property on a manifest.
 
     Args:
@@ -222,10 +233,15 @@ def manifest_set_property(manifest: dict[str, Any], key: str, value: str) -> dic
     Returns:
         The updated manifest dict.
     """
-    return cast(dict[str, Any], json.loads(_native.manifest_set_property(json.dumps(manifest), key, value)))
+    return cast(
+        dict[str, Any],
+        json.loads(_native.manifest_set_property(json.dumps(manifest), key, value)),
+    )
 
 
-def manifest_add_reference(manifest: dict[str, Any], key: str, value: str) -> dict[str, Any]:
+def manifest_add_reference(
+    manifest: dict[str, Any], key: str, value: str
+) -> dict[str, Any]:
     """Add a cross-reference to a manifest.
 
     Args:
@@ -236,7 +252,10 @@ def manifest_add_reference(manifest: dict[str, Any], key: str, value: str) -> di
     Returns:
         The updated manifest dict.
     """
-    return cast(dict[str, Any], json.loads(_native.manifest_add_reference(json.dumps(manifest), key, value)))
+    return cast(
+        dict[str, Any],
+        json.loads(_native.manifest_add_reference(json.dumps(manifest), key, value)),
+    )
 
 
 def manifest_set_representation(
@@ -263,7 +282,9 @@ def manifest_set_representation(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.manifest_set_representation(json.dumps(manifest), key, hash, format, uri, tier)
+            _native.manifest_set_representation(
+                json.dumps(manifest), key, hash, format, uri, tier
+            )
         ),
     )
 
@@ -277,7 +298,9 @@ def manifest_bump_version(manifest: dict[str, Any]) -> dict[str, Any]:
     Returns:
         The updated manifest dict with version incremented.
     """
-    return cast(dict[str, Any], json.loads(_native.manifest_bump_version(json.dumps(manifest))))
+    return cast(
+        dict[str, Any], json.loads(_native.manifest_bump_version(json.dumps(manifest)))
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -354,7 +377,9 @@ def content_hash_hex_digest(hash: str) -> str:
 # ═══════════════════════════════════════════════════════════════════════
 
 
-def change_set(path: str, new_value: str, old_value: str | None = None) -> dict[str, Any]:
+def change_set(
+    path: str, new_value: str, old_value: str | None = None
+) -> dict[str, Any]:
     """Create a ``Set`` change record.
 
     Args:
@@ -365,7 +390,9 @@ def change_set(path: str, new_value: str, old_value: str | None = None) -> dict[
     Returns:
         Change dict with ``path``, ``operation``, ``old_value``, ``new_value``.
     """
-    return cast(dict[str, Any], json.loads(_native.change_set(path, old_value, new_value)))
+    return cast(
+        dict[str, Any], json.loads(_native.change_set(path, old_value, new_value))
+    )
 
 
 def change_delete(path: str, old_value: str) -> dict[str, Any]:
@@ -415,7 +442,11 @@ def commit_new(
     """
     return cast(
         dict[str, Any],
-        json.loads(_native.commit_new(parent, author, message, manifest_hash, json.dumps(changes))),
+        json.loads(
+            _native.commit_new(
+                parent, author, message, manifest_hash, json.dumps(changes)
+            )
+        ),
     )
 
 
@@ -446,7 +477,10 @@ def repo_init(repository: str, base_path: str | None = None) -> dict[str, Any]:
     Returns:
         Dict with ``root`` (filesystem path) and ``repository``.
     """
-    return cast(dict[str, Any], json.loads(_native.repo_init(_resolve_repo_path(base_path), repository)))
+    return cast(
+        dict[str, Any],
+        json.loads(_native.repo_init(_resolve_repo_path(base_path), repository)),
+    )
 
 
 def repo_open(repository: str, base_path: str | None = None) -> dict[str, Any]:
@@ -459,7 +493,15 @@ def repo_open(repository: str, base_path: str | None = None) -> dict[str, Any]:
     Returns:
         Dict with ``root`` and ``repository``.
     """
-    return cast(dict[str, Any], json.loads(_native.repo_open(_resolve_repo_path(base_path), repository)))
+    return cast(
+        dict[str, Any],
+        json.loads(_native.repo_open(_resolve_repo_path(base_path), repository)),
+    )
+
+
+def repository_status(repository: str, repo_path: str | None = None) -> str:
+    """Return Lore's scanned working-tree status for a repository."""
+    return _native.repo_status(_resolve_repo_path(repo_path), repository)
 
 
 def repo_create_entity(
@@ -486,8 +528,41 @@ def repo_create_entity(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_create_entity(_resolve_repo_path(base_path), repository, entity_type, entity_id, name, author)
+            _native.repo_create_entity(
+                _resolve_repo_path(base_path),
+                repository,
+                entity_type,
+                entity_id,
+                name,
+                author,
+            )
         ),
+    )
+
+
+def create(entity_type: str, entity_id: str, **options: Any) -> dict[str, Any]:
+    """Create an entity with initial properties in one committed mutation."""
+    repository = options["repository"]
+    name = options["name"]
+    result = cast(
+        dict[str, Any],
+        json.loads(
+            _native.repo_create_entity_with_properties(
+                _resolve_repo_path(options.get("repo_path")),
+                repository,
+                entity_type,
+                entity_id,
+                name,
+                options.get("author", "px"),
+                json.dumps(options.get("properties", {})),
+            )
+        ),
+    )
+    return _commit_result(
+        result["commit_hash"],
+        repository,
+        entity_id,
+        f"create {entity_type} {entity_id}",
     )
 
 
@@ -511,7 +586,9 @@ def repo_read_manifest(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_read_manifest(_resolve_repo_path(base_path), repository, entity_type, entity_id)
+            _native.repo_read_manifest(
+                _resolve_repo_path(base_path), repository, entity_type, entity_id
+            )
         ),
     )
 
@@ -539,7 +616,11 @@ def repo_read_manifest_at_ref(
         dict[str, Any],
         json.loads(
             _native.repo_read_manifest_at_ref(
-                _resolve_repo_path(base_path), repository, entity_type, entity_id, reference
+                _resolve_repo_path(base_path),
+                repository,
+                entity_type,
+                entity_id,
+                reference,
             )
         ),
     )
@@ -560,7 +641,9 @@ def repo_write_manifest(
     Returns:
         The filesystem path where the manifest was written.
     """
-    return _native.repo_write_manifest(_resolve_repo_path(base_path), repository, json.dumps(manifest))
+    return _native.repo_write_manifest(
+        _resolve_repo_path(base_path), repository, json.dumps(manifest)
+    )
 
 
 def repo_commit_manifest(
@@ -584,17 +667,25 @@ def repo_commit_manifest(
         base_path: Base directory (defaults to ``$PX_DIR`` / ``~/.px``).
 
     Returns:
-        Dict with ``commit`` and ``version``.
+        The committed mutation result.
     """
     changes_json = json.dumps(changes or [])
-    return cast(
+    result = cast(
         dict[str, Any],
         json.loads(
             _native.repo_commit_manifest(
-                _resolve_repo_path(base_path), repository, entity_type, entity_id,
-                message, author, changes_json
+                _resolve_repo_path(base_path),
+                repository,
+                entity_type,
+                entity_id,
+                message,
+                author,
+                changes_json,
             )
         ),
+    )
+    return _commit_result(
+        cast(dict[str, Any], result["commit"])["id"], repository, entity_id, message
     )
 
 
@@ -669,7 +760,9 @@ def repo_list_entities(
     return cast(
         list[str],
         json.loads(
-            _native.repo_list_entities(_resolve_repo_path(base_path), repository, entity_type)
+            _native.repo_list_entities(
+                _resolve_repo_path(base_path), repository, entity_type
+            )
         ),
     )
 
@@ -774,7 +867,9 @@ def repo_revert_commit(
     Returns:
         The new revert commit hash.
     """
-    return _native.repo_revert_commit(_resolve_repo_path(base_path), repository, commit_hash, author)
+    return _native.repo_revert_commit(
+        _resolve_repo_path(base_path), repository, commit_hash, author
+    )
 
 
 def repo_add_remote(
@@ -797,7 +892,9 @@ def repo_add_remote(
     return cast(
         dict[str, Any],
         json.loads(
-            _native.repo_add_remote(_resolve_repo_path(base_path), repository, name, url)
+            _native.repo_add_remote(
+                _resolve_repo_path(base_path), repository, name, url
+            )
         ),
     )
 
@@ -838,7 +935,9 @@ def repo_list_remotes(
     Returns:
         List of ``(name, url)`` tuples.
     """
-    raw = json.loads(_native.repo_list_remotes(_resolve_repo_path(base_path), repository))
+    raw = json.loads(
+        _native.repo_list_remotes(_resolve_repo_path(base_path), repository)
+    )
     return [(item[0], item[1]) for item in raw]
 
 
@@ -892,6 +991,191 @@ def repo_pull(
     )
 
 
+def _entity_parts(entity_id: str) -> tuple[str, str, str]:
+    parts = (
+        entity_id.removeprefix("px://")
+        .removeprefix("nap://")
+        .split("#", 1)[0]
+        .split("/")
+    )
+    if len(parts) != 3 or not all(parts):
+        raise ValueError("expected repository/type/id")
+    return parts[0], parts[1], parts[2]
+
+
+def _commit_result(
+    commit_hash: str, repository: str, entity_id: str, message: str
+) -> dict[str, Any]:
+    return {
+        "commitHash": commit_hash[:12],
+        "commitHashFull": commit_hash,
+        "repository": repository,
+        "entityId": entity_id,
+        "message": message,
+        "pushed": True,
+    }
+
+
+def set_properties(
+    entity_id: str, properties: dict[str, Any], **options: Any
+) -> dict[str, Any]:
+    """Set one or more properties in one committed, pushed mutation."""
+    repository, entity_type, entity = _entity_parts(entity_id)
+    base_path = options.get("repo_path")
+    manifest = repo_read_manifest(repository, entity_type, entity, base_path)
+    changes: list[dict[str, Any]] = []
+    for key, value in properties.items():
+        path = (
+            key
+            if key.startswith(("properties.", "references."))
+            else f"properties.{key}"
+        )
+        segments = path.split(".")
+        target: dict[str, Any] = manifest
+        for segment in segments[:-1]:
+            target = cast(dict[str, Any], target.setdefault(segment, {}))
+        target[segments[-1]] = value
+        changes.append(change_set(path, json.dumps(value)))
+    repo_write_manifest(repository, manifest, base_path)
+    count = len(properties)
+    message = options.get("message") or (
+        f"set {next(iter(properties))} on {entity}"
+        if count == 1
+        else f"set {count} properties on {entity}"
+    )
+    return repo_commit_manifest(
+        repository,
+        entity_type,
+        entity,
+        message,
+        options.get("author", "px"),
+        changes,
+        base_path,
+    )
+
+
+def unset_properties(entity_id: str, keys: list[str], **options: Any) -> dict[str, Any]:
+    """Remove one or more properties or representations in one commit."""
+    repository, entity_type, entity = _entity_parts(entity_id)
+    base_path = options.get("repo_path")
+    manifest = repo_read_manifest(repository, entity_type, entity, base_path)
+    changes: list[dict[str, Any]] = []
+    for key in keys:
+        path = (
+            key
+            if key.startswith(("properties.", "representations."))
+            else f"properties.{key}"
+        )
+        root, leaf = path.split(".", 1)
+        target = cast(dict[str, Any], manifest.get(root, {}))
+        if leaf not in target:
+            raise KeyError(f"key not found: {key}")
+        del target[leaf]
+        changes.append(change_delete(path, ""))
+    repo_write_manifest(repository, manifest, base_path)
+    message = (
+        options.get("message")
+        or f"unset {keys[0] if len(keys) == 1 else f'{len(keys)} properties'} on {entity}"
+    )
+    return repo_commit_manifest(
+        repository,
+        entity_type,
+        entity,
+        message,
+        options.get("author", "px"),
+        changes,
+        base_path,
+    )
+
+
+def diff(entity_id: str, **options: Any) -> list[dict[str, Any]]:
+    """Compare an entity's working tree or selected revisions."""
+    base = resolve(
+        entity_id,
+        options.get("repo_path"),
+        options.get("base_branch"),
+        options.get("base_commit"),
+    )
+    if options.get("candidate_branch") or options.get("candidate_commit"):
+        candidate = resolve(
+            entity_id,
+            options.get("repo_path"),
+            options.get("candidate_branch"),
+            options.get("candidate_commit"),
+        )
+    else:
+        candidate = resolve(entity_id, options.get("repo_path"), source="local")
+    return merge_diff(manifest_schema(), base, candidate)
+
+
+def history(entity_id: str, **options: Any) -> list[dict[str, Any]]:
+    """Return entity history from the configured versioned repository."""
+    repository, entity_type, entity = _entity_parts(entity_id)
+    return repo_history(
+        repository,
+        entity_type,
+        entity,
+        options.get("limit", 20),
+        options.get("repo_path"),
+    )
+
+
+def validate(entity_id: str, **options: Any) -> dict[str, Any]:
+    """Validate an entity's working-tree manifest without committing it."""
+    repository, entity_type, entity = _entity_parts(entity_id)
+    return validate_manifest(
+        repo_read_manifest(repository, entity_type, entity, options.get("repo_path"))
+    )
+
+
+def add_representation(
+    entity_id: str, key: str, file_path: str, format: str, **options: Any
+) -> dict[str, Any]:
+    """Add a representation; replacing changed content requires ``replace=True``."""
+    repository, entity_type, entity = _entity_parts(entity_id)
+    base_path = options.get("repo_path")
+    manifest = repo_read_manifest(repository, entity_type, entity, base_path)
+    bytes_ = Path(file_path).read_bytes()
+    hash_ = content_hash_from_bytes(bytes_)
+    existing = cast(dict[str, Any], manifest["representations"]).get(key)
+    if existing and existing["hash"] == hash_:
+        return _commit_result(
+            repo_head_hash(repository, base_path),
+            repository,
+            entity,
+            options.get("message") or f"add representation {key} to {entity}",
+        )
+    if existing and not options.get("replace"):
+        raise ValueError(
+            f"representation '{key}' already exists with different content; pass replace=True"
+        )
+    filename = f"{key}.{format}"
+    destination = (
+        Path(_resolve_repo_path(base_path))
+        / repository
+        / entity_type_directory_name(entity_type)
+        / entity
+        / filename
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(file_path, destination)
+    cast(dict[str, Any], manifest["representations"])[key] = {
+        "hash": hash_,
+        "format": format,
+        "uri": filename,
+    }
+    repo_write_manifest(repository, manifest, base_path)
+    return repo_commit_manifest(
+        repository,
+        entity_type,
+        entity,
+        options.get("message") or f"add representation {key} to {entity}",
+        options.get("author", "px"),
+        [change_set(f"representations.{key}", hash_)],
+        base_path,
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Resolver Operations
 # ═══════════════════════════════════════════════════════════════════════
@@ -918,8 +1202,15 @@ def resolve(
         The resolved manifest dict or subtree value.
     """
     repo_path = _resolve_repo_path(repo_path)
-    if branch is not None or commit is not None or path is not None or source is not None:
-        result = _native.resolve_with_options(uri, repo_path, branch, commit, path, source)
+    if (
+        branch is not None
+        or commit is not None
+        or path is not None
+        or source is not None
+    ):
+        result = _native.resolve_with_options(
+            uri, repo_path, branch, commit, path, source
+        )
     else:
         result = _native.resolve(uri, repo_path)
     return cast(dict[str, Any], json.loads(result))
@@ -935,6 +1226,8 @@ def presign_representation(
     ttl_seconds: int | None = None,
     http_url: str | None = None,
     bearer_token: str | None = None,
+    download: bool = False,
+    output_path: str | None = None,
 ) -> dict[str, Any]:
     """Create a time-limited public URL for a committed representation.
 
@@ -957,25 +1250,32 @@ def presign_representation(
         http_url,
         bearer_token,
     )
-    return cast(dict[str, Any], json.loads(result))
-
-
-def resolve_query(uri: str, path: str, repo_path: str | None = None) -> Any:
-    """Query a specific subtree path from a manifest.
-
-    This is the most efficient way to read a single property from an entity.
-
-    Args:
-        uri: PX URI.
-        path: Dot-notation query path (e.g. ``"properties.species"``).
-        repo_path: Base directory (defaults to ``$PX_DIR`` / ``~/.px``).
-
-    Returns:
-        The value at the given path.
-    """
-    return json.loads(
-        _native.resolve_query(uri, _resolve_repo_path(repo_path), path)
-    )
+    presigned = cast(dict[str, Any], json.loads(result))
+    if download:
+        repository, entity_type, entity = _entity_parts(uri)
+        manifest = resolve(uri, repo_path)
+        representation_value = cast(dict[str, Any], manifest["representations"])[
+            representation
+        ]
+        asset = representation_value.get("uri")
+        if not asset:
+            raise ValueError(f"representation '{representation}' has no local URI")
+        destination = (
+            Path(output_path)
+            if output_path
+            else Path(_resolve_repo_path(repo_path))
+            / repository
+            / entity_type_directory_name(entity_type)
+            / entity
+            / asset
+        )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with urlopen(cast(str, presigned["url"])) as response:
+            bytes_ = response.read()
+        if not content_hash_verify(cast(str, representation_value["hash"]), bytes_):
+            raise ValueError("downloaded representation hash does not match manifest")
+        destination.write_bytes(bytes_)
+    return presigned
 
 
 def list_repositories(repo_path: str | None = None) -> list[str]:
@@ -1025,7 +1325,9 @@ def validate_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dict with ``valid`` (bool) and optionally ``errors`` (list of strings).
     """
-    return cast(dict[str, Any], json.loads(_native.validate_manifest(json.dumps(manifest))))
+    return cast(
+        dict[str, Any], json.loads(_native.validate_manifest(json.dumps(manifest)))
+    )
 
 
 def validate_commit(commit: dict[str, Any]) -> dict[str, Any]:
@@ -1222,7 +1524,6 @@ __all__ = [  # noqa: RUF022 — grouped by section, not globally sorted
     # Resolver
     "resolve",
     "presign_representation",
-    "resolve_query",
     "list_repositories",
     # Schema
     "manifest_schema",

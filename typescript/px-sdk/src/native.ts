@@ -41,7 +41,9 @@ interface NativeBindings {
   // Repository
   repoInit(basePath: string, repository: string): string;
   repoOpen(basePath: string, repository: string): string;
+  repoStatus(basePath: string, repository: string): string;
   repoCreateEntity(basePath: string, repository: string, entityType: string, entityId: string, name: string, author: string): string;
+  repoCreateEntityWithProperties(basePath: string, repository: string, entityType: string, entityId: string, name: string, author: string, propertiesJson: string): string;
   repoReadManifest(basePath: string, repository: string, entityType: string, entityId: string): string;
   repoReadManifestAtRef(basePath: string, repository: string, entityType: string, entityId: string, reference: string): string;
   repoWriteManifest(basePath: string, repository: string, manifestJson: string): string;
@@ -63,7 +65,6 @@ interface NativeBindings {
   // Resolver
   resolve(uri: string, repoPath: string): string;
   resolveWithOptions(uri: string, repoPath: string, branch?: string, commit?: string, path?: string, source?: "remote" | "local"): string;
-  resolveQuery(uri: string, repoPath: string, path: string): string;
   listRepositories(repoPath: string): string;
   presignRepresentation(uri: string, representation: string, repoPath: string, branch?: string, commit?: string, ttlSeconds?: number, httpUrl?: string, bearerToken?: string): Promise<string>;
 

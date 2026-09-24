@@ -29,6 +29,8 @@ Do not use commit `parent` fields as validation truth unless the current PX/Lore
 
 Some PX tools auto-commit (`px_add`, `px_set`). Do not call `px_commit` afterward unless you intentionally made additional uncommitted changes.
 
+Note: `px_add`, `px_set`, `px_create`, and `px_unset` stage, commit, and push automatically. `px_resolve` reads the configured server by default, so successful mutations are immediately visible to other clients. If a push fails, the commit remains local and PX reports the recovery command. Use `px resolve --local <uri>` only to inspect uncommitted filesystem changes.
+
 ## Character Creation and Character Sheets
 
 Treat a request to create a character, character sheet, reference sheet, or other character visual as a persistence workflow. Do not leave generated assets only in the conversation or on a local filesystem.

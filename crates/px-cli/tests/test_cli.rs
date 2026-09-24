@@ -53,7 +53,12 @@ fn test_local_file_command_workflow() {
         cmd.args(args).assert().success();
     };
     run(&["schema", "manifest", "--format", "json"]);
-    run(&["diff", base.to_str().unwrap(), current.to_str().unwrap()]);
+    let mut legacy_diff = Command::cargo_bin("px").expect("Failed to find px binary");
+    legacy_diff
+        .args(["diff", base.to_str().unwrap(), current.to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unexpected argument"));
     run(&[
         "merge",
         base.to_str().unwrap(),
@@ -89,6 +94,23 @@ fn test_px_resolve_accepts_uri_with_px_scheme() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("resolve"));
+}
+
+#[test]
+fn test_px_resolve_rejects_local_with_revision_selectors() {
+    let mut cmd = Command::cargo_bin("px").expect("Failed to find px binary");
+    cmd.args([
+        "--local",
+        "resolve",
+        "test-repository/character/testhero",
+        "--branch",
+        "main",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains(
+        "use --local or --branch/--commit, not both",
+    ));
 }
 
 #[test]
@@ -347,12 +369,10 @@ fn test_configure_validates_before_resetting_existing_provider() {
 }
 
 #[test]
-fn test_completions_generate() {
-    for shell in ["bash", "zsh", "fish"] {
-        let mut cmd = Command::cargo_bin("px").expect("Failed to find px binary");
-        cmd.args(["completions", shell])
-            .assert()
-            .success()
-            .stdout(predicate::str::contains("px"));
-    }
+fn test_completions_command_is_removed() {
+    let mut cmd = Command::cargo_bin("px").expect("Failed to find px binary");
+    cmd.args(["completions", "bash"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unrecognized subcommand"));
 }

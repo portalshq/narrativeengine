@@ -331,7 +331,7 @@ fn format_lore_repository_id(bytes: &[u8]) -> String {
 impl ResolveOptions {
     /// Returns the query path (from options or URI fragment).
     fn query_path(&self, uri: &PxUri) -> Option<String> {
-        self.path.clone().or_else(|| uri.fragment.clone())
+        uri.fragment.clone().or_else(|| self.path.clone())
     }
 }
 
@@ -1007,7 +1007,8 @@ impl Resolver {
         uri: &PxUri,
         options: &ResolveOptions,
     ) -> Result<ResolveResult, PxError> {
-        if self.effective_source(options) != ResolveSource::Local {
+        let source = self.effective_source(options);
+        if source != ResolveSource::Local {
             let manifest = self.remote_manifest(uri, options)?;
             return match options.query_path(uri) {
                 Some(path) => {
@@ -1019,6 +1020,15 @@ impl Resolver {
                 None => Ok(ResolveResult::Full(Box::new(manifest))),
             };
         }
+
+        // `--local` deliberately means the checked-out file as it exists now.
+        // It must not resolve a branch/default ref through Lore first.
+        if options.branch.is_some() || options.commit.is_some() {
+            return Err(PxError::Other(
+                "use --local or --branch/--commit, not both".to_string(),
+            ));
+        }
+
         let (repo, repo_config) = self.open_repo(&uri.repository)?;
         let query_path = options.query_path(uri);
 
@@ -1040,41 +1050,47 @@ impl Resolver {
             ),
         };
 
-        let revision: Option<String> = match (options.commit.as_ref(), options.branch.as_ref()) {
-            (Some(commit), _) => {
-                debug!(%commit, "resolve: rule 1 — commit provided");
-                if repo.vcs().is_none() {
-                    return Err(unsatisfiable(&format!("at commit '{commit}'")));
+        let wants_provenance =
+            options.provenance.unwrap_or(false) || options.include_blobs.unwrap_or(false);
+        let revision: Option<String> = if source == ResolveSource::Local && !wants_provenance {
+            None
+        } else {
+            match (options.commit.as_ref(), options.branch.as_ref()) {
+                (Some(commit), _) => {
+                    debug!(%commit, "resolve: rule 1 — commit provided");
+                    if repo.vcs().is_none() {
+                        return Err(unsatisfiable(&format!("at commit '{commit}'")));
+                    }
+                    Some(commit.clone())
                 }
-                Some(commit.clone())
-            }
-            (None, Some(branch)) => {
-                debug!(%branch, "resolve: rule 2 — branch provided");
-                let vcs = repo
-                    .vcs()
-                    .ok_or_else(|| unsatisfiable(&format!("at branch '{branch}'")))?;
-                Some(vcs.resolve_branch_head(&repo.root, branch)?)
-            }
-            (None, None) => {
-                let default_branch = repo_config
-                    .default_branch
-                    .as_ref()
-                    .or(self.config.default_branch.as_ref());
-                match default_branch {
-                    Some(default_branch) => {
-                        debug!(%default_branch, "resolve: rule 3 — using default_branch");
-                        let vcs = repo.vcs().ok_or_else(|| {
-                            unsatisfiable(&format!("at default branch '{default_branch}'"))
-                        })?;
-                        Some(vcs.resolve_branch_head(&repo.root, default_branch)?)
-                    }
-                    None if repo.vcs().is_some() => {
-                        debug!("resolve: rule 4 — no branch, no commit, no default_branch");
-                        return Err(PxError::NoDefaultBranch);
-                    }
-                    None => {
-                        debug!("resolve: unversioned — reading current filesystem state");
-                        None
+                (None, Some(branch)) => {
+                    debug!(%branch, "resolve: rule 2 — branch provided");
+                    let vcs = repo
+                        .vcs()
+                        .ok_or_else(|| unsatisfiable(&format!("at branch '{branch}'")))?;
+                    Some(vcs.resolve_branch_head(&repo.root, branch)?)
+                }
+                (None, None) => {
+                    let default_branch = repo_config
+                        .default_branch
+                        .as_ref()
+                        .or(self.config.default_branch.as_ref());
+                    match default_branch {
+                        Some(default_branch) => {
+                            debug!(%default_branch, "resolve: rule 3 — using default_branch");
+                            let vcs = repo.vcs().ok_or_else(|| {
+                                unsatisfiable(&format!("at default branch '{default_branch}'"))
+                            })?;
+                            Some(vcs.resolve_branch_head(&repo.root, default_branch)?)
+                        }
+                        None if repo.vcs().is_some() => {
+                            debug!("resolve: rule 4 — no branch, no commit, no default_branch");
+                            return Err(PxError::NoDefaultBranch);
+                        }
+                        None => {
+                            debug!("resolve: unversioned — reading current filesystem state");
+                            None
+                        }
                     }
                 }
             }
@@ -1082,15 +1098,17 @@ impl Resolver {
 
         // Read the manifest at the resolved revision, or the current filesystem
         // state when resolving without a revision (unversioned mode).
-        let manifest = match &revision {
-            Some(revision) => {
-                repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, revision)?
+        let manifest = if source == ResolveSource::Local {
+            repo.read_manifest(&uri.entity_type, &uri.entity_id)?
+        } else {
+            match &revision {
+                Some(revision) => {
+                    repo.read_manifest_at_ref(&uri.entity_type, &uri.entity_id, revision)?
+                }
+                None => repo.read_manifest(&uri.entity_type, &uri.entity_id)?,
             }
-            None => repo.read_manifest(&uri.entity_type, &uri.entity_id)?,
         };
 
-        let wants_provenance =
-            options.provenance.unwrap_or(false) || options.include_blobs.unwrap_or(false);
         if wants_provenance {
             if let Some(path) = query_path {
                 return Err(PxError::Other(format!(
@@ -1600,9 +1618,19 @@ impl Resolver {
         uri: &PxUri,
         limit: usize,
     ) -> Result<Vec<crate::vcs::CommitInfo>, PxError> {
+        self.remote_history_path(uri, &uri.manifest_path(), limit)
+    }
+
+    /// Get remote commit history for any repository-relative file.
+    pub fn remote_history_path(
+        &self,
+        uri: &PxUri,
+        file_path: &str,
+        limit: usize,
+    ) -> Result<Vec<crate::vcs::CommitInfo>, PxError> {
         let client = self.remote_client()?;
         let repository_name = uri.repository.clone();
-        let manifest_path = uri.manifest_path();
+        let file_path = file_path.to_string();
         block_on_grpc(async move {
             let repo = client.get_repository_by_name(&repository_name).await?;
             let scoped = client.for_repository_id(repo.id.clone());
@@ -1623,7 +1651,7 @@ impl Resolver {
                     PxError::GrpcError("RevisionInfo returned no identifier".to_string())
                 })?;
                 let current = match scoped
-                    .file_address_at_revision(identifier, manifest_path.clone())
+                    .file_address_at_revision(identifier, file_path.clone())
                     .await
                 {
                     Ok(value) => Some(value),
@@ -1633,7 +1661,7 @@ impl Resolver {
                 let parent = revision.parent_self.as_ref();
                 let previous = match parent.and_then(|parent| parent.identifier.clone()) {
                     Some(identifier) => match scoped
-                        .file_address_at_revision(identifier, manifest_path.clone())
+                        .file_address_at_revision(identifier, file_path.clone())
                         .await
                     {
                         Ok(value) => Some(value),
@@ -1752,6 +1780,33 @@ mod unit_tests {
             }
             _ => panic!("expected full manifest"),
         }
+    }
+
+    #[test]
+    fn test_local_resolution_reads_working_tree_without_a_vcs_ref() {
+        let (tmp, _) = setup();
+        let repo_path = tmp.path().join("toystory");
+        let manifest_path = repo_path.join("character/woody.yaml");
+        let content = std::fs::read_to_string(&manifest_path).unwrap();
+        std::fs::write(&manifest_path, content.replace("plush", "hand-edited")).unwrap();
+
+        let resolver = Resolver::with_vcs_factory(
+            tmp.path(),
+            || Box::new(MockBackend::fail_reads_at_ref()),
+            ResolveConfig {
+                default_branch: Some("main".to_string()),
+            },
+        );
+        let result = resolver
+            .resolve("px://toystory/character/woody", &Default::default())
+            .unwrap();
+
+        assert!(matches!(
+            result,
+            ResolveResult::Full(manifest)
+                if manifest.properties.get("toy_type")
+                    == Some(&serde_yaml::Value::String("hand-edited".to_string()))
+        ));
     }
 
     #[test]
@@ -2067,6 +2122,21 @@ mod unit_tests {
             }
             _ => panic!("expected subtree"),
         }
+    }
+
+    #[test]
+    fn test_uri_fragment_takes_precedence_over_positional_path() {
+        let (_tmp, resolver) = setup();
+        let result = resolver
+            .resolve(
+                "px://toystory/character/woody#properties.toy_type",
+                &ResolveOptions {
+                    path: Some("properties.homeworld".to_string()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert!(matches!(result, ResolveResult::Subtree(value) if value == "plush"));
     }
 
     #[test]

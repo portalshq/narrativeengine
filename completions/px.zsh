@@ -2,7 +2,7 @@
 
 autoload -U is-at-least
 
-_px() {
+_px_generated() {
     typeset -A opt_args
     typeset -a _arguments_options
     local ret=1
@@ -372,19 +372,6 @@ esac
     ;;
 esac
 ;;
-(completions)
-_arguments "${_arguments_options[@]}" : \
-'-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
-'--base-dir=[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
-'-v[Enable verbose debug logging]' \
-'--verbose[Enable verbose debug logging]' \
-'(--local)--remote[Resolve repository reads through the configured Lore server (the default)]' \
-'(--remote)--local[Resolve repository reads from an explicitly checked-out local working tree]' \
-'-h[Print help (see more with '\''--help'\'')]' \
-'--help[Print help (see more with '\''--help'\'')]' \
-':shell -- Shell to generate completions for:(bash elvish fish powershell zsh)' \
-&& ret=0
-;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
 '-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
@@ -408,6 +395,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--remote)--local[Resolve repository reads from an explicitly checked-out local working tree]' \
 '-h[Print help]' \
 '--help[Print help]' \
+'::repository -- Repository name:_default' \
 && ret=0
 ;;
 (sync)
@@ -431,6 +419,9 @@ _arguments "${_arguments_options[@]}" : \
 '--name=[Human-readable name]:NAME:_default' \
 '-a+[Author identifier]:AUTHOR:_default' \
 '--author=[Author identifier]:AUTHOR:_default' \
+'*--set=[Initial property, as key=value. May be repeated]:PROPERTIES:_default' \
+'-m+[Commit message]:MESSAGE:_default' \
+'--message=[Commit message]:MESSAGE:_default' \
 '-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
 '--base-dir=[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
 '-v[Enable verbose debug logging]' \
@@ -445,8 +436,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (resolve)
 _arguments "${_arguments_options[@]}" : \
-'--branch=[Resolve at a specific branch]:BRANCH:_default' \
-'--commit=[Resolve at a specific commit hash]:COMMIT:_default' \
+'(--commit)--branch=[Resolve at a specific branch]:BRANCH:_default' \
+'(--branch)--commit=[Resolve at a specific commit hash]:COMMIT:_default' \
 '-f+[Output format\: yaml, json]:FORMAT:_default' \
 '--format=[Output format\: yaml, json]:FORMAT:_default' \
 '-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
@@ -460,6 +451,7 @@ _arguments "${_arguments_options[@]}" : \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':uri -- PX URI. e.g., "px\://toystory/character/woody":_default' \
+'::path -- Optional manifest subtree selector. URI fragments take precedence:_default' \
 && ret=0
 ;;
 (presign)
@@ -469,6 +461,8 @@ _arguments "${_arguments_options[@]}" : \
 '--ttl-seconds=[Requested lifetime in seconds; Lore enforces its configured bounds]:TTL_SECONDS:_default' \
 '--http-url=[Explicit Lore HTTP origin, such as http\://127.0.0.1\:41339]:HTTP_URL:_default' \
 '--token-env=[Environment variable containing a repository-scoped bearer token]:TOKEN_ENV:_default' \
+'--download=[Download the representation after creating its presigned URL. Optionally set its destination]::OUTPUT:_files' \
+'--output=[Destination for --download. Defaults to the entity asset directory]:OUTPUT:_files' \
 '-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
 '--base-dir=[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
 '-v[Enable verbose debug logging]' \
@@ -511,7 +505,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--remote)--local[Resolve repository reads from an explicitly checked-out local working tree]' \
 '-h[Print help]' \
 '--help[Print help]' \
-':repository -- Repository name:_default' \
+':target -- Repository name or PX entity URI:_default' \
 && ret=0
 ;;
 (history)
@@ -524,9 +518,9 @@ _arguments "${_arguments_options[@]}" : \
 '--verbose[Enable verbose debug logging]' \
 '(--local)--remote[Resolve repository reads through the configured Lore server (the default)]' \
 '(--remote)--local[Resolve repository reads from an explicitly checked-out local working tree]' \
-'-h[Print help]' \
-'--help[Print help]' \
-':uri -- PX URI:_default' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':uri -- PX URI or repository-relative entity/file target:_default' \
 && ret=0
 ;;
 (list)
@@ -555,7 +549,7 @@ _arguments "${_arguments_options[@]}" : \
 '-h[Print help]' \
 '--help[Print help]' \
 ':repository -- Repository name:_default' \
-'::name -- Branch name to create. Omit to list all branches:_default' \
+'::name -- Branch name to create. Omit to list local branches:_default' \
 && ret=0
 ;;
 (set)
@@ -573,8 +567,25 @@ _arguments "${_arguments_options[@]}" : \
 '-h[Print help]' \
 '--help[Print help]' \
 ':uri -- PX URI:_default' \
-':key -- Property key (dot-notation):_default' \
-':value -- Property value:_default' \
+'*::values -- Repeating key/value pairs. Keys support dot-notation:_default' \
+&& ret=0
+;;
+(unset)
+_arguments "${_arguments_options[@]}" : \
+'-m+[Commit message]:MESSAGE:_default' \
+'--message=[Commit message]:MESSAGE:_default' \
+'-a+[Author identifier]:AUTHOR:_default' \
+'--author=[Author identifier]:AUTHOR:_default' \
+'-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
+'--base-dir=[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
+'-v[Enable verbose debug logging]' \
+'--verbose[Enable verbose debug logging]' \
+'(--local)--remote[Resolve repository reads through the configured Lore server (the default)]' \
+'(--remote)--local[Resolve repository reads from an explicitly checked-out local working tree]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':uri -- PX URI:_default' \
+'*::keys -- Keys to remove. `representations.<key>` removes a representation:_default' \
 && ret=0
 ;;
 (add)
@@ -586,6 +597,7 @@ _arguments "${_arguments_options[@]}" : \
 '--author=[Author identifier]:AUTHOR:_default' \
 '-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
 '--base-dir=[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
+'--replace[Replace an existing representation only when its content differs]' \
 '-v[Enable verbose debug logging]' \
 '--verbose[Enable verbose debug logging]' \
 '(--local)--remote[Resolve repository reads through the configured Lore server (the default)]' \
@@ -824,6 +836,10 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (diff)
 _arguments "${_arguments_options[@]}" : \
+'(--base-commit)--base-branch=[Base branch]:BASE_BRANCH:_default' \
+'(--candidate-commit)--candidate-branch=[Candidate branch]:CANDIDATE_BRANCH:_default' \
+'(--base-branch)--base-commit=[Base commit]:BASE_COMMIT:_default' \
+'(--candidate-branch)--candidate-commit=[Candidate commit]:CANDIDATE_COMMIT:_default' \
 '-f+[Output format\: json, yaml]:FORMAT:_default' \
 '--format=[Output format\: json, yaml]:FORMAT:_default' \
 '-d+[Base directory for repository repositories. Defaults to \$PX_DIR, or ~/.px if unset]:BASE_DIR:_files' \
@@ -834,8 +850,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--remote)--local[Resolve repository reads from an explicitly checked-out local working tree]' \
 '-h[Print help]' \
 '--help[Print help]' \
-':base_file -- Base (left) manifest file:_files' \
-':candidate_file -- Candidate (right) manifest file:_files' \
+':uri -- PX URI. The px\:// prefix is optional:_default' \
 && ret=0
 ;;
 (merge)
@@ -980,10 +995,6 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
-(completions)
-_arguments "${_arguments_options[@]}" : \
-&& ret=0
-;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -1029,6 +1040,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unset)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -1131,25 +1146,25 @@ _px_commands() {
 'auth:Manage secure authentication for the configured Lore provider' \
 'install:Install required dependencies' \
 'init:Initialize a repository repository and/or configure the backend provider' \
-'configure:Configure version-control backend (unified\: replaces \`px choose\` + \`px backend\`)' \
+'configure:Configure version-control backend' \
 'choose:Choose backend provider (deprecated\: use \`px configure\`)' \
 'backend:Configure or inspect the version-control backend (deprecated\: use \`px configure\`)' \
-'completions:Generate shell completions for \`px\`' \
 'doctor:Run diagnostics and repair' \
-'status:Show system status' \
-'sync:Sync with remote' \
+'status:Show system status, or working-tree status for one repository' \
+'sync:Fetch remote manifests and push local commits' \
 'create:Create a new entity manifest' \
 'resolve:Resolve a PX URI to its manifest or a subtree' \
 'presign:Create a time-limited public URL for a committed representation' \
-'query:Query a subtree from a manifest' \
-'commit:Commit changes to a repository repository' \
-'history:View commit history for an entity' \
+'query:Deprecated\: use \`px resolve <uri>#<path>\` or \`px resolve <uri> <path>\`' \
+'commit:Commit all repository changes, or only one entity when given its URI' \
+'history:View commit history for an entity or repository file' \
 'list:List repositories or entities within a repository' \
 'branch:Create or list branches' \
-'set:Set a property on an entity manifest' \
+'set:Set one or more properties on an entity manifest' \
+'unset:Remove one or more properties or representations from an entity manifest' \
 'add:Add a file representation to an entity manifest' \
 'revert:Revert a commit by hash (undoes all changes in that commit)' \
-'pull:Clone or pull a repository from a remote' \
+'pull:Clone or pull PX manifests from a remote (representation files stay remote)' \
 'push:Push the current branch to its configured upstream remote' \
 'remote:Manage remotes on a repository' \
 'sign:Sign a manifest (stub for v0)' \
@@ -1158,7 +1173,7 @@ _px_commands() {
 'head:Show the current HEAD commit hash' \
 'validate:Validate a manifest against the PX schema' \
 'schema:Print a JSON Schema for manifest or commit types' \
-'diff:Show diff between two manifest files or versions' \
+'diff:Show a manifest diff for an entity URI' \
 'merge:Three-way merge of JSON/YAML values' \
 'content-hash:Compute the BLAKE3 content hash of a file' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -1309,11 +1324,6 @@ _px__subcmd__commit_commands() {
     local commands; commands=()
     _describe -t commands 'px commit commands' commands "$@"
 }
-(( $+functions[_px__subcmd__completions_commands] )) ||
-_px__subcmd__completions_commands() {
-    local commands; commands=()
-    _describe -t commands 'px completions commands' commands "$@"
-}
 (( $+functions[_px__subcmd__configure_commands] )) ||
 _px__subcmd__configure_commands() {
     local commands; commands=(
@@ -1376,25 +1386,25 @@ _px__subcmd__help_commands() {
 'auth:Manage secure authentication for the configured Lore provider' \
 'install:Install required dependencies' \
 'init:Initialize a repository repository and/or configure the backend provider' \
-'configure:Configure version-control backend (unified\: replaces \`px choose\` + \`px backend\`)' \
+'configure:Configure version-control backend' \
 'choose:Choose backend provider (deprecated\: use \`px configure\`)' \
 'backend:Configure or inspect the version-control backend (deprecated\: use \`px configure\`)' \
-'completions:Generate shell completions for \`px\`' \
 'doctor:Run diagnostics and repair' \
-'status:Show system status' \
-'sync:Sync with remote' \
+'status:Show system status, or working-tree status for one repository' \
+'sync:Fetch remote manifests and push local commits' \
 'create:Create a new entity manifest' \
 'resolve:Resolve a PX URI to its manifest or a subtree' \
 'presign:Create a time-limited public URL for a committed representation' \
-'query:Query a subtree from a manifest' \
-'commit:Commit changes to a repository repository' \
-'history:View commit history for an entity' \
+'query:Deprecated\: use \`px resolve <uri>#<path>\` or \`px resolve <uri> <path>\`' \
+'commit:Commit all repository changes, or only one entity when given its URI' \
+'history:View commit history for an entity or repository file' \
 'list:List repositories or entities within a repository' \
 'branch:Create or list branches' \
-'set:Set a property on an entity manifest' \
+'set:Set one or more properties on an entity manifest' \
+'unset:Remove one or more properties or representations from an entity manifest' \
 'add:Add a file representation to an entity manifest' \
 'revert:Revert a commit by hash (undoes all changes in that commit)' \
-'pull:Clone or pull a repository from a remote' \
+'pull:Clone or pull PX manifests from a remote (representation files stay remote)' \
 'push:Push the current branch to its configured upstream remote' \
 'remote:Manage remotes on a repository' \
 'sign:Sign a manifest (stub for v0)' \
@@ -1403,7 +1413,7 @@ _px__subcmd__help_commands() {
 'head:Show the current HEAD commit hash' \
 'validate:Validate a manifest against the PX schema' \
 'schema:Print a JSON Schema for manifest or commit types' \
-'diff:Show diff between two manifest files or versions' \
+'diff:Show a manifest diff for an entity URI' \
 'merge:Three-way merge of JSON/YAML values' \
 'content-hash:Compute the BLAKE3 content hash of a file' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -1478,11 +1488,6 @@ _px__subcmd__help__subcmd__choose__subcmd__backend_commands() {
 _px__subcmd__help__subcmd__commit_commands() {
     local commands; commands=()
     _describe -t commands 'px help commit commands' commands "$@"
-}
-(( $+functions[_px__subcmd__help__subcmd__completions_commands] )) ||
-_px__subcmd__help__subcmd__completions_commands() {
-    local commands; commands=()
-    _describe -t commands 'px help completions commands' commands "$@"
 }
 (( $+functions[_px__subcmd__help__subcmd__configure_commands] )) ||
 _px__subcmd__help__subcmd__configure_commands() {
@@ -1635,6 +1640,11 @@ _px__subcmd__help__subcmd__sync_commands() {
     local commands; commands=()
     _describe -t commands 'px help sync commands' commands "$@"
 }
+(( $+functions[_px__subcmd__help__subcmd__unset_commands] )) ||
+_px__subcmd__help__subcmd__unset_commands() {
+    local commands; commands=()
+    _describe -t commands 'px help unset commands' commands "$@"
+}
 (( $+functions[_px__subcmd__help__subcmd__validate_commands] )) ||
 _px__subcmd__help__subcmd__validate_commands() {
     local commands; commands=()
@@ -1785,6 +1795,11 @@ _px__subcmd__sync_commands() {
     local commands; commands=()
     _describe -t commands 'px sync commands' commands "$@"
 }
+(( $+functions[_px__subcmd__unset_commands] )) ||
+_px__subcmd__unset_commands() {
+    local commands; commands=()
+    _describe -t commands 'px unset commands' commands "$@"
+}
 (( $+functions[_px__subcmd__validate_commands] )) ||
 _px__subcmd__validate_commands() {
     local commands; commands=()
@@ -1794,6 +1809,32 @@ _px__subcmd__validate_commands() {
 _px__subcmd__verify_commands() {
     local commands; commands=()
     _describe -t commands 'px verify commands' commands "$@"
+}
+
+_px_uri_candidates() {
+    local base="${PX_DIR:-$HOME/.px}" manifest path
+    [[ -d "$base" ]] || return
+    while IFS= read -r manifest; do
+        path="${manifest#$base/}"
+        [[ "$path" == */*/*.yaml ]] || continue
+        path="${path%.yaml}"
+        print -r -- "$path"
+        print -r -- "px://$path"
+    done < <(find "$base" -type f -name '*.yaml' ! -path '*/.px/*' 2>/dev/null)
+}
+
+_px() {
+    local word command=""
+    for word in "${words[@]}"; do
+        case "$word" in resolve|query|set|unset|add|presign|diff|history) command="$word"; break;; esac
+    done
+    if [[ -n "$command" && "$cur" != -* ]]; then
+        local -a candidates
+        candidates=("${(@f)$(_px_uri_candidates)}")
+        _describe -t px-uri 'PX URI' candidates
+        return
+    fi
+    _px_generated "$@"
 }
 
 if [ "$funcstack[1]" = "_px" ]; then

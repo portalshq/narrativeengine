@@ -395,7 +395,7 @@ fn test_local_lore_remote_read_command_suite() {
         .assert()
         .success();
     px_cmd()
-        .args(["branch", "--base-dir"])
+        .args(["--remote", "branch", "--base-dir"])
         .arg(reader.path())
         .arg(&repository)
         .assert()
@@ -407,7 +407,7 @@ fn test_local_lore_remote_read_command_suite() {
         .arg(&repository)
         .assert()
         .success()
-        .stdout(predicate::str::contains("hash"));
+        .stdout(predicate::str::contains("\"head\""));
 }
 
 /// A manifest is a file, while Lore's RevisionTree RPC accepts directory
@@ -508,8 +508,7 @@ fn test_local_lore_create_entity() {
         .arg("integration-test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Test Hero"))
-        .stdout(predicate::str::contains("px://"));
+        .stderr(predicate::str::contains("testhero"));
 
     // Verify entity file exists
     let entity_path = tmp
@@ -572,7 +571,7 @@ fn test_local_lore_update_repository_file() {
         .arg("integration-test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("toy_type"));
+        .stderr(predicate::str::contains("set 1 properties"));
 
     // Verify the update by reading the manifest
     let entity_path = tmp
@@ -813,8 +812,7 @@ fn test_local_lore_add_image_to_repository() {
         .arg("integration-test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("reference_image"))
-        .stdout(predicate::str::contains("blake3:"));
+        .stderr(predicate::str::contains("reference_image"));
 
     // Verify the representation was added
     let entity_path = tmp
@@ -1147,9 +1145,11 @@ fn test_local_lore_explicit_commit_and_revert() {
         commit_output.status.success(),
         "head-hash failed: {commit_output:?}"
     );
-    let commit = String::from_utf8(commit_output.stdout)
-        .expect("head-hash is utf-8")
-        .trim()
+    let commit: serde_json::Value = serde_json::from_slice(&commit_output.stdout)
+        .expect("head-hash is JSON when stdout is piped");
+    let commit = commit["head"]
+        .as_str()
+        .expect("head-hash response contains a hash")
         .to_string();
     assert!(!commit.is_empty(), "head-hash must return a commit hash");
 
@@ -1488,6 +1488,14 @@ fn test_local_lore_resolve_provenance_and_include_blobs() {
     );
     run_lore(
         &repo_path,
+        &["dirty", "character/hero.yaml", "--non-interactive"],
+    );
+    run_lore(
+        &repo_path,
+        &["stage", "character/hero.yaml", "--non-interactive"],
+    );
+    run_lore(
+        &repo_path,
         &[
             "file",
             "metadata",
@@ -1498,6 +1506,14 @@ fn test_local_lore_resolve_provenance_and_include_blobs() {
             &prompt_path_string,
             "--non-interactive",
         ],
+    );
+    run_lore(
+        &repo_path,
+        &["dirty", "character/hero.yaml", "--non-interactive"],
+    );
+    run_lore(
+        &repo_path,
+        &["stage", "character/hero.yaml", "--non-interactive"],
     );
     run_lore(
         &repo_path,

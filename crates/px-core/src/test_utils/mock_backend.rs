@@ -11,6 +11,7 @@ pub struct MockBackend {
     /// Incrementing counter for commit hashes.
     counter: AtomicU64,
     branches: Mutex<Vec<String>>,
+    fail_reads_at_ref: bool,
 }
 
 impl Default for MockBackend {
@@ -24,6 +25,15 @@ impl MockBackend {
         Self {
             counter: AtomicU64::new(1),
             branches: Mutex::new(vec!["main".to_string()]),
+            fail_reads_at_ref: false,
+        }
+    }
+
+    /// Build a backend that proves a caller did not resolve through a VCS ref.
+    pub fn fail_reads_at_ref() -> Self {
+        Self {
+            fail_reads_at_ref: true,
+            ..Self::new()
         }
     }
 
@@ -88,6 +98,11 @@ impl VcsBackend for MockBackend {
         file_path: &str,
         _reference: Option<&str>,
     ) -> Result<String, PxError> {
+        if self.fail_reads_at_ref {
+            return Err(PxError::VcsError(
+                "mock: read at ref must not be used".to_string(),
+            ));
+        }
         let full_path = repo_path.join(file_path);
         std::fs::read_to_string(&full_path)
             .map_err(|e| PxError::Other(format!("mock: read failed: {}", e)))

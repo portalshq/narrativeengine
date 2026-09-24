@@ -644,6 +644,38 @@ impl LoreBackend {
     fn repo_url(&self, repo_id: &str) -> String {
         format!("{}/{}", self.remote_url.trim_end_matches('/'), repo_id)
     }
+
+    fn commit_staged(&self, path: &Path, message: &str, author: &str) -> Result<String, PxError> {
+        let stdout = LoreProcessRunner::run(
+            [
+                "revision",
+                "commit",
+                message,
+                "--identity",
+                author,
+                "--non-interactive",
+            ],
+            Some(path),
+        )?;
+        Ok(stdout
+            .lines()
+            .find_map(|line| {
+                line.strip_prefix("Signature :")
+                    .or_else(|| line.strip_prefix("Signature:"))
+            })
+            .map(|signature| signature.trim().to_string())
+            .unwrap_or_else(|| {
+                stdout
+                    .lines()
+                    .next()
+                    .unwrap_or(&stdout)
+                    .trim()
+                    .strip_prefix("Created revision ")
+                    .and_then(|signature| signature.split_whitespace().next())
+                    .map(ToOwned::to_owned)
+                    .unwrap_or_else(|| stdout.trim().to_string())
+            }))
+    }
 }
 
 impl VcsBackend for LoreBackend {
@@ -761,42 +793,21 @@ impl VcsBackend for LoreBackend {
         // Stage 1: Discover and stage all changes.
         LoreProcessRunner::run(["stage", "--scan", ".", "--non-interactive"], Some(path))?;
 
-        // Stage 2: Commit with identity.
-        let stdout = LoreProcessRunner::run(
-            [
-                "revision",
-                "commit",
-                message,
-                "--identity",
-                author,
-                "--non-interactive",
-            ],
-            Some(path),
-        )?;
+        self.commit_staged(path, message, author)
+    }
 
-        // Parse the revision signature from stdout. Lore now outputs a
-        // multi-line report. We look for the "Signature :" line.
-        let signature = stdout
-            .lines()
-            .find_map(|line| {
-                line.strip_prefix("Signature :")
-                    .or_else(|| line.strip_prefix("Signature:"))
-            })
-            .map(|s| s.trim().to_string())
-            .unwrap_or_else(|| {
-                // Fallback: try the old "Created revision <sig> (#<num>)" format.
-                stdout
-                    .lines()
-                    .next()
-                    .unwrap_or(&stdout)
-                    .trim()
-                    .strip_prefix("Created revision ")
-                    .and_then(|s| s.split_whitespace().next())
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| stdout.trim().to_string())
-            });
-
-        Ok(signature)
+    fn commit_paths(
+        &self,
+        path: &Path,
+        paths: &[String],
+        message: &str,
+        author: &str,
+    ) -> Result<String, PxError> {
+        let mut args = vec!["stage".to_string(), "--scan".to_string()];
+        args.extend(paths.iter().cloned());
+        args.push("--non-interactive".to_string());
+        LoreProcessRunner::run(args, Some(path))?;
+        self.commit_staged(path, message, author)
     }
 
     // ── read_file_at_ref ─────────────────────────────────────────────

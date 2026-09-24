@@ -9,7 +9,8 @@
  */
 
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import native from "./native.js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -91,10 +92,126 @@ export interface RepoInfo {
   repository: string;
 }
 
-/** Operation result with commit. */
+/** Result of a committed PX mutation. */
 export interface CommitResult {
-  commit: Commit;
-  version: number;
+  commitHash: string;
+  commitHashFull: string;
+  repository: string;
+  entityId: string;
+  message: string;
+  pushed: boolean;
+  pushError?: string;
+}
+
+export interface MutationOptions { repoPath?: string; message?: string; author?: string }
+
+function entityParts(entityId: string): { repository: string; entityType: string; entityId: string } {
+  const normalized = entityId.replace(/^(px|nap):\/\//, "").split("#", 1)[0];
+  const [repository, entityType, id, ...rest] = normalized.split("/");
+  if (!repository || !entityType || !id || rest.length) throw new Error("expected repository/type/id");
+  return { repository, entityType, entityId: id };
+}
+
+function commitMutation(
+  parts: { repository: string; entityType: string; entityId: string },
+  message: string,
+  author: string,
+  changes: Change[],
+  repoPath?: string,
+): CommitResult {
+  return repoCommitManifest(parts.repository, parts.entityType, parts.entityId, message, author, changes, repoPath);
+}
+
+function commitResult(hash: string, repository: string, entityId: string, message: string): CommitResult {
+  return { commitHash: hash.slice(0, 12), commitHashFull: hash, repository, entityId, message, pushed: true };
+}
+
+/** Set one or more manifest properties in a single commit. */
+export function setProperties(
+  entityId: string,
+  properties: Record<string, unknown>,
+  options: MutationOptions = {},
+): CommitResult {
+  const parts = entityParts(entityId);
+  const manifest = repoReadManifest(parts.repository, parts.entityType, parts.entityId, options.repoPath);
+  const changes: Change[] = [];
+  for (const [key, value] of Object.entries(properties)) {
+    const path = key.startsWith("properties.") || key.startsWith("references.") ? key : `properties.${key}`;
+    const [root, ...segments] = path.split(".");
+    let target = manifest as unknown as Record<string, unknown>;
+    for (const segment of [root, ...segments.slice(0, -1)]) {
+      target[segment] ??= {};
+      target = target[segment] as Record<string, unknown>;
+    }
+    target[segments.at(-1) ?? root] = value;
+    changes.push(changeSet(path, JSON.stringify(value)));
+  }
+  repoWriteManifest(parts.repository, manifest, options.repoPath);
+  const count = Object.keys(properties).length;
+  return commitMutation(parts, options.message ?? (count === 1 ? `set ${Object.keys(properties)[0]} on ${parts.entityId}` : `set ${count} properties on ${parts.entityId}`), options.author ?? "px", changes, options.repoPath);
+}
+
+/** Remove one or more properties or representations in a single commit. */
+export function unsetProperties(entityId: string, keys: string[], options: MutationOptions = {}): CommitResult {
+  const parts = entityParts(entityId);
+  const manifest = repoReadManifest(parts.repository, parts.entityType, parts.entityId, options.repoPath);
+  const changes = keys.map((key) => {
+    const path = key.startsWith("representations.") || key.startsWith("properties.") ? key : `properties.${key}`;
+    const [root, leaf] = path.split(".", 2);
+    const target = (manifest as unknown as Record<string, Record<string, unknown>>)[root];
+    if (!target || !(leaf in target)) throw new Error(`key not found: ${key}`);
+    delete target[leaf];
+    return changeDelete(path, "");
+  });
+  repoWriteManifest(parts.repository, manifest, options.repoPath);
+  return commitMutation(parts, options.message ?? `unset ${keys.length === 1 ? keys[0] : `${keys.length} properties`} on ${parts.entityId}`, options.author ?? "px", changes, options.repoPath);
+}
+
+export interface DiffOptions { repoPath?: string; baseBranch?: string; candidateBranch?: string; baseCommit?: string; candidateCommit?: string }
+
+/** Compare an entity's working tree or selected revisions. */
+export function diff(entityId: string, options: DiffOptions = {}): DiffEntry[] {
+  const base = resolve(entityId, options.repoPath, options.baseBranch, options.baseCommit) as unknown as Record<string, unknown>;
+  const candidate = options.candidateBranch || options.candidateCommit
+    ? resolve(entityId, options.repoPath, options.candidateBranch, options.candidateCommit) as unknown as Record<string, unknown>
+    : resolve(entityId, options.repoPath, undefined, undefined, undefined, "local") as unknown as Record<string, unknown>;
+  return mergeDiff(manifestSchema(), base, candidate);
+}
+
+/** Return entity history. Fragment filtering remains a CLI/server operation. */
+export function history(entityId: string, options: { repoPath?: string; limit?: number } = {}): CommitEntry[] {
+  const parts = entityParts(entityId);
+  return repoHistory(parts.repository, parts.entityType, parts.entityId, options.limit ?? 20, options.repoPath);
+}
+
+/** Validate an entity's working-tree manifest without committing it. */
+export function validate(entityId: string, options: { repoPath?: string } = {}): ValidationResult {
+  const parts = entityParts(entityId);
+  return validateManifest(repoReadManifest(parts.repository, parts.entityType, parts.entityId, options.repoPath));
+}
+
+/** Add a representation and commit it; replacing changed content requires `replace`. */
+export async function addRepresentation(
+  entityId: string,
+  key: string,
+  filePath: string,
+  format: string,
+  options: MutationOptions & { replace?: boolean } = {},
+): Promise<CommitResult> {
+  const parts = entityParts(entityId);
+  const manifest = repoReadManifest(parts.repository, parts.entityType, parts.entityId, options.repoPath);
+  const bytes = await readFile(filePath);
+  const hash = contentHashFromBytes(bytes);
+  const existing = manifest.representations[key];
+  if (existing?.hash === hash) return commitResult(repoHeadHash(parts.repository, options.repoPath), parts.repository, parts.entityId, options.message ?? `add representation ${key} to ${parts.entityId}`);
+  if (existing && !options.replace) throw new Error(`representation '${key}' already exists with different content; pass replace: true`);
+  const filename = `${key}.${format}`;
+  const assetPath = join(resolveRepoPath(options.repoPath), parts.repository, entityTypeDirectoryName(parts.entityType), parts.entityId, filename);
+  await mkdir(dirname(assetPath), { recursive: true });
+  await copyFile(filePath, assetPath);
+  manifest.representations[key] = { hash, format, uri: filename };
+  repoWriteManifest(parts.repository, manifest, options.repoPath);
+  return commitMutation(parts, options.message ?? `add representation ${key} to ${parts.entityId}`, options.author ?? "px", [changeSet(`representations.${key}`, hash)], options.repoPath);
 }
 
 /** Entity creation result. */
@@ -144,6 +261,8 @@ export interface PresignOptions {
   ttlSeconds?: number;
   httpUrl?: string;
   bearerToken?: string;
+  download?: boolean;
+  outputPath?: string;
 }
 
 /** Select the configured Lore server or an explicit local working tree. */
@@ -542,6 +661,11 @@ export function repoOpen(repository: string, basePath?: string): RepoInfo {
   return JSON.parse(native.repoOpen(resolveRepoPath(basePath), repository)) as RepoInfo;
 }
 
+/** Return Lore's scanned working-tree status for a repository. */
+export function repositoryStatus(repository: string, repoPath?: string): string {
+  return native.repoStatus(resolveRepoPath(repoPath), repository);
+}
+
 /**
  * Create a new entity manifest and commit it.
  *
@@ -564,6 +688,19 @@ export function repoCreateEntity(
   return JSON.parse(
     native.repoCreateEntity(resolveRepoPath(basePath), repository, entityType, entityId, name, author),
   ) as CreateEntityResult;
+}
+
+/** Create an entity with initial properties in one committed mutation. */
+export function create(
+  entityType: string,
+  entityId: string,
+  options: { repository: string; name: string; properties?: Record<string, unknown>; author?: string; repoPath?: string },
+): CommitResult {
+  const result = JSON.parse(native.repoCreateEntityWithProperties(
+    resolveRepoPath(options.repoPath), options.repository, entityType, entityId, options.name,
+    options.author ?? "px", JSON.stringify(options.properties ?? {}),
+  )) as CreateEntityResult;
+  return commitResult(result.commit_hash, options.repository, entityId, `create ${entityType} ${entityId}`);
 }
 
 /**
@@ -634,7 +771,7 @@ export function repoWriteManifest(
  * @param author - Author identifier (default: `"px-sdk"`)
  * @param changes - Array of change objects
  * @param basePath - Base directory (defaults to `$PX_DIR` / `~/.px`)
- * @returns Object with `commit` and `version`
+ * @returns The committed mutation result.
  */
 export function repoCommitManifest(
   repository: string,
@@ -645,12 +782,13 @@ export function repoCommitManifest(
   changes: Change[] = [],
   basePath?: string,
 ): CommitResult {
-  return JSON.parse(
+  const result = JSON.parse(
     native.repoCommitManifest(
       resolveRepoPath(basePath), repository, entityType, entityId,
       message, author, JSON.stringify(changes),
     ),
-  ) as CommitResult;
+  ) as { commit: Commit };
+  return commitResult(result.commit.id, repository, entityId, message);
 }
 
 /**
@@ -946,25 +1084,22 @@ export async function presignRepresentation(
     options.httpUrl,
     options.bearerToken,
   );
-  return JSON.parse(result) as PresignedRepresentation;
-}
-
-/**
- * Query a specific subtree path from a manifest.
- *
- * This is the most efficient way to read a single property from an entity.
- *
- * @param uri - PX URI
- * @param path - Dot-notation query path (e.g. `"properties.species"`)
- * @param repoPath - Base directory (defaults to `$PX_DIR` / `~/.px`)
- * @returns The value at the given path
- */
-export function resolveQuery(
-  uri: string,
-  path: string,
-  repoPath?: string,
-): unknown {
-  return JSON.parse(native.resolveQuery(uri, resolveRepoPath(repoPath), path));
+  const presigned = JSON.parse(result) as PresignedRepresentation;
+  if (options.download) {
+    const parts = entityParts(uri);
+    const manifest = resolve(uri, options.repoPath) as unknown as Manifest;
+    const representationValue = manifest.representations[representation];
+    const asset = representationValue?.uri;
+    if (!asset) throw new Error(`representation '${representation}' has no local URI`);
+    const destination = options.outputPath ?? join(resolveRepoPath(options.repoPath), parts.repository, entityTypeDirectoryName(parts.entityType), parts.entityId, asset);
+    const response = await fetch(presigned.url);
+    if (!response.ok) throw new Error(`download failed: HTTP ${response.status}`);
+    await mkdir(dirname(destination), { recursive: true });
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!contentHashVerify(representationValue.hash, bytes)) throw new Error("downloaded representation hash does not match manifest");
+    await writeFile(destination, bytes);
+  }
+  return presigned;
 }
 
 /**

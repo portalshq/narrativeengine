@@ -7,6 +7,7 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::OnceLock;
 use tokio::runtime::Runtime;
@@ -341,6 +342,16 @@ fn repo_open(base_path: String, repository: String) -> PyResult<String> {
 }
 
 #[pyfunction]
+fn repo_status(base_path: String, repository: String) -> PyResult<String> {
+    let repo = open_repo(&base_path, &repository)?;
+    px_core::vcs_lore::LoreProcessRunner::run(
+        ["status", "--scan", "--non-interactive"],
+        Some(&repo.root),
+    )
+    .map_err(map_error)
+}
+
+#[pyfunction]
 fn repo_create_entity(
     base_path: String,
     repository: String,
@@ -359,6 +370,31 @@ fn repo_create_entity(
         "commit_hash": commit_hash,
     });
     Ok(result.to_string())
+}
+
+#[pyfunction]
+fn repo_create_entity_with_properties(
+    base_path: String,
+    repository: String,
+    entity_type: String,
+    entity_id: String,
+    name: String,
+    author: String,
+    properties_json: String,
+) -> PyResult<String> {
+    let properties: BTreeMap<String, serde_yaml::Value> =
+        serde_json::from_str(&properties_json).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let repo = open_repo(&base_path, &repository)?;
+    let (manifest, commit_hash) = repo
+        .create_entity_with_properties(
+            &parse_entity_type(&entity_type)?,
+            &entity_id,
+            &name,
+            &author,
+            properties,
+        )
+        .map_err(map_error)?;
+    Ok(serde_json::json!({"manifest": manifest, "commit_hash": commit_hash}).to_string())
 }
 
 #[pyfunction]
@@ -579,7 +615,9 @@ fn resolve(uri_str: String, repo_base_path: String) -> PyResult<String> {
             serde_json::to_string(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
-        ResolveResult::Provenance(_) => todo!(),
+        ResolveResult::Provenance(envelope) => {
+            serde_json::to_string(&envelope).map_err(|e| PyValueError::new_err(e.to_string()))
+        }
     }
 }
 
@@ -618,15 +656,10 @@ fn resolve_with_options(
             serde_json::to_string(&manifest).map_err(|e| PyValueError::new_err(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
-        ResolveResult::Provenance(_) => todo!(),
+        ResolveResult::Provenance(envelope) => {
+            serde_json::to_string(&envelope).map_err(|e| PyValueError::new_err(e.to_string()))
+        }
     }
-}
-
-#[pyfunction]
-fn resolve_query(uri_str: String, repo_base_path: String, path: String) -> PyResult<String> {
-    let resolver = Resolver::new(Path::new(&repo_base_path));
-    let result = resolver.query(&uri_str, &path).map_err(map_error)?;
-    Ok(result.to_string())
 }
 
 #[pyfunction]
@@ -865,7 +898,12 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     // Repository
     module.add_function(wrap_pyfunction!(repo_init, module)?)?;
     module.add_function(wrap_pyfunction!(repo_open, module)?)?;
+    module.add_function(wrap_pyfunction!(repo_status, module)?)?;
     module.add_function(wrap_pyfunction!(repo_create_entity, module)?)?;
+    module.add_function(wrap_pyfunction!(
+        repo_create_entity_with_properties,
+        module
+    )?)?;
     module.add_function(wrap_pyfunction!(repo_read_manifest, module)?)?;
     module.add_function(wrap_pyfunction!(repo_read_manifest_at_ref, module)?)?;
     module.add_function(wrap_pyfunction!(repo_write_manifest, module)?)?;
@@ -887,7 +925,6 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     // Resolver
     module.add_function(wrap_pyfunction!(resolve, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_with_options, module)?)?;
-    module.add_function(wrap_pyfunction!(resolve_query, module)?)?;
     module.add_function(wrap_pyfunction!(presign_representation, module)?)?;
     module.add_function(wrap_pyfunction!(list_repositories, module)?)?;
 

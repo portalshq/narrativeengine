@@ -68,8 +68,8 @@ px resolve px://toystory/character/woody
 # Fragment queries
 px resolve px://toystory/character/woody#properties.homeworld
 
-# Subtree queries
-px query px://toystory/character/woody properties
+# Subtree resolution
+px resolve px://toystory/character/woody properties
 
 # Version control
 px history px://toystory/character/woody
@@ -96,7 +96,7 @@ px://toystory/character/woody#properties.homeworld
 ```
 
 **Key rules:**
-- Branch and commit selectors are **never** in the URI path — pass them alongside the URI instead (mirrors Git and OCI tooling).
+- Branch and commit selectors are **never** in the URI path — pass them alongside the URI instead.
 - Fragment (`#`) carries the query path for subtree extraction.
 - Entity type is singular in the URI (`character`, not `characters`).
 
@@ -167,8 +167,8 @@ px resolve px://toystory/character/woody#references.appears_in.0
 
 ```bash
 # An AI writing a scene only needs participants and setting
-px query px://toystory/scene/pizza-planet properties.participants -f json
-px query px://toystory/scene/pizza-planet properties.setting -f json
+px resolve px://toystory/scene/pizza-planet properties.participants -f json
+px resolve px://toystory/scene/pizza-planet properties.setting -f json
 ```
 
 **Use case — CI/CD validation:** Verify every cross-reference resolves:
@@ -208,44 +208,6 @@ px resolve px://toystory/character/woody#properties.affiliation \
 ---
 
 ## 2. Portability
-
-### 2.1 Repository-as-Repo: Move Your World Anywhere
-
-Every PX repository is **files + Git** — zero runtime dependencies. This means it works with every transport and storage system:
-
-```bash
-# Archive an entire repository as a tarball
-tar czf toystory.px toystory/
-
-# Ship it via any medium — S3, Dropbox, scp, USB drive
-scp -r toystory/ user@server:/repositorys/
-
-# Clone across teams
-git clone git@github.com:studio/toystory-px.git
-
-# Sync to shared drives
-rsync -avz toystory/ /shared/drive/projects/
-
-# Mount in cloud storage
-aws s3 sync toystory/ s3://studio-assets/repositorys/toystory/
-```
-
-**Use case — multi-studio collaboration:** Studio A builds characters, Studio B builds locations, Studio C builds scenes. Each works in their own Git branch, and PX URIs are the contract between them. When they merge, the references resolve across all three.
-
-```bash
-# Studio A works on characters
-git clone git@github.com:studio/toystory-px.git
-px create character slinky -u toystory -n "Slinky Dog"
-
-# Studio B works on locations
-git clone git@github.com:studio/toystory-px.git
-px create location deathstar -u toystory -n "Death Star"
-
-# On merge, Studio A's character can reference Studio B's location
-px set px://toystory/character/slinky base "px://toystory/location/deathstar"
-```
-
-**Use case — offline fieldwork:** A writer on a plane builds an entire repository with no internet, just the `px` binary and a text editor. When they reconnect, `git push` syncs everything.
 
 ### 2.2 Content-Addressed Assets
 
@@ -320,7 +282,7 @@ provenance:
 **Use case — rights & attribution:** When a model is deprecated or a license changes, you can identify every asset generated with it:
 
 ```bash
-px query px://toystory/character/woody provenance.model
+px resolve px://toystory/character/woody provenance.model
 # → midjourney-v6
 ```
 
@@ -349,45 +311,36 @@ representations:
     uri: "gs://assets/toystory/slinky/voice.wav"
 head: "f7e3d2c1a..."
 ```
-
-You can commit this directly to Git, review it in PRs, diff changes — it's a first-class citizen in your development workflow.
-
-```bash
-git diff toystory/characters/slinky.yaml
-# -  accessory: red
-# +  accessory: blue
-```
-
 ---
 
 ## 3. Resolution
 
-### 3.1 Subtree Query Engine
+### 3.1 Subtree Resolution
 
-The `query` command extracts exactly the data you need from deep manifest trees — no full-file parsing required:
+`resolve` extracts exactly the data you need from deep manifest trees — no full-file parsing required:
 
 ```bash
 # Get the first scene a character appears in
-px query px://toystory/character/woody references.appears_in.0
+px resolve px://toystory/character/woody references.appears_in.0
 
 # Get just image hashes across all characters (for caching)
-px query px://toystory/character/woody representations.reference_image.hash
+px resolve px://toystory/character/woody representations.reference_image.hash
 
 # List available keys for tab completion / introspection
 px resolve px://toystory/character/woody#representations
 
 # Different output formats
-px query px://toystory/character/woody properties -f json
-px query px://toystory/character/woody properties -f yaml
+px resolve px://toystory/character/woody properties -f json
+px resolve px://toystory/character/woody properties -f yaml
 ```
 
 **Use case — AI story generator:** A GPT agent builds a scene by querying the setting, participants, and mood, then generates appropriate dialog — all from fragment queries:
 
 ```bash
 # Agent gathers context into variables
-SETTING=$(px query px://toystory/scene/pizza-planet properties -f json)
-MOOD=$(px query px://toystory/scene/pizza-planet properties.mood -f json)
-PARTICIPANTS=$(px query px://toystory/scene/pizza-planet properties.participants -f json)
+SETTING=$(px resolve px://toystory/scene/pizza-planet properties -f json)
+MOOD=$(px resolve px://toystory/scene/pizza-planet properties.mood -f json)
+PARTICIPANTS=$(px resolve px://toystory/scene/pizza-planet properties.participants -f json)
 
 # Agent generates scene using only the relevant data
 echo "Setting: $SETTING"
@@ -397,7 +350,7 @@ echo "Participants: $PARTICIPANTS"
 **Use case — API response size optimization:** A mobile client fetching character info only needs the `properties` subtree, not the full manifest (which may include provenance data, representations metadata, references arrays, etc.):
 
 ```bash
-px query px://toystory/character/woody properties -f json
+px resolve px://toystory/character/woody properties -f json
 # Returns ~200 bytes instead of ~2000
 ```
 
@@ -504,7 +457,7 @@ px history px://toystory/character/woody | grep "hair"
 **Use case — rollback:** Revert a character to a known good state:
 
 ```bash
-git -C toystory revert b83d1a2
+px revert --commit b83d1a2 toystory
 ```
 
 ### 3.4 Cross-Repository Discovery
@@ -649,14 +602,14 @@ px set px://toystory/prop/andy-hat references.owner "px://toystory/character/and
 
 ```bash
 # Find all scenes a character appears in
-px query px://toystory/character/woody references.appears_in
+px resolve px://toystory/character/woody references.appears_in
 
 # Find all characters that visit a location
 # (resolve scene participants for each scene set at the location)
 px resolve px://toystory/scene/pizza-planet#properties.participants
 
 # Find a character's relationships
-px query px://toystory/character/woody references.relationships -f json
+px resolve px://toystory/character/woody references.relationships -f json
 ```
 
 ### 4.4 Multi-Repository Portfolio
@@ -681,7 +634,7 @@ px list
 # px://toystory/
 # px://middleearth/
 
-# Each repository has its own Git history and branches
+# Each repository has its own history and branches
 px branch middleearth canon
 ```
 
@@ -689,21 +642,21 @@ px branch middleearth canon
 
 ```
 ~/.px/
-├── toystory/              ← independent Git repo
+├── toystory/              ← independent repo
 │   ├── .px/config.yaml
 │   ├── repository.yaml
 │   ├── characters/
 │   ├── locations/
 │   ├── scenes/
 │   └── props/
-├── toystory/              ← independent Git repo
+├── starocean/              ← independent repo
 │   ├── .px/config.yaml
 │   ├── repository.yaml
 │   ├── characters/
 │   ├── locations/
 │   ├── scenes/
 │   └── props/
-└── middleearth/           ← independent Git repo
+└── middleearth/           ← independent repo
     ├── .px/config.yaml
     ├── repository.yaml
     ├── characters/
@@ -749,7 +702,7 @@ provenance:
 
 ```bash
 # Find all entities generated with a specific model
-px query px://toystory/character/woody provenance.model
+px resolve px://toystory/character/woody provenance.model
 # → midjourney-v6
 ```
 
@@ -806,9 +759,9 @@ px init mynovel \
   && px set px://mynovel/character/hero archetype "reluctant hero"
 ```
 
-### Working Without Git
+### Working Without portals
 
-While PX uses Git for version control, all of your data is plain YAML files. You can:
+While PX uses portals for version control, all of your data is plain YAML files. You can:
 
 - Edit manifests directly in any text editor
 - Version them with any VCS (Fossil, Mercurial, Jujutsu)
@@ -820,9 +773,9 @@ While PX uses Git for version control, all of your data is plain YAML files. You
 ## Repository Layout Reference
 
 ```
-toystory/                    ← repository root (Git repo)
-├── .px/
-│   └── config.yaml          ← PX repository configuration
+toystory/                    ← repository root
+├── .lore/
+│   └── config.toml          ← repository configuration
 ├── repository.yaml            ← world manifest
 ├── characters/
 │   ├── woody.yaml
@@ -846,7 +799,7 @@ toystory/                    ← repository root (Git repo)
 | `px init --provider <type>` | Configure provider only (no repository) |
 | `px create <type> <id> -u <repository> -n <name>` | Create a new entity manifest |
 | `px resolve <uri>` | Resolve a PX URI to a manifest or subtree |
-| `px query <uri> <path>` | Query a subtree from a manifest |
+| `px resolve <uri> [path]` | Resolve a manifest or subtree; URI fragments are preferred |
 | `px set <uri> <key> <value>` | Set a property on an entity |
 | `px add <uri> <key> <file> --format <fmt>` | Add a content-addressed representation |
 | `px commit <repository> -m <message>` | Commit changes to the VCS |
@@ -857,19 +810,18 @@ toystory/                    ← repository root (Git repo)
 | `px validate <uri>` | Validate a manifest against the PX schema |
 | `px push <repository>` | Push the current branch to its upstream remote (alias: `px publish`) |
 | `px pull <url-or-name>` | Clone from URL or pull an existing repository |
-| `px sync <repository>` | Pull current branch from default remote |
+| `px sync <repository>` | Fetch remote manifests, then push local commits |
 | `px remote add <repository> <name> <url>` | Add a remote |
 | `px remote ls <repository>` | List remotes |
 | `px remote rm <repository> <name>` | Remove a remote |
 | `px revert <repository> -c <hash>` | Revert a commit |
-| `px diff <base> <candidate>` | Diff two manifest files |
+| `px diff <uri>` | Diff an entity working tree against its committed manifest |
 | `px merge <base> <current> <proposed>` | Three-way merge |
 | `px content-hash <file>` | Compute BLAKE3 content hash |
 | `px schema <name>` | Print JSON schema (manifest or commit) |
 | `px doctor [--repair]` | Run diagnostics and optionally auto-repair |
 | `px status` | Show system status and provider info |
 | `px configure [provider]` | Inspect or change the version-control provider |
-| `px completions <bash|zsh|fish>` | Generate shell completion scripts |
 | `px head <repository>` | Show the current HEAD commit hash |
 
 ### Command Notes
@@ -891,7 +843,7 @@ Repository repositories are stored in `~/.px/<repository>/` by default. Use `-d`
 ## Design Principles
 
 - **Manifest is current state. History is external.** Manifests store only `head` — a pointer to the latest commit. Full history lives in the VCS, preventing unbounded manifest growth.
-- **Branch and commit are NEVER in the URI.** They are orthogonal selectors passed alongside the URI (mirrors Git and OCI tooling).
+- **Branch and commit are NEVER in the URI.** They are orthogonal selectors passed alongside the URI.
 - **Content-address everything.** Every representation is identified by its BLAKE3 hash. Manifests are content-hashable for signing and verification.
 - **Subtree queries are first-class.** AI systems, CLI tools, and HTTP clients all use the same query engine. Fragment queries enable efficient data access without fetching entire manifests.
 

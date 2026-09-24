@@ -244,7 +244,7 @@ pub enum Commands {
         reset: bool,
     },
 
-    /// Configure version-control backend (unified: replaces `px choose` + `px backend`).
+    /// Configure version-control backend.
     ///
     /// Examples:
     ///   px configure                          # show current config
@@ -275,18 +275,6 @@ pub enum Commands {
         cmd: BackendCmd,
     },
 
-    /// Generate shell completions for `px`.
-    ///
-    /// Usage:
-    ///   px completions bash > ~/.local/share/bash-completion/completions/px
-    ///   px completions zsh > ~/.zfunc/_px
-    ///   px completions fish > ~/.config/fish/completions/px.fish
-    ///   source <(px completions bash)   # ephemeral
-    Completions {
-        /// Shell to generate completions for.
-        shell: clap_complete::Shell,
-    },
-
     /// Run diagnostics and repair.
     Doctor {
         /// Auto-repair detected issues.
@@ -294,10 +282,13 @@ pub enum Commands {
         repair: bool,
     },
 
-    /// Show system status.
-    Status,
+    /// Show system status, or working-tree status for one repository.
+    Status {
+        /// Repository name.
+        repository: Option<String>,
+    },
 
-    /// Sync with remote.
+    /// Fetch remote manifests and push local commits.
     Sync {
         /// Repository name.
         repository: String,
@@ -322,6 +313,14 @@ pub enum Commands {
         /// Author identifier.
         #[arg(long, short = 'a', default_value = "px")]
         author: String,
+
+        /// Initial property, as key=value. May be repeated.
+        #[arg(long = "set", value_parser = parse_key_value)]
+        properties: Vec<(String, String)>,
+
+        /// Commit message.
+        #[arg(long, short = 'm')]
+        message: Option<String>,
     },
 
     /// Resolve a PX URI to its manifest or a subtree.
@@ -332,12 +331,15 @@ pub enum Commands {
         /// PX URI. e.g., "px://toystory/character/woody"
         uri: String,
 
+        /// Optional manifest subtree selector. URI fragments take precedence.
+        path: Option<String>,
+
         /// Resolve at a specific branch.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "commit")]
         branch: Option<String>,
 
         /// Resolve at a specific commit hash.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "branch")]
         commit: Option<String>,
 
         /// Output format: yaml, json.
@@ -528,9 +530,18 @@ The SDKs return the same fields as the CLI JSON output.
         /// Environment variable containing a repository-scoped bearer token.
         #[arg(long)]
         token_env: Option<String>,
+
+        /// Download the representation after creating its presigned URL. Optionally set its destination.
+        #[arg(long, value_name = "OUTPUT", num_args = 0..=1, require_equals = true, default_missing_value = "")]
+        download: Option<PathBuf>,
+
+        /// Destination for --download. Defaults to the entity asset directory.
+        #[arg(long)]
+        output: Option<PathBuf>,
     },
 
-    /// Query a subtree from a manifest.
+    /// Deprecated: use `px resolve <uri>#<path>` or `px resolve <uri> <path>`.
+    #[command(hide = true)]
     Query {
         /// PX URI.
         uri: String,
@@ -543,10 +554,10 @@ The SDKs return the same fields as the CLI JSON output.
         format: String,
     },
 
-    /// Commit changes to a repository repository.
+    /// Commit all repository changes, or only one entity when given its URI.
     Commit {
-        /// Repository name.
-        repository: String,
+        /// Repository name or PX entity URI.
+        target: String,
 
         /// Commit message.
         #[arg(long, short = 'm')]
@@ -557,9 +568,14 @@ The SDKs return the same fields as the CLI JSON output.
         author: String,
     },
 
-    /// View commit history for an entity.
+    /// View commit history for an entity or repository file.
+    ///
+    /// The target follows the normal repository/entity convention:
+    /// `px history repo/type/id` shows the entity manifest, while
+    /// `px history repo/type/id/asset.png` shows an asset in that entity's
+    /// directory. A `.yaml` suffix on the entity form is accepted.
     History {
-        /// PX URI.
+        /// PX URI or repository-relative entity/file target.
         uri: String,
 
         /// Maximum number of commits to show.
@@ -582,24 +598,40 @@ The SDKs return the same fields as the CLI JSON output.
         /// Repository name.
         repository: String,
 
-        /// Branch name to create. Omit to list all branches.
+        /// Branch name to create. Omit to list local branches.
         name: Option<String>,
     },
 
-    /// Set a property on an entity manifest.
+    /// Set one or more properties on an entity manifest.
     Set {
         /// PX URI.
         uri: String,
 
-        /// Property key (dot-notation).
-        key: String,
-
-        /// Property value.
-        value: String,
+        /// Repeating key/value pairs. Keys support dot-notation.
+        #[arg(required = true, num_args = 2.., value_names = ["KEY", "VALUE"])]
+        values: Vec<String>,
 
         /// Commit message.
-        #[arg(long, short = 'm', default_value = "set property")]
-        message: String,
+        #[arg(long, short = 'm')]
+        message: Option<String>,
+
+        /// Author identifier.
+        #[arg(long, short = 'a', default_value = "px")]
+        author: String,
+    },
+
+    /// Remove one or more properties or representations from an entity manifest.
+    Unset {
+        /// PX URI.
+        uri: String,
+
+        /// Keys to remove. `representations.<key>` removes a representation.
+        #[arg(required = true)]
+        keys: Vec<String>,
+
+        /// Commit message.
+        #[arg(long, short = 'm')]
+        message: Option<String>,
 
         /// Author identifier.
         #[arg(long, short = 'a', default_value = "px")]
@@ -622,9 +654,13 @@ The SDKs return the same fields as the CLI JSON output.
         #[arg(long)]
         format: String,
 
+        /// Replace an existing representation only when its content differs.
+        #[arg(long)]
+        replace: bool,
+
         /// Commit message.
-        #[arg(long, short = 'm', default_value = "add representation")]
-        message: String,
+        #[arg(long, short = 'm')]
+        message: Option<String>,
 
         /// Author identifier.
         #[arg(long, short = 'a', default_value = "px")]
@@ -645,11 +681,11 @@ The SDKs return the same fields as the CLI JSON output.
         author: String,
     },
 
-    /// Clone or pull a repository from a remote.
+    /// Clone or pull PX manifests from a remote (representation files stay remote).
     ///
     /// If the argument is a URL, the repo is cloned (name is read from the
-    /// repo's own config).  If it's a repository name, the repo must already
-    /// exist locally and will be updated via pull.
+    /// repo's own config). If it's a repository name, the repo must already
+    /// exist locally and its manifests will be updated without downloading assets.
     Pull {
         /// URL (clone) or repository name (pull existing).
         url_or_name: String,
@@ -724,12 +760,22 @@ The SDKs return the same fields as the CLI JSON output.
         format: String,
     },
 
-    /// Show diff between two manifest files or versions.
+    /// Show a manifest diff for an entity URI.
     Diff {
-        /// Base (left) manifest file.
-        base_file: PathBuf,
-        /// Candidate (right) manifest file.
-        candidate_file: PathBuf,
+        /// PX URI. The px:// prefix is optional.
+        uri: String,
+        /// Base branch.
+        #[arg(long, conflicts_with = "base_commit")]
+        base_branch: Option<String>,
+        /// Candidate branch.
+        #[arg(long, conflicts_with = "candidate_commit")]
+        candidate_branch: Option<String>,
+        /// Base commit.
+        #[arg(long, conflicts_with = "base_branch")]
+        base_commit: Option<String>,
+        /// Candidate commit.
+        #[arg(long, conflicts_with = "candidate_branch")]
+        candidate_commit: Option<String>,
         /// Output format: json, yaml.
         #[arg(long, short = 'f', default_value = "yaml")]
         format: String,
@@ -753,4 +799,34 @@ The SDKs return the same fields as the CLI JSON output.
         /// Path to the file to hash.
         file: PathBuf,
     },
+}
+
+fn parse_key_value(input: &str) -> Result<(String, String), String> {
+    input
+        .split_once('=')
+        .filter(|(key, _)| !key.is_empty())
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .ok_or_else(|| "expected key=value".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Cli, Commands};
+    use clap::Parser;
+
+    #[test]
+    fn presign_download_accepts_an_optional_destination() {
+        let cli = Cli::try_parse_from([
+            "px",
+            "presign",
+            "repo/type/id",
+            "portrait",
+            "--download=/tmp/portrait.png",
+        ])
+        .unwrap();
+        assert!(matches!(
+            cli.command,
+            Commands::Presign { download: Some(path), .. } if path.as_os_str() == "/tmp/portrait.png"
+        ));
+    }
 }

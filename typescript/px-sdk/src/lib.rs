@@ -1,6 +1,7 @@
 use napi::Error;
 use napi::bindgen_prelude::Buffer;
 use napi_derive::napi;
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use px_core::{
@@ -313,6 +314,16 @@ pub fn repo_open(base_path: String, repository: String) -> napi::Result<String> 
     Ok(result.to_string())
 }
 
+#[napi(js_name = "repoStatus")]
+pub fn repo_status(base_path: String, repository: String) -> napi::Result<String> {
+    let repo = open_repo(&base_path, &repository)?;
+    px_core::vcs_lore::LoreProcessRunner::run(
+        ["status", "--scan", "--non-interactive"],
+        Some(&repo.root),
+    )
+    .map_err(map_error)
+}
+
 #[napi(js_name = "repoCreateEntity")]
 pub fn repo_create_entity(
     base_path: String,
@@ -332,6 +343,31 @@ pub fn repo_create_entity(
         "commit_hash": commit_hash,
     });
     Ok(result.to_string())
+}
+
+#[napi(js_name = "repoCreateEntityWithProperties")]
+pub fn repo_create_entity_with_properties(
+    base_path: String,
+    repository: String,
+    entity_type: String,
+    entity_id: String,
+    name: String,
+    author: String,
+    properties_json: String,
+) -> napi::Result<String> {
+    let properties: BTreeMap<String, serde_yaml::Value> =
+        serde_json::from_str(&properties_json).map_err(|e| Error::from_reason(e.to_string()))?;
+    let repo = open_repo(&base_path, &repository)?;
+    let (manifest, commit_hash) = repo
+        .create_entity_with_properties(
+            &parse_et(&entity_type)?,
+            &entity_id,
+            &name,
+            &author,
+            properties,
+        )
+        .map_err(map_error)?;
+    Ok(serde_json::json!({"manifest": manifest, "commit_hash": commit_hash}).to_string())
 }
 
 #[napi(js_name = "repoReadManifest")]
@@ -566,7 +602,9 @@ pub fn resolve(uri_str: String, repo_base_path: String) -> napi::Result<String> 
             serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
-        ResolveResult::Provenance(_) => todo!(),
+        ResolveResult::Provenance(envelope) => {
+            serde_json::to_string(&envelope).map_err(|e| Error::from_reason(e.to_string()))
+        }
     }
 }
 
@@ -605,19 +643,10 @@ pub fn resolve_with_options(
             serde_json::to_string(&manifest).map_err(|e| Error::from_reason(e.to_string()))
         }
         ResolveResult::Subtree(value) => Ok(value.to_string()),
-        ResolveResult::Provenance(_) => todo!(),
+        ResolveResult::Provenance(envelope) => {
+            serde_json::to_string(&envelope).map_err(|e| Error::from_reason(e.to_string()))
+        }
     }
-}
-
-#[napi(js_name = "resolveQuery")]
-pub fn resolve_query(
-    uri_str: String,
-    repo_base_path: String,
-    path: String,
-) -> napi::Result<String> {
-    let resolver = Resolver::new(Path::new(&repo_base_path));
-    let result = resolver.query(&uri_str, &path).map_err(map_error)?;
-    Ok(result.to_string())
 }
 
 #[napi(js_name = "presignRepresentation")]

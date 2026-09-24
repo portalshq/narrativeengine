@@ -24,7 +24,6 @@ workflow-e2e = []
 [dependencies]
 px-core = { workspace = true }
 clap = { workspace = true }
-clap_complete = "4"
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
@@ -33,6 +32,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
+reqwest = "0.12"
 rand = "0.8"
 
 [dev-dependencies]
