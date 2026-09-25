@@ -1468,10 +1468,21 @@ fn test_local_lore_resolve_provenance_and_include_blobs() {
         .expect("failed to write prompt fixture");
     let prompt_path_string = prompt_path.to_string_lossy().into_owned();
 
+    // Lore's file metadata commands update an existing staged revision. The
+    // entity was already committed by `px create`, so stage one real file
+    // change first to establish that revision.
+    let hero_path = repo_path.join("character/hero.yaml");
+    let hero_contents = fs::read_to_string(&hero_path).expect("failed to read hero manifest");
+    fs::write(&hero_path, format!("{hero_contents}\n")).expect("failed to update hero manifest");
+    run_lore(
+        &repo_path,
+        &["dirty", "character/hero.yaml", "--non-interactive"],
+    );
     run_lore(
         &repo_path,
         &["stage", "character/hero.yaml", "--non-interactive"],
     );
+
     run_lore(
         &repo_path,
         &[
@@ -1488,14 +1499,6 @@ fn test_local_lore_resolve_provenance_and_include_blobs() {
     );
     run_lore(
         &repo_path,
-        &["dirty", "character/hero.yaml", "--non-interactive"],
-    );
-    run_lore(
-        &repo_path,
-        &["stage", "character/hero.yaml", "--non-interactive"],
-    );
-    run_lore(
-        &repo_path,
         &[
             "file",
             "metadata",
@@ -1506,14 +1509,6 @@ fn test_local_lore_resolve_provenance_and_include_blobs() {
             &prompt_path_string,
             "--non-interactive",
         ],
-    );
-    run_lore(
-        &repo_path,
-        &["dirty", "character/hero.yaml", "--non-interactive"],
-    );
-    run_lore(
-        &repo_path,
-        &["stage", "character/hero.yaml", "--non-interactive"],
     );
     run_lore(
         &repo_path,
@@ -1528,6 +1523,7 @@ fn test_local_lore_resolve_provenance_and_include_blobs() {
 
     let output = px_cmd()
         .arg("resolve")
+        .arg("--local")
         .arg("--base-dir")
         .arg(tmp.path())
         .arg(format!("{repository}/character/hero"))
