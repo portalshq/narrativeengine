@@ -1,13 +1,13 @@
 ---
 generated: "true"
 generator: px-docgen
-version: 0.8.25
+version: 0.9.0
 source: clap
 ---
 
 
 # PX CLI Reference
-The `px` command-line interface (v0.8.25) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
+The `px` command-line interface (v0.9.0) provides tools for creating, resolving, and managing narrative resources using the PX protocol.
 
 
 ## Command Overview
